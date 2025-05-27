@@ -167,7 +167,7 @@ const Settings = () => {
         )}
       </Box>
 
-      {/* Toggle + Full Page Preview */}
+      {/* Toggle + Zoomed Preview */}
       <Typography variant="h6" sx={{ mt: 6 }}>Full Page Live Preview</Typography>
       <Box sx={{ my: 2 }}>
         <ToggleButtonGroup
@@ -180,20 +180,34 @@ const Settings = () => {
           <ToggleButton value="mobile">Mobile</ToggleButton>
         </ToggleButtonGroup>
       </Box>
-      <Paper variant="outlined" sx={{ p: 1, display: "flex", justifyContent: "center", borderRadius: 2 }}>
-        <iframe
-          ref={iframeRef}
-          title="Dashboard Preview"
-          src={`/dashboard?preview=true&ts=${Date.now()}`}
-          style={{
-            width: previewMode === "mobile" ? "375px" : "100%",
-            height: previewMode === "mobile" ? "812px" : "600px",
-            border: "none",
-            pointerEvents: "none",
-            borderRadius: "8px",
-          }}
-        />
-      </Paper>
+      <Box sx={{
+        display: "flex",
+        justifyContent: "center",
+        overflow: "hidden",
+        p: 1,
+        border: "1px solid #ccc",
+        borderRadius: 2,
+      }}>
+        <Box sx={{
+          transform: previewMode === "mobile" ? "scale(0.6)" : "scale(1)",
+          transformOrigin: "top left",
+          width: previewMode === "mobile" ? "390px" : "100%",
+          height: previewMode === "mobile" ? "812px" : "600px",
+          pointerEvents: "none",
+        }}>
+          <iframe
+            ref={iframeRef}
+            title="Dashboard Preview"
+            src={`/dashboard?preview=true&ts=${Date.now()}`}
+            style={{
+              width: "100%",
+              height: "100%",
+              border: "none",
+              borderRadius: "8px",
+            }}
+          />
+        </Box>
+      </Box>
     </Box>
   );
 };
