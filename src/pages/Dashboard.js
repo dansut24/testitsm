@@ -11,15 +11,21 @@ import {
 } from "recharts";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import DeleteIcon from "@mui/icons-material/Delete";
-import AddIcon from "@mui/icons-material/Add";
 import { useTheme } from "@mui/material/styles";
 
-const initialWidgets = [
-  { id: "1", type: "pie", title: "Incidents by Status" },
-  { id: "2", type: "bar", title: "Monthly Requests" },
-  { id: "3", type: "line", title: "Changes Over Time" },
-  { id: "10", type: "table", title: "Latest Incidents" }
-];
+const predefinedLayouts = {
+  default: ["pie", "bar", "line", "table"],
+  minimal: ["pie", "table"],
+  analytics: ["pie", "bar", "line"],
+};
+
+const widgetMetadata = {
+  pie: { id: "pie", type: "pie", title: "Incidents by Status" },
+  bar: { id: "bar", type: "bar", title: "Monthly Requests" },
+  line: { id: "line", type: "line", title: "Changes Over Time" },
+  table: { id: "table", type: "table", title: "Latest Incidents" },
+  team: { id: "team", type: "table", title: "Team Incidents" },
+};
 
 const samplePieData = [
   { name: "Open", value: 8 },
@@ -45,20 +51,28 @@ const COLORS = ["#ff6f61", "#6a67ce", "#6fcf97"];
 
 const Dashboard = () => {
   const theme = useTheme();
-  const [widgets, setWidgets] = useState(() => {
-    const saved = localStorage.getItem("dashboardWidgets");
-    return saved ? JSON.parse(saved) : initialWidgets;
-  });
+  const isPreview = new URLSearchParams(window.location.search).get("preview") === "true";
+
+  const [widgets, setWidgets] = useState([]);
   const [editMode, setEditMode] = useState(false);
   const [useGradient, setUseGradient] = useState(false);
 
-  const isPreview = new URLSearchParams(window.location.search).get("preview") === "true";
-
   useEffect(() => {
-    if (!isPreview) {
-      localStorage.setItem("dashboardWidgets", JSON.stringify(widgets));
+    const selected = localStorage.getItem("selectedDashboard") || "default";
+    let layout = predefinedLayouts[selected];
+
+    if (!layout) {
+      const customDashboards = JSON.parse(localStorage.getItem("custom-dashboards") || "[]");
+      const found = customDashboards.find(d => d.id === selected);
+      layout = found?.widgets || predefinedLayouts["default"];
     }
-  }, [widgets]);
+
+    const widgetData = layout.map((id) => ({
+      ...widgetMetadata[id],
+      id: `${id}-${Date.now() + Math.random()}`
+    }));
+    setWidgets(widgetData);
+  }, []);
 
   const onDragEnd = (result) => {
     if (!result.destination) return;
@@ -72,16 +86,11 @@ const Dashboard = () => {
     setWidgets(widgets.filter((w) => w.id !== id));
   };
 
-  const resetLayout = () => {
-    localStorage.removeItem("dashboardWidgets");
-    setWidgets(initialWidgets);
-  };
-
   const renderWidget = (widget) => {
     if (widget.type === "table") {
       return (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2, overflowY: 'auto', height: '100%', p: 1 }}>
-          {Array.from({ length: 10 }).map((_, i) => (
+          {Array.from({ length: 3 }).map((_, i) => (
             <Paper
               key={i}
               sx={{
@@ -93,7 +102,7 @@ const Dashboard = () => {
               }}
             >
               <Typography sx={{ fontSize: "0.95rem", color: "#456", mb: 1 }}>
-                <strong>#{i + 1}</strong> • Incident #{i + 1}
+                <strong>#{i + 1}</strong> â¢ Incident #{i + 1}
                 <Chip
                   label={i % 3 === 0 ? "Open" : i % 3 === 1 ? "Closed" : "Pending"}
                   sx={{
@@ -179,7 +188,7 @@ const Dashboard = () => {
               control={<Switch checked={useGradient} onChange={() => setUseGradient(!useGradient)} />}
               label="Gradient Theme"
             />
-            <Button variant="contained" size="small" onClick={resetLayout}>Reset Layout</Button>
+            <Button variant="outlined" size="small" onClick={() => setWidgets([])}>Reset</Button>
           </Stack>
         )}
       </Box>
