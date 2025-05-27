@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   Box, Typography, Paper, Radio, Grid, TextField,
-  Button, Checkbox, FormControlLabel, FormGroup, IconButton
+  Button, Checkbox, FormControlLabel, FormGroup, IconButton, ToggleButtonGroup, ToggleButton
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 
@@ -38,6 +38,7 @@ const Settings = () => {
   const [customDashboards, setCustomDashboards] = useState(() => {
     return JSON.parse(localStorage.getItem("custom-dashboards") || "[]");
   });
+  const [previewMode, setPreviewMode] = useState("desktop");
   const iframeRef = useRef(null);
 
   const handleLayoutChange = (id) => {
@@ -166,19 +167,30 @@ const Settings = () => {
         )}
       </Box>
 
-      {/* Full page preview */}
+      {/* Toggle + Full Page Preview */}
       <Typography variant="h6" sx={{ mt: 6 }}>Full Page Live Preview</Typography>
-      <Paper variant="outlined" sx={{ mt: 2, borderRadius: 2 }}>
+      <Box sx={{ my: 2 }}>
+        <ToggleButtonGroup
+          value={previewMode}
+          exclusive
+          onChange={(_, val) => val && setPreviewMode(val)}
+          size="small"
+        >
+          <ToggleButton value="desktop">Desktop</ToggleButton>
+          <ToggleButton value="mobile">Mobile</ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
+      <Paper variant="outlined" sx={{ p: 1, display: "flex", justifyContent: "center", borderRadius: 2 }}>
         <iframe
           ref={iframeRef}
           title="Dashboard Preview"
           src={`/dashboard?preview=true&ts=${Date.now()}`}
           style={{
-            width: "100%",
-            height: 600,
+            width: previewMode === "mobile" ? "375px" : "100%",
+            height: previewMode === "mobile" ? "812px" : "600px",
             border: "none",
-            borderRadius: "8px",
             pointerEvents: "none",
+            borderRadius: "8px",
           }}
         />
       </Paper>
