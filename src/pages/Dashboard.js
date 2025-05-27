@@ -51,7 +51,20 @@ const layouts = {
 const Dashboard = () => {
   const theme = useTheme();
   const selectedLayout = localStorage.getItem("selectedDashboard") || "default";
-  const widgets = layouts[selectedLayout] || layouts["default"];
+
+  let widgets = layouts[selectedLayout];
+
+  if (!widgets) {
+    const custom = localStorage.getItem("custom-dashboard");
+    if (custom) {
+      const parsed = JSON.parse(custom);
+      widgets = parsed.widgets.map((type, i) => ({
+        id: i.toString(),
+        type,
+        title: parsed.name + " - " + (type.charAt(0).toUpperCase() + type.slice(1))
+      }));
+    }
+  }
 
   const ChartWrapper = ({ children }) => (
     <Box sx={{ width: '100%', height: 240, overflow: 'hidden', display: 'flex' }}>
@@ -62,7 +75,7 @@ const Dashboard = () => {
   );
 
   const renderWidget = (widget) => {
-    if (widget.type === "table") {
+    if (widget.type === "table" || widget.type === "team") {
       return (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2, overflowY: 'auto', height: '100%', p: 1 }}>
           {Array.from({ length: 5 }).map((_, i) => (
