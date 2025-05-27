@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import {
   Box, Typography, Paper, Radio, Grid, TextField,
-  Button, Checkbox, FormControlLabel, FormGroup, IconButton, ToggleButtonGroup, ToggleButton
+  Button, Checkbox, FormControlLabel, FormGroup, IconButton,
+  ToggleButtonGroup, ToggleButton
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 
@@ -167,7 +168,7 @@ const Settings = () => {
         )}
       </Box>
 
-      {/* Toggle + Zoomed Preview */}
+      {/* Toggle + Real Fixed Size Preview */}
       <Typography variant="h6" sx={{ mt: 6 }}>Full Page Live Preview</Typography>
       <Box sx={{ my: 2 }}>
         <ToggleButtonGroup
@@ -183,30 +184,23 @@ const Settings = () => {
       <Box sx={{
         display: "flex",
         justifyContent: "center",
-        overflow: "hidden",
-        p: 1,
+        p: 2,
         border: "1px solid #ccc",
         borderRadius: 2,
+        overflow: "auto"
       }}>
-        <Box sx={{
-          transform: previewMode === "mobile" ? "scale(0.6)" : "scale(1)",
-          transformOrigin: "top left",
-          width: previewMode === "mobile" ? "390px" : "100%",
-          height: previewMode === "mobile" ? "812px" : "600px",
-          pointerEvents: "none",
-        }}>
-          <iframe
-            ref={iframeRef}
-            title="Dashboard Preview"
-            src={`/dashboard?preview=true&ts=${Date.now()}`}
-            style={{
-              width: "100%",
-              height: "100%",
-              border: "none",
-              borderRadius: "8px",
-            }}
-          />
-        </Box>
+        <iframe
+          ref={iframeRef}
+          title="Dashboard Preview"
+          src={`/dashboard?preview=true&ts=${Date.now()}`}
+          style={{
+            width: previewMode === "mobile" ? "375px" : "1280px",
+            height: previewMode === "mobile" ? "812px" : "720px",
+            border: "1px solid #999",
+            borderRadius: "8px",
+            pointerEvents: "none",
+          }}
+        />
       </Box>
     </Box>
   );
