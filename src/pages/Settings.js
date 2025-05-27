@@ -1,13 +1,8 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box, Typography, Paper, Radio, Grid, TextField,
   Button, Checkbox, FormControlLabel, FormGroup, IconButton
 } from "@mui/material";
-import {
-  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
-  LineChart, Line, CartesianGrid, ResponsiveContainer
-} from "recharts";
 import DeleteIcon from "@mui/icons-material/Delete";
 
 const layouts = {
@@ -24,68 +19,11 @@ const widgetOptions = [
   { id: "team", label: "Team Incidents" }
 ];
 
-const samplePieData = [
-  { name: "Open", value: 8 },
-  { name: "Closed", value: 12 },
-  { name: "Pending", value: 5 },
-];
-
-const sampleBarData = [
-  { name: "Jan", Requests: 5 },
-  { name: "Feb", Requests: 9 },
-  { name: "Mar", Requests: 7 },
-  { name: "Apr", Requests: 12 },
-];
-
-const sampleLineData = [
-  { name: "Week 1", Changes: 3 },
-  { name: "Week 2", Changes: 5 },
-  { name: "Week 3", Changes: 2 },
-  { name: "Week 4", Changes: 7 },
-];
-
-const COLORS = ["#ff6f61", "#6a67ce", "#6fcf97"];
-
 const DashboardPreview = ({ widgets }) => (
   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, p: 1, scale: '0.6', transformOrigin: 'top left', width: 'fit-content' }}>
     {widgets.map((type, idx) => (
       <Paper key={idx} sx={{ width: 160, height: 140, p: 1 }}>
         <Typography variant="caption" fontWeight="bold">{type.toUpperCase()}</Typography>
-        <Box sx={{ width: '100%', height: '100%' }}>
-          {{
-            pie: (
-              <ResponsiveContainer width="100%" height="80%">
-                <PieChart>
-                  <Pie data={samplePieData} dataKey="value" outerRadius={40}>
-                    {samplePieData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            ),
-            bar: (
-              <ResponsiveContainer width="100%" height="80%">
-                <BarChart data={sampleBarData}>
-                  <XAxis dataKey="name" hide />
-                  <YAxis hide />
-                  <Bar dataKey="Requests" fill="#8884d8" />
-                </BarChart>
-              </ResponsiveContainer>
-            ),
-            line: (
-              <ResponsiveContainer width="100%" height="80%">
-                <LineChart data={sampleLineData}>
-                  <XAxis dataKey="name" hide />
-                  <YAxis hide />
-                  <Line dataKey="Changes" stroke="#82ca9d" />
-                </LineChart>
-              </ResponsiveContainer>
-            ),
-            table: <Box sx={{ fontSize: "0.7em", mt: 1 }}>Incident #1<br />Incident #2</Box>,
-            team: <Box sx={{ fontSize: "0.7em", mt: 1 }}>Team A<br />Team B</Box>,
-          }[type]}
-        </Box>
       </Paper>
     ))}
   </Box>
@@ -100,10 +38,12 @@ const Settings = () => {
   const [customDashboards, setCustomDashboards] = useState(() => {
     return JSON.parse(localStorage.getItem("custom-dashboards") || "[]");
   });
+  const iframeRef = useRef(null);
 
   const handleLayoutChange = (id) => {
     setSelectedLayout(id);
     localStorage.setItem("selectedDashboard", id);
+    reloadIframe();
   };
 
   const toggleCustomWidget = (id) => {
@@ -123,7 +63,7 @@ const Settings = () => {
     localStorage.setItem("selectedDashboard", id);
     setCustomName("");
     setCustomWidgets([]);
-    alert("Custom dashboard saved!");
+    reloadIframe();
   };
 
   const deleteDashboard = (id) => {
@@ -133,6 +73,13 @@ const Settings = () => {
     if (selectedLayout === id) {
       localStorage.setItem("selectedDashboard", "default");
       setSelectedLayout("default");
+    }
+    reloadIframe();
+  };
+
+  const reloadIframe = () => {
+    if (iframeRef.current) {
+      iframeRef.current.src = "/dashboard?preview=true&ts=" + Date.now();
     }
   };
 
@@ -218,22 +165,24 @@ const Settings = () => {
           </Box>
         )}
       </Box>
-    
+
       {/* Full page preview */}
       <Typography variant="h6" sx={{ mt: 6 }}>Full Page Live Preview</Typography>
       <Paper variant="outlined" sx={{ mt: 2, borderRadius: 2 }}>
         <iframe
+          ref={iframeRef}
           title="Dashboard Preview"
-          src="/dashboard?preview=true"
+          src={`/dashboard?preview=true&ts=${Date.now()}`}
           style={{
             width: "100%",
             height: 600,
             border: "none",
             borderRadius: "8px",
+            pointerEvents: "none",
           }}
         />
       </Paper>
-</Box>
+    </Box>
   );
 };
 
