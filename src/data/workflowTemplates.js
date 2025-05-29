@@ -1,4 +1,6 @@
-const workflowTemplates = {
+// src/data/workflowTemplates.js
+
+export const workflowTemplates = {
   software_installation: [
     {
       title: "Verify software license",
@@ -30,5 +32,3 @@ const workflowTemplates = {
     },
   ],
 };
-
-export const workflows = workflowTemplates;
