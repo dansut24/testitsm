@@ -19,6 +19,7 @@ import Loading from "./pages/Loading";
 import NewIncident from "./pages/NewIncident";
 import NotFound from "./pages/NotFound";
 import IncidentDetail from "./pages/IncidentDetail";
+import NewServiceRequest from "./pages/NewServiceRequest"; // ✅ Added
 
 // Self-Service Portal
 import SelfServiceLayout from "./layouts/SelfServiceLayout";
@@ -38,7 +39,7 @@ function App() {
         sx={{
           height: "100vh",
           width: "100vw",
-          overflow: "hidden", // Prevent double scrollbars
+          overflow: "hidden",
           display: "flex",
           flexDirection: "column",
         }}
@@ -73,6 +74,7 @@ function App() {
             <Route path="profile" element={<UserProfile />} />
             <Route path="settings" element={<Settings />} />
             <Route path="new-incident" element={<NewIncident />} />
+            <Route path="new-service-request" element={<NewServiceRequest />} /> {/* ✅ Added */}
             <Route path="incidents/:id" element={<IncidentDetail />} />
           </Route>
 
