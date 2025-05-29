@@ -19,8 +19,8 @@ import Loading from "./pages/Loading";
 import NewIncident from "./pages/NewIncident";
 import NotFound from "./pages/NotFound";
 import IncidentDetail from "./pages/IncidentDetail";
-import NewServiceRequest from "./pages/NewServiceRequest";
-import ServiceRequestDetail from "./pages/ServiceRequestDetail";
+import NewServiceRequest from "./pages/NewServiceRequest"; // ✅ Added
+import ServiceRequestDetail from "./pages/ServiceRequestDetail"; // ✅ Added
 
 // Self-Service Portal
 import SelfServiceLayout from "./layouts/SelfServiceLayout";
@@ -31,8 +31,6 @@ import SelfServiceKnowledgeBase from "./pages/SelfService/KnowledgeBase";
 import ServiceCatalog from "./pages/SelfService/ServiceCatalog";
 import Checkout from "./pages/SelfService/Checkout";
 import Confirmation from "./pages/SelfService/Confirmation";
-
-import PrivateRoute from "./components/PrivateRoute";
 
 function App() {
   return (
@@ -67,7 +65,11 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="incidents" element={<Incidents />} />
+            <Route path="incidents/:id" element={<IncidentDetail />} />
+            <Route path="new-incident" element={<NewIncident />} />
             <Route path="service-requests" element={<ServiceRequests />} />
+            <Route path="service-requests/:id" element={<ServiceRequestDetail />} /> {/* ✅ Added */}
+            <Route path="new-service-request" element={<NewServiceRequest />} />
             <Route path="changes" element={<Changes />} />
             <Route path="problems" element={<Problems />} />
             <Route path="assets" element={<Assets />} />
@@ -76,10 +78,6 @@ function App() {
             <Route path="approvals" element={<Approvals />} />
             <Route path="profile" element={<UserProfile />} />
             <Route path="settings" element={<Settings />} />
-            <Route path="new-incident" element={<NewIncident />} />
-            <Route path="new-service-request" element={<NewServiceRequest />} />
-            <Route path="incidents/:id" element={<IncidentDetail />} />
-            <Route path="service-request/:id" element={<ServiceRequestDetail />} />
           </Route>
 
           {/* 404 Fallback */}
