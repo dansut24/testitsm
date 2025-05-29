@@ -1,5 +1,3 @@
-// src/data/workflowTemplates.js
-
 const workflowTemplates = {
   software_installation: [
     {
@@ -33,4 +31,4 @@ const workflowTemplates = {
   ],
 };
 
-export default workflowTemplates;
+export const workflows = workflowTemplates;
