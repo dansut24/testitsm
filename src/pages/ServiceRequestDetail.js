@@ -1,47 +1,69 @@
 // src/pages/ServiceRequestDetail.js
 
 import React from "react";
-import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
-  Button,
-  Divider,
-  Paper,
   Chip,
-  Tabs,
-  Tab,
+  Paper,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
 } from "@mui/material";
+import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
+import ScheduleIcon from "@mui/icons-material/Schedule";
+import DoneIcon from "@mui/icons-material/Done";
 
 const dummyRequest = {
-  id: 1,
-  title: "Access to shared drive",
-  description: "User needs access to the marketing shared drive.",
-  status: "Pending Approval",
-  category: "Access Request",
-  requester: "Jane Smith",
-  createdAt: "2024-05-20",
-  updatedAt: "2024-05-21",
+  id: 101,
+  title: "Software Installation",
+  description: "Install Adobe Photoshop for design team.",
+  status: "In Progress",
+  created: "2024-05-28",
+  updated: "2024-05-29",
+  tasks: [
+    {
+      id: 1,
+      title: "Check Licensing Availability",
+      assignee: "Alice Smith",
+      status: "Pending",
+    },
+    {
+      id: 2,
+      title: "Install Software",
+      assignee: "Bob Taylor",
+      status: "In Progress",
+    },
+    {
+      id: 3,
+      title: "Verify Installation",
+      assignee: "QA Team",
+      status: "Completed",
+    },
+  ],
+};
+
+const getIcon = (status) => {
+  switch (status) {
+    case "Completed":
+      return <DoneIcon color="success" />;
+    case "In Progress":
+      return <ScheduleIcon color="primary" />;
+    default:
+      return <AssignmentTurnedInIcon color="disabled" />;
+  }
 };
 
 const ServiceRequestDetail = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [tab, setTab] = React.useState(0);
-
-  const handleTabChange = (e, newValue) => setTab(newValue);
-
   return (
     <Box sx={{ px: 3, py: 2 }}>
-      <Button variant="outlined" size="small" onClick={() => navigate(-1)}>
-        Back
-      </Button>
-
-      <Typography variant="h5" sx={{ mt: 2 }}>
-        {dummyRequest.title} <Chip label={dummyRequest.status} color="warning" sx={{ ml: 2 }} />
+      <Typography variant="h5">
+        {dummyRequest.title} <Chip label={dummyRequest.status} color="primary" sx={{ ml: 2 }} />
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        Request ID: #{id}
+        Request ID: #{dummyRequest.id}
       </Typography>
 
       <Paper sx={{ mt: 2, p: 2 }}>
@@ -51,34 +73,32 @@ const ServiceRequestDetail = () => {
         <Typography variant="body2" sx={{ mb: 2 }}>
           {dummyRequest.description}
         </Typography>
-
         <Divider sx={{ my: 2 }} />
 
         <Typography variant="body2">
-          <strong>Category:</strong> {dummyRequest.category}
+          <strong>Created:</strong> {dummyRequest.created}
         </Typography>
         <Typography variant="body2">
-          <strong>Requester:</strong> {dummyRequest.requester}
-        </Typography>
-        <Typography variant="body2">
-          <strong>Created:</strong> {dummyRequest.createdAt}
-        </Typography>
-        <Typography variant="body2">
-          <strong>Last Updated:</strong> {dummyRequest.updatedAt}
+          <strong>Last Updated:</strong> {dummyRequest.updated}
         </Typography>
       </Paper>
 
-      <Tabs value={tab} onChange={handleTabChange} sx={{ mt: 3 }}>
-        <Tab label="Details" />
-        <Tab label="Approvals" />
-        <Tab label="Comments" />
-      </Tabs>
-
-      <Box sx={{ mt: 2 }}>
-        {tab === 0 && <Typography variant="body2">[Details content here]</Typography>}
-        {tab === 1 && <Typography variant="body2">[Approvals content here]</Typography>}
-        {tab === 2 && <Typography variant="body2">[Comments content here]</Typography>}
-      </Box>
+      <Paper sx={{ mt: 3, p: 2 }}>
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          Tasks
+        </Typography>
+        <List>
+          {dummyRequest.tasks.map((task) => (
+            <ListItem key={task.id} divider>
+              <ListItemIcon>{getIcon(task.status)}</ListItemIcon>
+              <ListItemText
+                primary={task.title}
+                secondary={`Assignee: ${task.assignee} | Status: ${task.status}`}
+              />
+            </ListItem>
+          ))}
+        </List>
+      </Paper>
     </Box>
   );
 };
