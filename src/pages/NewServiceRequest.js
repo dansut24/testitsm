@@ -3,7 +3,7 @@ import {
   Box, Typography, TextField, Button, Paper, MenuItem
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { workflowTemplates } from "../data/workflowTemplates";
+import { workflows } from "../data/workflowTemplates";
 
 const NewServiceRequest = () => {
   const navigate = useNavigate();
