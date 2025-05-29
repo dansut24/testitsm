@@ -32,3 +32,5 @@ export const workflowTemplates = {
     },
   ],
 };
+
+export const workflows = workflowTemplates;
