@@ -1,9 +1,20 @@
+// src/pages/NewServiceRequest.js
+
 import React, { useState } from "react";
 import {
-  Box, Typography, TextField, Button, Paper, MenuItem
+  Box,
+  Typography,
+  Paper,
+  TextField,
+  MenuItem,
+  Button,
+  Select,
+  InputLabel,
+  FormControl,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { workflows } from "../data/workflowTemplates";
+import { createServiceRequestWithTasks } from "../utils/createServiceRequestWithTasks";
+import { workflowTemplates } from "../data/workflowTemplates"; // ✅ Import added
 
 const NewServiceRequest = () => {
   const navigate = useNavigate();
@@ -11,88 +22,72 @@ const NewServiceRequest = () => {
     title: "",
     description: "",
     category: "",
-    template: "",
   });
 
   const handleChange = (e) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = () => {
-    const requestId = `SR-${Date.now()}`;
-    const tasks = (workflowTemplates[formData.template] || []).map(task => ({
-      ...task,
-      requestId,
-      status: "Not Started",
-    }));
-
-    const newRequest = {
-      id: requestId,
-      title: formData.title,
-      description: formData.description,
-      category: formData.category,
-      status: "Open",
-      created: new Date().toISOString(),
-      tasks,
-    };
-
-    console.log("New Service Request with Tasks:", newRequest);
-    // Here you could push to localStorage, context, or your API
-
-    navigate(`/service-requests/${requestId}`);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const { request, tasks } = createServiceRequestWithTasks(formData);
+    console.log("New Request:", request);
+    console.log("Associated Tasks:", tasks);
+    navigate("/service-requests"); // or navigate(`/service-requests/${request.id}`);
   };
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        New Service Request
+      <Typography variant="h5" sx={{ mb: 2 }}>
+        Raise New Service Request
       </Typography>
-      <Paper sx={{ p: 3, mt: 2 }}>
-        <TextField
-          fullWidth
-          label="Title"
-          name="title"
-          value={formData.title}
-          onChange={handleChange}
-          sx={{ mb: 2 }}
-        />
-        <TextField
-          fullWidth
-          label="Description"
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          multiline
-          rows={3}
-          sx={{ mb: 2 }}
-        />
-        <TextField
-          fullWidth
-          label="Category"
-          name="category"
-          value={formData.category}
-          onChange={handleChange}
-          sx={{ mb: 2 }}
-        />
-        <TextField
-          fullWidth
-          select
-          label="Workflow Template"
-          name="template"
-          value={formData.template}
-          onChange={handleChange}
-          sx={{ mb: 2 }}
-        >
-          {Object.keys(workflowTemplates).map((key) => (
-            <MenuItem key={key} value={key}>
-              {key.replace(/_/g, " ").toUpperCase()}
-            </MenuItem>
-          ))}
-        </TextField>
 
-        <Button variant="contained" onClick={handleSubmit}>
-          Submit Request
-        </Button>
+      <Paper sx={{ p: 3 }}>
+        <form onSubmit={handleSubmit}>
+          <TextField
+            label="Title"
+            name="title"
+            fullWidth
+            value={formData.title}
+            onChange={handleChange}
+            required
+            sx={{ mb: 2 }}
+          />
+
+          <TextField
+            label="Description"
+            name="description"
+            fullWidth
+            multiline
+            rows={4}
+            value={formData.description}
+            onChange={handleChange}
+            required
+            sx={{ mb: 2 }}
+          />
+
+          <FormControl fullWidth sx={{ mb: 3 }}>
+            <InputLabel>Category</InputLabel>
+            <Select
+              name="category"
+              value={formData.category}
+              label="Category"
+              onChange={handleChange}
+              required
+            >
+              {Object.keys(workflowTemplates).map((key) => (
+                <MenuItem key={key} value={key}>
+                  {key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <Button type="submit" variant="contained" size="large">
+            Submit Request
+          </Button>
+        </form>
       </Paper>
     </Box>
   );
