@@ -9,17 +9,31 @@ import {
   Paper,
   Tabs,
   Tab,
+  List,
+  ListItem,
+  ListItemText,
 } from "@mui/material";
 
 const dummyRequest = {
-  id: 101,
-  title: "Install Adobe Photoshop",
-  description: "User requires Photoshop installed for design tasks.",
+  id: 1,
+  title: "Software Installation Request",
+  description: "Requesting installation of Adobe Photoshop.",
+  category: "Software",
   status: "Open",
-  category: "Software Installation",
-  requester: "Alice Smith",
-  createdAt: "2024-05-05",
-  updatedAt: "2024-05-06",
+  created: "2024-05-25",
+  updated: "2024-05-26",
+  tasks: [
+    {
+      title: "Verify software license",
+      assignee: "Licensing Team",
+      status: "In Progress",
+    },
+    {
+      title: "Install software",
+      assignee: "Desktop Support",
+      status: "Not Started",
+    },
+  ],
 };
 
 const ServiceRequestDetail = () => {
@@ -56,13 +70,10 @@ const ServiceRequestDetail = () => {
           <strong>Category:</strong> {dummyRequest.category}
         </Typography>
         <Typography variant="body2">
-          <strong>Requester:</strong> {dummyRequest.requester}
+          <strong>Created:</strong> {dummyRequest.created}
         </Typography>
         <Typography variant="body2">
-          <strong>Created:</strong> {dummyRequest.createdAt}
-        </Typography>
-        <Typography variant="body2">
-          <strong>Last Updated:</strong> {dummyRequest.updatedAt}
+          <strong>Last Updated:</strong> {dummyRequest.updated}
         </Typography>
       </Paper>
 
@@ -71,6 +82,7 @@ const ServiceRequestDetail = () => {
         <Tab label="Comments" />
         <Tab label="Attachments" />
         <Tab label="Actions" />
+        <Tab label="Tasks" />
       </Tabs>
 
       <Box sx={{ mt: 2 }}>
@@ -78,6 +90,18 @@ const ServiceRequestDetail = () => {
         {tab === 1 && <Typography variant="body2">[Comments go here]</Typography>}
         {tab === 2 && <Typography variant="body2">[Attachments go here]</Typography>}
         {tab === 3 && <Typography variant="body2">[Actions go here]</Typography>}
+        {tab === 4 && (
+          <List>
+            {dummyRequest.tasks.map((task, index) => (
+              <ListItem key={index} sx={{ pl: 0 }}>
+                <ListItemText
+                  primary={`${task.title} — ${task.status}`}
+                  secondary={`Assignee: ${task.assignee}`}
+                />
+              </ListItem>
+            ))}
+          </List>
+        )}
       </Box>
     </Box>
   );
