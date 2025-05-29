@@ -19,7 +19,8 @@ import Loading from "./pages/Loading";
 import NewIncident from "./pages/NewIncident";
 import NotFound from "./pages/NotFound";
 import IncidentDetail from "./pages/IncidentDetail";
-import NewServiceRequest from "./pages/NewServiceRequest"; // ✅ Added
+import NewServiceRequest from "./pages/NewServiceRequest";
+import ServiceRequestDetail from "./pages/ServiceRequestDetail";
 
 // Self-Service Portal
 import SelfServiceLayout from "./layouts/SelfServiceLayout";
@@ -30,6 +31,8 @@ import SelfServiceKnowledgeBase from "./pages/SelfService/KnowledgeBase";
 import ServiceCatalog from "./pages/SelfService/ServiceCatalog";
 import Checkout from "./pages/SelfService/Checkout";
 import Confirmation from "./pages/SelfService/Confirmation";
+
+import PrivateRoute from "./components/PrivateRoute";
 
 function App() {
   return (
@@ -74,8 +77,9 @@ function App() {
             <Route path="profile" element={<UserProfile />} />
             <Route path="settings" element={<Settings />} />
             <Route path="new-incident" element={<NewIncident />} />
-            <Route path="new-service-request" element={<NewServiceRequest />} /> {/* ✅ Added */}
+            <Route path="new-service-request" element={<NewServiceRequest />} />
             <Route path="incidents/:id" element={<IncidentDetail />} />
+            <Route path="service-request/:id" element={<ServiceRequestDetail />} />
           </Route>
 
           {/* 404 Fallback */}
