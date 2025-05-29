@@ -23,7 +23,7 @@ import { useNavigate } from "react-router-dom";
 
 const testRequests = Array.from({ length: 50 }, (_, i) => ({
   id: i + 1,
-  title: `Service Request ${i + 1}`,
+  title: `Request ${i + 1}`,
   description: `This is a sample description for service request number ${i + 1}.`,
   category: ["Access", "Hardware", "Software"][i % 3],
   status: ["Open", "In Progress", "Completed"][i % 3],
@@ -48,7 +48,7 @@ const ServiceRequests = () => {
       setExportType(type);
       setPreviewOpen(true);
     } else if (type === "new") {
-      navigate("/raise-service-request");
+      navigate("/new-service-request");
     }
     handleMenuClose();
   };
@@ -104,7 +104,7 @@ const ServiceRequests = () => {
             key={request.id}
             sx={{
               background: "#f5f8fe",
-              borderLeft: "5px solid #295cb3",
+              borderLeft: "5px solid #2b7a78",
               p: 2,
               borderRadius: 1.5,
               cursor: "pointer",
