@@ -1,6 +1,4 @@
-// src/pages/IncidentDetail.js
-
-import React, { useState } from "react";
+import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -11,10 +9,8 @@ import {
   Paper,
   Tabs,
   Tab,
+  TextField,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent
 } from "@mui/material";
 import ComputerIcon from "@mui/icons-material/Computer";
 
@@ -29,81 +25,18 @@ const dummyIncident = {
   updatedAt: "2024-05-03",
 };
 
-const RemoteViewer = () => {
-  const [videoRef] = useState(React.createRef());
-
-  React.useEffect(() => {
-    const viewerId = `viewer_${Math.random().toString(36).substring(2, 15)}`;
-    const socket = new WebSocket("wss://webrtc-signaling-server.fly.dev/ws");
-
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-    });
-
-    pc.ontrack = (event) => {
-      if (videoRef.current) {
-        videoRef.current.srcObject = event.streams[0];
-      }
-    };
-
-    socket.onopen = () => {
-      socket.send(JSON.stringify({ type: "register", role: "viewer", id: viewerId }));
-      const offerHandler = async () => {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        socket.send(
-          JSON.stringify({
-            type: "offer",
-            to: "agent01",
-            from: viewerId,
-            sdp: offer.sdp,
-          })
-        );
-      };
-      offerHandler();
-    };
-
-    socket.onmessage = async (event) => {
-      const msg = JSON.parse(event.data);
-      if (msg.type === "answer") {
-        await pc.setRemoteDescription({ type: "answer", sdp: msg.sdp });
-      } else if (msg.type === "candidate") {
-        await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
-      }
-    };
-
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        socket.send(
-          JSON.stringify({
-            type: "candidate",
-            to: "agent01",
-            from: viewerId,
-            candidate: event.candidate,
-          })
-        );
-      }
-    };
-  }, [videoRef]);
-
-  return (
-    <video
-      ref={videoRef}
-      autoPlay
-      playsInline
-      controls={false}
-      style={{ width: "100%", height: "100%", background: "black" }}
-    />
-  );
-};
-
 const IncidentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [tab, setTab] = useState(0);
-  const [openViewer, setOpenViewer] = useState(false);
+  const [tab, setTab] = React.useState(0);
+  const [deviceName, setDeviceName] = React.useState("");
 
   const handleTabChange = (e, newValue) => setTab(newValue);
+
+  const handleOpenViewer = () => {
+    const viewerUrl = `/remote-viewer.html?device=${encodeURIComponent(deviceName)}`;
+    window.open(viewerUrl, "RemoteAccess", "width=1024,height=768");
+  };
 
   return (
     <Box sx={{ px: 3, py: 2 }}>
@@ -113,9 +46,6 @@ const IncidentDetail = () => {
 
       <Typography variant="h5" sx={{ mt: 2 }}>
         {dummyIncident.title} <Chip label={dummyIncident.status} color="primary" sx={{ ml: 2 }} />
-        <IconButton color="primary" onClick={() => setOpenViewer(true)} sx={{ ml: 2 }}>
-          <ComputerIcon />
-        </IconButton>
       </Typography>
       <Typography variant="body2" color="text.secondary">
         Incident ID: #{id}
@@ -143,6 +73,24 @@ const IncidentDetail = () => {
         <Typography variant="body2">
           <strong>Last Updated:</strong> {dummyIncident.updatedAt}
         </Typography>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
+          <TextField
+            size="small"
+            label="Asset Tag / Device Name"
+            value={deviceName}
+            onChange={(e) => setDeviceName(e.target.value)}
+            sx={{ mr: 2 }}
+          />
+          <IconButton
+            color="primary"
+            onClick={handleOpenViewer}
+            disabled={!deviceName.trim()}
+            title="Connect to Device"
+          >
+            <ComputerIcon />
+          </IconButton>
+        </Box>
       </Paper>
 
       <Tabs value={tab} onChange={handleTabChange} sx={{ mt: 3 }}>
@@ -158,15 +106,6 @@ const IncidentDetail = () => {
         {tab === 2 && <Typography variant="body2">[Attachments go here]</Typography>}
         {tab === 3 && <Typography variant="body2">[Actions go here]</Typography>}
       </Box>
-
-      <Dialog open={openViewer} onClose={() => setOpenViewer(false)} maxWidth="lg" fullWidth>
-        <DialogTitle>Remote Access - agent01</DialogTitle>
-        <DialogContent>
-          <Box sx={{ height: "70vh" }}>
-            <RemoteViewer />
-          </Box>
-        </DialogContent>
-      </Dialog>
     </Box>
   );
 };
