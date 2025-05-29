@@ -21,12 +21,12 @@ import {
 import ExportPreviewModal from "../components/ExportPreviewModal";
 import { useNavigate } from "react-router-dom";
 
-const testRequests = Array.from({ length: 50 }, (_, i) => ({
+const testServiceRequests = Array.from({ length: 50 }, (_, i) => ({
   id: i + 1,
-  title: `Request ${i + 1}`,
+  title: `Service Request ${i + 1}`,
   description: `This is a sample description for service request number ${i + 1}.`,
-  category: ["Access", "Hardware", "Software"][i % 3],
-  status: ["Open", "In Progress", "Completed"][i % 3],
+  category: ["Software", "Access", "Hardware"][i % 3],
+  status: ["Open", "Pending", "Completed"][i % 3],
   created: "2024-05-16 10:00",
 }));
 
@@ -54,9 +54,9 @@ const ServiceRequests = () => {
   };
 
   const handleExportConfirm = () => {
-    if (exportType === "csv") exportToCSV(testRequests, exportTitle);
-    if (exportType === "xlsx") exportToXLSX(testRequests, exportTitle);
-    if (exportType === "pdf") exportToPDF(testRequests, exportTitle);
+    if (exportType === "csv") exportToCSV(testServiceRequests, exportTitle);
+    if (exportType === "xlsx") exportToXLSX(testServiceRequests, exportTitle);
+    if (exportType === "pdf") exportToPDF(testServiceRequests, exportTitle);
     setPreviewOpen(false);
   };
 
@@ -99,27 +99,27 @@ const ServiceRequests = () => {
       </Box>
 
       <Box sx={{ display: "flex", flexDirection: "column", gap: 2, px: 2, py: 2 }}>
-        {testRequests.map((request) => (
+        {testServiceRequests.map((req) => (
           <Paper
-            key={request.id}
+            key={req.id}
             sx={{
               background: "#f5f8fe",
-              borderLeft: "5px solid #2b7a78",
+              borderLeft: "5px solid #00aaff",
               p: 2,
               borderRadius: 1.5,
               cursor: "pointer",
               boxShadow: "0 1px 6px rgba(20,40,80,0.03)",
             }}
-            onClick={() => navigate(`/service-requests/${request.id}`)}
+            onClick={() => navigate(`/service-requests/${req.id}`)}
           >
             <Typography sx={{ fontSize: "0.95rem", color: "#456", mb: 1 }}>
-              <strong>#{request.id}</strong> • {request.category}
+              <strong>#{req.id}</strong> • {req.category}
               <Chip
-                label={request.status}
+                label={req.status}
                 sx={{
                   ml: 1,
                   bgcolor: "#e2e8f0",
-                  color: "#2b5ca4",
+                  color: "#0077aa",
                   fontSize: "0.85em",
                   height: "20px",
                   fontWeight: 500,
@@ -127,12 +127,12 @@ const ServiceRequests = () => {
                 }}
               />
             </Typography>
-            <Typography variant="h6">{request.title}</Typography>
+            <Typography variant="h6">{req.title}</Typography>
             <Typography variant="body2" sx={{ mt: 1 }}>
-              {request.description}
+              {req.description}
             </Typography>
             <Typography sx={{ fontSize: "0.92em", color: "#789", mt: 1 }}>
-              Created: {request.created}
+              Created: {req.created}
             </Typography>
           </Paper>
         ))}
@@ -145,7 +145,7 @@ const ServiceRequests = () => {
         exportTitle={exportTitle}
         setExportTitle={setExportTitle}
         exportType={exportType || "file"}
-        recordCount={testRequests.length}
+        recordCount={testServiceRequests.length}
       />
     </Box>
   );
