@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, Button, Typography, Paper, TextField } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import createServiceRequestWithTasks from "../utils/createServiceRequestWithTasks";
+import { createServiceRequestWithTasks } from "../utils/createServiceRequestWithTasks";
 
 const NewServiceRequest = () => {
   const navigate = useNavigate();
