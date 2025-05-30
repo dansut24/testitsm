@@ -28,6 +28,7 @@ import ProblemDetail from "./pages/ProblemDetail";
 import AssetDetail from "./pages/AssetDetail";
 import ArticleDetail from "./pages/ArticleDetail";
 import Announcements from "./pages/Announcements";
+import WorkScheduler from "./pages/WorkScheduler";
 
 // Self-Service Portal
 import SelfServiceLayout from "./layouts/SelfServiceLayout";
@@ -96,6 +97,7 @@ function App() {
             <Route path="assets/:id" element={<AssetDetail />} />
             <Route path="knowledge-base/:id" element={<ArticleDetail />} />
             <Route path="announcements" element={<Announcements />} />
+            <Route path="work-scheduler" element={<WorkScheduler />} />
           </Route>
 
           {/* 404 Fallback */}
