@@ -18,7 +18,7 @@ import GitHubIcon from "@mui/icons-material/GitHub";
 import BusinessIcon from "@mui/icons-material/Business";
 import logo from "../assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
 import { useThemeMode } from "../context/ThemeContext";
-import supabase from "../supabaseClient";
+import { supabase } from "../supabaseClient";
 
 const Login = () => {
   const [formData, setFormData] = useState({ username: "", password: "" });
