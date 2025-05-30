@@ -24,3 +24,17 @@ export const getSlaDueDate = (createdAt, priority) => {
 export const isSlaBreached = (dueDate) => {
   return new Date() > new Date(dueDate);
 };
+
+export const getSlaStatus = (dueDate) => {
+  const due = new Date(dueDate);
+  const now = new Date();
+  const diff = due - now;
+
+  if (diff <= 0) return "Overdue";
+
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 60) return `Due in ${minutes}m`;
+
+  const hours = Math.floor(minutes / 60);
+  return `Due in ${hours}h`;
+};
