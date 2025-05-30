@@ -17,6 +17,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import HistoryIcon from "@mui/icons-material/History";
 import CloseIcon from "@mui/icons-material/Close";
 import NotificationDrawer from "./NotificationDrawer"; // at top
+import UserActivityLogDrawer from "../components/UserActivityLogDrawer";
 
 const Navbar = ({
   sidebarWidth,
@@ -72,13 +73,10 @@ const Navbar = ({
       ),
       notifications: (
   <NotificationDrawer />
+),     
+activity: (
+  <UserActivityLogDrawer />
 ),
-      activity: (
-        <>
-          <Typography variant="h6">Activity Log</Typography>
-          <Typography variant="body2" sx={{ mt: 1 }}>Recent user actions will appear here.</Typography>
-        </>
-      ),
       help: (
         <>
           <Typography variant="h6">Help</Typography>
