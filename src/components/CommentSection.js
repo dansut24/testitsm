@@ -12,7 +12,7 @@ import {
   ListItemText,
   Divider,
 } from "@mui/material";
-import MarkdownEditor from '@uiw/react-markdown-editor';
+import MarkdownEditor from '@uiw/react-md-editor';
 
 const CommentSection = ({ comments, onAddComment }) => {
   const [editorValue, setEditorValue] = useState("");
