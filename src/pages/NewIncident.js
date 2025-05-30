@@ -7,9 +7,9 @@ import {
   CircularProgress,
   Paper,
   Fade,
-  MenuItem
+  MenuItem,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom"; // ✅ Add this
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
 const StepIndicator = ({ step, active }) => (
@@ -36,8 +36,12 @@ const StepIndicator = ({ step, active }) => (
   </Box>
 );
 
+const categoryOptions = ["Hardware", "Software", "Network", "Access", "Other"];
+
+const priorityOptions = ["Low", "Medium", "High", "Critical"];
+
 const NewIncident = () => {
-  const navigate = useNavigate(); // ✅ Add this
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [customerQuery, setCustomerQuery] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -46,7 +50,7 @@ const NewIncident = () => {
     description: "",
     category: "",
     priority: "",
-    asset_tag: ""
+    asset_tag: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -58,35 +62,43 @@ const NewIncident = () => {
 
   const handleSubmit = async () => {
     setSubmitting(true);
+    setError("");
+
+    if (!formData.title || !formData.description || !formData.category || !formData.priority) {
+      setError("Please complete all required fields.");
+      setSubmitting(false);
+      return;
+    }
 
     try {
-      // Get next reference from Supabase function
       const { data: refData, error: refErr } = await supabase.rpc("get_next_incident_reference");
       if (refErr) throw refErr;
 
       const reference = refData;
+      const user = JSON.parse(localStorage.getItem("user"));
 
-      const { data, error } = await supabase
+      const { data, error: insertError } = await supabase
         .from("incidents")
-    .insert([
-  {
-    title: formData.title,
-    description: formData.description,
-    priority: formData.priority,
-    reference,
-    customer_name: selectedCustomer.name,
-    submitted_by: JSON.parse(localStorage.getItem("user"))?.username || "unknown"
-  },
-])
+        .insert([
+          {
+            title: formData.title,
+            description: formData.description,
+            category: formData.category,
+            priority: formData.priority,
+            reference,
+            asset_tag: formData.asset_tag || null,
+            customer_name: selectedCustomer?.name || "",
+            submitted_by: user?.username || "unknown",
+          },
+        ])
         .select()
         .single();
 
-      if (error) throw error;
+      if (insertError) throw insertError;
 
       navigate(`/incidents/${data.id}`, { state: { tabName: reference } });
     } catch (err) {
-      console.error("Failed to raise incident:", err.message);
-      setError(err.message || "Failed to raise incident");
+      setError(err.message);
     } finally {
       setSubmitting(false);
     }
@@ -133,6 +145,7 @@ const NewIncident = () => {
               Step 2: Incident Details
             </Typography>
             <TextField
+              required
               fullWidth
               label="Incident Title"
               value={formData.title}
@@ -140,6 +153,7 @@ const NewIncident = () => {
               sx={{ mb: 2 }}
             />
             <TextField
+              required
               fullWidth
               multiline
               rows={4}
@@ -149,13 +163,22 @@ const NewIncident = () => {
               sx={{ mb: 2 }}
             />
             <TextField
+              required
               fullWidth
+              select
               label="Category"
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               sx={{ mb: 2 }}
-            />
+            >
+              {categoryOptions.map((cat) => (
+                <MenuItem key={cat} value={cat}>
+                  {cat}
+                </MenuItem>
+              ))}
+            </TextField>
             <TextField
+              required
               fullWidth
               select
               label="Priority"
@@ -163,10 +186,11 @@ const NewIncident = () => {
               onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
               sx={{ mb: 2 }}
             >
-              <MenuItem value="Low">Low</MenuItem>
-              <MenuItem value="Medium">Medium</MenuItem>
-              <MenuItem value="High">High</MenuItem>
-              <MenuItem value="Critical">Critical</MenuItem>
+              {priorityOptions.map((level) => (
+                <MenuItem key={level} value={level}>
+                  {level}
+                </MenuItem>
+              ))}
             </TextField>
             <TextField
               fullWidth
@@ -175,13 +199,13 @@ const NewIncident = () => {
               onChange={(e) => setFormData({ ...formData, asset_tag: e.target.value })}
               sx={{ mb: 2 }}
             />
-            {error && <Typography color="error">{error}</Typography>}
-            <Button
-              variant="contained"
-              onClick={handleSubmit}
-              disabled={submitting}
-            >
-              {submitting ? <CircularProgress size={20} color="inherit" /> : "Submit"}
+            {error && (
+              <Typography color="error" sx={{ mb: 2 }}>
+                {error}
+              </Typography>
+            )}
+            <Button variant="contained" fullWidth onClick={handleSubmit} disabled={submitting}>
+              {submitting ? <CircularProgress size={20} color="inherit" /> : "Submit Incident"}
             </Button>
           </Paper>
         </Box>
