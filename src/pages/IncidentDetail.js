@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -11,28 +11,36 @@ import {
   Tab,
   TextField,
   IconButton,
+  CircularProgress,
 } from "@mui/material";
 import ComputerIcon from "@mui/icons-material/Computer";
 import CommentSection from "../components/CommentSection";
-import { getSlaDueDate, getSlaStatus } from "../utils/slaUtils"; // 🔹 Added SLA imports
-
-const dummyIncident = {
-  id: 1,
-  title: "Printer not working",
-  description: "The office printer is jammed and not responding.",
-  status: "In Progress",
-  priority: "High",
-  assignee: "John Doe",
-  createdAt: "2024-05-01T08:00:00Z",
-  updatedAt: "2024-05-03T12:00:00Z",
-};
+import { getSlaDueDate, getSlaStatus } from "../utils/slaUtils";
+import supabase from "../supabaseClient";
 
 const IncidentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [tab, setTab] = React.useState(0);
-  const [deviceName, setDeviceName] = React.useState("");
-  const [comments, setComments] = React.useState([]);
+  const [tab, setTab] = useState(0);
+  const [deviceName, setDeviceName] = useState("");
+  const [comments, setComments] = useState([]);
+  const [incident, setIncident] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchIncident = async () => {
+      const { data, error } = await supabase
+        .from("incidents")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (!error) setIncident(data);
+      setLoading(false);
+    };
+
+    fetchIncident();
+  }, [id]);
 
   const handleTabChange = (e, newValue) => setTab(newValue);
 
@@ -45,7 +53,23 @@ const IncidentDetail = () => {
     setComments((prev) => [...prev, newComment]);
   };
 
-  const slaDueDate = getSlaDueDate(dummyIncident.createdAt, dummyIncident.priority);
+  if (loading) {
+    return (
+      <Box sx={{ p: 4, textAlign: "center" }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!incident) {
+    return (
+      <Box sx={{ p: 4 }}>
+        <Typography color="error">Incident not found.</Typography>
+      </Box>
+    );
+  }
+
+  const slaDueDate = getSlaDueDate(incident.created_at, incident.priority);
   const slaStatus = getSlaStatus(slaDueDate);
 
   return (
@@ -55,7 +79,7 @@ const IncidentDetail = () => {
       </Button>
 
       <Typography variant="h5" sx={{ mt: 2 }}>
-        {dummyIncident.title} <Chip label={dummyIncident.status} color="primary" sx={{ ml: 2 }} />
+        {incident.title} <Chip label={incident.status} color="primary" sx={{ ml: 2 }} />
       </Typography>
       <Typography variant="body2" color="text.secondary">
         Incident ID: #{id}
@@ -66,22 +90,22 @@ const IncidentDetail = () => {
           Description
         </Typography>
         <Typography variant="body2" sx={{ mb: 2 }}>
-          {dummyIncident.description}
+          {incident.description}
         </Typography>
 
         <Divider sx={{ my: 2 }} />
 
         <Typography variant="body2">
-          <strong>Priority:</strong> {dummyIncident.priority}
+          <strong>Priority:</strong> {incident.priority}
         </Typography>
         <Typography variant="body2">
-          <strong>Assignee:</strong> {dummyIncident.assignee}
+          <strong>Assignee:</strong> {incident.assignee || "-"}
         </Typography>
         <Typography variant="body2">
-          <strong>Created:</strong> {dummyIncident.createdAt}
+          <strong>Created:</strong> {new Date(incident.created_at).toLocaleString()}
         </Typography>
         <Typography variant="body2">
-          <strong>Last Updated:</strong> {dummyIncident.updatedAt}
+          <strong>Last Updated:</strong> {new Date(incident.updated_at).toLocaleString()}
         </Typography>
         <Typography variant="body2">
           <strong>SLA:</strong> {slaStatus} (Due: {new Date(slaDueDate).toLocaleString()})
