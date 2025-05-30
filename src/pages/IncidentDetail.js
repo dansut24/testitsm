@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import ComputerIcon from "@mui/icons-material/Computer";
 import CommentSection from "../components/CommentSection";
+import { getSlaDueDate, getSlaStatus } from "../utils/slaUtils"; // 🔹 Added SLA imports
 
 const dummyIncident = {
   id: 1,
@@ -22,8 +23,8 @@ const dummyIncident = {
   status: "In Progress",
   priority: "High",
   assignee: "John Doe",
-  createdAt: "2024-05-01",
-  updatedAt: "2024-05-03",
+  createdAt: "2024-05-01T08:00:00Z",
+  updatedAt: "2024-05-03T12:00:00Z",
 };
 
 const IncidentDetail = () => {
@@ -31,7 +32,7 @@ const IncidentDetail = () => {
   const navigate = useNavigate();
   const [tab, setTab] = React.useState(0);
   const [deviceName, setDeviceName] = React.useState("");
-  const [comments, setComments] = React.useState([]); // ✅ State for comments
+  const [comments, setComments] = React.useState([]);
 
   const handleTabChange = (e, newValue) => setTab(newValue);
 
@@ -43,6 +44,9 @@ const IncidentDetail = () => {
   const handleAddComment = (newComment) => {
     setComments((prev) => [...prev, newComment]);
   };
+
+  const slaDueDate = getSlaDueDate(dummyIncident.createdAt, dummyIncident.priority);
+  const slaStatus = getSlaStatus(slaDueDate);
 
   return (
     <Box sx={{ px: 3, py: 2 }}>
@@ -78,6 +82,9 @@ const IncidentDetail = () => {
         </Typography>
         <Typography variant="body2">
           <strong>Last Updated:</strong> {dummyIncident.updatedAt}
+        </Typography>
+        <Typography variant="body2">
+          <strong>SLA:</strong> {slaStatus} (Due: {new Date(slaDueDate).toLocaleString()})
         </Typography>
 
         <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
