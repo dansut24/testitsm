@@ -31,12 +31,17 @@ const IncidentDetail = () => {
   const navigate = useNavigate();
   const [tab, setTab] = React.useState(0);
   const [deviceName, setDeviceName] = React.useState("");
+  const [comments, setComments] = React.useState([]); // ✅ State for comments
 
   const handleTabChange = (e, newValue) => setTab(newValue);
 
   const handleOpenViewer = () => {
     const viewerUrl = `/remote-viewer.html?device=${encodeURIComponent(deviceName)}`;
     window.open(viewerUrl, "RemoteAccess", "width=1024,height=768");
+  };
+
+  const handleAddComment = (newComment) => {
+    setComments((prev) => [...prev, newComment]);
   };
 
   return (
@@ -103,7 +108,9 @@ const IncidentDetail = () => {
 
       <Box sx={{ mt: 2 }}>
         {tab === 0 && <Typography variant="body2">[Timeline goes here]</Typography>}
-        {tab === 1 && <CommentSection />}
+        {tab === 1 && (
+          <CommentSection comments={comments} onAddComment={handleAddComment} />
+        )}
         {tab === 2 && <Typography variant="body2">[Attachments go here]</Typography>}
         {tab === 3 && <Typography variant="body2">[Actions go here]</Typography>}
       </Box>
