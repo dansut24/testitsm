@@ -1,5 +1,3 @@
-// src/pages/NewIncident.js
-
 import React, { useState } from "react";
 import {
   Box,
@@ -11,6 +9,7 @@ import {
   Fade,
   MenuItem
 } from "@mui/material";
+import { useNavigate } from "react-router-dom"; // ✅ Add this
 import { supabase } from "../supabaseClient";
 
 const StepIndicator = ({ step, active }) => (
@@ -38,6 +37,7 @@ const StepIndicator = ({ step, active }) => (
 );
 
 const NewIncident = () => {
+  const navigate = useNavigate(); // ✅ Add this
   const [step, setStep] = useState(1);
   const [customerQuery, setCustomerQuery] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -57,41 +57,42 @@ const NewIncident = () => {
   };
 
   const handleSubmit = async () => {
-  setSubmitting(true);
+    setSubmitting(true);
 
-  try {
-    // Get next reference
-    const { data: refData, error: refErr } = await supabase.rpc("get_next_incident_reference");
-    if (refErr) throw refErr;
+    try {
+      // Get next reference from Supabase function
+      const { data: refData, error: refErr } = await supabase.rpc("get_next_incident_reference");
+      if (refErr) throw refErr;
 
-    const reference = refData;
+      const reference = refData;
 
-    // Insert incident with the generated reference
-    const { data, error } = await supabase
-      .from("incidents")
-      .insert([
-        {
-          title: formData.title,
-          description: formData.description,
-          priority: formData.priority,
-          reference,
-          customer_name: selectedCustomer.name,
-        },
-      ])
-      .select()
-      .single();
+      const { data, error } = await supabase
+        .from("incidents")
+        .insert([
+          {
+            title: formData.title,
+            description: formData.description,
+            category: formData.category,
+            priority: formData.priority,
+            asset_tag: formData.asset_tag,
+            reference,
+            customer_name: selectedCustomer.name,
+          },
+        ])
+        .select()
+        .single();
 
-    if (error) throw error;
+      if (error) throw error;
 
-    // Redirect and set tab title using reference
-    navigate(`/incidents/${data.id}`, { state: { tabName: reference } });
-  } catch (err) {
-    console.error("Failed to raise incident:", err.message);
-  } finally {
-    setSubmitting(false);
-  }
-};
-  
+      navigate(`/incidents/${data.id}`, { state: { tabName: reference } });
+    } catch (err) {
+      console.error("Failed to raise incident:", err.message);
+      setError(err.message || "Failed to raise incident");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Box sx={{ px: 2, py: 4, maxWidth: 600, mx: "auto", position: "relative" }}>
       <Typography variant="h5" gutterBottom>
