@@ -9,7 +9,9 @@ import {
   CircularProgress,
   Paper,
   Fade,
+  MenuItem
 } from "@mui/material";
+import { supabase } from "../supabaseClient";
 
 const StepIndicator = ({ step, active }) => (
   <Box
@@ -39,20 +41,44 @@ const NewIncident = () => {
   const [step, setStep] = useState(1);
   const [customerQuery, setCustomerQuery] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [formData, setFormData] = useState({ title: "", description: "", priority: "" });
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    category: "",
+    priority: "",
+    asset_tag: ""
+  });
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const handleCustomerSearch = () => {
     setSelectedCustomer({ name: customerQuery });
     setStep(2);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
+    setError("");
+    const { title, description, category, priority, asset_tag } = formData;
+
+    const { error } = await supabase.from("incidents").insert([
+      {
+        title,
+        description,
+        category,
+        priority,
+        submitted_by: selectedCustomer.name,
+        asset_tag
+      },
+    ]);
+
+    setSubmitting(false);
+
+    if (error) {
+      setError("Failed to submit incident. Please try again.");
+    } else {
       alert("Incident submitted!");
-    }, 2000);
+    }
   };
 
   return (
@@ -113,11 +139,32 @@ const NewIncident = () => {
             />
             <TextField
               fullWidth
+              label="Category"
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              select
               label="Priority"
               value={formData.priority}
               onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
               sx={{ mb: 2 }}
+            >
+              <MenuItem value="Low">Low</MenuItem>
+              <MenuItem value="Medium">Medium</MenuItem>
+              <MenuItem value="High">High</MenuItem>
+              <MenuItem value="Critical">Critical</MenuItem>
+            </TextField>
+            <TextField
+              fullWidth
+              label="Asset Tag (optional)"
+              value={formData.asset_tag}
+              onChange={(e) => setFormData({ ...formData, asset_tag: e.target.value })}
+              sx={{ mb: 2 }}
             />
+            {error && <Typography color="error">{error}</Typography>}
             <Button
               variant="contained"
               onClick={handleSubmit}
