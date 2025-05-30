@@ -14,6 +14,7 @@ import Reports from "./pages/Reports";
 import Approvals from "./pages/Approvals";
 import UserProfile from "./pages/UserProfile";
 import Settings from "./pages/Settings";
+import AdminSettings from "./pages/AdminSettings";
 import Login from "./pages/Login";
 import Loading from "./pages/Loading";
 import NewIncident from "./pages/NewIncident";
@@ -85,6 +86,7 @@ function App() {
             <Route path="approvals" element={<Approvals />} />
             <Route path="profile" element={<UserProfile />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="admin-settings" element={<AdminSettings />} />
             <Route path="new-incident" element={<NewIncident />} />
             <Route path="new-service-request" element={<NewServiceRequest />} />
             <Route path="new-change" element={<NewChange />} />
