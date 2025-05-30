@@ -1,69 +1,47 @@
+// src/pages/Assets.js
 import React, { useState } from "react";
 import {
   Box,
   Typography,
   Paper,
   Chip,
-  Divider,
   TextField,
   InputAdornment,
   IconButton,
   Menu,
   MenuItem,
 } from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import SearchIcon from "@mui/icons-material/Search";
+import { useNavigate } from "react-router-dom";
 
-const sampleAssets = [
-  {
-    id: 1,
-    assetTag: "ASSET-001",
-    serialNumber: "SN12345678",
-    model: "Latitude 5420",
-    manufacturer: "Dell",
-    status: "In Use",
-    assignedTo: "Alice Johnson",
-    location: "London Office",
-  },
-  {
-    id: 2,
-    assetTag: "ASSET-002",
-    serialNumber: "SN87654321",
-    model: "MacBook Pro 16",
-    manufacturer: "Apple",
-    status: "Available",
-    assignedTo: "",
-    location: "Birmingham Office",
-  },
-  {
-    id: 3,
-    assetTag: "ASSET-003",
-    serialNumber: "SN56473829",
-    model: "EliteBook 850",
-    manufacturer: "HP",
-    status: "In Repair",
-    assignedTo: "Tom Harding",
-    location: "London Office",
-  },
-];
+const testAssets = Array.from({ length: 20 }, (_, i) => ({
+  id: i + 1,
+  name: `Asset ${i + 1}`,
+  type: ["Laptop", "Desktop", "Printer"][i % 3],
+  status: ["In Use", "Spare", "Faulty"][i % 3],
+  location: ["London", "Manchester", "Birmingham"][i % 3],
+}));
 
 const Assets = () => {
-  const [search, setSearch] = useState("");
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
+  const [search, setSearch] = useState("");
+  const navigate = useNavigate();
 
   const handleMenuClick = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
+  const handleMenuAction = (type) => {
+    if (type === "new") navigate("/new-asset");
+    handleMenuClose();
+  };
 
-  const filteredAssets = sampleAssets.filter(
-    (asset) =>
-      asset.assetTag.toLowerCase().includes(search.toLowerCase()) ||
-      asset.serialNumber.toLowerCase().includes(search.toLowerCase()) ||
-      asset.model.toLowerCase().includes(search.toLowerCase())
+  const filteredAssets = testAssets.filter((asset) =>
+    asset.name.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <Box sx={{ width: "100%", p: 0 }}>
+    <Box sx={{ width: "100%" }}>
       <Box
         sx={{
           px: 2,
@@ -95,9 +73,7 @@ const Assets = () => {
           <MoreVertIcon />
         </IconButton>
         <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose}>
-          <MenuItem>New Asset</MenuItem>
-          <MenuItem>Export to CSV</MenuItem>
-          <MenuItem>Export to Excel</MenuItem>
+          <MenuItem onClick={() => handleMenuAction("new")}>New Asset</MenuItem>
         </Menu>
       </Box>
 
@@ -106,32 +82,19 @@ const Assets = () => {
           <Paper
             key={asset.id}
             sx={{
-              background: "#fefefe",
-              borderLeft: "5px solid #1e88e5",
+              background: "#f5f8fe",
+              borderLeft: "5px solid #4a90e2",
               p: 2,
               borderRadius: 1.5,
               cursor: "pointer",
               boxShadow: "0 1px 6px rgba(20,40,80,0.03)",
             }}
+            onClick={() => navigate(`/assets/${asset.id}`)}
           >
-            <Typography sx={{ fontSize: "0.95rem", color: "#456", mb: 1 }}>
-              <strong>{asset.assetTag}</strong> • {asset.model} ({asset.manufacturer})
-              <Chip
-                label={asset.status}
-                sx={{
-                  ml: 1,
-                  bgcolor: "#e0e0e0",
-                  color: "#1e88e5",
-                  fontSize: "0.8em",
-                  height: "20px",
-                  fontWeight: 500,
-                  borderRadius: "10px",
-                }}
-              />
-            </Typography>
-            <Typography variant="body2">Serial Number: {asset.serialNumber}</Typography>
-            <Typography variant="body2">Assigned To: {asset.assignedTo || "Unassigned"}</Typography>
+            <Typography variant="h6">{asset.name}</Typography>
+            <Typography variant="body2">Type: {asset.type}</Typography>
             <Typography variant="body2">Location: {asset.location}</Typography>
+            <Chip label={asset.status} sx={{ mt: 1 }} />
           </Paper>
         ))}
       </Box>
