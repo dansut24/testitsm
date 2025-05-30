@@ -18,6 +18,7 @@ import HistoryIcon from "@mui/icons-material/History";
 import CloseIcon from "@mui/icons-material/Close";
 import NotificationDrawer from "./NotificationDrawer"; // at top
 import UserActivityLogDrawer from "../components/UserActivityLogDrawer";
+import ProfileDrawer from "./ProfileDrawer"; // add this import at the top
 
 const Navbar = ({
   sidebarWidth,
@@ -59,18 +60,7 @@ const Navbar = ({
 
   const renderDrawerContent = () => {
     const content = {
-      profile: (
-        <>
-          <Typography variant="h6">Profile</Typography>
-          <Typography variant="body2" sx={{ mt: 1 }}>Name: {storedUser.username}</Typography>
-          <Typography variant="body2">Email: john.doe@example.com</Typography>
-          <Typography variant="body2">Role: Admin</Typography>
-          <Box sx={{ flexGrow: 1 }} />
-          <Button variant="outlined" color="error" onClick={() => setLogoutDialogOpen(true)} sx={{ mt: 2 }}>
-            Logout
-          </Button>
-        </>
-      ),
+      profile: <ProfileDrawer onLogout={() => setLogoutDialogOpen(true)} />,
       notifications: (
   <NotificationDrawer />
 ),     
