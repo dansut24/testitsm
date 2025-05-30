@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -13,7 +13,7 @@ import {
   IconButton,
 } from "@mui/material";
 import ComputerIcon from "@mui/icons-material/Computer";
-import MDEditor from "@uiw/react-md-editor";
+import CommentSection from "../components/CommentSection";
 
 const dummyIncident = {
   id: 1,
@@ -29,9 +29,8 @@ const dummyIncident = {
 const IncidentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [tab, setTab] = useState(0);
-  const [deviceName, setDeviceName] = useState("");
-  const [comment, setComment] = useState("");
+  const [tab, setTab] = React.useState(0);
+  const [deviceName, setDeviceName] = React.useState("");
 
   const handleTabChange = (e, newValue) => setTab(newValue);
 
@@ -104,19 +103,7 @@ const IncidentDetail = () => {
 
       <Box sx={{ mt: 2 }}>
         {tab === 0 && <Typography variant="body2">[Timeline goes here]</Typography>}
-        {tab === 1 && (
-          <Box>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              Add Comment
-            </Typography>
-            <Box data-color-mode="light">
-              <MDEditor value={comment} onChange={setComment} height={200} />
-            </Box>
-            <Button variant="contained" sx={{ mt: 2 }}>
-              Submit Comment
-            </Button>
-          </Box>
-        )}
+        {tab === 1 && <CommentSection />}
         {tab === 2 && <Typography variant="body2">[Attachments go here]</Typography>}
         {tab === 3 && <Typography variant="body2">[Actions go here]</Typography>}
       </Box>
