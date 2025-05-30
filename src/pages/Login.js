@@ -18,6 +18,7 @@ import GitHubIcon from "@mui/icons-material/GitHub";
 import BusinessIcon from "@mui/icons-material/Business";
 import logo from "../assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
 import { useThemeMode } from "../context/ThemeContext";
+import users from "../data/users";
 
 const Login = () => {
   const [formData, setFormData] = useState({ username: "", password: "" });
@@ -33,18 +34,18 @@ const Login = () => {
       return;
     }
 
-    const mockUser = {
-      id: 1,
-      username: formData.username,
-      avatar_url: "",
-      roles: ["admin", "selfservice"]
-    };
+    const matchedUser = users.find(
+      (u) => u.username === formData.username && u.password === formData.password
+    );
 
-    sessionStorage.setItem("user", JSON.stringify(mockUser));
+    if (!matchedUser) {
+      setError("Invalid credentials. Please try again.");
+      return;
+    }
+
+    sessionStorage.setItem("user", JSON.stringify(matchedUser));
     sessionStorage.setItem("token", "mock-token");
-    sessionStorage.setItem("selectedRole", "admin");
-
-    // Redirect to loading page before dashboard
+    sessionStorage.setItem("selectedRole", matchedUser.roles[0]);
     navigate("/loading");
   };
 
