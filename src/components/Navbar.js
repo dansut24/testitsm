@@ -208,14 +208,15 @@ activity: (
   PaperProps={{
     sx: {
       position: "fixed",
-      zIndex: (theme) => theme.zIndex.appBar + 10, // Above the navbar
+      zIndex: (theme) => theme.zIndex.appBar + 10,
       width: isMobile ? "100%" : 320,
       height: isMobile ? "50%" : "100%",
       bottom: isMobile ? 0 : "auto",
       right: !isMobile ? 0 : "auto",
       top: !isMobile ? 0 : "auto",
-      pt: isMobile ? 2 : 6, // Add padding on top to clear navbar
       px: 2,
+      pt: 0,
+      pb: 2,
       display: "flex",
       flexDirection: "column",
       borderTopLeftRadius: isMobile ? 16 : 0,
@@ -223,20 +224,37 @@ activity: (
     },
   }}
 >
-  <Box display="flex" justifyContent="flex-end" sx={{ mb: 1 }}>
-    <IconButton
-      onClick={closeDrawer}
+  <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    {/* Fixed close button */}
+    <Box
       sx={{
-        position: "relative",
-        zIndex: (theme) => theme.zIndex.appBar + 11,
+        flexShrink: 0,
+        position: "sticky",
+        top: 0,
+        zIndex: 2,
+        backgroundColor: "background.paper",
+        pb: 1,
       }}
     >
-      <CloseIcon />
-    </IconButton>
-  </Box>
-  {renderDrawerContent()}
-</Drawer>
+      <Box display="flex" justifyContent="flex-end">
+        <IconButton
+          onClick={closeDrawer}
+          sx={{
+            position: "relative",
+            zIndex: (theme) => theme.zIndex.appBar + 11,
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </Box>
+    </Box>
 
+    {/* Scrollable content area */}
+    <Box sx={{ overflowY: "auto", flexGrow: 1 }}>
+      {renderDrawerContent()}
+    </Box>
+  </Box>
+</Drawer>
 
       <Dialog open={logoutDialogOpen} onClose={() => setLogoutDialogOpen(false)}>
         <DialogTitle>Confirm Logout</DialogTitle>
