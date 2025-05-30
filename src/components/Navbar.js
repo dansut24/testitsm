@@ -204,8 +204,8 @@ activity: (
   anchor={isMobile ? "bottom" : "right"}
   open={drawerOpen}
   onClose={closeDrawer}
-  onOpen={() => {}} // Required prop even if not used
-  disableDiscovery={!isMobile} // Enable swipe gesture only on mobile
+  onOpen={() => {}}
+  disableDiscovery={!isMobile}
   disableSwipeToOpen={!isMobile}
   PaperProps={{
     sx: {
@@ -227,6 +227,20 @@ activity: (
   }}
 >
   <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    {isMobile && (
+      <Box
+        sx={{
+          width: 40,
+          height: 4,
+          bgcolor: "#ccc",
+          borderRadius: 2,
+          mx: "auto",
+          mt: 1,
+          mb: 1,
+        }}
+      />
+    )}
+
     <Box
       sx={{
         flexShrink: 0,
