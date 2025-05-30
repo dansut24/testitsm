@@ -20,15 +20,22 @@ import {
 } from "../utils/exportUtils";
 import ExportPreviewModal from "../components/ExportPreviewModal";
 import { useNavigate } from "react-router-dom";
+import { getSlaDueDate, getSlaStatus } from "../utils/slaUtils";
 
-const testIncidents = Array.from({ length: 50 }, (_, i) => ({
-  id: i + 1,
-  title: `Incident ${i + 1}`,
-  description: `This is a sample description for incident number ${i + 1}.`,
-  category: ["Hardware", "Software", "Network"][i % 3],
-  status: ["Open", "In Progress", "Resolved"][i % 3],
-  created: "2024-05-16 10:00",
-}));
+const now = new Date();
+
+const testIncidents = Array.from({ length: 50 }, (_, i) => {
+  const createdAt = new Date(now.getTime() - i * 60 * 60 * 1000); // each 1 hour apart
+  return {
+    id: i + 1,
+    title: `Incident ${i + 1}`,
+    description: `This is a sample description for incident number ${i + 1}.`,
+    category: ["Hardware", "Software", "Network"][i % 3],
+    status: ["Open", "In Progress", "Resolved"][i % 3],
+    created: createdAt.toISOString(),
+    slaDueDate: getSlaDueDate(createdAt.toISOString(), "High"),
+  };
+});
 
 const Incidents = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -126,13 +133,25 @@ const Incidents = () => {
                   borderRadius: "10px",
                 }}
               />
+              <Chip
+                label={getSlaStatus(incident.slaDueDate)}
+                sx={{
+                  ml: 1,
+                  bgcolor: getSlaStatus(incident.slaDueDate) === "Overdue" ? "#ffe0e0" : "#e7f7ed",
+                  color: getSlaStatus(incident.slaDueDate) === "Overdue" ? "#d32f2f" : "#2e7d32",
+                  fontSize: "0.75em",
+                  height: "20px",
+                  fontWeight: 500,
+                  borderRadius: "10px",
+                }}
+              />
             </Typography>
             <Typography variant="h6">{incident.title}</Typography>
             <Typography variant="body2" sx={{ mt: 1 }}>
               {incident.description}
             </Typography>
             <Typography sx={{ fontSize: "0.92em", color: "#789", mt: 1 }}>
-              Created: {incident.created}
+              Created: {new Date(incident.created).toLocaleString()}
             </Typography>
           </Paper>
         ))}
