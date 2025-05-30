@@ -21,7 +21,7 @@ import { useThemeMode } from "../context/ThemeContext";
 import supabase from "../supabaseClient";
 
 const Login = () => {
-  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [formData, setFormData] = useState({ username: "", password: "" });
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { mode } = useThemeMode();
@@ -31,17 +31,17 @@ const Login = () => {
 
   const handleLogin = async () => {
     setError("");
+    const { username, password } = formData;
 
-    const { email, password } = formData;
-    if (!email || !password) {
-      setError("Please enter both email and password.");
+    if (!username || !password) {
+      setError("Please enter both username and password.");
       return;
     }
 
     const { data, error: loginError } = await supabase
       .from("users")
       .select("*")
-      .eq("email", email)
+      .eq("username", username)
       .eq("password", password)
       .single();
 
@@ -68,7 +68,7 @@ const Login = () => {
         alert("❌ Connection failed: " + error.message);
       } else {
         console.log("✅ Supabase connection successful:", data);
-        alert("✅ Connection successful. First user email: " + (data[0]?.email || "No users found"));
+        alert("✅ Connection successful. First user: " + (data[0]?.username || "No users found"));
       }
     } catch (err) {
       console.error("❌ Unexpected error:", err);
@@ -103,10 +103,9 @@ const Login = () => {
 
         <TextField
           fullWidth
-          label="Email"
-          name="email"
-          type="email"
-          value={formData.email}
+          label="Username"
+          name="username"
+          value={formData.username}
           onChange={handleChange}
           margin="dense"
         />
