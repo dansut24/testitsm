@@ -1,78 +1,62 @@
+// src/components/CommentSection.js
+
 import React, { useState } from "react";
-import { Box, Typography, Avatar, Button } from "@mui/material";
-import MarkdownEditor from "@uiw/react-markdown-editor";
+import {
+  Box,
+  Typography,
+  Button,
+  Avatar,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  Divider,
+} from "@mui/material";
+import MarkdownEditor from '@uiw/react-markdown-editor';
 
-const dummyComments = [
-  {
-    id: 1,
-    user: "Alice",
-    content: "This issue is being looked into.",
-    timestamp: "2025-05-25 10:15",
-  },
-  {
-    id: 2,
-    user: "Bob",
-    content: "Temporary workaround applied.",
-    timestamp: "2025-05-26 14:45",
-  },
-];
-
-const CommentSection = () => {
-  const [commentText, setCommentText] = useState("");
-  const [comments, setComments] = useState(dummyComments);
+const CommentSection = ({ comments, onAddComment }) => {
+  const [editorValue, setEditorValue] = useState("");
 
   const handlePostComment = () => {
-    if (commentText.trim()) {
-      const newComment = {
-        id: comments.length + 1,
-        user: "CurrentUser",
-        content: commentText,
-        timestamp: new Date().toISOString().slice(0, 16).replace("T", " "),
-      };
-      setComments([newComment, ...comments]);
-      setCommentText("");
-    }
+    if (!editorValue.trim()) return;
+    const newComment = {
+      id: Date.now(),
+      author: "John Doe",
+      content: editorValue,
+      timestamp: new Date().toISOString(),
+    };
+    onAddComment(newComment);
+    setEditorValue("");
   };
 
   return (
     <Box>
-      <Typography variant="subtitle1" sx={{ mb: 1 }}>
-        Add a Comment
-      </Typography>
+      <Typography variant="subtitle1" sx={{ mb: 1 }}>Add a Comment</Typography>
       <MarkdownEditor
-        value={commentText}
-        onChange={(value) => setCommentText(value)}
-        height="150px"
+        value={editorValue}
+        onChange={(val) => setEditorValue(val)}
+        height={120}
       />
-      <Button
-        onClick={handlePostComment}
-        variant="contained"
-        sx={{ mt: 2 }}
-      >
-        Post Comment
+      <Button variant="contained" sx={{ mt: 1 }} onClick={handlePostComment}>
+        Post
       </Button>
 
-      <Box sx={{ mt: 3 }}>
-        <Typography variant="subtitle1">Previous Comments</Typography>
-        {comments.map((comment) => (
-          <Box key={comment.id} sx={{ mt: 2, p: 2, bgcolor: "background.paper", borderRadius: 1, boxShadow: 1 }}>
-            <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-              <Avatar sx={{ width: 24, height: 24, mr: 1 }}>
-                {comment.user.charAt(0)}
-              </Avatar>
-              <Typography variant="body2" fontWeight="bold">
-                {comment.user}
-              </Typography>
-              <Typography variant="caption" sx={{ ml: 1 }} color="text.secondary">
-                {comment.timestamp}
-              </Typography>
-            </Box>
-            <Typography variant="body2" component="div">
-              <div dangerouslySetInnerHTML={{ __html: window.marked.parse(comment.content) }} />
-            </Typography>
-          </Box>
+      <Divider sx={{ my: 2 }} />
+
+      <Typography variant="subtitle2" sx={{ mb: 1 }}>Comments</Typography>
+      <List dense>
+        {comments.map((c) => (
+          <ListItem alignItems="flex-start" key={c.id}>
+            <ListItemAvatar>
+              <Avatar>{c.author[0]}</Avatar>
+            </ListItemAvatar>
+            <ListItemText
+              primary={c.author + " · " + new Date(c.timestamp).toLocaleString()}
+              secondary={<span dangerouslySetInnerHTML={{ __html: c.content }} />}
+            />
+          </ListItem>
         ))}
-      </Box>
+      </List>
     </Box>
   );
 };
