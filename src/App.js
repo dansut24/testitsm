@@ -37,14 +37,15 @@ function App() {
     <Router>
       <CssBaseline />
       <Box
-        sx={{
-          height: "100vh",
-          width: "100vw",
-          overflow: "hidden",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
+  sx={{
+    minHeight: "100vh",
+    width: "100vw",
+    overflowX: "hidden",
+    overflowY: "auto",
+    display: "flex",
+    flexDirection: "column",
+  }}
+>
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
