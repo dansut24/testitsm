@@ -26,7 +26,8 @@
     "file-saver": "^2.0.5",
     "react-big-calendar": "^1.6.0",
   "date-fns": "^2.30.0",
-   "@uiw/react-md-editor": "*"
+   "@uiw/react-md-editor": "*",
+      "@supabase/supabase-js": "^2.39.5"
   },
   "scripts": {
     "start": "react-scripts start",
