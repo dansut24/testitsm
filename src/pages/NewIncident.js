@@ -68,17 +68,16 @@ const NewIncident = () => {
 
       const { data, error } = await supabase
         .from("incidents")
-        .insert([
-          {
-            title: formData.title,
-            description: formData.description,
-            category: formData.category,
-            priority: formData.priority,
-            asset_tag: formData.asset_tag,
-            reference,
-            customer_name: selectedCustomer.name,
-          },
-        ])
+    .insert([
+  {
+    title: formData.title,
+    description: formData.description,
+    priority: formData.priority,
+    reference,
+    customer_name: selectedCustomer.name,
+    submitted_by: JSON.parse(localStorage.getItem("user"))?.username || "unknown"
+  },
+])
         .select()
         .single();
 
