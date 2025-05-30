@@ -26,8 +26,8 @@ import ServiceRequestDetail from "./pages/ServiceRequestDetail";
 import ChangeDetail from "./pages/ChangeDetail";
 import ProblemDetail from "./pages/ProblemDetail";
 import AssetDetail from "./pages/AssetDetail";
-import ArticleDetail from "./pages/ArticleDetail"; // ✅ Added
-import NotFound from "./pages/NotFound";
+import ArticleDetail from "./pages/ArticleDetail";
+import Announcements from "./pages/Announcements";
 
 // Self-Service Portal
 import SelfServiceLayout from "./layouts/SelfServiceLayout";
@@ -38,6 +38,8 @@ import SelfServiceKnowledgeBase from "./pages/SelfService/KnowledgeBase";
 import ServiceCatalog from "./pages/SelfService/ServiceCatalog";
 import Checkout from "./pages/SelfService/Checkout";
 import Confirmation from "./pages/SelfService/Confirmation";
+
+import NotFound from "./pages/NotFound";
 
 function App() {
   return (
@@ -73,26 +75,27 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="incidents" element={<Incidents />} />
-            <Route path="incidents/:id" element={<IncidentDetail />} />
-            <Route path="new-incident" element={<NewIncident />} />
             <Route path="service-requests" element={<ServiceRequests />} />
-            <Route path="service-requests/:id" element={<ServiceRequestDetail />} />
-            <Route path="new-service-request" element={<NewServiceRequest />} />
             <Route path="changes" element={<Changes />} />
-            <Route path="changes/:id" element={<ChangeDetail />} />
-            <Route path="new-change" element={<NewChange />} />
             <Route path="problems" element={<Problems />} />
-            <Route path="problems/:id" element={<ProblemDetail />} />
-            <Route path="new-problem" element={<NewProblem />} />
             <Route path="assets" element={<Assets />} />
-            <Route path="assets/:id" element={<AssetDetail />} />
-            <Route path="new-asset" element={<NewAsset />} />
             <Route path="knowledge-base" element={<KnowledgeBase />} />
-            <Route path="knowledge-base/:id" element={<ArticleDetail />} /> {/* ✅ Added */}
             <Route path="reports" element={<Reports />} />
             <Route path="approvals" element={<Approvals />} />
             <Route path="profile" element={<UserProfile />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="new-incident" element={<NewIncident />} />
+            <Route path="new-service-request" element={<NewServiceRequest />} />
+            <Route path="new-change" element={<NewChange />} />
+            <Route path="new-problem" element={<NewProblem />} />
+            <Route path="new-asset" element={<NewAsset />} />
+            <Route path="incidents/:id" element={<IncidentDetail />} />
+            <Route path="service-requests/:id" element={<ServiceRequestDetail />} />
+            <Route path="changes/:id" element={<ChangeDetail />} />
+            <Route path="problems/:id" element={<ProblemDetail />} />
+            <Route path="assets/:id" element={<AssetDetail />} />
+            <Route path="knowledge-base/:id" element={<ArticleDetail />} />
+            <Route path="announcements" element={<Announcements />} />
           </Route>
 
           {/* 404 Fallback */}
