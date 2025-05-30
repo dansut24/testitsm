@@ -1,68 +1,103 @@
-import React from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState } from "react";
 import {
   Box,
   Typography,
-  Button,
-  Chip,
-  Divider,
   Paper,
+  Divider,
+  IconButton,
+  TextField,
+  Button,
 } from "@mui/material";
+import ThumbUpAltIcon from "@mui/icons-material/ThumbUpAlt";
+import ThumbDownAltIcon from "@mui/icons-material/ThumbDownAlt";
 
-const dummyArticles = [
-  {
-    id: 1,
-    title: "How to reset your password",
-    category: "Accounts",
-    content: `To reset your password, go to the login screen and click on "Forgot Password". Follow the instructions sent to your email.`,
-    author: "IT Helpdesk",
-    created: "2024-03-18",
-  },
-  {
-    id: 2,
-    title: "Troubleshooting network issues",
-    category: "Network",
-    content: `If you can't connect to the internet, try restarting your router or contact support for further help.`,
-    author: "Network Admin",
-    created: "2024-04-02",
-  },
-];
+const dummyArticle = {
+  id: 1,
+  title: "How to Reset Your Password",
+  content:
+    "To reset your password, go to the login page and click on 'Forgot Password'. Follow the instructions sent to your registered email address.",
+  lastUpdated: "2024-05-01",
+};
 
 const ArticleDetail = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const article = dummyArticles.find((a) => a.id === parseInt(id));
+  const [likes, setLikes] = useState(0);
+  const [dislikes, setDislikes] = useState(0);
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState("");
 
-  if (!article) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Typography variant="h6">Article not found</Typography>
-        <Button onClick={() => navigate(-1)} sx={{ mt: 2 }}>
-          Go back
-        </Button>
-      </Box>
-    );
-  }
+  const handleLike = () => setLikes(likes + 1);
+  const handleDislike = () => setDislikes(dislikes + 1);
+
+  const handleCommentSubmit = () => {
+    if (newComment.trim()) {
+      setComments([...comments, newComment.trim()]);
+      setNewComment("");
+    }
+  };
 
   return (
     <Box sx={{ px: 3, py: 2 }}>
-      <Button variant="outlined" size="small" onClick={() => navigate(-1)}>
-        Back
-      </Button>
-
-      <Typography variant="h4" sx={{ mt: 2 }}>
-        {article.title}
-      </Typography>
-      <Chip label={article.category} size="small" sx={{ mt: 1 }} />
-      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-        By {article.author} • {article.created}
+      <Typography variant="h5" gutterBottom>
+        {dummyArticle.title}
       </Typography>
 
-      <Paper sx={{ mt: 3, p: 3 }}>
-        <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
-          {article.content}
-        </Typography>
+      <Typography variant="body2" color="text.secondary" gutterBottom>
+        Last updated: {dummyArticle.lastUpdated}
+      </Typography>
+
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Typography variant="body1">{dummyArticle.content}</Typography>
       </Paper>
+
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
+        <IconButton onClick={handleLike} color="primary">
+          <ThumbUpAltIcon />
+        </IconButton>
+        <Typography>{likes}</Typography>
+
+        <IconButton onClick={handleDislike} color="error">
+          <ThumbDownAltIcon />
+        </IconButton>
+        <Typography>{dislikes}</Typography>
+      </Box>
+
+      <Divider sx={{ my: 2 }} />
+
+      <Typography variant="h6" gutterBottom>
+        Comments
+      </Typography>
+
+      {comments.length === 0 ? (
+        <Typography variant="body2" color="text.secondary">
+          No comments yet.
+        </Typography>
+      ) : (
+        comments.map((comment, index) => (
+          <Paper key={index} sx={{ p: 2, mb: 1 }}>
+            <Typography variant="body2">{comment}</Typography>
+          </Paper>
+        ))
+      )}
+
+      <TextField
+        fullWidth
+        multiline
+        minRows={3}
+        variant="outlined"
+        placeholder="Add a comment..."
+        value={newComment}
+        onChange={(e) => setNewComment(e.target.value)}
+        sx={{ mt: 2 }}
+      />
+
+      <Button
+        variant="contained"
+        sx={{ mt: 1 }}
+        onClick={handleCommentSubmit}
+        disabled={!newComment.trim()}
+      >
+        Submit Comment
+      </Button>
     </Box>
   );
 };
