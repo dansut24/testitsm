@@ -251,17 +251,17 @@ activity: (
         pb: 1,
       }}
     >
-      <Box display="flex" justifyContent="flex-end">
-        <IconButton
-          onClick={closeDrawer}
-          sx={{
-            position: "relative",
-            zIndex: (theme) => theme.zIndex.appBar + 11,
-          }}
-        >
-          <CloseIcon />
-        </IconButton>
-      </Box>
+      <Box display="flex" justifyContent="flex-end" sx={{ display: isMobile ? "none" : "flex" }}>
+  <IconButton
+    onClick={closeDrawer}
+    sx={{
+      position: "relative",
+      zIndex: (theme) => theme.zIndex.appBar + 11,
+    }}
+  >
+    <CloseIcon />
+  </IconButton>
+</Box>
     </Box>
 
     <Box sx={{ overflowY: "auto", flexGrow: 1 }}>
