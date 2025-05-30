@@ -10,42 +10,56 @@ import {
   Divider,
   Stack,
   Box,
-  Link as MuiLink
+  Link as MuiLink,
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
 import GoogleIcon from "@mui/icons-material/Google";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import BusinessIcon from "@mui/icons-material/Business";
 import logo from "../assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
+import { createClient } from "@supabase/supabase-js";
 import { useThemeMode } from "../context/ThemeContext";
-import users from "../data/users";
+
+const supabase = createClient(
+  "https://ciilmjntkujdhxtsmsho.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpaWxtam50a3VqZGh4dHNtc2hvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg2MjUyODYsImV4cCI6MjA2NDIwMTI4Nn0.IgP77aJA-PCRMkZjbTaTEUkje_e1bA9ZP73SVDHPXhA"
+);
 
 const Login = () => {
-  const [formData, setFormData] = useState({ username: "", password: "" });
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
-  const { mode, setMode } = useThemeMode();
   const navigate = useNavigate();
+  const { mode } = useThemeMode();
 
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e) =>
+    setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handleLogin = () => {
-    if (formData.username.trim() === "" || formData.password.trim() === "") {
-      setError("Please enter username and password.");
+  const handleLogin = async () => {
+    setError("");
+
+    const { email, password } = formData;
+    if (!email || !password) {
+      setError("Please enter both email and password.");
       return;
     }
 
-    const matchedUser = users.find(
-      (u) => u.username === formData.username && u.password === formData.password
-    );
+    const { data, error: loginError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    if (!matchedUser) {
-      setError("Invalid credentials. Please try again.");
+    if (loginError) {
+      setError(loginError.message);
       return;
     }
 
-    sessionStorage.setItem("user", JSON.stringify(matchedUser));
-    sessionStorage.setItem("token", "mock-token");
-    sessionStorage.setItem("selectedRole", matchedUser.roles[0]);
+    const user = data.user;
+    const role = "admin"; // For now — placeholder until roles are fetched from DB
+
+    localStorage.setItem("token", data.session.access_token);
+    localStorage.setItem("user", JSON.stringify(user));
+    localStorage.setItem("selectedRole", role);
+
     navigate("/loading");
   };
 
@@ -76,9 +90,10 @@ const Login = () => {
 
         <TextField
           fullWidth
-          label="Username"
-          name="username"
-          value={formData.username}
+          label="Email"
+          name="email"
+          type="email"
+          value={formData.email}
           onChange={handleChange}
           margin="dense"
         />
