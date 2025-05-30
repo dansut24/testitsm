@@ -17,13 +17,8 @@ import GoogleIcon from "@mui/icons-material/Google";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import BusinessIcon from "@mui/icons-material/Business";
 import logo from "../assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
-import { createClient } from "@supabase/supabase-js";
+import supabase from "../supabaseClient";
 import { useThemeMode } from "../context/ThemeContext";
-
-const supabase = createClient(
-  "https://ciilmjntkujdhxtsmsho.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpaWxtam50a3VqZGh4dHNtc2hvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg2MjUyODYsImV4cCI6MjA2NDIwMTI4Nn0.IgP77aJA-PCRMkZjbTaTEUkje_e1bA9ZP73SVDHPXhA"
-);
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
