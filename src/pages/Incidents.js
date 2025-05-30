@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -21,21 +21,7 @@ import {
 import ExportPreviewModal from "../components/ExportPreviewModal";
 import { useNavigate } from "react-router-dom";
 import { getSlaDueDate, getSlaStatus } from "../utils/slaUtils";
-
-const now = new Date();
-
-const testIncidents = Array.from({ length: 50 }, (_, i) => {
-  const createdAt = new Date(now.getTime() - i * 60 * 60 * 1000); // each 1 hour apart
-  return {
-    id: i + 1,
-    title: `Incident ${i + 1}`,
-    description: `This is a sample description for incident number ${i + 1}.`,
-    category: ["Hardware", "Software", "Network"][i % 3],
-    status: ["Open", "In Progress", "Resolved"][i % 3],
-    created: createdAt.toISOString(),
-    slaDueDate: getSlaDueDate(createdAt.toISOString(), "High"),
-  };
-});
+import { supabase } from "../supabaseClient";
 
 const Incidents = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -44,6 +30,7 @@ const Incidents = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [exportType, setExportType] = useState("file");
   const [exportTitle, setExportTitle] = useState("Incidents Export");
+  const [incidents, setIncidents] = useState([]);
 
   const navigate = useNavigate();
 
@@ -61,11 +48,25 @@ const Incidents = () => {
   };
 
   const handleExportConfirm = () => {
-    if (exportType === "csv") exportToCSV(testIncidents, exportTitle);
-    if (exportType === "xlsx") exportToXLSX(testIncidents, exportTitle);
-    if (exportType === "pdf") exportToPDF(testIncidents, exportTitle);
+    if (exportType === "csv") exportToCSV(incidents, exportTitle);
+    if (exportType === "xlsx") exportToXLSX(incidents, exportTitle);
+    if (exportType === "pdf") exportToPDF(incidents, exportTitle);
     setPreviewOpen(false);
   };
+
+  useEffect(() => {
+    const fetchIncidents = async () => {
+      const { data, error } = await supabase.from("incidents").select("*");
+      if (data) {
+        const enriched = data.map((incident) => ({
+          ...incident,
+          slaDueDate: getSlaDueDate(incident.created, incident.priority || "Medium"),
+        }));
+        setIncidents(enriched);
+      }
+    };
+    fetchIncidents();
+  }, []);
 
   return (
     <Box sx={{ width: "100%", p: 0 }}>
@@ -106,7 +107,7 @@ const Incidents = () => {
       </Box>
 
       <Box sx={{ display: "flex", flexDirection: "column", gap: 2, px: 2, py: 2 }}>
-        {testIncidents.map((incident) => (
+        {incidents.map((incident) => (
           <Paper
             key={incident.id}
             sx={{
@@ -137,8 +138,14 @@ const Incidents = () => {
                 label={getSlaStatus(incident.slaDueDate)}
                 sx={{
                   ml: 1,
-                  bgcolor: getSlaStatus(incident.slaDueDate) === "Overdue" ? "#ffe0e0" : "#e7f7ed",
-                  color: getSlaStatus(incident.slaDueDate) === "Overdue" ? "#d32f2f" : "#2e7d32",
+                  bgcolor:
+                    getSlaStatus(incident.slaDueDate) === "Overdue"
+                      ? "#ffe0e0"
+                      : "#e7f7ed",
+                  color:
+                    getSlaStatus(incident.slaDueDate) === "Overdue"
+                      ? "#d32f2f"
+                      : "#2e7d32",
                   fontSize: "0.75em",
                   height: "20px",
                   fontWeight: 500,
@@ -164,7 +171,7 @@ const Incidents = () => {
         exportTitle={exportTitle}
         setExportTitle={setExportTitle}
         exportType={exportType || "file"}
-        recordCount={testIncidents.length}
+        recordCount={incidents.length}
       />
     </Box>
   );
