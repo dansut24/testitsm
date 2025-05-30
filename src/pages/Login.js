@@ -17,8 +17,8 @@ import GoogleIcon from "@mui/icons-material/Google";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import BusinessIcon from "@mui/icons-material/Business";
 import logo from "../assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
-import supabase from "../supabaseClient";
 import { useThemeMode } from "../context/ThemeContext";
+import supabase from "../supabaseClient";
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -38,24 +38,42 @@ const Login = () => {
       return;
     }
 
-    const { data, error: loginError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data, error: loginError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .eq("password", password)
+      .single();
 
-    if (loginError) {
-      setError(loginError.message);
+    if (loginError || !data) {
+      setError("Invalid login credentials.");
       return;
     }
 
-    const user = data.user;
-    const role = "admin"; // For now — placeholder until roles are fetched from DB
+    const user = data;
+    const role = user.role || "admin";
 
-    localStorage.setItem("token", data.session.access_token);
+    localStorage.setItem("token", "mock-token");
     localStorage.setItem("user", JSON.stringify(user));
     localStorage.setItem("selectedRole", role);
 
     navigate("/loading");
+  };
+
+  const handleTestConnection = async () => {
+    try {
+      const { data, error } = await supabase.from("users").select("*").limit(1);
+      if (error) {
+        console.error("❌ Supabase connection failed:", error.message);
+        alert("❌ Connection failed: " + error.message);
+      } else {
+        console.log("✅ Supabase connection successful:", data);
+        alert("✅ Connection successful. First user email: " + (data[0]?.email || "No users found"));
+      }
+    } catch (err) {
+      console.error("❌ Unexpected error:", err);
+      alert("❌ Unexpected error: " + err.message);
+    }
   };
 
   return (
@@ -120,6 +138,15 @@ const Login = () => {
           onClick={handleLogin}
         >
           Login
+        </Button>
+
+        <Button
+          variant="outlined"
+          fullWidth
+          sx={{ mt: 2 }}
+          onClick={handleTestConnection}
+        >
+          Test Supabase Connection
         </Button>
       </Paper>
 
