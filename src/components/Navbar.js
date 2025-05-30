@@ -16,6 +16,7 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import SettingsIcon from "@mui/icons-material/Settings";
 import HistoryIcon from "@mui/icons-material/History";
 import CloseIcon from "@mui/icons-material/Close";
+import NotificationDrawer from "./NotificationDrawer"; // at top
 
 const Navbar = ({
   sidebarWidth,
@@ -70,11 +71,8 @@ const Navbar = ({
         </>
       ),
       notifications: (
-        <>
-          <Typography variant="h6">Notifications</Typography>
-          <Typography variant="body2" sx={{ mt: 1 }}>No new notifications.</Typography>
-        </>
-      ),
+  <NotificationDrawer />
+),
       activity: (
         <>
           <Typography variant="h6">Activity Log</Typography>
