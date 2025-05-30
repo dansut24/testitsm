@@ -1,3 +1,5 @@
+// src/App.js
+
 import React from "react";
 import { CssBaseline, Box } from "@mui/material";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
@@ -19,8 +21,10 @@ import Loading from "./pages/Loading";
 import NewIncident from "./pages/NewIncident";
 import NotFound from "./pages/NotFound";
 import IncidentDetail from "./pages/IncidentDetail";
-import NewServiceRequest from "./pages/NewServiceRequest"; // ✅ Added
-import ServiceRequestDetail from "./pages/ServiceRequestDetail"; // ✅ Added
+import NewServiceRequest from "./pages/NewServiceRequest";
+import ServiceRequestDetail from "./pages/ServiceRequestDetail";
+import NewChangeRequest from "./pages/NewChangeRequest";
+import ChangeDetail from "./pages/ChangeDetail";
 
 // Self-Service Portal
 import SelfServiceLayout from "./layouts/SelfServiceLayout";
@@ -37,15 +41,15 @@ function App() {
     <Router>
       <CssBaseline />
       <Box
-  sx={{
-    minHeight: "100vh",
-    width: "100vw",
-    overflowX: "hidden",
-    overflowY: "auto",
-    display: "flex",
-    flexDirection: "column",
-  }}
->
+        sx={{
+          minHeight: "100vh",
+          width: "100vw",
+          overflowX: "hidden",
+          overflowY: "auto",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
@@ -68,10 +72,15 @@ function App() {
             <Route path="incidents" element={<Incidents />} />
             <Route path="incidents/:id" element={<IncidentDetail />} />
             <Route path="new-incident" element={<NewIncident />} />
+
             <Route path="service-requests" element={<ServiceRequests />} />
-            <Route path="service-requests/:id" element={<ServiceRequestDetail />} /> {/* ✅ Added */}
             <Route path="new-service-request" element={<NewServiceRequest />} />
+            <Route path="service-requests/:id" element={<ServiceRequestDetail />} />
+
             <Route path="changes" element={<Changes />} />
+            <Route path="new-change-request" element={<NewChangeRequest />} />
+            <Route path="changes/:id" element={<ChangeDetail />} />
+
             <Route path="problems" element={<Problems />} />
             <Route path="assets" element={<Assets />} />
             <Route path="knowledge-base" element={<KnowledgeBase />} />
