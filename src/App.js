@@ -1,5 +1,3 @@
-// src/App.js
-
 import React from "react";
 import { CssBaseline, Box } from "@mui/material";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
@@ -11,6 +9,7 @@ import ServiceRequests from "./pages/ServiceRequests";
 import Changes from "./pages/Changes";
 import Problems from "./pages/Problems";
 import Assets from "./pages/Assets";
+import AssetDetail from "./pages/AssetDetail"; // ✅ Added
 import KnowledgeBase from "./pages/KnowledgeBase";
 import Reports from "./pages/Reports";
 import Approvals from "./pages/Approvals";
@@ -18,15 +17,15 @@ import UserProfile from "./pages/UserProfile";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import Loading from "./pages/Loading";
-import NewIncident from "./pages/NewIncident";
-import IncidentDetail from "./pages/IncidentDetail";
-import NewServiceRequest from "./pages/NewServiceRequest";
-import ServiceRequestDetail from "./pages/ServiceRequestDetail";
-import NewChange from "./pages/NewChange";
-import ChangeDetail from "./pages/ChangeDetail";
-import NewProblem from "./pages/NewProblem"; // ✅ Added
-import ProblemDetail from "./pages/ProblemDetail"; // ✅ Added
 import NotFound from "./pages/NotFound";
+import NewIncident from "./pages/NewIncident";
+import NewServiceRequest from "./pages/NewServiceRequest";
+import NewChange from "./pages/NewChange";
+import NewProblem from "./pages/NewProblem";
+import IncidentDetail from "./pages/IncidentDetail";
+import ServiceRequestDetail from "./pages/ServiceRequestDetail";
+import ChangeDetail from "./pages/ChangeDetail";
+import ProblemDetail from "./pages/ProblemDetail";
 
 // Self-Service Portal
 import SelfServiceLayout from "./layouts/SelfServiceLayout";
@@ -76,20 +75,20 @@ function App() {
             <Route path="changes" element={<Changes />} />
             <Route path="problems" element={<Problems />} />
             <Route path="assets" element={<Assets />} />
+            <Route path="assets/:id" element={<AssetDetail />} /> {/* ✅ New route */}
             <Route path="knowledge-base" element={<KnowledgeBase />} />
             <Route path="reports" element={<Reports />} />
             <Route path="approvals" element={<Approvals />} />
             <Route path="profile" element={<UserProfile />} />
             <Route path="settings" element={<Settings />} />
-
             <Route path="new-incident" element={<NewIncident />} />
-            <Route path="incidents/:id" element={<IncidentDetail />} />
             <Route path="new-service-request" element={<NewServiceRequest />} />
-            <Route path="service-requests/:id" element={<ServiceRequestDetail />} />
             <Route path="new-change" element={<NewChange />} />
+            <Route path="new-problem" element={<NewProblem />} />
+            <Route path="incidents/:id" element={<IncidentDetail />} />
+            <Route path="service-requests/:id" element={<ServiceRequestDetail />} />
             <Route path="changes/:id" element={<ChangeDetail />} />
-            <Route path="new-problem" element={<NewProblem />} /> {/* ✅ New */}
-            <Route path="problems/:id" element={<ProblemDetail />} /> {/* ✅ New */}
+            <Route path="problems/:id" element={<ProblemDetail />} />
           </Route>
 
           {/* 404 Fallback */}
