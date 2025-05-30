@@ -57,30 +57,41 @@ const NewIncident = () => {
   };
 
   const handleSubmit = async () => {
-    setSubmitting(true);
-    setError("");
-    const { title, description, category, priority, asset_tag } = formData;
+  setSubmitting(true);
 
-    const { error } = await supabase.from("incidents").insert([
-      {
-        title,
-        description,
-        category,
-        priority,
-        submitted_by: selectedCustomer.name,
-        asset_tag
-      },
-    ]);
+  try {
+    // Get next reference
+    const { data: refData, error: refErr } = await supabase.rpc("get_next_incident_reference");
+    if (refErr) throw refErr;
 
+    const reference = refData;
+
+    // Insert incident with the generated reference
+    const { data, error } = await supabase
+      .from("incidents")
+      .insert([
+        {
+          title: formData.title,
+          description: formData.description,
+          priority: formData.priority,
+          reference,
+          customer_name: selectedCustomer.name,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Redirect and set tab title using reference
+    navigate(`/incidents/${data.id}`, { state: { tabName: reference } });
+  } catch (err) {
+    console.error("Failed to raise incident:", err.message);
+  } finally {
     setSubmitting(false);
-
-    if (error) {
-      setError("Failed to submit incident. Please try again.");
-    } else {
-      alert("Incident submitted!");
-    }
-  };
-
+  }
+};
+  
   return (
     <Box sx={{ px: 2, py: 4, maxWidth: 600, mx: "auto", position: "relative" }}>
       <Typography variant="h5" gutterBottom>
