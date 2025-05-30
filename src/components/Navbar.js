@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import {
   AppBar, Toolbar, Typography, IconButton, InputBase, useMediaQuery,
-  useTheme, Box, Tooltip, Select, MenuItem, Avatar, Drawer, Dialog,
+  useTheme, Box, Tooltip, Select, MenuItem, Avatar, SwipeableDrawer, Dialog,
   DialogTitle, DialogContent, DialogActions, Button
 } from "@mui/material";
 import { useThemeMode } from "../context/ThemeContext";
@@ -200,11 +200,13 @@ activity: (
         )}
       </AppBar>
 
-      <Drawer
+      <SwipeableDrawer
   anchor={isMobile ? "bottom" : "right"}
   open={drawerOpen}
   onClose={closeDrawer}
-  ModalProps={{ keepMounted: true }}
+  onOpen={() => {}} // Required prop even if not used
+  disableDiscovery={!isMobile} // Enable swipe gesture only on mobile
+  disableSwipeToOpen={!isMobile}
   PaperProps={{
     sx: {
       position: "fixed",
@@ -225,7 +227,6 @@ activity: (
   }}
 >
   <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-    {/* Fixed close button */}
     <Box
       sx={{
         flexShrink: 0,
@@ -249,12 +250,11 @@ activity: (
       </Box>
     </Box>
 
-    {/* Scrollable content area */}
     <Box sx={{ overflowY: "auto", flexGrow: 1 }}>
       {renderDrawerContent()}
     </Box>
   </Box>
-</Drawer>
+</SwipeableDrawer>
 
       <Dialog open={logoutDialogOpen} onClose={() => setLogoutDialogOpen(false)}>
         <DialogTitle>Confirm Logout</DialogTitle>
