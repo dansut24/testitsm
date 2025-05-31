@@ -11,9 +11,6 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
-import sendgrid from "@sendgrid/mail";
-
-sendgrid.setApiKey(import.meta.env.VITE_SENDGRID_API_KEY);
 
 const StepIndicator = ({ step, active }) => (
   <Box
@@ -62,31 +59,6 @@ const NewIncident = () => {
     setStep(2);
   };
 
-  const sendNotificationEmail = async (incident) => {
-    const htmlContent = `
-      <div style="font-family: sans-serif; line-height: 1.5;">
-        <h2 style="color: #4caf50;">New Incident Submitted</h2>
-        <p><strong>Reference:</strong> ${incident.reference}</p>
-        <p><strong>Title:</strong> ${incident.title}</p>
-        <p><strong>Description:</strong> ${incident.description}</p>
-        <p><strong>Priority:</strong> ${incident.priority}</p>
-        <p><strong>Category:</strong> ${incident.category}</p>
-        <p><strong>Asset Tag:</strong> ${incident.asset_tag || "N/A"}</p>
-        <p><strong>Customer:</strong> ${incident.customer_name}</p>
-        <p><strong>Submitted By:</strong> ${incident.submitted_by}</p>
-        <hr />
-        <p style="font-size: 12px; color: #888;">This is an automated notification from Hi5Tech ITSM.</p>
-      </div>
-    `;
-
-    await sendgrid.send({
-      to: "danieljamessutton18@outlook.com",
-      from: "notifications@hi5tech.co.uk",
-      subject: `New Incident: ${incident.reference}`,
-      html: htmlContent,
-    });
-  };
-
   const handleSubmit = async () => {
     setSubmitting(true);
     setError("");
@@ -123,11 +95,20 @@ const NewIncident = () => {
 
       if (insertError) throw insertError;
 
-      await sendNotificationEmail({
-        ...formData,
-        reference,
-        customer_name: selectedCustomer?.name || "",
-        submitted_by: user?.username || "unknown",
+      // Send email via serverless function
+      await fetch("/api/send-incident-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reference,
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          priority: formData.priority,
+          asset_tag: formData.asset_tag,
+          customer_name: selectedCustomer?.name || "",
+          submitted_by: user?.username || "unknown",
+        }),
       });
 
       navigate(`/incidents/${data.id}`, { state: { tabName: reference } });
@@ -143,6 +124,8 @@ const NewIncident = () => {
       <Typography variant="h5" gutterBottom>
         Raise New Incident
       </Typography>
+
+      {/* Step 1 */}
       <Box sx={{ position: "relative", mb: 5 }}>
         <StepIndicator step={1} active={step >= 1} />
         <Paper elevation={3} sx={{ pt: 4, pb: 2, px: 2 }}>
@@ -168,6 +151,7 @@ const NewIncident = () => {
         </Paper>
       </Box>
 
+      {/* Step 2 */}
       <Fade in={step >= 2}>
         <Box sx={{ position: "relative" }}>
           <StepIndicator step={2} active={step === 2} />
