@@ -6,7 +6,7 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { Navigate } from "react-router-dom";
-import usePermissions from "../hooks/usePermissions";
+import { usePermissions } from "../hooks/usePermissions";
 
 const layouts = {
   default: ["pie", "bar", "line", "table"],
