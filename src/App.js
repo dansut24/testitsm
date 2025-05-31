@@ -44,9 +44,15 @@ import Confirmation from "./pages/SelfService/Confirmation";
 import NotFound from "./pages/NotFound";
 import NotAuthorised from "./pages/NotAuthorised";
 import ProtectedRoute from "./components/ProtectedRoute";
+import useAuth from "./hooks/useAuth";
 
 function App() {
-  const user = JSON.parse(localStorage.getItem("user"));
+  const { user, authLoading } = useAuth();
+
+  if (authLoading) {
+    return <div>Loading...</div>;
+  }
+
   const isLoggedIn = !!user;
 
   return (
@@ -82,9 +88,7 @@ function App() {
           {/* ITSM Admin Routes */}
           <Route
             path="/"
-            element={
-              isLoggedIn ? <Layout /> : <Login />
-            }
+            element={isLoggedIn ? <Layout /> : <Login />}
           >
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="incidents" element={<Incidents />} />
