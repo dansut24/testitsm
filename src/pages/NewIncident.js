@@ -11,6 +11,9 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
+import sendgrid from "@sendgrid/mail";
+
+sendgrid.setApiKey(import.meta.env.VITE_SENDGRID_API_KEY);
 
 const StepIndicator = ({ step, active }) => (
   <Box
@@ -37,7 +40,6 @@ const StepIndicator = ({ step, active }) => (
 );
 
 const categoryOptions = ["Hardware", "Software", "Network", "Access", "Other"];
-
 const priorityOptions = ["Low", "Medium", "High", "Critical"];
 
 const NewIncident = () => {
@@ -58,6 +60,31 @@ const NewIncident = () => {
   const handleCustomerSearch = () => {
     setSelectedCustomer({ name: customerQuery });
     setStep(2);
+  };
+
+  const sendNotificationEmail = async (incident) => {
+    const htmlContent = `
+      <div style="font-family: sans-serif; line-height: 1.5;">
+        <h2 style="color: #4caf50;">New Incident Submitted</h2>
+        <p><strong>Reference:</strong> ${incident.reference}</p>
+        <p><strong>Title:</strong> ${incident.title}</p>
+        <p><strong>Description:</strong> ${incident.description}</p>
+        <p><strong>Priority:</strong> ${incident.priority}</p>
+        <p><strong>Category:</strong> ${incident.category}</p>
+        <p><strong>Asset Tag:</strong> ${incident.asset_tag || "N/A"}</p>
+        <p><strong>Customer:</strong> ${incident.customer_name}</p>
+        <p><strong>Submitted By:</strong> ${incident.submitted_by}</p>
+        <hr />
+        <p style="font-size: 12px; color: #888;">This is an automated notification from Hi5Tech ITSM.</p>
+      </div>
+    `;
+
+    await sendgrid.send({
+      to: "danieljamessutton18@outlook.com",
+      from: "notifications@hi5tech.co.uk",
+      subject: `New Incident: ${incident.reference}`,
+      html: htmlContent,
+    });
   };
 
   const handleSubmit = async () => {
@@ -96,6 +123,13 @@ const NewIncident = () => {
 
       if (insertError) throw insertError;
 
+      await sendNotificationEmail({
+        ...formData,
+        reference,
+        customer_name: selectedCustomer?.name || "",
+        submitted_by: user?.username || "unknown",
+      });
+
       navigate(`/incidents/${data.id}`, { state: { tabName: reference } });
     } catch (err) {
       setError(err.message);
@@ -109,8 +143,6 @@ const NewIncident = () => {
       <Typography variant="h5" gutterBottom>
         Raise New Incident
       </Typography>
-
-      {/* Step 1 */}
       <Box sx={{ position: "relative", mb: 5 }}>
         <StepIndicator step={1} active={step >= 1} />
         <Paper elevation={3} sx={{ pt: 4, pb: 2, px: 2 }}>
@@ -136,7 +168,6 @@ const NewIncident = () => {
         </Paper>
       </Box>
 
-      {/* Step 2 */}
       <Fade in={step >= 2}>
         <Box sx={{ position: "relative" }}>
           <StepIndicator step={2} active={step === 2} />
@@ -144,66 +175,20 @@ const NewIncident = () => {
             <Typography variant="subtitle1" gutterBottom>
               Step 2: Incident Details
             </Typography>
-            <TextField
-              required
-              fullWidth
-              label="Incident Title"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              required
-              fullWidth
-              multiline
-              rows={4}
-              label="Description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              required
-              fullWidth
-              select
-              label="Category"
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              sx={{ mb: 2 }}
-            >
+            <TextField required fullWidth label="Incident Title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} sx={{ mb: 2 }} />
+            <TextField required fullWidth multiline rows={4} label="Description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} sx={{ mb: 2 }} />
+            <TextField required fullWidth select label="Category" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} sx={{ mb: 2 }}>
               {categoryOptions.map((cat) => (
-                <MenuItem key={cat} value={cat}>
-                  {cat}
-                </MenuItem>
+                <MenuItem key={cat} value={cat}>{cat}</MenuItem>
               ))}
             </TextField>
-            <TextField
-              required
-              fullWidth
-              select
-              label="Priority"
-              value={formData.priority}
-              onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-              sx={{ mb: 2 }}
-            >
+            <TextField required fullWidth select label="Priority" value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: e.target.value })} sx={{ mb: 2 }}>
               {priorityOptions.map((level) => (
-                <MenuItem key={level} value={level}>
-                  {level}
-                </MenuItem>
+                <MenuItem key={level} value={level}>{level}</MenuItem>
               ))}
             </TextField>
-            <TextField
-              fullWidth
-              label="Asset Tag (optional)"
-              value={formData.asset_tag}
-              onChange={(e) => setFormData({ ...formData, asset_tag: e.target.value })}
-              sx={{ mb: 2 }}
-            />
-            {error && (
-              <Typography color="error" sx={{ mb: 2 }}>
-                {error}
-              </Typography>
-            )}
+            <TextField fullWidth label="Asset Tag (optional)" value={formData.asset_tag} onChange={(e) => setFormData({ ...formData, asset_tag: e.target.value })} sx={{ mb: 2 }} />
+            {error && <Typography color="error" sx={{ mb: 2 }}>{error}</Typography>}
             <Button variant="contained" fullWidth onClick={handleSubmit} disabled={submitting}>
               {submitting ? <CircularProgress size={20} color="inherit" /> : "Submit Incident"}
             </Button>
