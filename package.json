@@ -27,7 +27,8 @@
     "react-big-calendar": "^1.6.0",
   "date-fns": "^2.30.0",
    "@uiw/react-md-editor": "*",
-      "@supabase/supabase-js": "^2.39.5"
+      "@supabase/supabase-js": "^2.39.5",
+      "@sendgrid/mail": "^7.7.0",
   },
   "scripts": {
     "start": "react-scripts start",
