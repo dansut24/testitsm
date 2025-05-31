@@ -5,7 +5,7 @@ import {
   ToggleButtonGroup, ToggleButton
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
-import usePermissions from "../hooks/usePermissions";
+import { usePermissions } from '../hooks/usePermissions';
 
 const layouts = {
   default: ["pie", "bar", "line", "table"],
