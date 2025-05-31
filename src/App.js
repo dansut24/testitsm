@@ -1,6 +1,6 @@
 import React from "react";
 import { CssBaseline, Box } from "@mui/material";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
@@ -44,6 +44,8 @@ import Confirmation from "./pages/SelfService/Confirmation";
 import NotFound from "./pages/NotFound";
 
 function App() {
+  const token = localStorage.getItem("token");
+
   return (
     <Router>
       <CssBaseline />
@@ -58,6 +60,9 @@ function App() {
         }}
       >
         <Routes>
+          {/* Auth Routing: root path redirects */}
+          <Route path="/" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
+
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/loading" element={<Loading />} />
