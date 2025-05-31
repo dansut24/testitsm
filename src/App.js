@@ -1,6 +1,6 @@
 import React from "react";
 import { CssBaseline, Box } from "@mui/material";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
@@ -42,13 +42,8 @@ import Checkout from "./pages/SelfService/Checkout";
 import Confirmation from "./pages/SelfService/Confirmation";
 
 import NotFound from "./pages/NotFound";
-
-const ProtectedRoute = ({ element, allowedRoles }) => {
-  const user = JSON.parse(localStorage.getItem("user"));
-  if (!user) return <Navigate to="/login" />;
-  if (!allowedRoles || allowedRoles.includes(user.role)) return element;
-  return <Navigate to="/dashboard" />;
-};
+import NotAuthorised from "./pages/NotAuthorised";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   const user = JSON.parse(localStorage.getItem("user"));
@@ -71,6 +66,7 @@ function App() {
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/loading" element={<Loading />} />
+          <Route path="/not-authorised" element={<NotAuthorised />} />
 
           {/* Self-Service Portal */}
           <Route path="/self-service" element={<SelfServiceLayout />}>
@@ -86,7 +82,9 @@ function App() {
           {/* ITSM Admin Routes */}
           <Route
             path="/"
-            element={isLoggedIn ? <Layout /> : <Navigate to="/login" />}
+            element={
+              isLoggedIn ? <Layout /> : <Login />
+            }
           >
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="incidents" element={<Incidents />} />
@@ -96,15 +94,16 @@ function App() {
             <Route path="assets" element={<Assets />} />
             <Route path="knowledge-base" element={<KnowledgeBase />} />
             <Route path="reports" element={<Reports />} />
-            <Route
-              path="approvals"
-              element={<ProtectedRoute element={<Approvals />} allowedRoles={["admin", "approver"]} />}
-            />
+            <Route path="approvals" element={<Approvals />} />
             <Route path="profile" element={<UserProfile />} />
             <Route path="settings" element={<Settings />} />
             <Route
               path="admin-settings"
-              element={<ProtectedRoute element={<AdminSettings />} allowedRoles={["admin"]} />}
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminSettings />
+                </ProtectedRoute>
+              }
             />
             <Route path="new-incident" element={<NewIncident />} />
             <Route path="new-service-request" element={<NewServiceRequest />} />
