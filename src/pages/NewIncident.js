@@ -59,6 +59,20 @@ const NewIncident = () => {
     setStep(2);
   };
 
+  const sendNotificationEmail = async (incident) => {
+    try {
+      await fetch("/api/send-incident-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(incident),
+      });
+    } catch (err) {
+      console.error("Email send error:", err);
+    }
+  };
+
   const handleSubmit = async () => {
     setSubmitting(true);
     setError("");
@@ -95,20 +109,11 @@ const NewIncident = () => {
 
       if (insertError) throw insertError;
 
-      // Send email via serverless function
-      await fetch("/api/send-incident-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reference,
-          title: formData.title,
-          description: formData.description,
-          category: formData.category,
-          priority: formData.priority,
-          asset_tag: formData.asset_tag,
-          customer_name: selectedCustomer?.name || "",
-          submitted_by: user?.username || "unknown",
-        }),
+      await sendNotificationEmail({
+        ...formData,
+        reference,
+        customer_name: selectedCustomer?.name || "",
+        submitted_by: user?.username || "unknown",
       });
 
       navigate(`/incidents/${data.id}`, { state: { tabName: reference } });
@@ -124,8 +129,6 @@ const NewIncident = () => {
       <Typography variant="h5" gutterBottom>
         Raise New Incident
       </Typography>
-
-      {/* Step 1 */}
       <Box sx={{ position: "relative", mb: 5 }}>
         <StepIndicator step={1} active={step >= 1} />
         <Paper elevation={3} sx={{ pt: 4, pb: 2, px: 2 }}>
@@ -151,7 +154,6 @@ const NewIncident = () => {
         </Paper>
       </Box>
 
-      {/* Step 2 */}
       <Fade in={step >= 2}>
         <Box sx={{ position: "relative" }}>
           <StepIndicator step={2} active={step === 2} />
