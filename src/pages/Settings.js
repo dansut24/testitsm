@@ -5,6 +5,8 @@ import {
   ToggleButtonGroup, ToggleButton
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { Navigate } from "react-router-dom";
+import usePermissions from "../hooks/usePermissions";
 
 const layouts = {
   default: ["pie", "bar", "line", "table"],
@@ -31,6 +33,9 @@ const DashboardPreview = ({ widgets }) => (
 );
 
 const Settings = () => {
+  const { allowed } = usePermissions();
+  if (!allowed.settings) return <Navigate to="/dashboard" replace />;
+
   const [selectedLayout, setSelectedLayout] = useState(() => {
     return localStorage.getItem("selectedDashboard") || "default";
   });
