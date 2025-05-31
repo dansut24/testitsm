@@ -1,16 +1,20 @@
 // src/components/ProtectedRoute.js
 import React from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate } from "react-router-dom";
+import NotAuthorised from "../pages/NotAuthorised";
 
-const ProtectedRoute = ({ element, allowedRoles }) => {
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const location = useLocation();
+const ProtectedRoute = ({ allowedRoles, children }) => {
+  const user = JSON.parse(localStorage.getItem("user"));
 
-  if (!user || !allowedRoles.includes(user.role)) {
-    return <Navigate to="/not-authorised" state={{ from: location }} replace />;
+  if (!user) {
+    return <Navigate to="/login" replace />;
   }
 
-  return element;
+  if (!allowedRoles.includes(user.role)) {
+    return <NotAuthorised />;
+  }
+
+  return children;
 };
 
 export default ProtectedRoute;
