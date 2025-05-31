@@ -1,36 +1,36 @@
-// /api/send-incident-email.js
 import sgMail from '@sendgrid/mail';
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end("Method Not Allowed");
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-  const { title, description, reference, priority, category } = req.body;
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).send({ error: 'Method not allowed' });
+  }
+
+  const { reference, title, description, priority, category, submittedBy } = req.body;
+
+  const msg = {
+    to: "danieljamessutton18@outlook.com",
+    from: "danieljamessutton18@outlook.com", // Use a verified sender
+    subject: `New Incident Raised - ${reference}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:auto">
+        <h2 style="color:#1976d2">New Incident Raised</h2>
+        <p><strong>Reference:</strong> ${reference}</p>
+        <p><strong>Title:</strong> ${title}</p>
+        <p><strong>Description:</strong> ${description}</p>
+        <p><strong>Category:</strong> ${category}</p>
+        <p><strong>Priority:</strong> ${priority}</p>
+        <p><strong>Submitted By:</strong> ${submittedBy}</p>
+      </div>
+    `,
+  };
 
   try {
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-
-    const msg = {
-      to: 'support@yourcompany.com', // ✅ update with real recipient
-      from: 'noreply@hi5tech.co.uk', // ✅ verified sender
-      subject: `🚨 New Incident Raised: ${reference}`,
-      html: `
-        <div style="font-family: sans-serif; line-height: 1.6;">
-          <h2 style="color: #295cb3;">New Incident Notification</h2>
-          <p><strong>Reference:</strong> ${reference}</p>
-          <p><strong>Title:</strong> ${title}</p>
-          <p><strong>Description:</strong><br>${description}</p>
-          <p><strong>Priority:</strong> ${priority}</p>
-          <p><strong>Category:</strong> ${category}</p>
-          <hr/>
-          <p style="font-size: 0.85em; color: #777;">Hi5Tech ITSM</p>
-        </div>
-      `
-    };
-
     await sgMail.send(msg);
-    res.status(200).json({ success: true });
+    res.status(200).json({ message: "Email sent" });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to send email' });
+    console.error("SendGrid error:", err.response?.body || err.message);
+    res.status(500).json({ error: "Failed to send email" });
   }
 }
