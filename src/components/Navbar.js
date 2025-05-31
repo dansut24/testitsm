@@ -1,10 +1,9 @@
-// src/components/Navbar.js — with logout confirmation
+// src/components/Navbar.js — updated with full logout
 
 import React, { useState } from "react";
 import {
   AppBar, Toolbar, Typography, IconButton, InputBase, useMediaQuery,
-  useTheme, Box, Tooltip, Select, MenuItem, Avatar, SwipeableDrawer, Dialog,
-  DialogTitle, DialogContent, DialogActions, Button
+  useTheme, Box, Tooltip, Select, MenuItem, Avatar, SwipeableDrawer
 } from "@mui/material";
 import { useThemeMode } from "../context/ThemeContext";
 import { useNavigate } from "react-router-dom";
@@ -16,9 +15,9 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import SettingsIcon from "@mui/icons-material/Settings";
 import HistoryIcon from "@mui/icons-material/History";
 import CloseIcon from "@mui/icons-material/Close";
-import NotificationDrawer from "./NotificationDrawer"; // at top
+import NotificationDrawer from "./NotificationDrawer";
 import UserActivityLogDrawer from "../components/UserActivityLogDrawer";
-import ProfileDrawer from "./ProfileDrawer"; // add this import at the top
+import ProfileDrawer from "./ProfileDrawer";
 
 const Navbar = ({
   sidebarWidth,
@@ -36,8 +35,10 @@ const Navbar = ({
   const [tabHistory, setTabHistory] = useState([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerType, setDrawerType] = useState("profile");
-  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
-  const [storedUser] = useState({ username: "John", avatar_url: "" });
+  const [storedUser] = useState(() => {
+    const user = localStorage.getItem("user");
+    return user ? JSON.parse(user) : { username: "User", avatar_url: "" };
+  });
 
   const goBack = () => {
     if (tabHistory.length > 0) {
@@ -54,19 +55,16 @@ const Navbar = ({
   const closeDrawer = () => setDrawerOpen(false);
 
   const handleLogout = () => {
+    localStorage.clear();
     sessionStorage.clear();
     navigate("/login");
   };
 
   const renderDrawerContent = () => {
     const content = {
-      profile: <ProfileDrawer onLogout={() => setLogoutDialogOpen(true)} />,
-      notifications: (
-  <NotificationDrawer />
-),     
-activity: (
-  <UserActivityLogDrawer />
-),
+      profile: <ProfileDrawer onLogout={handleLogout} />, // 🔹 updated
+      notifications: <NotificationDrawer />,     
+      activity: <UserActivityLogDrawer />,
       help: (
         <>
           <Typography variant="h6">Help</Typography>
@@ -191,85 +189,72 @@ activity: (
       </AppBar>
 
       <SwipeableDrawer
-  anchor={isMobile ? "bottom" : "right"}
-  open={drawerOpen}
-  onClose={closeDrawer}
-  onOpen={() => {}}
-  disableDiscovery={!isMobile}
-  disableSwipeToOpen={!isMobile}
-  PaperProps={{
-    sx: {
-      position: "fixed",
-      zIndex: (theme) => theme.zIndex.appBar + 10,
-      width: isMobile ? "100%" : 320,
-      height: isMobile ? "50%" : "100%",
-      bottom: isMobile ? 0 : "auto",
-      right: !isMobile ? 0 : "auto",
-      top: !isMobile ? 0 : "auto",
-      px: 2,
-      pt: 0,
-      pb: 2,
-      display: "flex",
-      flexDirection: "column",
-      borderTopLeftRadius: isMobile ? 16 : 0,
-      borderTopRightRadius: isMobile ? 16 : 0,
-    },
-  }}
->
-  <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-    {isMobile && (
-      <Box
-        sx={{
-          width: 40,
-          height: 4,
-          bgcolor: "#ccc",
-          borderRadius: 2,
-          mx: "auto",
-          mt: 1,
-          mb: 1,
+        anchor={isMobile ? "bottom" : "right"}
+        open={drawerOpen}
+        onClose={closeDrawer}
+        onOpen={() => {}}
+        disableDiscovery={!isMobile}
+        disableSwipeToOpen={!isMobile}
+        PaperProps={{
+          sx: {
+            position: "fixed",
+            zIndex: (theme) => theme.zIndex.appBar + 10,
+            width: isMobile ? "100%" : 320,
+            height: isMobile ? "50%" : "100%",
+            bottom: isMobile ? 0 : "auto",
+            right: !isMobile ? 0 : "auto",
+            top: !isMobile ? 0 : "auto",
+            px: 2,
+            pt: 0,
+            pb: 2,
+            display: "flex",
+            flexDirection: "column",
+            borderTopLeftRadius: isMobile ? 16 : 0,
+            borderTopRightRadius: isMobile ? 16 : 0,
+          },
         }}
-      />
-    )}
+      >
+        <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+          {isMobile && (
+            <Box
+              sx={{
+                width: 40,
+                height: 4,
+                bgcolor: "#ccc",
+                borderRadius: 2,
+                mx: "auto",
+                mt: 1,
+                mb: 1,
+              }}
+            />
+          )}
 
-    <Box
-      sx={{
-        flexShrink: 0,
-        position: "sticky",
-        top: 0,
-        zIndex: 2,
-        backgroundColor: "background.paper",
-        pb: 1,
-      }}
-    >
-      <Box display="flex" justifyContent="flex-end" sx={{ display: isMobile ? "none" : "flex" }}>
-  <IconButton
-    onClick={closeDrawer}
-    sx={{
-      position: "relative",
-      zIndex: (theme) => theme.zIndex.appBar + 11,
-    }}
-  >
-    <CloseIcon />
-  </IconButton>
-</Box>
-    </Box>
+          <Box
+            sx={{
+              flexShrink: 0,
+              position: "sticky",
+              top: 0,
+              zIndex: 2,
+              backgroundColor: "background.paper",
+              pb: 1,
+            }}
+          >
+            <Box display="flex" justifyContent="flex-end" sx={{ display: isMobile ? "none" : "flex" }}>
+              <IconButton
+                onClick={closeDrawer}
+                sx={{
+                  position: "relative",
+                  zIndex: (theme) => theme.zIndex.appBar + 11,
+                }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </Box>
+          </Box>
 
-    <Box sx={{ overflowY: "auto", flexGrow: 1 }}>
-      {renderDrawerContent()}
-    </Box>
-  </Box>
-</SwipeableDrawer>
-
-      <Dialog open={logoutDialogOpen} onClose={() => setLogoutDialogOpen(false)}>
-        <DialogTitle>Confirm Logout</DialogTitle>
-        <DialogContent>
-          <Typography>Are you sure you want to log out?</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setLogoutDialogOpen(false)}>Cancel</Button>
-          <Button color="error" onClick={handleLogout}>Logout</Button>
-        </DialogActions>
-      </Dialog>
+          <Box sx={{ overflowY: "auto", flexGrow: 1 }}>{renderDrawerContent()}</Box>
+        </Box>
+      </SwipeableDrawer>
     </>
   );
 };
