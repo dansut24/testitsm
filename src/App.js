@@ -1,6 +1,6 @@
 import React from "react";
 import { CssBaseline, Box } from "@mui/material";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
@@ -42,10 +42,9 @@ import Checkout from "./pages/SelfService/Checkout";
 import Confirmation from "./pages/SelfService/Confirmation";
 
 import NotFound from "./pages/NotFound";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
-  const token = localStorage.getItem("token");
-
   return (
     <Router>
       <CssBaseline />
@@ -60,9 +59,6 @@ function App() {
         }}
       >
         <Routes>
-          {/* Auth Routing: root path redirects */}
-          <Route path="/" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
-
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/loading" element={<Loading />} />
@@ -78,8 +74,15 @@ function App() {
             <Route path="knowledge-base" element={<SelfServiceKnowledgeBase />} />
           </Route>
 
-          {/* ITSM Admin Routes */}
-          <Route path="/" element={<Layout />}>
+          {/* ITSM Admin Routes (Protected) */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="incidents" element={<Incidents />} />
             <Route path="service-requests" element={<ServiceRequests />} />
