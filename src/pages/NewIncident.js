@@ -61,15 +61,23 @@ const NewIncident = () => {
 
   const sendNotificationEmail = async (incident) => {
     try {
-      await fetch("/api/send-incident-email", {
+      await fetch("/api/send-email", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(incident),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "incident",
+          subject: `New Incident Submitted - ${incident.reference}`,
+          reference: incident.reference,
+          title: incident.title,
+          description: incident.description,
+          priority: incident.priority,
+          category: incident.category,
+          submittedBy: incident.submitted_by,
+          customer: incident.customer_name,
+        }),
       });
     } catch (err) {
-      console.error("Email send error:", err);
+      console.error("Email notification error:", err);
     }
   };
 
@@ -129,6 +137,7 @@ const NewIncident = () => {
       <Typography variant="h5" gutterBottom>
         Raise New Incident
       </Typography>
+
       <Box sx={{ position: "relative", mb: 5 }}>
         <StepIndicator step={1} active={step >= 1} />
         <Paper elevation={3} sx={{ pt: 4, pb: 2, px: 2 }}>
@@ -161,19 +170,57 @@ const NewIncident = () => {
             <Typography variant="subtitle1" gutterBottom>
               Step 2: Incident Details
             </Typography>
-            <TextField required fullWidth label="Incident Title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} sx={{ mb: 2 }} />
-            <TextField required fullWidth multiline rows={4} label="Description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} sx={{ mb: 2 }} />
-            <TextField required fullWidth select label="Category" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} sx={{ mb: 2 }}>
+            <TextField
+              required
+              fullWidth
+              label="Incident Title"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              required
+              fullWidth
+              multiline
+              rows={4}
+              label="Description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              required
+              fullWidth
+              select
+              label="Category"
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              sx={{ mb: 2 }}
+            >
               {categoryOptions.map((cat) => (
                 <MenuItem key={cat} value={cat}>{cat}</MenuItem>
               ))}
             </TextField>
-            <TextField required fullWidth select label="Priority" value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: e.target.value })} sx={{ mb: 2 }}>
+            <TextField
+              required
+              fullWidth
+              select
+              label="Priority"
+              value={formData.priority}
+              onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+              sx={{ mb: 2 }}
+            >
               {priorityOptions.map((level) => (
                 <MenuItem key={level} value={level}>{level}</MenuItem>
               ))}
             </TextField>
-            <TextField fullWidth label="Asset Tag (optional)" value={formData.asset_tag} onChange={(e) => setFormData({ ...formData, asset_tag: e.target.value })} sx={{ mb: 2 }} />
+            <TextField
+              fullWidth
+              label="Asset Tag (optional)"
+              value={formData.asset_tag}
+              onChange={(e) => setFormData({ ...formData, asset_tag: e.target.value })}
+              sx={{ mb: 2 }}
+            />
             {error && <Typography color="error" sx={{ mb: 2 }}>{error}</Typography>}
             <Button variant="contained" fullWidth onClick={handleSubmit} disabled={submitting}>
               {submitting ? <CircularProgress size={20} color="inherit" /> : "Submit Incident"}
