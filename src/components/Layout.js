@@ -45,6 +45,8 @@ const Layout = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
+  const storedUser = JSON.parse(localStorage.getItem("user"));
+  const role = storedUser?.role || "user";
   const location = useLocation();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -123,20 +125,24 @@ const Layout = () => {
   const handleSidebarToggle = () => setSidebarOpen((prev) => !prev);
   const handleMobileSidebarToggle = () => setMobileOpen((prev) => !prev);
 
-  const menuItems = [
-    { text: "Dashboard", icon: <DashboardIcon /> },
-    { text: "Incidents", icon: <ReportProblemIcon /> },
-    { text: "Service Requests", icon: <AssignmentIcon /> },
-    { text: "Changes", icon: <AutoFixHighIcon /> },
-    { text: "Problems", icon: <BugReportIcon /> },
-    { text: "Assets", icon: <DevicesOtherIcon /> },
-    { text: "Knowledge Base", icon: <MenuBookIcon /> },
-    { text: "Reports", icon: <BarChartIcon /> },
-    { text: "Approvals", icon: <HowToVoteIcon /> },
-    { text: "Profile", icon: <PersonIcon /> },
-    { text: "Settings", icon: <SettingsIcon /> },
-  ];
+  const baseMenuItems = [
+  { text: "Dashboard", icon: <DashboardIcon /> },
+  { text: "Incidents", icon: <ReportProblemIcon /> },
+  { text: "Service Requests", icon: <AssignmentIcon /> },
+  { text: "Changes", icon: <AutoFixHighIcon /> },
+  { text: "Problems", icon: <BugReportIcon /> },
+  { text: "Assets", icon: <DevicesOtherIcon /> },
+  { text: "Knowledge Base", icon: <MenuBookIcon /> },
+  { text: "Reports", icon: <BarChartIcon /> },
+  { text: "Approvals", icon: <HowToVoteIcon /> },
+  { text: "Profile", icon: <PersonIcon /> },
+  { text: "Settings", icon: <SettingsIcon /> },
+];
 
+const adminMenuItem = { text: "Admin Settings", icon: <SettingsIcon /> };
+
+const menuItems = role === "admin" ? [...baseMenuItems, adminMenuItem] : baseMenuItems;
+  
   return (
     <Box sx={{ display: "flex", height: "100vh", overflow: "hidden" }}>
       <Sidebar
