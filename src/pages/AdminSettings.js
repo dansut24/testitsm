@@ -1,71 +1,84 @@
-// src/pages/AdminSettings.js
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
+  Paper,
   Tabs,
   Tab,
-  TextField,
   Button,
-  Paper,
-  Divider,
-  Switch,
-  FormControlLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
+import { supabase } from "../supabaseClient";
 
 const AdminSettings = () => {
   const [tab, setTab] = useState(0);
-  const handleTabChange = (e, newValue) => setTab(newValue);
+  const [records, setRecords] = useState([]);
+  const [type, setType] = useState("incidents");
+  const [selectedId, setSelectedId] = useState(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const tableOptions = ["incidents", "service_requests"];
+
+  useEffect(() => {
+    fetchData();
+  }, [type]);
+
+  const fetchData = async () => {
+    const { data, error } = await supabase.from(type).select("id, title, reference");
+    if (!error) setRecords(data);
+  };
+
+  const handleDelete = async () => {
+    const { error } = await supabase.from(type).delete().eq("id", selectedId);
+    if (!error) {
+      setRecords(records.filter((r) => r.id !== selectedId));
+      setConfirmOpen(false);
+    }
+  };
 
   return (
-    <Box sx={{ px: 3, py: 2 }}>
-      <Typography variant="h5" sx={{ mb: 2 }}>Admin Settings</Typography>
-      <Tabs value={tab} onChange={handleTabChange}>
-        <Tab label="General" />
-        <Tab label="Branding" />
-        <Tab label="Notifications" />
-        <Tab label="Roles" />
-      </Tabs>
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h5" gutterBottom>
+        Admin Settings
+      </Typography>
 
-      <Divider sx={{ my: 2 }} />
+      <Paper sx={{ mt: 3 }}>
+        <Tabs value={tab} onChange={(e, v) => { setTab(v); setType(tableOptions[v]); }}>
+          <Tab label="Incidents" />
+          <Tab label="Service Requests" />
+        </Tabs>
 
-      {tab === 0 && (
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="h6">General Settings</Typography>
-          <TextField label="Company Name" fullWidth sx={{ my: 2 }} />
-          <TextField label="Support Email" fullWidth sx={{ my: 2 }} />
-          <Button variant="contained">Save</Button>
-        </Paper>
-      )}
+        <Box sx={{ p: 2 }}>
+          {records.map((item) => (
+            <Box
+              key={item.id}
+              sx={{ display: "flex", justifyContent: "space-between", mb: 1, p: 1, border: "1px solid #ddd", borderRadius: 1 }}
+            >
+              <Box>
+                <Typography fontWeight="bold">{item.reference || item.id}</Typography>
+                <Typography variant="body2">{item.title}</Typography>
+              </Box>
+              <Button color="error" variant="outlined" onClick={() => { setSelectedId(item.id); setConfirmOpen(true); }}>
+                Delete
+              </Button>
+            </Box>
+          ))}
+        </Box>
+      </Paper>
 
-      {tab === 1 && (
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="h6">Branding</Typography>
-          <TextField label="Primary Color" fullWidth sx={{ my: 2 }} />
-          <TextField label="Secondary Color" fullWidth sx={{ my: 2 }} />
-          <Button variant="contained">Save</Button>
-        </Paper>
-      )}
-
-      {tab === 2 && (
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="h6">System Notifications</Typography>
-          <FormControlLabel
-            control={<Switch defaultChecked />}
-            label="Enable Email Alerts"
-            sx={{ my: 2 }}
-          />
-          <Button variant="contained">Save</Button>
-        </Paper>
-      )}
-
-      {tab === 3 && (
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="h6">Roles & Permissions</Typography>
-          <Typography variant="body2">Role management features coming soon.</Typography>
-        </Paper>
-      )}
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+        <DialogTitle>Confirm Deletion</DialogTitle>
+        <DialogContent>
+          Are you sure you want to delete this {type.slice(0, -1)}?
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button color="error" onClick={handleDelete}>Delete</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
