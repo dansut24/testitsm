@@ -36,7 +36,7 @@ export default async function handler(req, res) {
   `;
 
   const msg = {
-    to: "danieljamessutton18@outlook.com",
+    to: "danielsuttonsamsung@gmail.com",
     from: "social@hi5tech.co.uk",
     subject: `New ${capitalizedType} Raised - ${reference}`,
     html: htmlContent,
