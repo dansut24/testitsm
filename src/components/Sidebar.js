@@ -15,6 +15,7 @@ import {
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { useTheme } from "@mui/material/styles";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const drawerWidth = 240;
 const collapsedWidth = 60;
@@ -25,12 +26,12 @@ const Sidebar = ({
   handleSidebarToggle,
   handleMobileSidebarToggle,
   sidebarWidth,
-  tabIndex,
   menuItems,
-  handleSidebarTabClick,
   isMobile,
 }) => {
   const theme = useTheme();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const drawerContent = (
     <>
@@ -62,14 +63,14 @@ const Sidebar = ({
         }}
       >
         <List>
-          {menuItems.map((item, index) => (
+          {menuItems.map((item) => (
             <ListItem
               button
               key={item.text}
-              selected={tabIndex === index}
+              selected={location.pathname === item.path}
               onClick={() => {
-                handleSidebarTabClick(index);
-                if (isMobile) handleMobileSidebarToggle(); // Auto-close on tap
+                if (item.path) navigate(item.path);
+                if (isMobile) handleMobileSidebarToggle();
               }}
               sx={{
                 justifyContent: sidebarOpen || isMobile ? "initial" : "center",
