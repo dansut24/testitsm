@@ -38,6 +38,7 @@ const routeLabels = {
   "/approvals": "Approvals",
   "/profile": "Profile",
   "/settings": "Settings",
+  "/admin-settings": "Admin Settings",
   "/new-incident": "New Incident",
 };
 
@@ -45,8 +46,6 @@ const Layout = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
-  const storedUser = JSON.parse(localStorage.getItem("user"));
-  const role = storedUser?.role || "user";
   const location = useLocation();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -60,6 +59,9 @@ const Layout = () => {
     const storedIndex = sessionStorage.getItem("tabIndex");
     return storedIndex ? parseInt(storedIndex, 10) : 0;
   });
+
+  const storedUser = JSON.parse(localStorage.getItem("user"));
+  const role = storedUser?.role || "user";
 
   const sidebarWidth = sidebarOpen ? drawerWidth : collapsedWidth;
 
@@ -126,23 +128,23 @@ const Layout = () => {
   const handleMobileSidebarToggle = () => setMobileOpen((prev) => !prev);
 
   const baseMenuItems = [
-  { text: "Dashboard", icon: <DashboardIcon /> },
-  { text: "Incidents", icon: <ReportProblemIcon /> },
-  { text: "Service Requests", icon: <AssignmentIcon /> },
-  { text: "Changes", icon: <AutoFixHighIcon /> },
-  { text: "Problems", icon: <BugReportIcon /> },
-  { text: "Assets", icon: <DevicesOtherIcon /> },
-  { text: "Knowledge Base", icon: <MenuBookIcon /> },
-  { text: "Reports", icon: <BarChartIcon /> },
-  { text: "Approvals", icon: <HowToVoteIcon /> },
-  { text: "Profile", icon: <PersonIcon /> },
-  { text: "Settings", icon: <SettingsIcon /> },
-];
+    { text: "Dashboard", icon: <DashboardIcon /> },
+    { text: "Incidents", icon: <ReportProblemIcon /> },
+    { text: "Service Requests", icon: <AssignmentIcon /> },
+    { text: "Changes", icon: <AutoFixHighIcon /> },
+    { text: "Problems", icon: <BugReportIcon /> },
+    { text: "Assets", icon: <DevicesOtherIcon /> },
+    { text: "Knowledge Base", icon: <MenuBookIcon /> },
+    { text: "Reports", icon: <BarChartIcon /> },
+    { text: "Approvals", icon: <HowToVoteIcon /> },
+    { text: "Profile", icon: <PersonIcon /> },
+    { text: "Settings", icon: <SettingsIcon /> },
+  ];
 
-const adminMenuItem = { text: "Admin Settings", icon: <SettingsIcon /> };
+  const adminMenuItem = { text: "Admin Settings", icon: <SettingsIcon /> };
 
-const menuItems = role === "admin" ? [...baseMenuItems, adminMenuItem] : baseMenuItems;
-  
+  const menuItems = role === "admin" ? [...baseMenuItems, adminMenuItem] : baseMenuItems;
+
   return (
     <Box sx={{ display: "flex", height: "100vh", overflow: "hidden" }}>
       <Sidebar
@@ -155,8 +157,8 @@ const menuItems = role === "admin" ? [...baseMenuItems, adminMenuItem] : baseMen
         tabIndex={tabIndex}
         menuItems={menuItems}
         handleSidebarTabClick={(index) => {
-          const path = Object.keys(routeLabels)[index];
-          navigate(path);
+          const path = Object.keys(routeLabels)[index] || menuItems[index].text.toLowerCase().replace(/\s+/g, "-");
+          navigate(`/${path}`);
         }}
         isMobile={isMobile}
       />
@@ -171,7 +173,6 @@ const menuItems = role === "admin" ? [...baseMenuItems, adminMenuItem] : baseMen
           overflow: "hidden",
         }}
       >
-        {/* Fixed Navbar */}
         <Navbar
           sidebarWidth={sidebarWidth}
           showNavbar={showNavbar}
@@ -182,7 +183,6 @@ const menuItems = role === "admin" ? [...baseMenuItems, adminMenuItem] : baseMen
           handleSidebarToggle={handleSidebarToggle}
         />
 
-        {/* Fixed Tabs bar */}
         <AppsBar
           tabs={tabs}
           tabIndex={tabIndex}
@@ -194,33 +194,32 @@ const menuItems = role === "admin" ? [...baseMenuItems, adminMenuItem] : baseMen
           collapsedWidth={collapsedWidth}
         />
 
-<Box
-  sx={{
-    flexGrow: 1,
-    minHeight: 0,
-    overflowY: "auto",
-    px: 2,
-    pb: 2,
-    position: "relative",
-    zIndex: 0, // keep content below navbar/appsbar
-  }}
->
-  {/* 👇 overlay dummy element to force scrollbar to start from the top */}
-  <Box
-    sx={{
-      position: "fixed",
-      top: 0,
-      right: 0,
-      bottom: 0,
-      width: "17px", // native scrollbar width
-      zIndex: (theme) => theme.zIndex.drawer + 10,
-      pointerEvents: "none",
-    }}
-  />
-  <MainContent />
-  <BreadcrumbsNav />
-  <BackToTop />
-</Box>
+        <Box
+          sx={{
+            flexGrow: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            px: 2,
+            pb: 2,
+            position: "relative",
+            zIndex: 0,
+          }}
+        >
+          <Box
+            sx={{
+              position: "fixed",
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: "17px",
+              zIndex: (theme) => theme.zIndex.drawer + 10,
+              pointerEvents: "none",
+            }}
+          />
+          <MainContent />
+          <BreadcrumbsNav />
+          <BackToTop />
+        </Box>
 
         <AIChat />
         <Footer />
