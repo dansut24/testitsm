@@ -28,6 +28,7 @@ const NewServiceRequest = () => {
     description: "",
     category: "",
     priority: "",
+    customer_name: "", // Add this field
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
