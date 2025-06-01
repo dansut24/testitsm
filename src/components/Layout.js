@@ -60,8 +60,8 @@ const Layout = () => {
     return storedIndex ? parseInt(storedIndex, 10) : 0;
   });
 
-  const storedUser = JSON.parse(localStorage.getItem("user"));
-  const role = storedUser?.role || "user";
+  const user = JSON.parse(localStorage.getItem("user"));
+  const role = user?.role || "user";
 
   const sidebarWidth = sidebarOpen ? drawerWidth : collapsedWidth;
 
@@ -127,23 +127,20 @@ const Layout = () => {
   const handleSidebarToggle = () => setSidebarOpen((prev) => !prev);
   const handleMobileSidebarToggle = () => setMobileOpen((prev) => !prev);
 
-  const baseMenuItems = [
-    { text: "Dashboard", icon: <DashboardIcon /> },
-    { text: "Incidents", icon: <ReportProblemIcon /> },
-    { text: "Service Requests", icon: <AssignmentIcon /> },
-    { text: "Changes", icon: <AutoFixHighIcon /> },
-    { text: "Problems", icon: <BugReportIcon /> },
-    { text: "Assets", icon: <DevicesOtherIcon /> },
-    { text: "Knowledge Base", icon: <MenuBookIcon /> },
-    { text: "Reports", icon: <BarChartIcon /> },
-    { text: "Approvals", icon: <HowToVoteIcon /> },
-    { text: "Profile", icon: <PersonIcon /> },
-    { text: "Settings", icon: <SettingsIcon /> },
+  const menuItems = [
+    { text: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
+    { text: "Incidents", icon: <ReportProblemIcon />, path: "/incidents" },
+    { text: "Service Requests", icon: <AssignmentIcon />, path: "/service-requests" },
+    { text: "Changes", icon: <AutoFixHighIcon />, path: "/changes" },
+    { text: "Problems", icon: <BugReportIcon />, path: "/problems" },
+    { text: "Assets", icon: <DevicesOtherIcon />, path: "/assets" },
+    { text: "Knowledge Base", icon: <MenuBookIcon />, path: "/knowledge-base" },
+    { text: "Reports", icon: <BarChartIcon />, path: "/reports" },
+    { text: "Approvals", icon: <HowToVoteIcon />, path: "/approvals" },
+    { text: "Profile", icon: <PersonIcon />, path: "/profile" },
+    { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
+    ...(role === "admin" ? [{ text: "Admin Settings", icon: <SettingsIcon />, path: "/admin-settings" }] : []),
   ];
-
-  const adminMenuItem = { text: "Admin Settings", icon: <SettingsIcon /> };
-
-  const menuItems = role === "admin" ? [...baseMenuItems, adminMenuItem] : baseMenuItems;
 
   return (
     <Box sx={{ display: "flex", height: "100vh", overflow: "hidden" }}>
@@ -156,9 +153,8 @@ const Layout = () => {
         collapsedWidth={collapsedWidth}
         tabIndex={tabIndex}
         menuItems={menuItems}
-        handleSidebarTabClick={(index) => {
-          const path = Object.keys(routeLabels)[index] || menuItems[index].text.toLowerCase().replace(/\s+/g, "-");
-          navigate(`/${path}`);
+        handleSidebarTabClick={(item) => {
+          navigate(item.path);
         }}
         isMobile={isMobile}
       />
