@@ -72,66 +72,114 @@ const Sidebar = ({
         }}
       >
         <List>
-          {menuItems.map((item) => (
+          {menuItems.map((item, index) => (
             <React.Fragment key={item.text}>
-              <ListItem
-                button
-                onClick={() => {
-                  if (item.children) {
-                    toggleDropdown(item.text);
-                  } else if (item.path) {
-                    navigate(item.path);
-                    if (isMobile) handleMobileSidebarToggle();
+              <Box
+                onMouseEnter={() => {
+                  if (!sidebarOpen && !isMobile && item.children) {
+                    setOpenDropdowns({ [item.text]: true });
                   }
                 }}
-                selected={location.pathname === item.path}
-                sx={{
-                  justifyContent: sidebarOpen || isMobile ? "initial" : "center",
-                  "&.Mui-selected": {
-                    backgroundColor: theme.palette.action.selected,
-                    color: theme.palette.primary.main,
-                  },
-                  "&:hover": {
-                    backgroundColor: theme.palette.action.hover,
-                  },
+                onMouseLeave={() => {
+                  if (!sidebarOpen && !isMobile && item.children) {
+                    setOpenDropdowns({ [item.text]: false });
+                  }
                 }}
+                sx={{ position: "relative" }}
               >
-                <ListItemIcon
+                <ListItem
+                  button
+                  onClick={() => {
+                    if (item.children) {
+                      if (sidebarOpen || isMobile) {
+                        toggleDropdown(item.text);
+                      }
+                    } else if (item.path) {
+                      navigate(item.path);
+                      if (isMobile) handleMobileSidebarToggle();
+                    }
+                  }}
+                  selected={location.pathname === item.path}
                   sx={{
-                    minWidth: 0,
-                    mr: sidebarOpen || isMobile ? 2 : "auto",
-                    justifyContent: "center",
-                    color: theme.palette.text.primary,
+                    justifyContent: sidebarOpen || isMobile ? "initial" : "center",
+                    "&.Mui-selected": {
+                      backgroundColor: theme.palette.action.selected,
+                      color: theme.palette.primary.main,
+                    },
+                    "&:hover": {
+                      backgroundColor: theme.palette.action.hover,
+                    },
                   }}
                 >
-                  {item.icon}
-                </ListItemIcon>
-                {(sidebarOpen || isMobile) && <ListItemText primary={item.text} />}
-                {(sidebarOpen || isMobile) && item.children && (
-                  openDropdowns[item.text] ? <ExpandLess /> : <ExpandMore />
-                )}
-              </ListItem>
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 0,
+                      mr: sidebarOpen || isMobile ? 2 : "auto",
+                      justifyContent: "center",
+                      color: theme.palette.text.primary,
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  {(sidebarOpen || isMobile) && <ListItemText primary={item.text} />}
+                  {(sidebarOpen || isMobile) && item.children && (
+                    openDropdowns[item.text] ? <ExpandLess /> : <ExpandMore />
+                  )}
+                </ListItem>
 
-              {item.children && (
-                <Collapse in={openDropdowns[item.text]} timeout="auto" unmountOnExit>
-                  <List component="div" disablePadding>
-                    {item.children.map((child, idx) => (
-                      <ListItem
-                        button
-                        key={child.text}
-                        sx={{ pl: 4 }}
-                        selected={location.pathname === child.path}
-                        onClick={() => {
-                          navigate(child.path);
-                          if (isMobile) handleMobileSidebarToggle();
+                {item.children && (
+                  (sidebarOpen || isMobile) ? (
+                    <Collapse in={openDropdowns[item.text]} timeout="auto" unmountOnExit>
+                      <List component="div" disablePadding>
+                        {item.children.map((child, idx) => (
+                          <ListItem
+                            button
+                            key={child.text}
+                            sx={{ pl: 4 }}
+                            selected={location.pathname === child.path}
+                            onClick={() => {
+                              navigate(child.path);
+                              if (isMobile) handleMobileSidebarToggle();
+                            }}
+                          >
+                            <ListItemText primary={child.text} />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Collapse>
+                  ) : (
+                    openDropdowns[item.text] && (
+                      <Box
+                        sx={{
+                          position: "fixed",
+                          top: `calc(${64 + index * 48}px)`, // 64px for toolbar, 48px per item
+                          left: `${collapsedWidth}px`,
+                          backgroundColor: theme.palette.background.paper,
+                          boxShadow: 4,
+                          borderRadius: 1,
+                          zIndex: theme.zIndex.modal,
+                          minWidth: 180,
                         }}
                       >
-                        <ListItemText primary={child.text} />
-                      </ListItem>
-                    ))}
-                  </List>
-                </Collapse>
-              )}
+                        <List dense>
+                          {item.children.map((child) => (
+                            <ListItem
+                              button
+                              key={child.text}
+                              onClick={() => {
+                                navigate(child.path);
+                                setOpenDropdowns({});
+                              }}
+                            >
+                              <ListItemText primary={child.text} />
+                            </ListItem>
+                          ))}
+                        </List>
+                      </Box>
+                    )
+                  )
+                )}
+              </Box>
             </React.Fragment>
           ))}
         </List>
