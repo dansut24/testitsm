@@ -138,8 +138,9 @@ const Layout = () => {
   { text: "Reports", icon: <BarChartIcon />, path: "/reports" },
   { text: "Approvals", icon: <HowToVoteIcon />, path: "/approvals" },
   { text: "Profile", icon: <PersonIcon />, path: "/profile" },
-  { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
-  { text: "Admin Settings", icon: <SettingsIcon />, path: "/admin-settings", role: "admin" }, // Only show for admin
+  ...(role === "admin"
+    ? [{ text: "Admin Settings", icon: <SettingsIcon />, path: "/admin-settings" }]
+    : [{ text: "Settings", icon: <SettingsIcon />, path: "/settings" }]),
 ];
   
   return (
