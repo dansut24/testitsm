@@ -11,6 +11,7 @@ import {
   ListItemIcon,
   ListItemText,
   Collapse,
+  Grow,
 } from "@mui/material";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -41,6 +42,10 @@ const Sidebar = ({
       ...prev,
       [text]: !prev[text],
     }));
+  };
+
+  const closeAllDropdowns = () => {
+    setOpenDropdowns({});
   };
 
   const drawerContent = (
@@ -92,12 +97,12 @@ const Sidebar = ({
                   button
                   onClick={() => {
                     if (item.children) {
-                      if (sidebarOpen || isMobile) {
-                        toggleDropdown(item.text);
-                      }
+                      // Toggle dropdown on click in all modes
+                      toggleDropdown(item.text);
                     } else if (item.path) {
                       navigate(item.path);
                       if (isMobile) handleMobileSidebarToggle();
+                      closeAllDropdowns();
                     }
                   }}
                   selected={location.pathname === item.path}
@@ -132,7 +137,7 @@ const Sidebar = ({
                   (sidebarOpen || isMobile) ? (
                     <Collapse in={openDropdowns[item.text]} timeout="auto" unmountOnExit>
                       <List component="div" disablePadding>
-                        {item.children.map((child, idx) => (
+                        {item.children.map((child) => (
                           <ListItem
                             button
                             key={child.text}
@@ -141,6 +146,7 @@ const Sidebar = ({
                             onClick={() => {
                               navigate(child.path);
                               if (isMobile) handleMobileSidebarToggle();
+                              closeAllDropdowns();
                             }}
                           >
                             <ListItemText primary={child.text} />
@@ -149,35 +155,37 @@ const Sidebar = ({
                       </List>
                     </Collapse>
                   ) : (
-                    openDropdowns[item.text] &&
                     ReactDOM.createPortal(
-                      <Box
-                        sx={{
-                          position: "fixed",
-                          top: `calc(64px + ${index * 48}px)`, // 64px for toolbar, 48px per item
-                          left: `${collapsedWidth}px`,
-                          backgroundColor: theme.palette.background.paper,
-                          boxShadow: 4,
-                          borderRadius: 1,
-                          zIndex: theme.zIndex.modal + 10,
-                          minWidth: 180,
-                        }}
-                      >
-                        <List dense>
-                          {item.children.map((child) => (
-                            <ListItem
-                              button
-                              key={child.text}
-                              onClick={() => {
-                                navigate(child.path);
-                                setOpenDropdowns({});
-                              }}
-                            >
-                              <ListItemText primary={child.text} />
-                            </ListItem>
-                          ))}
-                        </List>
-                      </Box>,
+                      <Grow in={openDropdowns[item.text]}>
+                        <Box
+                          sx={{
+                            position: "fixed",
+                            top: `calc(64px + ${index * 48}px)`,
+                            left: `${collapsedWidth}px`,
+                            backgroundColor: theme.palette.background.paper,
+                            boxShadow: 4,
+                            borderRadius: 1,
+                            zIndex: theme.zIndex.modal + 10,
+                            minWidth: 180,
+                            transformOrigin: "left top",
+                          }}
+                        >
+                          <List dense>
+                            {item.children.map((child) => (
+                              <ListItem
+                                button
+                                key={child.text}
+                                onClick={() => {
+                                  navigate(child.path);
+                                  closeAllDropdowns();
+                                }}
+                              >
+                                <ListItemText primary={child.text} />
+                              </ListItem>
+                            ))}
+                          </List>
+                        </Box>
+                      </Grow>,
                       document.body
                     )
                   )
