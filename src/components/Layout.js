@@ -127,7 +127,7 @@ const Layout = () => {
   const handleSidebarToggle = () => setSidebarOpen((prev) => !prev);
   const handleMobileSidebarToggle = () => setMobileOpen((prev) => !prev);
 
-  const menuItems = [
+const menuItems = [
   {
     text: "Dashboard",
     icon: <DashboardIcon />,
@@ -144,17 +144,26 @@ const Layout = () => {
   {
     text: "Service Requests",
     icon: <AssignmentIcon />,
-    path: "/service-requests",
+    children: [
+      { text: "View Requests", path: "/service-requests" },
+      { text: "Raise Request", path: "/new-service-request" },
+    ],
   },
   {
     text: "Changes",
     icon: <AutoFixHighIcon />,
-    path: "/changes",
+    children: [
+      { text: "View Changes", path: "/changes" },
+      { text: "Raise Change", path: "/new-change" },
+    ],
   },
   {
     text: "Problems",
     icon: <BugReportIcon />,
-    path: "/problems",
+    children: [
+      { text: "View Problems", path: "/problems" },
+      { text: "Raise Problem", path: "/new-problem" },
+    ],
   },
   {
     text: "Assets",
