@@ -128,16 +128,59 @@ const Layout = () => {
   const handleMobileSidebarToggle = () => setMobileOpen((prev) => !prev);
 
   const menuItems = [
-  { text: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
-  { text: "Incidents", icon: <ReportProblemIcon />, path: "/incidents" },
-  { text: "Service Requests", icon: <AssignmentIcon />, path: "/service-requests" },
-  { text: "Changes", icon: <AutoFixHighIcon />, path: "/changes" },
-  { text: "Problems", icon: <BugReportIcon />, path: "/problems" },
-  { text: "Assets", icon: <DevicesOtherIcon />, path: "/assets" },
-  { text: "Knowledge Base", icon: <MenuBookIcon />, path: "/knowledge-base" },
-  { text: "Reports", icon: <BarChartIcon />, path: "/reports" },
-  { text: "Approvals", icon: <HowToVoteIcon />, path: "/approvals" },
-  { text: "Profile", icon: <PersonIcon />, path: "/profile" },
+  {
+    text: "Dashboard",
+    icon: <DashboardIcon />,
+    path: "/dashboard",
+  },
+  {
+    text: "Incidents",
+    icon: <ReportProblemIcon />,
+    children: [
+      { text: "View Incidents", path: "/incidents" },
+      { text: "Raise Incident", path: "/new-incident" },
+    ],
+  },
+  {
+    text: "Service Requests",
+    icon: <AssignmentIcon />,
+    path: "/service-requests",
+  },
+  {
+    text: "Changes",
+    icon: <AutoFixHighIcon />,
+    path: "/changes",
+  },
+  {
+    text: "Problems",
+    icon: <BugReportIcon />,
+    path: "/problems",
+  },
+  {
+    text: "Assets",
+    icon: <DevicesOtherIcon />,
+    path: "/assets",
+  },
+  {
+    text: "Knowledge Base",
+    icon: <MenuBookIcon />,
+    path: "/knowledge-base",
+  },
+  {
+    text: "Reports",
+    icon: <BarChartIcon />,
+    path: "/reports",
+  },
+  {
+    text: "Approvals",
+    icon: <HowToVoteIcon />,
+    path: "/approvals",
+  },
+  {
+    text: "Profile",
+    icon: <PersonIcon />,
+    path: "/profile",
+  },
   ...(role === "admin"
     ? [{ text: "Admin Settings", icon: <SettingsIcon />, path: "/admin-settings" }]
     : [{ text: "Settings", icon: <SettingsIcon />, path: "/settings" }]),
