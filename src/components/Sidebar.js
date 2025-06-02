@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import ReactDOM from "react-dom";
 import {
   Box,
   SwipeableDrawer,
@@ -148,16 +149,17 @@ const Sidebar = ({
                       </List>
                     </Collapse>
                   ) : (
-                    openDropdowns[item.text] && (
+                    openDropdowns[item.text] &&
+                    ReactDOM.createPortal(
                       <Box
                         sx={{
                           position: "fixed",
-                          top: `calc(${64 + index * 48}px)`, // 64px for toolbar, 48px per item
+                          top: `calc(64px + ${index * 48}px)`, // 64px for toolbar, 48px per item
                           left: `${collapsedWidth}px`,
                           backgroundColor: theme.palette.background.paper,
                           boxShadow: 4,
                           borderRadius: 1,
-                          zIndex: theme.zIndex.modal,
+                          zIndex: theme.zIndex.modal + 10,
                           minWidth: 180,
                         }}
                       >
@@ -175,7 +177,8 @@ const Sidebar = ({
                             </ListItem>
                           ))}
                         </List>
-                      </Box>
+                      </Box>,
+                      document.body
                     )
                   )
                 )}
