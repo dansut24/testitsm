@@ -1,123 +1,68 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
 
 const Viewer = () => {
-  const { tenantId } = useParams();
   const videoRef = useRef(null);
-  const logRef = useRef(null);
   const [logs, setLogs] = useState([]);
-
-  const log = (msg) => {
-    setLogs((prev) => [...prev, msg]);
-    console.log(msg);
-  };
+  const addLog = (msg) => setLogs((prev) => [...prev, msg]);
 
   useEffect(() => {
+    const tenantId = "tenant123";
     const video = videoRef.current;
+
     const pc = new RTCPeerConnection({
       iceServers: [
         {
-          urls: "turn:flyturnserver.fly.dev:3478",
-          username: "user",
-          credential: "pass",
+          urls: [
+            "turn:relay1.expressturn.com:3480?transport=udp",
+            "turn:relay1.expressturn.com:3480?transport=tcp",
+          ],
+          username: "000000002064281179",
+          credential: "RzKsDze1P7nN",
         },
       ],
-      iceTransportPolicy: "all",
+      iceTransportPolicy: "relay", // Force TURN only
     });
 
-    const ws = new WebSocket("wss://webrtc-signaling-server-old-silence-5681.fly.dev");
+    addLog("[Test] Created RTCPeerConnection");
 
-    ws.onopen = () => {
-      log("[Viewer] WebSocket connected");
-      ws.send(JSON.stringify({ type: "register", role: "viewer", tenant: tenantId }));
-    };
-
-    ws.onmessage = async (event) => {
-      const data = JSON.parse(event.data);
-      log(`[Viewer] Message: ${data.type}`);
-
-      if (data.type === "offer") {
-        if (!data.sdp || !data.sdp.type || !data.sdp.sdp) {
-          log("[Viewer] Invalid offer format");
-          return;
-        }
-
-        try {
-          await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          ws.send(JSON.stringify({ type: "answer", sdp: pc.localDescription, tenant: tenantId }));
-          log("[Viewer] Sent SDP answer");
-        } catch (err) {
-          log("[Viewer] Error handling offer: " + err);
-        }
-      } else if (data.type === "ice") {
-        try {
-          await pc.addIceCandidate(data.candidate);
-          log("[Viewer] ICE candidate added");
-        } catch (err) {
-          log("[Viewer] Failed to add ICE candidate: " + err);
-        }
-      }
-    };
+    let turnSucceeded = false;
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        ws.send(JSON.stringify({ type: "ice", candidate: event.candidate, tenant: tenantId }));
-        log("[Viewer] Sent ICE candidate");
+        addLog(`[ICE] Candidate: ${event.candidate.candidate}`);
+        if (event.candidate.candidate.includes("relay")) {
+          turnSucceeded = true;
+        }
+      } else {
+        addLog("[ICE] ICE Gathering Complete");
+        if (turnSucceeded) {
+          addLog("✅ TURN relay candidate found — TURN is working!");
+        } else {
+          addLog("❌ No TURN relay candidate found — TURN might be unreachable.");
+        }
+        pc.close();
       }
     };
 
-    pc.oniceconnectionstatechange = () => {
-      log("[ICE] State changed to: " + pc.iceConnectionState);
-    };
-
-    pc.ontrack = (event) => {
-      if (video.srcObject !== event.streams[0]) {
-        video.srcObject = event.streams[0];
-        log("[Viewer] Remote stream attached");
-      }
-    };
+    pc.createDataChannel("test");
+    pc.createOffer()
+      .then((offer) => pc.setLocalDescription(offer))
+      .catch((err) => addLog(`[Error] Failed to create offer: ${err.message}`));
 
     return () => {
-      ws.close();
       pc.close();
-      log("[Viewer] Cleanup on unmount");
     };
-  }, [tenantId]);
+  }, []);
 
   return (
-    <div style={{ position: "relative", height: "100vh", background: "#000" }}>
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
-        style={{ width: "100vw", height: "100vh", objectFit: "contain" }}
-      />
-      <div
-        ref={logRef}
-        style={{
-          position: "absolute",
-          top: 10,
-          left: 10,
-          background: "rgba(0,0,0,0.7)",
-          color: "#0f0",
-          fontSize: "12px",
-          padding: "8px",
-          maxHeight: "50vh",
-          overflowY: "auto",
-          width: "40vw",
-          borderRadius: "4px",
-        }}
-      >
-        <strong>Logs:</strong>
-        <ul style={{ margin: 0, paddingLeft: 16 }}>
-          {logs.map((line, index) => (
-            <li key={index} style={{ listStyle: "none" }}>{line}</li>
-          ))}
-        </ul>
-      </div>
+    <div style={{ height: "100vh", backgroundColor: "#111", color: "#0f0", padding: 16 }}>
+      <h2>WebRTC TURN Connectivity Test</h2>
+      <pre style={{ fontSize: 14, whiteSpace: "pre-wrap" }}>
+        {logs.map((line, idx) => (
+          <div key={idx}>{line}</div>
+        ))}
+      </pre>
+      <video ref={videoRef} autoPlay playsInline muted style={{ display: "none" }} />
     </div>
   );
 };
