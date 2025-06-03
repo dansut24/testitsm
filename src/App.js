@@ -46,8 +46,9 @@ import NotAuthorised from "./pages/NotAuthorised";
 import ProtectedRoute from "./components/ProtectedRoute";
 import useAuth from "./hooks/useAuth";
 
-// 🔁 RDP Viewer
+// RDP + Test
 import Viewer from "./pages/rdp/Viewer";
+import ConnectivityTest from "./pages/rdp/ConnectivityTest";
 
 function App() {
   const { user, authLoading } = useAuth();
@@ -76,7 +77,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/loading" element={<Loading />} />
           <Route path="/not-authorised" element={<NotAuthorised />} />
-          <Route path="/rdp/:tenantId" element={<Viewer />} />
+          <Route path="/connectivity-test" element={<ConnectivityTest />} />
 
           {/* Self-Service Portal */}
           <Route path="/self-service" element={<SelfServiceLayout />}>
@@ -105,6 +106,7 @@ function App() {
             <Route path="approvals" element={<Approvals />} />
             <Route path="profile" element={<UserProfile />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="rdp-viewer" element={<Viewer />} />
             <Route
               path="admin-settings"
               element={
