@@ -1,54 +1,57 @@
-// src/pages/tools/ConnectivityTest.js
-import React, { useEffect, useState } from "react";
+// src/pages/ConnectivityTest.js
+import React, { useEffect, useState } from 'react';
 
 const ConnectivityTest = () => {
-  const [logs, setLogs] = useState(["Running test..."]);
-  const appendLog = (msg) => setLogs((prev) => [...prev, msg]);
+  const [log, setLog] = useState([]);
+  const [relayFound, setRelayFound] = useState(false);
+
+  const logMessage = (msg) => {
+    console.log(msg);
+    setLog((prev) => [...prev, msg]);
+  };
 
   useEffect(() => {
     const pc = new RTCPeerConnection({
       iceServers: [
         {
-          urls: "turn:flyturnserver.fly.dev:3478",
-          username: "user",
-          credential: "pass",
-        },
+          urls: 'turn:flyturnserver.fly.dev:3478',
+          username: 'user',
+          credential: 'pass'
+        }
       ],
-      iceTransportPolicy: "relay",
+      iceTransportPolicy: 'relay'
     });
 
-    let turnFound = false;
+    logMessage('[Test] Created RTCPeerConnection');
 
     pc.onicecandidate = (event) => {
-      if (!event.candidate) {
-        if (turnFound) {
-          appendLog("✅ TURN candidate found — connectivity should work over the internet.");
-        } else {
-          appendLog("❌ No TURN candidate found — TURN might be unreachable.");
+      if (event.candidate) {
+        const c = event.candidate;
+        logMessage(`[ICE] Candidate: ${c.candidate}`);
+        if (c.candidate.includes('typ relay')) {
+          logMessage('[✔] TURN relay candidate found ✅');
+          setRelayFound(true);
         }
-        return;
-      }
-
-      const cand = event.candidate.candidate;
-      appendLog(`ICE candidate: ${cand}`);
-      if (cand.includes("typ relay")) {
-        turnFound = true;
-        appendLog("🔁 Relay (TURN) candidate detected.");
+      } else {
+        logMessage('[ICE] ICE Gathering Complete');
+        if (!relayFound) {
+          logMessage('[❌] No TURN relay candidate found');
+        }
       }
     };
 
-    pc.oniceconnectionstatechange = () => {
-      appendLog(`ICE connection state: ${pc.iceConnectionState}`);
-    };
-
-    pc.createDataChannel("test");
+    pc.createDataChannel('test');
     pc.createOffer().then((offer) => pc.setLocalDescription(offer));
+
+    return () => pc.close();
   }, []);
 
   return (
-    <div style={{ background: "#111", color: "#0f0", padding: "1rem", fontFamily: "monospace" }}>
+    <div style={{ padding: '20px', fontFamily: 'monospace', color: '#fff', background: '#111', minHeight: '100vh' }}>
       <h2>WebRTC TURN Connectivity Test</h2>
-      <pre>{logs.join("\n")}</pre>
+      <pre style={{ whiteSpace: 'pre-wrap' }}>
+        {log.map((l, idx) => <div key={idx}>{l}</div>)}
+      </pre>
     </div>
   );
 };
