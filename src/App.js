@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
+import UserDashboard from "./pages/UserDashboard"; // ✅ NEW
 import Incidents from "./pages/Incidents";
 import ServiceRequests from "./pages/ServiceRequests";
 import Changes from "./pages/Changes";
@@ -90,12 +91,31 @@ function App() {
             <Route path="knowledge-base" element={<SelfServiceKnowledgeBase />} />
           </Route>
 
-          {/* ITSM Admin Routes */}
-          <Route
-            path="/"
-            element={isLoggedIn ? <Layout /> : <Login />}
-          >
-            <Route path="dashboard" element={<Dashboard />} />
+          {/* ITSM Admin/User Layout */}
+          <Route path="/" element={isLoggedIn ? <Layout /> : <Login />}>
+            {/* Role-based Dashboard */}
+            <Route
+              path="dashboard"
+              element={
+                user?.role === "user" ? (
+                  <UserDashboard />
+                ) : (
+                  <Dashboard />
+                )
+              }
+            />
+
+            {/* User-specific dashboard route */}
+            <Route
+              path="user-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={["user"]}>
+                  <UserDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Standard ITSM Routes */}
             <Route path="incidents" element={<Incidents />} />
             <Route path="service-requests" element={<ServiceRequests />} />
             <Route path="changes" element={<Changes />} />
@@ -107,6 +127,8 @@ function App() {
             <Route path="profile" element={<UserProfile />} />
             <Route path="settings" element={<Settings />} />
             <Route path="rdp-viewer" element={<Viewer />} />
+
+            {/* Admin-only settings */}
             <Route
               path="admin-settings"
               element={
@@ -115,17 +137,22 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/* Creation Pages */}
             <Route path="new-incident" element={<NewIncident />} />
             <Route path="new-service-request" element={<NewServiceRequest />} />
             <Route path="new-change" element={<NewChange />} />
             <Route path="new-problem" element={<NewProblem />} />
             <Route path="new-asset" element={<NewAsset />} />
+
+            {/* Detail Pages */}
             <Route path="incidents/:id" element={<IncidentDetail />} />
             <Route path="service-requests/:id" element={<ServiceRequestDetail />} />
             <Route path="changes/:id" element={<ChangeDetail />} />
             <Route path="problems/:id" element={<ProblemDetail />} />
             <Route path="assets/:id" element={<AssetDetail />} />
             <Route path="knowledge-base/:id" element={<ArticleDetail />} />
+
             <Route path="announcements" element={<Announcements />} />
             <Route path="work-scheduler" element={<WorkScheduler />} />
           </Route>
