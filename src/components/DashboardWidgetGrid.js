@@ -1,20 +1,21 @@
 import React, { useEffect, useState } from "react";
 import GridLayout from "react-grid-layout";
-import { Paper, Typography, Box, CircularProgress } from "@mui/material";
-import { supabase } from "../supabaseClient"; // ensure you have this configured
+import {
+  Box, Paper, Typography, CircularProgress,
+  Fab, Dialog, DialogTitle, DialogContent, FormGroup, FormControlLabel, Checkbox
+} from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import { widgetRegistry } from "./widgetRegistry";
+import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 
-const defaultLayout = [
-  { i: "incidents", x: 0, y: 0, w: 4, h: 3 },
-  { i: "requests", x: 4, y: 0, w: 4, h: 3 },
-  { i: "knowledge", x: 8, y: 0, w: 4, h: 3 },
-];
-
 const DashboardWidgetGrid = () => {
+  const { user } = useAuth();
   const [layout, setLayout] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth(); // ensure user object includes user.id
+  const [widgetPickerOpen, setWidgetPickerOpen] = useState(false);
 
+  // Fetch layout from Supabase
   useEffect(() => {
     const fetchLayout = async () => {
       const { data, error } = await supabase
@@ -24,7 +25,7 @@ const DashboardWidgetGrid = () => {
         .single();
 
       if (data?.layout) setLayout(data.layout);
-      else setLayout(defaultLayout);
+      else setLayout(Object.values(widgetRegistry).map((w) => w.defaultLayout));
 
       setLoading(false);
     };
@@ -34,15 +35,24 @@ const DashboardWidgetGrid = () => {
 
   const onLayoutChange = async (newLayout) => {
     setLayout(newLayout);
-
-    const { error } = await supabase
+    await supabase
       .from("dashboard_layouts")
       .upsert({
         user_id: user.id,
         layout: newLayout,
         updated_at: new Date().toISOString(),
       });
-    if (error) console.error("Failed to save layout", error);
+  };
+
+  const toggleWidget = (key) => {
+    const exists = layout.find((item) => item.i === key);
+    let updatedLayout;
+    if (exists) {
+      updatedLayout = layout.filter((item) => item.i !== key);
+    } else {
+      updatedLayout = [...layout, widgetRegistry[key].defaultLayout];
+    }
+    onLayoutChange(updatedLayout);
   };
 
   const renderWidget = (key) => {
@@ -81,6 +91,34 @@ const DashboardWidgetGrid = () => {
           </div>
         ))}
       </GridLayout>
+
+      <Fab
+        color="primary"
+        onClick={() => setWidgetPickerOpen(true)}
+        sx={{ position: "fixed", bottom: 24, right: 24 }}
+      >
+        <AddIcon />
+      </Fab>
+
+      <Dialog open={widgetPickerOpen} onClose={() => setWidgetPickerOpen(false)}>
+        <DialogTitle>Select Dashboard Widgets</DialogTitle>
+        <DialogContent>
+          <FormGroup>
+            {Object.entries(widgetRegistry).map(([key, { label }]) => (
+              <FormControlLabel
+                key={key}
+                control={
+                  <Checkbox
+                    checked={!!layout.find((item) => item.i === key)}
+                    onChange={() => toggleWidget(key)}
+                  />
+                }
+                label={label}
+              />
+            ))}
+          </FormGroup>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };
