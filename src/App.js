@@ -154,8 +154,8 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <Router>
+      <AuthProvider>
         <CssBaseline />
         <Box
           sx={{
@@ -169,8 +169,8 @@ function App() {
         >
           <AppRoutes />
         </Box>
-      </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 
