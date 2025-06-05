@@ -1,43 +1,54 @@
 // src/components/ProfileDrawer.js
-
 import React from "react";
-import { Typography, Box, Button, Avatar } from "@mui/material";
+import {
+  Drawer,
+  Box,
+  Typography,
+  Avatar,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
+  IconButton,
+} from "@mui/material";
+import LogoutIcon from "@mui/icons-material/Logout";
+import { useAuth } from "../context/AuthContext";
 
-const ProfileDrawer = ({ onLogout }) => {
-  const storedUser = JSON.parse(localStorage.getItem("user")) || {
-    username: "Unknown",
-    avatar_url: "",
-    email: "",
-    role: "",
-  };
+const ProfileDrawer = ({ open, onClose }) => {
+  const { user, logout } = useAuth();
 
   return (
-    <Box>
-      <Typography variant="h6">Profile</Typography>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 2 }}>
-        <Avatar src={storedUser.avatar_url} sx={{ width: 48, height: 48 }}>
-          {storedUser.username?.[0]?.toUpperCase() || "U"}
-        </Avatar>
-        <Box>
-          <Typography variant="subtitle1">{storedUser.username}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {storedUser.email || "No email set"}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Role: {storedUser.role || "N/A"}
-          </Typography>
+    <Drawer anchor="right" open={open} onClose={onClose}>
+      <Box sx={{ width: 300, p: 3 }}>
+        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+          <Avatar sx={{ width: 56, height: 56 }}>
+            {user?.full_name ? user.full_name[0] : "?"}
+          </Avatar>
+          <Box sx={{ ml: 2 }}>
+            <Typography variant="h6">
+              {user?.full_name || "No name set"}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {user?.email}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Role: {user?.role}
+            </Typography>
+          </Box>
         </Box>
-      </Box>
 
-      <Button
-        variant="outlined"
-        color="error"
-        onClick={onLogout}
-        sx={{ mt: 3 }}
-      >
-        Logout
-      </Button>
-    </Box>
+        <Divider sx={{ my: 2 }} />
+
+        <List>
+          <ListItem button onClick={logout}>
+            <ListItemText primary="Logout" />
+            <IconButton>
+              <LogoutIcon />
+            </IconButton>
+          </ListItem>
+        </List>
+      </Box>
+    </Drawer>
   );
 };
 
