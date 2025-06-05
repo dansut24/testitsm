@@ -1,4 +1,3 @@
-// src/components/ProfileDrawer.js
 import React from "react";
 import {
   Drawer,
@@ -6,10 +5,10 @@ import {
   Typography,
   Avatar,
   Divider,
+  IconButton,
   List,
   ListItem,
   ListItemText,
-  IconButton,
 } from "@mui/material";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useAuth } from "../context/AuthContext";
@@ -19,20 +18,20 @@ const ProfileDrawer = ({ open, onClose }) => {
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose}>
-      <Box sx={{ width: 300, p: 3 }}>
+      <Box sx={{ width: 300, p: 3, bgcolor: "background.paper" }}>
         <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
           <Avatar sx={{ width: 56, height: 56 }}>
-            {user?.full_name ? user.full_name[0] : "?"}
+            {user?.full_name?.[0] || "?"}
           </Avatar>
           <Box sx={{ ml: 2 }}>
             <Typography variant="h6">
-              {user?.full_name || "No name set"}
+              {user?.full_name || "Unknown User"}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {user?.email}
+              {user?.email || "No email"}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Role: {user?.role}
+              Role: {user?.role || "N/A"}
             </Typography>
           </Box>
         </Box>
