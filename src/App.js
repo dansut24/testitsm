@@ -17,6 +17,7 @@ import UserProfile from "./pages/UserProfile";
 import Settings from "./pages/Settings";
 import AdminSettings from "./pages/AdminSettings";
 import Login from "./pages/Login";
+import Signup from "./pages/Signup"; // ✅ NEW
 import Loading from "./pages/Loading";
 import NewIncident from "./pages/NewIncident";
 import NewServiceRequest from "./pages/NewServiceRequest";
@@ -65,6 +66,7 @@ function AppRoutes() {
     <Routes>
       {/* Public Routes */}
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} /> {/* ✅ NEW */}
       <Route path="/loading" element={<Loading />} />
       <Route path="/not-authorised" element={<NotAuthorised />} />
       <Route path="/connectivity-test" element={<ConnectivityTest />} />
@@ -82,19 +84,12 @@ function AppRoutes() {
 
       {/* ITSM Admin/User Layout */}
       <Route path="/" element={isLoggedIn ? <Layout /> : <Login />}>
-        {/* Role-based Dashboard */}
         <Route
           path="dashboard"
           element={
-            user?.role === "selfservice" ? (
-              <UserDashboard />
-            ) : (
-              <Dashboard />
-            )
+            user?.role === "selfservice" ? <UserDashboard /> : <Dashboard />
           }
         />
-
-        {/* User-specific dashboard route */}
         <Route
           path="user-dashboard"
           element={
@@ -141,7 +136,6 @@ function AppRoutes() {
         <Route path="problems/:id" element={<ProblemDetail />} />
         <Route path="assets/:id" element={<AssetDetail />} />
         <Route path="knowledge-base/:id" element={<ArticleDetail />} />
-
         <Route path="announcements" element={<Announcements />} />
         <Route path="work-scheduler" element={<WorkScheduler />} />
       </Route>
