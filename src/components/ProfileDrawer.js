@@ -12,44 +12,31 @@ import {
 } from "@mui/material";
 import LogoutIcon from "@mui/icons-material/Logout";
 
-const TestDrawer = ({ open, onClose }) => {
-  const dummyUser = {
-    full_name: "Dan Sutton",
-    email: "danielsuttonsamsung@gmail.com",
-    role: "admin"
-  };
-
+const ProfileDrawer = ({ open, onClose }) => {
   return (
-    <Drawer
-      anchor="right"
-      open={open}
-      onClose={onClose}
-      sx={{
-        zIndex: 1301,
-        "& .MuiDrawer-paper": {
-          backgroundColor: "white",
-          color: "black",
-          width: 300,
-          p: 3,
-        },
-      }}
-    >
-      <Box sx={{ p: 3 }}>
+    <Drawer anchor="right" open={open} onClose={onClose}>
+      <Box sx={{ width: 300, p: 3, bgcolor: "background.paper" }}>
         <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
           <Avatar sx={{ width: 56, height: 56 }}>
-            {dummyUser.full_name[0]}
+            D
           </Avatar>
           <Box sx={{ ml: 2 }}>
-            <Typography variant="h6">{dummyUser.full_name}</Typography>
-            <Typography variant="body2">{dummyUser.email}</Typography>
-            <Typography variant="caption">Role: {dummyUser.role}</Typography>
+            <Typography variant="h6">
+              Dan Sutton
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              dan@hi5tech.co.uk
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Role: admin
+            </Typography>
           </Box>
         </Box>
 
         <Divider sx={{ my: 2 }} />
 
         <List>
-          <ListItem button onClick={() => alert("Logout clicked")}>
+          <ListItem button onClick={() => alert("Logging out...")}>
             <ListItemText primary="Logout" />
             <IconButton>
               <LogoutIcon />
@@ -61,4 +48,4 @@ const TestDrawer = ({ open, onClose }) => {
   );
 };
 
-export default TestDrawer;
+export default ProfileDrawer;
