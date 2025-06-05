@@ -10,9 +10,16 @@ import { useAuth } from "../context/AuthContext";
 import { widgetRegistry } from "../components/widgetRegistry";
 
 const Settings = () => {
-  const { user } = useAuth();
+  const { user, authLoading } = useAuth();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // 🔍 Debug Logging
+  console.log("🔍 Auth Debug:");
+  console.log("User:", user);
+  console.log("User ID:", user?.id);
+  console.log("User Role:", user?.role);
+  console.log("Auth Loading:", authLoading);
 
   const handleCreateDashboard = async () => {
     if (!user?.id) {
@@ -34,14 +41,23 @@ const Settings = () => {
       });
 
     if (error) {
-      console.error("Supabase error:", error);
+      console.error("❌ Supabase insert error:", error);
       setStatus({ type: "error", message: "❌ Failed to create dashboard layout." });
     } else {
+      console.log("✅ Dashboard layout created successfully.");
       setStatus({ type: "success", message: "✅ Dashboard layout created successfully!" });
     }
 
     setLoading(false);
   };
+
+  if (authLoading) {
+    return (
+      <Box sx={{ p: 4 }}>
+        <Typography>Loading session...</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 4 }}>
