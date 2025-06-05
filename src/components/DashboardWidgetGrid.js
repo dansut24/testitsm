@@ -8,6 +8,7 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import { widgetRegistry } from "./widgetRegistry";
+
 import IncidentWidget from "./IncidentWidget";
 import RequestWidget from "./RequestWidget";
 import KnowledgeWidget from "./KnowledgeWidget";
@@ -22,7 +23,7 @@ const DashboardWidgetGrid = () => {
     const fetchLayout = async () => {
       if (!user?.id) return;
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("dashboard_layouts")
         .select("layout")
         .eq("user_id", user.id)
@@ -31,14 +32,7 @@ const DashboardWidgetGrid = () => {
       if (data?.layout) {
         setWidgets(data.layout);
       } else {
-        const defaultLayout = Object.keys(widgetRegistry);
-        setWidgets(defaultLayout);
-
-        await supabase.from("dashboard_layouts").upsert({
-          user_id: user.id,
-          layout: defaultLayout,
-          updated_at: new Date().toISOString(),
-        });
+        setWidgets([]); // Do not auto-create layout
       }
 
       setLoading(false);
@@ -60,7 +54,6 @@ const DashboardWidgetGrid = () => {
 
   const onDragEnd = (result) => {
     if (!result.destination) return;
-
     const reordered = Array.from(widgets);
     const [moved] = reordered.splice(result.source.index, 1);
     reordered.splice(result.destination.index, 0, moved);
@@ -75,20 +68,30 @@ const DashboardWidgetGrid = () => {
   };
 
   const renderWidget = (key) => {
-  if (!user?.id) return null; // ✅ Avoid rendering if user is missing
+    if (!user?.id) return null;
 
-  switch (key) {
-    case "incidents":
-      return <IncidentWidget userId={user.id} />;
-    case "requests":
-      return <RequestWidget userId={user.id} />;
-    case "knowledge":
-      return <KnowledgeWidget />;
-    default:
-      return <Typography variant="h6">Unknown Widget</Typography>;
-  }
-};
+    switch (key) {
+      case "incidents":
+        return <IncidentWidget userId={user.id} />;
+      case "requests":
+        return <RequestWidget userId={user.id} />;
+      case "knowledge":
+        return <KnowledgeWidget />;
+      default:
+        return <Typography variant="h6">Unknown Widget</Typography>;
+    }
+  };
+
   if (loading) return <CircularProgress sx={{ mt: 4 }} />;
+  if (!loading && widgets.length === 0) {
+    return (
+      <Box sx={{ p: 4 }}>
+        <Typography variant="body1">
+          No dashboard layout found. Please create your dashboard in <strong>Settings</strong>.
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 2 }}>
