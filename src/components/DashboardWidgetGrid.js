@@ -1,21 +1,20 @@
-import React, { useEffect, useState } from "react";
-import GridLayout from "react-grid-layout";
+import React, { useState, useEffect } from "react";
 import {
-  Box, Paper, Typography, CircularProgress,
+  Box, Paper, Typography, Grid, CircularProgress,
   Fab, Dialog, DialogTitle, DialogContent, FormGroup, FormControlLabel, Checkbox
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import { widgetRegistry } from "./widgetRegistry";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
+import { widgetRegistry } from "./widgetRegistry";
 
 const DashboardWidgetGrid = () => {
   const { user } = useAuth();
-  const [layout, setLayout] = useState(null);
+  const [widgets, setWidgets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [widgetPickerOpen, setWidgetPickerOpen] = useState(false);
 
-  // Fetch layout from Supabase
   useEffect(() => {
     const fetchLayout = async () => {
       const { data, error } = await supabase
@@ -24,8 +23,8 @@ const DashboardWidgetGrid = () => {
         .eq("user_id", user.id)
         .single();
 
-      if (data?.layout) setLayout(data.layout);
-      else setLayout(Object.values(widgetRegistry).map((w) => w.defaultLayout));
+      if (data?.layout) setWidgets(data.layout);
+      else setWidgets(Object.keys(widgetRegistry)); // show all by default
 
       setLoading(false);
     };
@@ -33,26 +32,31 @@ const DashboardWidgetGrid = () => {
     if (user?.id) fetchLayout();
   }, [user]);
 
-  const onLayoutChange = async (newLayout) => {
-    setLayout(newLayout);
+  const saveLayout = async (updatedLayout) => {
+    setWidgets(updatedLayout);
     await supabase
       .from("dashboard_layouts")
       .upsert({
         user_id: user.id,
-        layout: newLayout,
+        layout: updatedLayout,
         updated_at: new Date().toISOString(),
       });
   };
 
+  const onDragEnd = (result) => {
+    if (!result.destination) return;
+
+    const reordered = Array.from(widgets);
+    const [moved] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, moved);
+    saveLayout(reordered);
+  };
+
   const toggleWidget = (key) => {
-    const exists = layout.find((item) => item.i === key);
-    let updatedLayout;
-    if (exists) {
-      updatedLayout = layout.filter((item) => item.i !== key);
-    } else {
-      updatedLayout = [...layout, widgetRegistry[key].defaultLayout];
-    }
-    onLayoutChange(updatedLayout);
+    const updated = widgets.includes(key)
+      ? widgets.filter((k) => k !== key)
+      : [...widgets, key];
+    saveLayout(updated);
   };
 
   const renderWidget = (key) => {
@@ -71,26 +75,39 @@ const DashboardWidgetGrid = () => {
   if (loading) return <CircularProgress sx={{ mt: 4 }} />;
 
   return (
-    <Box sx={{ width: "100%", p: 2 }}>
-      <GridLayout
-        className="layout"
-        layout={layout}
-        cols={12}
-        rowHeight={80}
-        width={1200}
-        onLayoutChange={onLayoutChange}
-        draggableHandle=".widget-header"
-      >
-        {layout.map((item) => (
-          <div key={item.i}>
-            <Paper elevation={3} sx={{ height: "100%", p: 2, overflow: "auto" }}>
-              <Box className="widget-header" sx={{ cursor: "move", mb: 1 }}>
-                {renderWidget(item.i)}
-              </Box>
-            </Paper>
-          </div>
-        ))}
-      </GridLayout>
+    <Box sx={{ p: 2 }}>
+      <DragDropContext onDragEnd={onDragEnd}>
+        <Droppable droppableId="dashboard" direction="vertical">
+          {(provided) => (
+            <Grid
+              container
+              spacing={2}
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+            >
+              {widgets.map((key, index) => (
+                <Draggable key={key} draggableId={key} index={index}>
+                  {(provided) => (
+                    <Grid
+                      item
+                      xs={12}
+                      md={6}
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      {...provided.dragHandleProps}
+                    >
+                      <Paper sx={{ p: 2, minHeight: 120 }}>
+                        {renderWidget(key)}
+                      </Paper>
+                    </Grid>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
+            </Grid>
+          )}
+        </Droppable>
+      </DragDropContext>
 
       <Fab
         color="primary"
@@ -109,7 +126,7 @@ const DashboardWidgetGrid = () => {
                 key={key}
                 control={
                   <Checkbox
-                    checked={!!layout.find((item) => item.i === key)}
+                    checked={widgets.includes(key)}
                     onChange={() => toggleWidget(key)}
                   />
                 }
