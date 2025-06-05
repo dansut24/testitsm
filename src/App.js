@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
-import UserDashboard from "./pages/UserDashboard"; // ✅ NEW
+import UserDashboard from "./pages/UserDashboard";
 import Incidents from "./pages/Incidents";
 import ServiceRequests from "./pages/ServiceRequests";
 import Changes from "./pages/Changes";
@@ -45,13 +45,14 @@ import Confirmation from "./pages/SelfService/Confirmation";
 import NotFound from "./pages/NotFound";
 import NotAuthorised from "./pages/NotAuthorised";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { AuthProvider } from "./context/AuthContext";
 import useAuth from "./hooks/useAuth";
 
 // RDP + Test
 import Viewer from "./pages/rdp/Viewer";
 import ConnectivityTest from "./pages/rdp/ConnectivityTest";
 
-function App() {
+function AppRoutes() {
   const { user, authLoading } = useAuth();
 
   if (authLoading) {
@@ -61,107 +62,115 @@ function App() {
   const isLoggedIn = !!user;
 
   return (
-    <Router>
-      <CssBaseline />
-      <Box
-        sx={{
-          minHeight: "100vh",
-          width: "100vw",
-          overflowX: "hidden",
-          overflowY: "auto",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/loading" element={<Loading />} />
-          <Route path="/not-authorised" element={<NotAuthorised />} />
-          <Route path="/connectivity-test" element={<ConnectivityTest />} />
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/loading" element={<Loading />} />
+      <Route path="/not-authorised" element={<NotAuthorised />} />
+      <Route path="/connectivity-test" element={<ConnectivityTest />} />
 
-          {/* Self-Service Portal */}
-          <Route path="/self-service" element={<SelfServiceLayout />}>
-            <Route index element={<SelfServiceHome />} />
-            <Route path="raise-request" element={<RaiseRequest />} />
-            <Route path="raise-incident" element={<RaiseIncident />} />
-            <Route path="catalog" element={<ServiceCatalog />} />
-            <Route path="checkout" element={<Checkout />} />
-            <Route path="confirmation" element={<Confirmation />} />
-            <Route path="knowledge-base" element={<SelfServiceKnowledgeBase />} />
-          </Route>
+      {/* Self-Service Portal */}
+      <Route path="/self-service" element={<SelfServiceLayout />}>
+        <Route index element={<SelfServiceHome />} />
+        <Route path="raise-request" element={<RaiseRequest />} />
+        <Route path="raise-incident" element={<RaiseIncident />} />
+        <Route path="catalog" element={<ServiceCatalog />} />
+        <Route path="checkout" element={<Checkout />} />
+        <Route path="confirmation" element={<Confirmation />} />
+        <Route path="knowledge-base" element={<SelfServiceKnowledgeBase />} />
+      </Route>
 
-          {/* ITSM Admin/User Layout */}
-          <Route path="/" element={isLoggedIn ? <Layout /> : <Login />}>
-            {/* Role-based Dashboard */}
-            <Route
-              path="dashboard"
-              element={
-                user?.role === "user" ? (
-                  <UserDashboard />
-                ) : (
-                  <Dashboard />
-                )
-              }
-            />
+      {/* ITSM Admin/User Layout */}
+      <Route path="/" element={isLoggedIn ? <Layout /> : <Login />}>
+        {/* Role-based Dashboard */}
+        <Route
+          path="dashboard"
+          element={
+            user?.role === "user" ? (
+              <UserDashboard />
+            ) : (
+              <Dashboard />
+            )
+          }
+        />
 
-            {/* User-specific dashboard route */}
-            <Route
-              path="user-dashboard"
-              element={
-                <ProtectedRoute allowedRoles={["user"]}>
-                  <UserDashboard />
-                </ProtectedRoute>
-              }
-            />
+        {/* User-specific dashboard route */}
+        <Route
+          path="user-dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["user"]}>
+              <UserDashboard />
+            </ProtectedRoute>
+          }
+        />
 
-            {/* Standard ITSM Routes */}
-            <Route path="incidents" element={<Incidents />} />
-            <Route path="service-requests" element={<ServiceRequests />} />
-            <Route path="changes" element={<Changes />} />
-            <Route path="problems" element={<Problems />} />
-            <Route path="assets" element={<Assets />} />
-            <Route path="knowledge-base" element={<KnowledgeBase />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="approvals" element={<Approvals />} />
-            <Route path="profile" element={<UserProfile />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="rdp-viewer" element={<Viewer />} />
+        {/* Standard ITSM Routes */}
+        <Route path="incidents" element={<Incidents />} />
+        <Route path="service-requests" element={<ServiceRequests />} />
+        <Route path="changes" element={<Changes />} />
+        <Route path="problems" element={<Problems />} />
+        <Route path="assets" element={<Assets />} />
+        <Route path="knowledge-base" element={<KnowledgeBase />} />
+        <Route path="reports" element={<Reports />} />
+        <Route path="approvals" element={<Approvals />} />
+        <Route path="profile" element={<UserProfile />} />
+        <Route path="settings" element={<Settings />} />
+        <Route path="rdp-viewer" element={<Viewer />} />
 
-            {/* Admin-only settings */}
-            <Route
-              path="admin-settings"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <AdminSettings />
-                </ProtectedRoute>
-              }
-            />
+        {/* Admin-only settings */}
+        <Route
+          path="admin-settings"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminSettings />
+            </ProtectedRoute>
+          }
+        />
 
-            {/* Creation Pages */}
-            <Route path="new-incident" element={<NewIncident />} />
-            <Route path="new-service-request" element={<NewServiceRequest />} />
-            <Route path="new-change" element={<NewChange />} />
-            <Route path="new-problem" element={<NewProblem />} />
-            <Route path="new-asset" element={<NewAsset />} />
+        {/* Creation Pages */}
+        <Route path="new-incident" element={<NewIncident />} />
+        <Route path="new-service-request" element={<NewServiceRequest />} />
+        <Route path="new-change" element={<NewChange />} />
+        <Route path="new-problem" element={<NewProblem />} />
+        <Route path="new-asset" element={<NewAsset />} />
 
-            {/* Detail Pages */}
-            <Route path="incidents/:id" element={<IncidentDetail />} />
-            <Route path="service-requests/:id" element={<ServiceRequestDetail />} />
-            <Route path="changes/:id" element={<ChangeDetail />} />
-            <Route path="problems/:id" element={<ProblemDetail />} />
-            <Route path="assets/:id" element={<AssetDetail />} />
-            <Route path="knowledge-base/:id" element={<ArticleDetail />} />
+        {/* Detail Pages */}
+        <Route path="incidents/:id" element={<IncidentDetail />} />
+        <Route path="service-requests/:id" element={<ServiceRequestDetail />} />
+        <Route path="changes/:id" element={<ChangeDetail />} />
+        <Route path="problems/:id" element={<ProblemDetail />} />
+        <Route path="assets/:id" element={<AssetDetail />} />
+        <Route path="knowledge-base/:id" element={<ArticleDetail />} />
 
-            <Route path="announcements" element={<Announcements />} />
-            <Route path="work-scheduler" element={<WorkScheduler />} />
-          </Route>
+        <Route path="announcements" element={<Announcements />} />
+        <Route path="work-scheduler" element={<WorkScheduler />} />
+      </Route>
 
-          {/* 404 Fallback */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Box>
-    </Router>
+      {/* 404 Fallback */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <CssBaseline />
+        <Box
+          sx={{
+            minHeight: "100vh",
+            width: "100vw",
+            overflowX: "hidden",
+            overflowY: "auto",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <AppRoutes />
+        </Box>
+      </Router>
+    </AuthProvider>
   );
 }
 
