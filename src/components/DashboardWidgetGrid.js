@@ -75,6 +75,8 @@ const DashboardWidgetGrid = () => {
   };
 
   const renderWidget = (key) => {
+  if (!user?.id) return null; // ✅ Avoid rendering if user is missing
+
   switch (key) {
     case "incidents":
       return <IncidentWidget userId={user.id} />;
@@ -86,7 +88,6 @@ const DashboardWidgetGrid = () => {
       return <Typography variant="h6">Unknown Widget</Typography>;
   }
 };
-
   if (loading) return <CircularProgress sx={{ mt: 4 }} />;
 
   return (
