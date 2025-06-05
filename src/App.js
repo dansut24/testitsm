@@ -17,7 +17,7 @@ import UserProfile from "./pages/UserProfile";
 import Settings from "./pages/Settings";
 import AdminSettings from "./pages/AdminSettings";
 import Login from "./pages/Login";
-import Signup from "./pages/Signup"; // ✅ NEW
+import Signup from "./pages/Signup";
 import Loading from "./pages/Loading";
 import NewIncident from "./pages/NewIncident";
 import NewServiceRequest from "./pages/NewServiceRequest";
@@ -46,8 +46,7 @@ import Confirmation from "./pages/SelfService/Confirmation";
 import NotFound from "./pages/NotFound";
 import NotAuthorised from "./pages/NotAuthorised";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { AuthProvider } from "./context/AuthContext";
-import useAuth from "./hooks/useAuth";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 
 // RDP + Test
 import Viewer from "./pages/rdp/Viewer";
@@ -56,9 +55,7 @@ import ConnectivityTest from "./pages/rdp/ConnectivityTest";
 function AppRoutes() {
   const { user, authLoading } = useAuth();
 
-  if (authLoading) {
-    return <div>Loading...</div>;
-  }
+  if (authLoading) return <div>Loading...</div>;
 
   const isLoggedIn = !!user;
 
@@ -66,7 +63,7 @@ function AppRoutes() {
     <Routes>
       {/* Public Routes */}
       <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} /> {/* ✅ NEW */}
+      <Route path="/signup" element={<Signup />} />
       <Route path="/loading" element={<Loading />} />
       <Route path="/not-authorised" element={<NotAuthorised />} />
       <Route path="/connectivity-test" element={<ConnectivityTest />} />
@@ -82,7 +79,7 @@ function AppRoutes() {
         <Route path="knowledge-base" element={<SelfServiceKnowledgeBase />} />
       </Route>
 
-      {/* ITSM Admin/User Layout */}
+      {/* Main App Layout */}
       <Route path="/" element={isLoggedIn ? <Layout /> : <Login />}>
         <Route
           path="dashboard"
@@ -98,8 +95,6 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-
-        {/* Standard ITSM Routes */}
         <Route path="incidents" element={<Incidents />} />
         <Route path="service-requests" element={<ServiceRequests />} />
         <Route path="changes" element={<Changes />} />
@@ -112,7 +107,6 @@ function AppRoutes() {
         <Route path="settings" element={<Settings />} />
         <Route path="rdp-viewer" element={<Viewer />} />
 
-        {/* Admin-only settings */}
         <Route
           path="admin-settings"
           element={
@@ -122,14 +116,14 @@ function AppRoutes() {
           }
         />
 
-        {/* Creation Pages */}
+        {/* Create */}
         <Route path="new-incident" element={<NewIncident />} />
         <Route path="new-service-request" element={<NewServiceRequest />} />
         <Route path="new-change" element={<NewChange />} />
         <Route path="new-problem" element={<NewProblem />} />
         <Route path="new-asset" element={<NewAsset />} />
 
-        {/* Detail Pages */}
+        {/* Detail */}
         <Route path="incidents/:id" element={<IncidentDetail />} />
         <Route path="service-requests/:id" element={<ServiceRequestDetail />} />
         <Route path="changes/:id" element={<ChangeDetail />} />
@@ -140,7 +134,6 @@ function AppRoutes() {
         <Route path="work-scheduler" element={<WorkScheduler />} />
       </Route>
 
-      {/* 404 Fallback */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
