@@ -16,6 +16,20 @@ import { useAuth } from "../context/AuthContext";
 const ProfileDrawer = ({ open, onClose }) => {
   const { user, logout } = useAuth();
 
+  console.log("🔍 ProfileDrawer user:", user);
+
+  if (!user) {
+    return (
+      <Drawer anchor="right" open={open} onClose={onClose}>
+        <Box sx={{ width: 300, p: 3 }}>
+          <Typography variant="body2" color="text.secondary">
+            Loading profile...
+          </Typography>
+        </Box>
+      </Drawer>
+    );
+  }
+
   return (
     <Drawer anchor="right" open={open} onClose={onClose}>
       <Box sx={{ width: 300, p: 3, bgcolor: "background.paper" }}>
