@@ -18,10 +18,11 @@ import GitHubIcon from "@mui/icons-material/GitHub";
 import BusinessIcon from "@mui/icons-material/Business";
 import logo from "../assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
 import { useThemeMode } from "../context/ThemeContext";
+import AuthService from "../services/AuthService";
 import { supabase } from "../supabaseClient";
 
 const Login = () => {
-  const [formData, setFormData] = useState({ username: "", password: "" });
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { mode } = useThemeMode();
@@ -31,44 +32,33 @@ const Login = () => {
 
   const handleLogin = async () => {
     setError("");
-    const { username, password } = formData;
+    const { email, password } = formData;
 
-    if (!username || !password) {
-      setError("Please enter both username and password.");
+    if (!email || !password) {
+      setError("Please enter both email and password.");
       return;
     }
 
-    const { data, error: loginError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("username", username)
-      .eq("password", password)
-      .single();
+    const { error: loginError } = await AuthService.signIn(email, password);
 
-    if (loginError || !data) {
+    if (loginError) {
+      console.error("Login error:", loginError.message);
       setError("Invalid login credentials.");
       return;
     }
-
-    const user = data;
-    const role = user.role || "admin";
-
-    localStorage.setItem("token", "mock-token");
-    localStorage.setItem("user", JSON.stringify(user));
-    localStorage.setItem("selectedRole", role);
 
     navigate("/loading");
   };
 
   const handleTestConnection = async () => {
     try {
-      const { data, error } = await supabase.from("users").select("*").limit(1);
+      const { data, error } = await supabase.from("profiles").select("*").limit(1);
       if (error) {
         console.error("❌ Supabase connection failed:", error.message);
         alert("❌ Connection failed: " + error.message);
       } else {
         console.log("✅ Supabase connection successful:", data);
-        alert("✅ Connection successful. First user: " + (data[0]?.username || "No users found"));
+        alert("✅ Connection successful. First profile: " + (data[0]?.full_name || "No users found"));
       }
     } catch (err) {
       console.error("❌ Unexpected error:", err);
@@ -88,13 +78,13 @@ const Login = () => {
         </Typography>
 
         <Stack spacing={1.5} mb={3}>
-          <Button variant="outlined" startIcon={<GoogleIcon />} fullWidth>
+          <Button variant="outlined" startIcon={<GoogleIcon />} fullWidth disabled>
             Sign in with Google
           </Button>
-          <Button variant="outlined" startIcon={<BusinessIcon />} fullWidth>
+          <Button variant="outlined" startIcon={<BusinessIcon />} fullWidth disabled>
             Sign in with Microsoft
           </Button>
-          <Button variant="outlined" startIcon={<GitHubIcon />} fullWidth>
+          <Button variant="outlined" startIcon={<GitHubIcon />} fullWidth disabled>
             Sign in with GitHub
           </Button>
         </Stack>
@@ -103,9 +93,10 @@ const Login = () => {
 
         <TextField
           fullWidth
-          label="Username"
-          name="username"
-          value={formData.username}
+          label="Email"
+          name="email"
+          type="email"
+          value={formData.email}
           onChange={handleChange}
           margin="dense"
         />
