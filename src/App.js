@@ -1,6 +1,6 @@
 import React from "react";
 import { CssBaseline, Box } from "@mui/material";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom"; // ✅ no Router here!
 
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
@@ -46,7 +46,7 @@ import Confirmation from "./pages/SelfService/Confirmation";
 import NotFound from "./pages/NotFound";
 import NotAuthorised from "./pages/NotAuthorised";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { useAuth } from "./context/AuthContext"; // ✅ Only hook used here
 
 // RDP + Test
 import Viewer from "./pages/rdp/Viewer";
@@ -79,7 +79,7 @@ function AppRoutes() {
         <Route path="knowledge-base" element={<SelfServiceKnowledgeBase />} />
       </Route>
 
-      {/* Main App Layout */}
+      {/* Main Authenticated Layout */}
       <Route path="/" element={isLoggedIn ? <Layout /> : <Login />}>
         <Route
           path="dashboard"
@@ -95,6 +95,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
         <Route path="incidents" element={<Incidents />} />
         <Route path="service-requests" element={<ServiceRequests />} />
         <Route path="changes" element={<Changes />} />
@@ -107,6 +108,7 @@ function AppRoutes() {
         <Route path="settings" element={<Settings />} />
         <Route path="rdp-viewer" element={<Viewer />} />
 
+        {/* Admin-only */}
         <Route
           path="admin-settings"
           element={
@@ -116,14 +118,14 @@ function AppRoutes() {
           }
         />
 
-        {/* Create */}
+        {/* Creation Pages */}
         <Route path="new-incident" element={<NewIncident />} />
         <Route path="new-service-request" element={<NewServiceRequest />} />
         <Route path="new-change" element={<NewChange />} />
         <Route path="new-problem" element={<NewProblem />} />
         <Route path="new-asset" element={<NewAsset />} />
 
-        {/* Detail */}
+        {/* Detail Views */}
         <Route path="incidents/:id" element={<IncidentDetail />} />
         <Route path="service-requests/:id" element={<ServiceRequestDetail />} />
         <Route path="changes/:id" element={<ChangeDetail />} />
@@ -134,6 +136,7 @@ function AppRoutes() {
         <Route path="work-scheduler" element={<WorkScheduler />} />
       </Route>
 
+      {/* Fallback */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
@@ -141,23 +144,21 @@ function AppRoutes() {
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <CssBaseline />
-        <Box
-          sx={{
-            minHeight: "100vh",
-            width: "100vw",
-            overflowX: "hidden",
-            overflowY: "auto",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <AppRoutes />
-        </Box>
-      </AuthProvider>
-    </Router>
+    <>
+      <CssBaseline />
+      <Box
+        sx={{
+          minHeight: "100vh",
+          width: "100vw",
+          overflowX: "hidden",
+          overflowY: "auto",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <AppRoutes />
+      </Box>
+    </>
   );
 }
 
