@@ -72,17 +72,17 @@ const DashboardWidgetGrid = () => {
   };
 
   const renderWidget = (key) => {
-    switch (key) {
-      case "incidents":
-        return <Typography variant="h6">🛠 My Incidents</Typography>;
-      case "requests":
-        return <Typography variant="h6">📦 My Service Requests</Typography>;
-      case "knowledge":
-        return <Typography variant="h6">📚 Knowledge Base Tips</Typography>;
-      default:
-        return <Typography variant="h6">Unknown Widget</Typography>;
-    }
-  };
+  switch (key) {
+    case "incidents":
+      return <IncidentWidget userId={user.id} />;
+    case "requests":
+      return <RequestWidget userId={user.id} />;
+    case "knowledge":
+      return <KnowledgeWidget />;
+    default:
+      return <Typography variant="h6">Unknown Widget</Typography>;
+  }
+};
 
   if (loading) return <CircularProgress sx={{ mt: 4 }} />;
 
