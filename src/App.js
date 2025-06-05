@@ -90,7 +90,7 @@ function AppRoutes() {
         <Route
           path="user-dashboard"
           element={
-            <ProtectedRoute allowedRoles={["user"]}>
+            <ProtectedRoute allowedRoles={["user", "selfservice"]}>
               <UserDashboard />
             </ProtectedRoute>
           }
