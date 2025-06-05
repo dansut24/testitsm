@@ -8,6 +8,9 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import { widgetRegistry } from "./widgetRegistry";
+import IncidentWidget from "./IncidentWidget";
+import RequestWidget from "./RequestWidget";
+import KnowledgeWidget from "./KnowledgeWidget";
 
 const DashboardWidgetGrid = () => {
   const { user } = useAuth();
