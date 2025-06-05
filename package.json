@@ -28,9 +28,7 @@
     "@uiw/react-md-editor": "*",
     "@supabase/supabase-js": "^2.39.5",
     "@sendgrid/mail": "^7.7.0",
-    "react-draggable": "^4.4.6",
-    "react-grid-layout": "^1.3.4",
-    "react-resizable": "git+https://github.com/hckhan/react-resizable.git"
+    "react-draggable": "^4.4.6"
   },
   "scripts": {
     "start": "react-scripts start",
