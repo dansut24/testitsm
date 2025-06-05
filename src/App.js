@@ -86,7 +86,7 @@ function AppRoutes() {
         <Route
           path="dashboard"
           element={
-            user?.role === "user" ? (
+            user?.role === "selfservice" ? (
               <UserDashboard />
             ) : (
               <Dashboard />
