@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "../supabaseClient"; // must exist
+import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
 
 const AuthContext = createContext();
@@ -16,14 +16,13 @@ export const AuthProvider = ({ children }) => {
       } = await supabase.auth.getSession();
 
       if (session?.user) {
-        // Assume roles are stored in metadata or use fallback
         const role = session.user.user_metadata?.role || "user";
 
         setUser({
           id: session.user.id,
           email: session.user.email,
           role,
-          roles: [role], // keep consistent with includes("admin") logic
+          roles: [role],
         });
       } else {
         setUser(null);
@@ -39,6 +38,7 @@ export const AuthProvider = ({ children }) => {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         const role = session.user.user_metadata?.role || "user";
+
         setUser({
           id: session.user.id,
           email: session.user.email,
@@ -48,6 +48,8 @@ export const AuthProvider = ({ children }) => {
       } else {
         setUser(null);
       }
+
+      setAuthLoading(false); // ✅ Now correctly handled
     });
 
     return () => subscription.unsubscribe();
