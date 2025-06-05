@@ -1,4 +1,3 @@
-// src/components/ProfileDrawer.js
 import React from "react";
 import {
   Drawer,
@@ -12,61 +11,45 @@ import {
   ListItemText,
 } from "@mui/material";
 import LogoutIcon from "@mui/icons-material/Logout";
-import { useAuth } from "../context/AuthContext";
 
-const ProfileDrawer = ({ open, onClose }) => {
-  const { user, logout } = useAuth();
+const TestDrawer = ({ open, onClose }) => {
+  const dummyUser = {
+    full_name: "Dan Sutton",
+    email: "danielsuttonsamsung@gmail.com",
+    role: "admin"
+  };
 
   return (
-    <Drawer anchor="right" open={open} onClose={onClose}>
-      <Box
-        sx={{
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={onClose}
+      sx={{
+        zIndex: 1301,
+        "& .MuiDrawer-paper": {
+          backgroundColor: "white",
+          color: "black",
           width: 300,
           p: 3,
-          bgcolor: "background.paper",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-        }}
-      >
-        <Box>
-          <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-            <Avatar
-              sx={{
-                width: 56,
-                height: 56,
-                bgcolor: "primary.main",
-                fontSize: 24,
-              }}
-            >
-              {user?.full_name?.[0]?.toUpperCase() || "?"}
-            </Avatar>
-            <Box sx={{ ml: 2 }}>
-              <Typography variant="h6" noWrap>
-                {user?.full_name || "Unknown User"}
-              </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                noWrap
-              >
-                {user?.email || "No email"}
-              </Typography>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-              >
-                Role: {user?.role || "N/A"}
-              </Typography>
-            </Box>
+        },
+      }}
+    >
+      <Box sx={{ p: 3 }}>
+        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+          <Avatar sx={{ width: 56, height: 56 }}>
+            {dummyUser.full_name[0]}
+          </Avatar>
+          <Box sx={{ ml: 2 }}>
+            <Typography variant="h6">{dummyUser.full_name}</Typography>
+            <Typography variant="body2">{dummyUser.email}</Typography>
+            <Typography variant="caption">Role: {dummyUser.role}</Typography>
           </Box>
-
-          <Divider sx={{ my: 2 }} />
         </Box>
 
+        <Divider sx={{ my: 2 }} />
+
         <List>
-          <ListItem button onClick={logout}>
+          <ListItem button onClick={() => alert("Logout clicked")}>
             <ListItemText primary="Logout" />
             <IconButton>
               <LogoutIcon />
@@ -78,4 +61,4 @@ const ProfileDrawer = ({ open, onClose }) => {
   );
 };
 
-export default ProfileDrawer;
+export default TestDrawer;
