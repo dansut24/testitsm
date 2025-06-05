@@ -1,71 +1,46 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "../supabaseClient";
-import { useNavigate } from "react-router-dom";
+import AuthService from "../services/AuthService";
 
-const AuthContext = createContext();
+useEffect(() => {
+  const initAuth = async () => {
+    const session = await AuthService.getSession();
+    const user = session?.data?.session?.user;
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const navigate = useNavigate();
+    if (user) {
+      const profile = await AuthService.getCurrentUserProfile();
+      const role = profile?.role || "user";
 
-  useEffect(() => {
-    const initAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      setUser({
+        id: user.id,
+        email: user.email,
+        role,
+        roles: [role],
+        name: profile?.full_name || "",
+      });
+    } else {
+      setUser(null);
+    }
 
-      if (session?.user) {
-        const role = session.user.user_metadata?.role || "user";
-
-        setUser({
-          id: session.user.id,
-          email: session.user.email,
-          role,
-          roles: [role],
-        });
-      } else {
-        setUser(null);
-      }
-
-      setAuthLoading(false);
-    };
-
-    initAuth();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        const role = session.user.user_metadata?.role || "user";
-
-        setUser({
-          id: session.user.id,
-          email: session.user.email,
-          role,
-          roles: [role],
-        });
-      } else {
-        setUser(null);
-      }
-
-      setAuthLoading(false); // ✅ Now correctly handled
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    navigate("/login");
+    setAuthLoading(false);
   };
 
-  return (
-    <AuthContext.Provider value={{ user, authLoading, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
+  initAuth();
 
-export const useAuth = () => useContext(AuthContext);
+  const unsubscribe = AuthService.onAuthStateChanged(async (user) => {
+    if (user) {
+      const profile = await AuthService.getCurrentUserProfile();
+      const role = profile?.role || "user";
+
+      setUser({
+        id: user.id,
+        email: user.email,
+        role,
+        roles: [role],
+        name: profile?.full_name || "",
+      });
+    } else {
+      setUser(null);
+    }
+  });
+
+  return unsubscribe;
+}, []);
