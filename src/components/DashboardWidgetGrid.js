@@ -17,19 +17,31 @@ const DashboardWidgetGrid = () => {
 
   useEffect(() => {
     const fetchLayout = async () => {
+      if (!user?.id) return;
+
       const { data, error } = await supabase
         .from("dashboard_layouts")
         .select("layout")
         .eq("user_id", user.id)
         .single();
 
-      if (data?.layout) setWidgets(data.layout);
-      else setWidgets(Object.keys(widgetRegistry)); // show all by default
+      if (data?.layout) {
+        setWidgets(data.layout);
+      } else {
+        const defaultLayout = Object.keys(widgetRegistry);
+        setWidgets(defaultLayout);
+
+        await supabase.from("dashboard_layouts").upsert({
+          user_id: user.id,
+          layout: defaultLayout,
+          updated_at: new Date().toISOString(),
+        });
+      }
 
       setLoading(false);
     };
 
-    if (user?.id) fetchLayout();
+    fetchLayout();
   }, [user]);
 
   const saveLayout = async (updatedLayout) => {
