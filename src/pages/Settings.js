@@ -10,7 +10,10 @@ import {
   ListItemSecondaryAction,
   IconButton,
   Divider,
-  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
@@ -21,17 +24,18 @@ const Settings = () => {
   const { user, authLoading } = useAuth();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [linkedIdentities, setLinkedIdentities] = useState([]);
-  const [unlinking, setUnlinking] = useState(null);
+  const [linkedProviders, setLinkedProviders] = useState([]);
+  const [unlinkDialog, setUnlinkDialog] = useState({ open: false, provider: null });
 
   useEffect(() => {
     const fetchLinkedAccounts = async () => {
-      const { data, error } = await supabase.auth.getUserIdentities();
+      const { data: identitiesData, error } = await supabase.auth.getUserIdentities();
       if (error) {
-        console.error("Error fetching identities", error);
+        console.error("Error fetching identities:", error);
         return;
       }
-      setLinkedIdentities(data.identities || []);
+      const providers = identitiesData.identities.map((id) => id.provider);
+      setLinkedProviders(providers);
     };
 
     fetchLinkedAccounts();
@@ -66,22 +70,46 @@ const Settings = () => {
     setLoading(false);
   };
 
-  const handleUnlink = async (identity) => {
-    setUnlinking(identity.provider);
-    const { error } = await supabase.auth.unlinkIdentity(identity);
-    if (error) {
-      console.error("Unlink error:", error.message);
-      setStatus({ type: "error", message: `❌ Failed to unlink ${identity.provider}.` });
-    } else {
-      setStatus({ type: "success", message: `✅ Unlinked ${identity.provider} successfully.` });
-      setLinkedIdentities((prev) =>
-        prev.filter((id) => id.provider !== identity.provider)
-      );
-    }
-    setUnlinking(null);
+  const confirmUnlink = (provider) => {
+    setUnlinkDialog({ open: true, provider });
   };
 
-  const hasEmailIdentity = linkedIdentities.some((id) => id.provider === "email");
+  const handleUnlinkConfirmed = async () => {
+    const provider = unlinkDialog.provider;
+    setUnlinkDialog({ open: false, provider: null });
+
+    if (linkedProviders.length <= 1) {
+      alert("You must have at least one linked account.");
+      return;
+    }
+
+    try {
+      const { data: identitiesData, error: fetchError } = await supabase.auth.getUserIdentities();
+      if (fetchError) {
+        console.error("Failed to fetch identities:", fetchError);
+        alert("Error fetching identities.");
+        return;
+      }
+
+      const identityToUnlink = identitiesData.identities.find((id) => id.provider === provider);
+      if (!identityToUnlink) {
+        alert("Provider not found.");
+        return;
+      }
+
+      const { error: unlinkError } = await supabase.auth.unlinkIdentity(identityToUnlink);
+      if (unlinkError) {
+        console.error("Failed to unlink identity:", unlinkError);
+        alert("❌ Failed to unlink " + provider);
+      } else {
+        setLinkedProviders((prev) => prev.filter((p) => p !== provider));
+        alert("✅ Successfully unlinked " + provider);
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      alert("❌ Unexpected error occurred.");
+    }
+  };
 
   if (authLoading) {
     return (
@@ -128,44 +156,48 @@ const Settings = () => {
             These identity providers are linked to your account.
           </Typography>
 
-          {linkedIdentities.length === 0 ? (
+          {linkedProviders.length === 0 ? (
             <Alert severity="info">No linked accounts found.</Alert>
           ) : (
             <List>
-              {linkedIdentities.map((identity) => {
-                const isEmail = identity.provider === "email";
-                return (
-                  <ListItem key={identity.provider} divider>
-                    <ListItemText
-                      primary={
-                        identity.provider.charAt(0).toUpperCase() +
-                        identity.provider.slice(1)
+              {linkedProviders.map((provider) => (
+                <ListItem key={provider} divider>
+                  <ListItemText primary={provider.charAt(0).toUpperCase() + provider.slice(1)} />
+                  <ListItemSecondaryAction>
+                    <IconButton
+                      onClick={() => confirmUnlink(provider)}
+                      disabled={provider === "email" || linkedProviders.length <= 1}
+                      title={
+                        provider === "email"
+                          ? "Email cannot be unlinked"
+                          : "Unlink " + provider
                       }
-                      secondary={
-                        isEmail
-                          ? "Primary account - cannot unlink"
-                          : identity.identity_data?.email || ""
-                      }
-                    />
-                    {!isEmail && linkedIdentities.length > 1 && (
-                      <ListItemSecondaryAction>
-                        <IconButton
-                          onClick={() => handleUnlink(identity)}
-                          disabled={unlinking === identity.provider}
-                        >
-                          {unlinking === identity.provider ? (
-                            <CircularProgress size={20} />
-                          ) : (
-                            <LinkOffIcon />
-                          )}
-                        </IconButton>
-                      </ListItemSecondaryAction>
-                    )}
-                  </ListItem>
-                );
-              })}
+                    >
+                      <LinkOffIcon />
+                    </IconButton>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              ))}
             </List>
           )}
+
+          <Dialog
+            open={unlinkDialog.open}
+            onClose={() => setUnlinkDialog({ open: false, provider: null })}
+          >
+            <DialogTitle>Unlink {unlinkDialog.provider}?</DialogTitle>
+            <DialogContent>
+              Are you sure you want to unlink {unlinkDialog.provider}? You’ll need another login method to access your account.
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setUnlinkDialog({ open: false, provider: null })}>
+                Cancel
+              </Button>
+              <Button color="error" onClick={handleUnlinkConfirmed}>
+                Confirm Unlink
+              </Button>
+            </DialogActions>
+          </Dialog>
         </>
       )}
     </Box>
