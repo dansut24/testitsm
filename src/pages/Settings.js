@@ -1,25 +1,36 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
   Button,
-  Alert
+  Alert,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  IconButton,
+  Divider,
 } from "@mui/material";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import { widgetRegistry } from "../components/widgetRegistry";
+import LinkOffIcon from "@mui/icons-material/LinkOff";
 
 const Settings = () => {
   const { user, authLoading } = useAuth();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [linkedProviders, setLinkedProviders] = useState([]);
 
-  // 🔍 Debug Logging
-  console.log("🔍 Auth Debug:");
-  console.log("User:", user);
-  console.log("User ID:", user?.id);
-  console.log("User Role:", user?.role);
-  console.log("Auth Loading:", authLoading);
+  useEffect(() => {
+    const fetchLinkedAccounts = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      const identities = session?.session?.user?.identities || [];
+      setLinkedProviders(identities.map((id) => id.provider));
+    };
+
+    fetchLinkedAccounts();
+  }, []);
 
   const handleCreateDashboard = async () => {
     if (!user?.id) {
@@ -44,11 +55,14 @@ const Settings = () => {
       console.error("❌ Supabase insert error:", error);
       setStatus({ type: "error", message: "❌ Failed to create dashboard layout." });
     } else {
-      console.log("✅ Dashboard layout created successfully.");
       setStatus({ type: "success", message: "✅ Dashboard layout created successfully!" });
     }
 
     setLoading(false);
+  };
+
+  const handleUnlink = (provider) => {
+    alert(`Unlinking ${provider} is not supported by Supabase at this time.`);
   };
 
   if (authLoading) {
@@ -87,6 +101,30 @@ const Settings = () => {
             <Alert severity={status.type} sx={{ mt: 2 }}>
               {status.message}
             </Alert>
+          )}
+
+          <Divider sx={{ my: 4 }} />
+
+          <Typography variant="h6">Linked Accounts</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            These identity providers are linked to your account.
+          </Typography>
+
+          {linkedProviders.length === 0 ? (
+            <Alert severity="info">No linked accounts found.</Alert>
+          ) : (
+            <List>
+              {linkedProviders.map((provider) => (
+                <ListItem key={provider} divider>
+                  <ListItemText primary={provider.charAt(0).toUpperCase() + provider.slice(1)} />
+                  <ListItemSecondaryAction>
+                    <IconButton onClick={() => handleUnlink(provider)}>
+                      <LinkOffIcon />
+                    </IconButton>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              ))}
+            </List>
           )}
         </>
       )}
