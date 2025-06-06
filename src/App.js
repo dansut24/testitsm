@@ -32,6 +32,7 @@ import AssetDetail from "./pages/AssetDetail";
 import ArticleDetail from "./pages/ArticleDetail";
 import Announcements from "./pages/Announcements";
 import WorkScheduler from "./pages/WorkScheduler";
+import LinkComplete from "./pages/LinkComplete";
 
 // Self-Service Portal
 import SelfServiceLayout from "./layouts/SelfServiceLayout";
@@ -67,6 +68,7 @@ function AppRoutes() {
       <Route path="/loading" element={<Loading />} />
       <Route path="/not-authorised" element={<NotAuthorised />} />
       <Route path="/connectivity-test" element={<ConnectivityTest />} />
+      <Route path="/link-complete" element={<LinkComplete />} />
 
       {/* Self-Service Portal */}
       <Route path="/self-service" element={<SelfServiceLayout />}>
