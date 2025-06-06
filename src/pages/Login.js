@@ -50,6 +50,17 @@ const Login = () => {
     navigate("/loading");
   };
 
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+    });
+
+    if (error) {
+      console.error("Google sign-in error:", error.message);
+      setError("Google sign-in failed.");
+    }
+  };
+
   const handleTestConnection = async () => {
     try {
       const { data, error } = await supabase.from("profiles").select("*").limit(1);
@@ -78,7 +89,7 @@ const Login = () => {
         </Typography>
 
         <Stack spacing={1.5} mb={3}>
-          <Button variant="outlined" startIcon={<GoogleIcon />} fullWidth disabled>
+          <Button variant="outlined" startIcon={<GoogleIcon />} fullWidth onClick={handleGoogleLogin}>
             Sign in with Google
           </Button>
           <Button variant="outlined" startIcon={<BusinessIcon />} fullWidth disabled>
