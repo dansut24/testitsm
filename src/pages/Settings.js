@@ -10,6 +10,7 @@ import {
   ListItemSecondaryAction,
   IconButton,
   Divider,
+  CircularProgress,
 } from "@mui/material";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
@@ -20,13 +21,17 @@ const Settings = () => {
   const { user, authLoading } = useAuth();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [linkedProviders, setLinkedProviders] = useState([]);
+  const [linkedIdentities, setLinkedIdentities] = useState([]);
+  const [unlinking, setUnlinking] = useState(null);
 
   useEffect(() => {
     const fetchLinkedAccounts = async () => {
-      const { data: session } = await supabase.auth.getSession();
-      const identities = session?.session?.user?.identities || [];
-      setLinkedProviders(identities.map((id) => id.provider));
+      const { data, error } = await supabase.auth.getUserIdentities();
+      if (error) {
+        console.error("Error fetching identities", error);
+        return;
+      }
+      setLinkedIdentities(data.identities || []);
     };
 
     fetchLinkedAccounts();
@@ -61,9 +66,22 @@ const Settings = () => {
     setLoading(false);
   };
 
-  const handleUnlink = (provider) => {
-    alert(`Unlinking ${provider} is not supported by Supabase at this time.`);
+  const handleUnlink = async (identity) => {
+    setUnlinking(identity.provider);
+    const { error } = await supabase.auth.unlinkIdentity(identity);
+    if (error) {
+      console.error("Unlink error:", error.message);
+      setStatus({ type: "error", message: `❌ Failed to unlink ${identity.provider}.` });
+    } else {
+      setStatus({ type: "success", message: `✅ Unlinked ${identity.provider} successfully.` });
+      setLinkedIdentities((prev) =>
+        prev.filter((id) => id.provider !== identity.provider)
+      );
+    }
+    setUnlinking(null);
   };
+
+  const hasEmailIdentity = linkedIdentities.some((id) => id.provider === "email");
 
   if (authLoading) {
     return (
@@ -110,20 +128,42 @@ const Settings = () => {
             These identity providers are linked to your account.
           </Typography>
 
-          {linkedProviders.length === 0 ? (
+          {linkedIdentities.length === 0 ? (
             <Alert severity="info">No linked accounts found.</Alert>
           ) : (
             <List>
-              {linkedProviders.map((provider) => (
-                <ListItem key={provider} divider>
-                  <ListItemText primary={provider.charAt(0).toUpperCase() + provider.slice(1)} />
-                  <ListItemSecondaryAction>
-                    <IconButton onClick={() => handleUnlink(provider)}>
-                      <LinkOffIcon />
-                    </IconButton>
-                  </ListItemSecondaryAction>
-                </ListItem>
-              ))}
+              {linkedIdentities.map((identity) => {
+                const isEmail = identity.provider === "email";
+                return (
+                  <ListItem key={identity.provider} divider>
+                    <ListItemText
+                      primary={
+                        identity.provider.charAt(0).toUpperCase() +
+                        identity.provider.slice(1)
+                      }
+                      secondary={
+                        isEmail
+                          ? "Primary account - cannot unlink"
+                          : identity.identity_data?.email || ""
+                      }
+                    />
+                    {!isEmail && linkedIdentities.length > 1 && (
+                      <ListItemSecondaryAction>
+                        <IconButton
+                          onClick={() => handleUnlink(identity)}
+                          disabled={unlinking === identity.provider}
+                        >
+                          {unlinking === identity.provider ? (
+                            <CircularProgress size={20} />
+                          ) : (
+                            <LinkOffIcon />
+                          )}
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    )}
+                  </ListItem>
+                );
+              })}
             </List>
           )}
         </>
