@@ -19,23 +19,26 @@ import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import { widgetRegistry } from "../components/widgetRegistry";
 import LinkOffIcon from "@mui/icons-material/LinkOff";
+import GoogleIcon from "@mui/icons-material/Google";
+import EmailIcon from "@mui/icons-material/Email";
 
 const Settings = () => {
   const { user, authLoading } = useAuth();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [linkedProviders, setLinkedProviders] = useState([]);
-  const [unlinkDialog, setUnlinkDialog] = useState({ open: false, provider: null });
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [providerToUnlink, setProviderToUnlink] = useState(null);
 
   useEffect(() => {
     const fetchLinkedAccounts = async () => {
       const { data: identitiesData, error } = await supabase.auth.getUserIdentities();
-      if (error) {
-        console.error("Error fetching identities:", error);
-        return;
+      if (!error) {
+        setLinkedProviders(identitiesData.identities || []);
+      } else {
+        console.error("Failed to fetch identities:", error.message);
+        setLinkedProviders([]);
       }
-      const providers = identitiesData.identities.map((id) => id.provider);
-      setLinkedProviders(providers);
     };
 
     fetchLinkedAccounts();
@@ -71,43 +74,46 @@ const Settings = () => {
   };
 
   const confirmUnlink = (provider) => {
-    setUnlinkDialog({ open: true, provider });
+    setProviderToUnlink(provider);
+    setConfirmOpen(true);
   };
 
   const handleUnlinkConfirmed = async () => {
-    const provider = unlinkDialog.provider;
-    setUnlinkDialog({ open: false, provider: null });
+    setConfirmOpen(false);
 
-    if (linkedProviders.length <= 1) {
-      alert("You must have at least one linked account.");
+    const { data: identitiesData } = await supabase.auth.getUserIdentities();
+    const allIdentities = identitiesData.identities;
+
+    if (allIdentities.length <= 1) {
+      alert("You must have at least one linked identity.");
       return;
     }
 
-    try {
-      const { data: identitiesData, error: fetchError } = await supabase.auth.getUserIdentities();
-      if (fetchError) {
-        console.error("Failed to fetch identities:", fetchError);
-        alert("Error fetching identities.");
-        return;
-      }
+    const identity = allIdentities.find((id) => id.provider === providerToUnlink);
 
-      const identityToUnlink = identitiesData.identities.find((id) => id.provider === provider);
-      if (!identityToUnlink) {
-        alert("Provider not found.");
-        return;
-      }
+    if (!identity) {
+      alert("Provider not linked.");
+      return;
+    }
 
-      const { error: unlinkError } = await supabase.auth.unlinkIdentity(identityToUnlink);
-      if (unlinkError) {
-        console.error("Failed to unlink identity:", unlinkError);
-        alert("❌ Failed to unlink " + provider);
-      } else {
-        setLinkedProviders((prev) => prev.filter((p) => p !== provider));
-        alert("✅ Successfully unlinked " + provider);
-      }
-    } catch (err) {
-      console.error("Unexpected error:", err);
-      alert("❌ Unexpected error occurred.");
+    const { error } = await supabase.auth.unlinkIdentity(identity);
+    if (error) {
+      console.error("Failed to unlink identity:", error);
+      alert(`Failed to unlink ${providerToUnlink}: ${error.message}`);
+    } else {
+      setLinkedProviders((prev) => prev.filter((id) => id.provider !== providerToUnlink));
+      setStatus({ type: "success", message: `✅ Unlinked ${providerToUnlink} successfully.` });
+    }
+  };
+
+  const getProviderIcon = (provider) => {
+    switch (provider) {
+      case "google":
+        return <GoogleIcon sx={{ mr: 1 }} />;
+      case "email":
+        return <EmailIcon sx={{ mr: 1 }} />;
+      default:
+        return null;
     }
   };
 
@@ -135,11 +141,7 @@ const Settings = () => {
             Use the button below to create your personal dashboard layout with default widgets.
           </Typography>
 
-          <Button
-            variant="contained"
-            onClick={handleCreateDashboard}
-            disabled={loading}
-          >
+          <Button variant="contained" onClick={handleCreateDashboard} disabled={loading}>
             {loading ? "Creating..." : "Create Dashboard Layout"}
           </Button>
 
@@ -160,46 +162,36 @@ const Settings = () => {
             <Alert severity="info">No linked accounts found.</Alert>
           ) : (
             <List>
-              {linkedProviders.map((provider) => (
-                <ListItem key={provider} divider>
-                  <ListItemText primary={provider.charAt(0).toUpperCase() + provider.slice(1)} />
+              {linkedProviders.map((identity) => (
+                <ListItem key={identity.provider} divider>
+                  {getProviderIcon(identity.provider)}
+                  <ListItemText primary={identity.provider.charAt(0).toUpperCase() + identity.provider.slice(1)} />
                   <ListItemSecondaryAction>
-                    <IconButton
-                      onClick={() => confirmUnlink(provider)}
-                      disabled={provider === "email" || linkedProviders.length <= 1}
-                      title={
-                        provider === "email"
-                          ? "Email cannot be unlinked"
-                          : "Unlink " + provider
-                      }
-                    >
-                      <LinkOffIcon />
-                    </IconButton>
+                    {identity.provider !== "email" && (
+                      <IconButton onClick={() => confirmUnlink(identity.provider)}>
+                        <LinkOffIcon />
+                      </IconButton>
+                    )}
                   </ListItemSecondaryAction>
                 </ListItem>
               ))}
             </List>
           )}
-
-          <Dialog
-            open={unlinkDialog.open}
-            onClose={() => setUnlinkDialog({ open: false, provider: null })}
-          >
-            <DialogTitle>Unlink {unlinkDialog.provider}?</DialogTitle>
-            <DialogContent>
-              Are you sure you want to unlink {unlinkDialog.provider}? You’ll need another login method to access your account.
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setUnlinkDialog({ open: false, provider: null })}>
-                Cancel
-              </Button>
-              <Button color="error" onClick={handleUnlinkConfirmed}>
-                Confirm Unlink
-              </Button>
-            </DialogActions>
-          </Dialog>
         </>
       )}
+
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+        <DialogTitle>Confirm Unlink</DialogTitle>
+        <DialogContent>
+          Are you sure you want to unlink <strong>{providerToUnlink}</strong> from your account?
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={handleUnlinkConfirmed} color="error" variant="contained">
+            Unlink
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
