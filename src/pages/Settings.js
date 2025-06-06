@@ -14,12 +14,15 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Stack,
 } from "@mui/material";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import { widgetRegistry } from "../components/widgetRegistry";
 import LinkOffIcon from "@mui/icons-material/LinkOff";
 import GoogleIcon from "@mui/icons-material/Google";
+import GitHubIcon from "@mui/icons-material/GitHub";
+import BusinessIcon from "@mui/icons-material/Business";
 import EmailIcon from "@mui/icons-material/Email";
 
 const Settings = () => {
@@ -29,6 +32,8 @@ const Settings = () => {
   const [linkedProviders, setLinkedProviders] = useState([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [providerToUnlink, setProviderToUnlink] = useState(null);
+
+  const availableProviders = ["google", "github", "azure"];
 
   useEffect(() => {
     const fetchLinkedAccounts = async () => {
@@ -90,7 +95,6 @@ const Settings = () => {
     }
 
     const identity = allIdentities.find((id) => id.provider === providerToUnlink);
-
     if (!identity) {
       alert("Provider not linked.");
       return;
@@ -106,16 +110,37 @@ const Settings = () => {
     }
   };
 
+  const handleLink = async (provider) => {
+    try {
+      const { data, error } = await supabase.auth.linkIdentity({ provider });
+      if (error) {
+        alert(`❌ Failed to link ${provider}: ${error.message}`);
+      } else {
+        alert(`✅ Linked ${provider} successfully.`);
+      }
+    } catch (err) {
+      console.error("Linking error:", err);
+      alert("❌ Unexpected error occurred while linking.");
+    }
+  };
+
   const getProviderIcon = (provider) => {
     switch (provider) {
       case "google":
         return <GoogleIcon sx={{ mr: 1 }} />;
+      case "github":
+        return <GitHubIcon sx={{ mr: 1 }} />;
+      case "azure":
+        return <BusinessIcon sx={{ mr: 1 }} />;
       case "email":
         return <EmailIcon sx={{ mr: 1 }} />;
       default:
         return null;
     }
   };
+
+  const linkedProviderKeys = linkedProviders.map((p) => p.provider);
+  const unlinkedProviders = availableProviders.filter((p) => !linkedProviderKeys.includes(p));
 
   if (authLoading) {
     return (
@@ -155,7 +180,7 @@ const Settings = () => {
 
           <Typography variant="h6">Linked Accounts</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            These identity providers are linked to your account.
+            These identity providers are currently linked to your account.
           </Typography>
 
           {linkedProviders.length === 0 ? (
@@ -176,6 +201,27 @@ const Settings = () => {
                 </ListItem>
               ))}
             </List>
+          )}
+
+          {unlinkedProviders.length > 0 && (
+            <>
+              <Divider sx={{ my: 4 }} />
+              <Typography variant="h6" gutterBottom>
+                Link New Accounts
+              </Typography>
+              <Stack direction="column" spacing={1}>
+                {unlinkedProviders.map((provider) => (
+                  <Button
+                    key={provider}
+                    variant="outlined"
+                    startIcon={getProviderIcon(provider)}
+                    onClick={() => handleLink(provider)}
+                  >
+                    Link {provider.charAt(0).toUpperCase() + provider.slice(1)}
+                  </Button>
+                ))}
+              </Stack>
+            </>
           )}
         </>
       )}
