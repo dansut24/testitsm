@@ -1,81 +1,85 @@
+// src/pages/StartTrial.js
+
 import React, { useState } from "react";
 import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Paper,
-  Alert,
-  Container
+  Container, Paper, Typography, TextField, Button, Box, InputAdornment
 } from "@mui/material";
 
 const StartTrial = () => {
-  const [formData, setFormData] = useState({ name: "", email: "", company: "" });
-  const [status, setStatus] = useState(null);
+  const [companyName, setCompanyName] = useState("");
+  const [subdomain, setSubdomain] = useState("");
 
-  const handleChange = (e) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleCompanyChange = (e) => {
+    const name = e.target.value;
+    setCompanyName(name);
 
-  const handleSubmit = async () => {
-    if (!formData.name || !formData.email || !formData.company) {
-      setStatus({ type: "error", message: "Please fill in all fields." });
-      return;
-    }
+    const slug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
 
-    // TODO: replace with actual backend integration
-    console.log("📨 Trial request submitted:", formData);
-    setStatus({ type: "success", message: "Trial started! We'll email you shortly." });
+    setSubdomain(slug);
+  };
+
+  const handleSubdomainChange = (e) => {
+    const input = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+    setSubdomain(input);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const fullDomain = `${subdomain}-itsm.hi5tech.co.uk`;
+    alert(`Trial started for: ${fullDomain}`);
+    // TODO: POST to backend, provision project etc
   };
 
   return (
-    <Container maxWidth="sm">
-      <Paper sx={{ p: 4, mt: 6 }}>
+    <Container maxWidth="sm" sx={{ mt: 6 }}>
+      <Paper elevation={4} sx={{ p: 4 }}>
         <Typography variant="h5" gutterBottom>
           Start Your Free Trial
         </Typography>
-        <Typography variant="body2" sx={{ mb: 2 }}>
-          Enter your details to begin a 14-day trial.
+
+        <Typography variant="body2" color="text.secondary" mb={3}>
+          Get your own ITSM instance in seconds. Just tell us your company name.
         </Typography>
 
-        {status && (
-          <Alert severity={status.type} sx={{ mb: 2 }}>
-            {status.message}
-          </Alert>
-        )}
+        <Box component="form" onSubmit={handleSubmit}>
+          <TextField
+            fullWidth
+            label="Company Name"
+            value={companyName}
+            onChange={handleCompanyChange}
+            margin="normal"
+            required
+          />
 
-        <TextField
-          fullWidth
-          label="Full Name"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-          margin="normal"
-        />
-        <TextField
-          fullWidth
-          label="Work Email"
-          name="email"
-          value={formData.email}
-          onChange={handleChange}
-          margin="normal"
-        />
-        <TextField
-          fullWidth
-          label="Company Name"
-          name="company"
-          value={formData.company}
-          onChange={handleChange}
-          margin="normal"
-        />
+          <TextField
+            fullWidth
+            label="Your Domain"
+            value={subdomain}
+            onChange={handleSubdomainChange}
+            margin="normal"
+            required
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  -itsm.hi5tech.co.uk
+                </InputAdornment>
+              ),
+            }}
+            helperText="You can customise the first part, but the domain will always end with -itsm.hi5tech.co.uk"
+          />
 
-        <Button
-          variant="contained"
-          fullWidth
-          sx={{ mt: 2 }}
-          onClick={handleSubmit}
-        >
-          Start Trial
-        </Button>
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
+            sx={{ mt: 3 }}
+          >
+            Start Trial
+          </Button>
+        </Box>
       </Paper>
     </Container>
   );
