@@ -1,6 +1,6 @@
 import React from "react";
 import { CssBaseline, Box } from "@mui/material";
-import { Routes, Route } from "react-router-dom"; // ✅ no Router here!
+import { Routes, Route } from "react-router-dom";
 
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
@@ -34,6 +34,10 @@ import Announcements from "./pages/Announcements";
 import WorkScheduler from "./pages/WorkScheduler";
 import LinkComplete from "./pages/LinkComplete";
 
+// 🆕 Add Pricing and Trial pages
+import Pricing from "./pages/Pricing";
+import StartTrial from "./pages/StartTrial";
+
 // Self-Service Portal
 import SelfServiceLayout from "./layouts/SelfServiceLayout";
 import SelfServiceHome from "./pages/SelfService/SelfServiceHome";
@@ -47,9 +51,8 @@ import Confirmation from "./pages/SelfService/Confirmation";
 import NotFound from "./pages/NotFound";
 import NotAuthorised from "./pages/NotAuthorised";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { useAuth } from "./context/AuthContext"; // ✅ Only hook used here
+import { useAuth } from "./context/AuthContext";
 
-// RDP + Test
 import Viewer from "./pages/rdp/Viewer";
 import ConnectivityTest from "./pages/rdp/ConnectivityTest";
 
@@ -69,6 +72,8 @@ function AppRoutes() {
       <Route path="/not-authorised" element={<NotAuthorised />} />
       <Route path="/connectivity-test" element={<ConnectivityTest />} />
       <Route path="/link-complete" element={<LinkComplete />} />
+      <Route path="/pricing" element={<Pricing />} /> {/* ✅ Added */}
+      <Route path="/start-trial" element={<StartTrial />} /> {/* ✅ Added */}
 
       {/* Self-Service Portal */}
       <Route path="/self-service" element={<SelfServiceLayout />}>
