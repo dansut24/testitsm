@@ -2,23 +2,22 @@
 
 import React, { useState } from "react";
 import {
-  Box, Typography, TextField, Button, Stepper, Step, StepLabel, Checkbox,
-  FormControlLabel, Grid, Alert
+  Box, Typography, TextField, Button, Stepper, Step, StepLabel,
+  Checkbox, FormControlLabel, Grid, Alert
 } from "@mui/material";
 import { supabase } from "../supabaseClient";
+import { useNavigate } from "react-router-dom";
 
 const defaultTeams = [
-  "Service Desk",
-  "Desktop Support",
-  "Server Support",
-  "Network Team",
+  "Service Desk", "Desktop Support", "Server Support", "Network Team"
 ];
 
 const defaultModules = [
-  "Incidents", "Service Requests", "Changes", "Problems", "Assets", "Knowledge Base",
+  "Incidents", "Service Requests", "Changes", "Problems", "Assets", "Knowledge Base"
 ];
 
 const TenantSetupWizard = () => {
+  const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState({
     companyName: "",
@@ -36,7 +35,8 @@ const TenantSetupWizard = () => {
   const handleNext = () => setStep((prev) => prev + 1);
   const handleBack = () => setStep((prev) => prev - 1);
 
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e) =>
+    setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleCheckboxChange = (field, value) => {
     const current = formData[field];
@@ -50,8 +50,10 @@ const TenantSetupWizard = () => {
 
   const handleSubmit = async () => {
     setStatus(null);
-
-    const { companyName, subdomain, adminEmail, adminName, adminPassword, modules, teams } = formData;
+    const {
+      companyName, subdomain, adminEmail, adminName,
+      adminPassword, modules, teams
+    } = formData;
     const domain = `${subdomain.toLowerCase()}.hi5tech.co.uk`;
 
     // 1. Create Supabase Auth User
@@ -59,58 +61,54 @@ const TenantSetupWizard = () => {
       email: adminEmail,
       password: adminPassword,
       options: {
-        data: {
-          full_name: adminName,
-          role: "admin",
-        },
+        data: { full_name: adminName, role: "admin" },
       },
     });
 
-    if (signUpError) {
-      setStatus({ type: "error", message: signUpError.message });
-      return;
+    if (signUpError || !userData?.user) {
+      return setStatus({ type: "error", message: signUpError?.message || "User creation failed" });
     }
 
-    const userId = userData?.user?.id;
+    const userId = userData.user.id;
 
-    // 2. Create Tenant & Link Profile
-    const { error: insertError } = await supabase.from("tenants").insert([
-      {
-        name: companyName,
-        domain,
-        created_by: userId,
-      },
-    ]);
+    // 2. Create Tenant
+    const { data: tenantInsert, error: tenantError } = await supabase
+      .from("tenants")
+      .insert([{ name: companyName, domain, created_by: userId }])
+      .select()
+      .single();
 
-    if (insertError) {
-      setStatus({ type: "error", message: insertError.message });
-      return;
+    if (tenantError || !tenantInsert?.id) {
+      return setStatus({ type: "error", message: tenantError?.message || "Tenant creation failed" });
     }
 
-    // 3. Insert Tenant Settings, Teams, Modules
+    const tenantId = tenantInsert.id;
+
+    // 3. Update Profile with tenant_id
+    await supabase
+      .from("profiles")
+      .update({ tenant_id: tenantId })
+      .eq("id", userId);
+
+    // 4. Add Teams and Modules
     await Promise.all([
       supabase.from("tenant_settings").insert({
-        tenant_id: userId,
+        tenant_id: tenantId,
         modules,
         logo_url: "",
       }),
-      ...teams.map((teamName) =>
-        supabase.from("teams").insert({
-          tenant_id: userId,
-          name: teamName,
-        })
+      ...teams.map((team) =>
+        supabase.from("teams").insert({ tenant_id: tenantId, name: team })
       ),
     ]);
 
-    setStatus({ type: "success", message: "Tenant setup complete!" });
-    handleNext();
+    // Redirect to tenant dashboard
+    window.location.href = `https://${subdomain}.hi5tech.co.uk/dashboard`;
   };
 
   return (
     <Box sx={{ maxWidth: 600, mx: "auto", mt: 4, p: 2 }}>
-      <Typography variant="h4" gutterBottom>
-        Tenant Setup
-      </Typography>
+      <Typography variant="h4" gutterBottom>Tenant Setup</Typography>
       <Stepper activeStep={step} alternativeLabel>
         {steps.map((label) => (
           <Step key={label}><StepLabel>{label}</StepLabel></Step>
@@ -124,25 +122,27 @@ const TenantSetupWizard = () => {
               label="Company Name"
               name="companyName"
               fullWidth
+              margin="normal"
               value={formData.companyName}
               onChange={(e) => {
-                const value = e.target.value;
+                const name = e.target.value;
                 setFormData({
                   ...formData,
-                  companyName: value,
-                  subdomain: value.toLowerCase().replace(/\s+/g, ""),
+                  companyName: name,
+                  subdomain: name.toLowerCase().replace(/\s+/g, ""),
                 });
               }}
-              margin="normal"
             />
             <TextField
               label="Subdomain"
               name="subdomain"
               fullWidth
-              value={formData.subdomain}
-              InputProps={{ endAdornment: <Typography>.hi5tech.co.uk</Typography> }}
-              onChange={handleChange}
               margin="normal"
+              value={formData.subdomain}
+              onChange={handleChange}
+              InputProps={{
+                endAdornment: <Typography>.hi5tech.co.uk</Typography>,
+              }}
             />
           </>
         )}
@@ -153,33 +153,33 @@ const TenantSetupWizard = () => {
               label="Full Name"
               name="adminName"
               fullWidth
+              margin="normal"
               value={formData.adminName}
               onChange={handleChange}
-              margin="normal"
             />
             <TextField
               label="Email"
               name="adminEmail"
               fullWidth
+              margin="normal"
               value={formData.adminEmail}
               onChange={handleChange}
-              margin="normal"
             />
             <TextField
               label="Password"
               name="adminPassword"
-              fullWidth
               type="password"
+              fullWidth
+              margin="normal"
               value={formData.adminPassword}
               onChange={handleChange}
-              margin="normal"
             />
           </>
         )}
 
         {step === 2 && (
           <>
-            <Typography>Select the modules to enable:</Typography>
+            <Typography>Select Modules</Typography>
             <Grid container spacing={1}>
               {defaultModules.map((mod) => (
                 <Grid item xs={6} key={mod}>
@@ -200,7 +200,7 @@ const TenantSetupWizard = () => {
 
         {step === 3 && (
           <>
-            <Typography>Select default teams:</Typography>
+            <Typography>Select Teams</Typography>
             <Grid container spacing={1}>
               {defaultTeams.map((team) => (
                 <Grid item xs={6} key={team}>
@@ -220,12 +220,7 @@ const TenantSetupWizard = () => {
         )}
 
         {step === 4 && (
-          <>
-            <Typography variant="h6" gutterBottom>All done!</Typography>
-            <Typography variant="body1">
-              Your tenant setup is complete. You can now log in and start managing your IT environment.
-            </Typography>
-          </>
+          <Typography variant="body1">Setup complete! Redirecting...</Typography>
         )}
 
         {status && (
