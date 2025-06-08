@@ -1,11 +1,10 @@
-// src/pages/TenantSetupWizard.js
-
 import React, { useState } from "react";
 import {
-  Box, Typography, TextField, Button, Stepper, Step, StepLabel,
-  Checkbox, FormControlLabel, Grid, Alert
+  Box, Typography, TextField, Button, Stepper, Step, StepLabel, Checkbox,
+  FormControlLabel, Grid, Alert
 } from "@mui/material";
 import { supabase } from "../supabaseClient";
+import { useNavigate } from "react-router-dom";
 
 const defaultTeams = [
   "Service Desk", "Desktop Support", "Server Support", "Network Team"
@@ -15,7 +14,10 @@ const defaultModules = [
   "Incidents", "Service Requests", "Changes", "Problems", "Assets", "Knowledge Base"
 ];
 
+const steps = ["Company Info", "Admin Setup", "Modules", "Teams", "Logo", "Finish"];
+
 const TenantSetupWizard = () => {
+  const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState({
     companyName: "",
@@ -28,14 +30,13 @@ const TenantSetupWizard = () => {
     logoFile: null,
   });
   const [status, setStatus] = useState(null);
-
-  const steps = ["Company Info", "Admin Setup", "Modules", "Teams", "Logo", "Finish"];
+  const [tenantId, setTenantId] = useState(null);
+  const [userId, setUserId] = useState(null);
 
   const handleNext = () => setStep((prev) => prev + 1);
   const handleBack = () => setStep((prev) => prev - 1);
 
-  const handleChange = (e) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleCheckboxChange = (field, value) => {
     const current = formData[field];
@@ -47,8 +48,9 @@ const TenantSetupWizard = () => {
     });
   };
 
-  const handleLogoUpload = (e) => {
-    setFormData({ ...formData, logoFile: e.target.files[0] });
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) setFormData({ ...formData, logoFile: file });
   };
 
   const handleSubmit = async () => {
@@ -57,6 +59,7 @@ const TenantSetupWizard = () => {
       companyName, subdomain, adminEmail, adminName,
       adminPassword, modules, teams, logoFile
     } = formData;
+
     const domain = `${subdomain.toLowerCase()}.hi5tech.co.uk`;
 
     // 1. Create Supabase Auth User
@@ -72,12 +75,13 @@ const TenantSetupWizard = () => {
       return setStatus({ type: "error", message: signUpError?.message || "User creation failed" });
     }
 
-    const userId = userData.user.id;
+    const newUserId = userData.user.id;
+    setUserId(newUserId);
 
-    // 2. Create Tenant
+    // 2. Insert Tenant
     const { data: tenantInsert, error: tenantError } = await supabase
       .from("tenants")
-      .insert([{ name: companyName, domain, subdomain, created_by: userId }])
+      .insert([{ name: companyName, domain, subdomain, created_by: newUserId }])
       .select()
       .single();
 
@@ -85,45 +89,58 @@ const TenantSetupWizard = () => {
       return setStatus({ type: "error", message: tenantError?.message || "Tenant creation failed" });
     }
 
-    const tenantId = tenantInsert.id;
+    const newTenantId = tenantInsert.id;
+    setTenantId(newTenantId);
 
-    // 3. Upload logo (if selected)
-    let logoUrl = "";
+    // 3. Update Profile with tenant_id
+    await supabase
+      .from("profiles")
+      .update({ tenant_id: newTenantId })
+      .eq("id", newUserId);
+
+    // 4. Insert tenant_settings with placeholder logo
+    const { error: settingsError } = await supabase
+      .from("tenant_settings")
+      .insert({
+        tenant_id: newTenantId,
+        modules,
+        logo_url: "", // Will update after upload
+      });
+
+    if (settingsError) {
+      return setStatus({ type: "error", message: `Settings insert failed: ${settingsError.message}` });
+    }
+
+    // 5. Insert Teams
+    for (let team of teams) {
+      await supabase.from("teams").insert({ tenant_id: newTenantId, name: team });
+    }
+
+    // 6. Upload Logo (optional)
     if (logoFile) {
-      const { error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from("tenant-logos")
-        .upload(`${tenantId}/logo.png`, logoFile, {
+        .upload(`${subdomain}/logo.png`, logoFile, {
           cacheControl: "3600",
           upsert: true,
         });
 
       if (uploadError) {
-        return setStatus({ type: "error", message: "Logo upload failed." });
+        return setStatus({ type: "error", message: `Logo upload failed: ${uploadError.message}` });
       }
 
-      const { data } = supabase.storage
+      const publicURL = supabase.storage
         .from("tenant-logos")
-        .getPublicUrl(`${tenantId}/logo.png`);
+        .getPublicUrl(`${subdomain}/logo.png`).data.publicUrl;
 
-      logoUrl = data?.publicUrl || "";
+      // 7. Update tenant_settings with logo URL
+      await supabase
+        .from("tenant_settings")
+        .update({ logo_url: publicURL })
+        .eq("tenant_id", newTenantId);
     }
 
-    // 4. Update Profile with tenant_id
-    await supabase.from("profiles").update({ tenant_id: tenantId }).eq("id", userId);
-
-    // 5. Add Tenant Settings and Teams
-    await Promise.all([
-      supabase.from("tenant_settings").insert({
-        tenant_id: tenantId,
-        modules,
-        logo_url: logoUrl,
-      }),
-      ...teams.map((team) =>
-        supabase.from("teams").insert({ tenant_id: tenantId, name: team })
-      ),
-    ]);
-
-    // Redirect to tenant dashboard
+    // Redirect
     window.location.href = `https://${subdomain}.hi5tech.co.uk/dashboard`;
   };
 
@@ -161,22 +178,16 @@ const TenantSetupWizard = () => {
               margin="normal"
               value={formData.subdomain}
               onChange={handleChange}
-              InputProps={{
-                endAdornment: <Typography>.hi5tech.co.uk</Typography>,
-              }}
+              InputProps={{ endAdornment: <Typography>.hi5tech.co.uk</Typography> }}
             />
           </>
         )}
 
         {step === 1 && (
           <>
-            <TextField label="Full Name" name="adminName" fullWidth margin="normal"
-              value={formData.adminName} onChange={handleChange} />
-            <TextField label="Email" name="adminEmail" fullWidth margin="normal"
-              value={formData.adminEmail} onChange={handleChange} />
-            <TextField label="Password" name="adminPassword" type="password"
-              fullWidth margin="normal" value={formData.adminPassword}
-              onChange={handleChange} />
+            <TextField label="Full Name" name="adminName" fullWidth margin="normal" value={formData.adminName} onChange={handleChange} />
+            <TextField label="Email" name="adminEmail" fullWidth margin="normal" value={formData.adminEmail} onChange={handleChange} />
+            <TextField label="Password" name="adminPassword" type="password" fullWidth margin="normal" value={formData.adminPassword} onChange={handleChange} />
           </>
         )}
 
@@ -224,8 +235,8 @@ const TenantSetupWizard = () => {
 
         {step === 4 && (
           <>
-            <Typography>Upload Logo (Optional)</Typography>
-            <input type="file" accept="image/*" onChange={handleLogoUpload} />
+            <Typography>Upload Company Logo</Typography>
+            <input type="file" accept="image/*" onChange={handleLogoChange} />
           </>
         )}
 
@@ -234,9 +245,7 @@ const TenantSetupWizard = () => {
         )}
 
         {status && (
-          <Alert severity={status.type} sx={{ mt: 2 }}>
-            {status.message}
-          </Alert>
+          <Alert severity={status.type} sx={{ mt: 2 }}>{status.message}</Alert>
         )}
 
         <Box sx={{ mt: 4, display: "flex", justifyContent: "space-between" }}>
