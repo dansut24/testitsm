@@ -1,3 +1,5 @@
+// src/context/AuthContext.js
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
@@ -13,10 +15,14 @@ export const AuthProvider = ({ children }) => {
 
   const getSubdomain = () => {
     const host = window.location.hostname;
+
     if (host.includes("localhost")) return "local";
+
     const parts = host.split(".");
-    if (parts.length < 3) return null; // no subdomain
-    return parts[0].replace("-itsm", ""); // e.g., "test" from test-itsm.hi5tech.co.uk
+    const domain = parts.slice(-2).join("."); // hi5tech.co.uk
+    if (host === domain) return null; // root domain
+
+    return parts[0].replace("-itsm", ""); // extract subdomain before -itsm
   };
 
   useEffect(() => {
@@ -31,15 +37,13 @@ export const AuthProvider = ({ children }) => {
           .single();
 
         if (error || !data) {
+          setTenant(null);
           setTenantError("🚫 Tenant not found for this subdomain.");
           setAuthLoading(false);
           return;
         }
 
         setTenant(data);
-      } else {
-        // No subdomain: assume root domain (marketing site)
-        setTenant(null);
       }
 
       const {
@@ -100,8 +104,8 @@ export const AuthProvider = ({ children }) => {
     navigate("/login");
   };
 
-  // ✅ Only show error if on a subdomain
-  if (tenantError && getSubdomain()) {
+  // Optional: Show tenant error message only for subdomains
+  if (tenantError) {
     return (
       <div style={{ padding: 40 }}>
         <h2>{tenantError}</h2>
