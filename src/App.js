@@ -64,7 +64,11 @@ import Products from "./pages/Marketing/Products";
 
 function isRootDomain() {
   const host = window.location.hostname;
-  return host === "hi5tech.co.uk" || host === "www.hi5tech.co.uk";
+  return (
+    host === "hi5tech.co.uk" ||
+    host === "www.hi5tech.co.uk" ||
+    /^[\d.]+$/.test(host) // support for direct IP access during dev
+  );
 }
 
 function AppRoutes() {
@@ -74,7 +78,6 @@ function AppRoutes() {
   const isLoggedIn = !!user;
 
   if (isRootDomain()) {
-    // Public Marketing Site
     return (
       <Routes>
         <Route path="/" element={<MarketingHome />} />
@@ -89,10 +92,8 @@ function AppRoutes() {
     );
   }
 
-  // ITSM Tenant Site
   return (
     <Routes>
-      {/* Public Auth Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/loading" element={<Loading />} />
@@ -100,7 +101,7 @@ function AppRoutes() {
       <Route path="/connectivity-test" element={<ConnectivityTest />} />
       <Route path="/link-complete" element={<LinkComplete />} />
 
-      {/* Self-Service Portal */}
+      {/* Self-Service */}
       <Route path="/self-service" element={<SelfServiceLayout />}>
         <Route index element={<SelfServiceHome />} />
         <Route path="raise-request" element={<RaiseRequest />} />
@@ -111,7 +112,7 @@ function AppRoutes() {
         <Route path="knowledge-base" element={<SelfServiceKnowledgeBase />} />
       </Route>
 
-      {/* Main ITSM Layout */}
+      {/* Authenticated */}
       <Route path="/" element={isLoggedIn ? <Layout /> : <Login />}>
         <Route
           path="dashboard"
