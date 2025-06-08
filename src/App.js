@@ -77,21 +77,22 @@ function AppRoutes() {
 
   const isLoggedIn = !!user;
 
-  if (isRootDomain()) {
-    return (
-      <Routes>
+if (isRootDomain()) {
+  return (
+    <Routes>
+      <Route element={<MarketingLayout />}>
         <Route path="/" element={<MarketingHome />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/products" element={<Products />} />
-        <Route path="/pricing" element={<Pricing />} />
-        <Route path="/start-trial" element={<StartTrial />} />
-        <Route path="/tenant-setup" element={<TenantSetupWizard />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    );
-  }
-
+      </Route>
+      <Route path="/pricing" element={<Pricing />} />
+      <Route path="/start-trial" element={<StartTrial />} />
+      <Route path="/tenant-setup" element={<TenantSetupWizard />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
