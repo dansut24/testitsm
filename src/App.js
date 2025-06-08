@@ -5,6 +5,7 @@ import { useAuth } from "./context/AuthContext";
 
 // ITSM Pages
 import Layout from "./components/Layout";
+import MarketingLayout from "./layouts/MarketingLayout";
 import Dashboard from "./pages/Dashboard";
 import UserDashboard from "./pages/UserDashboard";
 import Incidents from "./pages/Incidents";
