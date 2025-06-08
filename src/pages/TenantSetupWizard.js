@@ -1,42 +1,49 @@
 // src/pages/TenantSetupWizard.js
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Box, Typography, TextField, Button, Stepper, Step, StepLabel,
-  Checkbox, FormControlLabel, Grid, Alert
+  Box, Typography, TextField, Button, Stepper, Step, StepLabel, Checkbox,
+  FormControlLabel, Grid, Alert
 } from "@mui/material";
 import { supabase } from "../supabaseClient";
-import { useNavigate } from "react-router-dom";
 
-const defaultTeams = [
-  "Service Desk", "Desktop Support", "Server Support", "Network Team"
-];
-
-const defaultModules = [
-  "Incidents", "Service Requests", "Changes", "Problems", "Assets", "Knowledge Base"
-];
-
-const steps = ["Company Info", "Admin Setup", "Modules", "Teams", "Logo", "Finish"];
+const defaultTeams = ["Service Desk", "Desktop Support", "Server Support"];
+const defaultModules = ["Incidents", "Service Requests", "Assets", "Knowledge Base"];
+const steps = ["Admin Signup", "Company Info", "Modules", "Teams", "Logo", "Finish"];
 
 const TenantSetupWizard = () => {
-  const navigate = useNavigate();
   const [step, setStep] = useState(0);
+  const [userConfirmed, setUserConfirmed] = useState(false);
+  const [status, setStatus] = useState(null);
   const [formData, setFormData] = useState({
-    companyName: "",
-    subdomain: "",
     adminName: "",
     adminEmail: "",
     adminPassword: "",
+    companyName: "",
+    subdomain: "",
     modules: [],
     teams: [],
     logoFile: null,
   });
-  const [status, setStatus] = useState(null);
+
+  useEffect(() => {
+    const checkConfirmed = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) setUserConfirmed(true);
+    };
+    checkConfirmed();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN") setUserConfirmed(true);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleNext = () => setStep((prev) => prev + 1);
   const handleBack = () => setStep((prev) => prev - 1);
-
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e) =>
+    setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleCheckboxChange = (field, value) => {
     const current = formData[field];
@@ -53,17 +60,11 @@ const TenantSetupWizard = () => {
     if (file) setFormData({ ...formData, logoFile: file });
   };
 
-  const handleSubmit = async () => {
+  const handleSignup = async () => {
     setStatus(null);
-    const {
-      companyName, subdomain, adminEmail, adminName,
-      adminPassword, modules, teams, logoFile
-    } = formData;
+    const { adminEmail, adminPassword, adminName } = formData;
 
-    const domain = `${subdomain.toLowerCase()}.hi5tech.co.uk`;
-
-    // Step 1: Create Auth User
-    const { data: userData, error: signUpError } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email: adminEmail,
       password: adminPassword,
       options: {
@@ -71,64 +72,79 @@ const TenantSetupWizard = () => {
       },
     });
 
-    if (signUpError || !userData?.user) {
-      return setStatus({ type: "error", message: signUpError?.message || "User creation failed" });
+    if (error) {
+      setStatus({ type: "error", message: error.message });
+    } else {
+      setStatus({
+        type: "info",
+        message: "Signup successful. Please confirm your email before continuing.",
+      });
+    }
+  };
+
+  const handleSubmit = async () => {
+    setStatus(null);
+    const session = await supabase.auth.getSession();
+    const user = session?.data?.session?.user;
+    if (!user) {
+      return setStatus({ type: "error", message: "User session not found." });
     }
 
-    const userId = userData.user.id;
+    const {
+      companyName, subdomain, modules, teams, logoFile
+    } = formData;
 
-    // Step 2: Insert Tenant
-    const { data: tenantData, error: tenantError } = await supabase
+    const domain = `${subdomain.toLowerCase()}.hi5tech.co.uk`;
+    const userId = user.id;
+
+    // 1. Insert Tenant
+    const { data: tenantInsert, error: tenantError } = await supabase
       .from("tenants")
-      .insert([{ name: companyName, subdomain, domain, created_by: userId }])
+      .insert([{ name: companyName, domain, subdomain, created_by: userId }])
       .select()
       .single();
 
-    if (tenantError || !tenantData?.id) {
+    if (tenantError || !tenantInsert?.id) {
       return setStatus({ type: "error", message: tenantError?.message || "Tenant creation failed" });
     }
 
-    const tenantId = tenantData.id;
+    const newTenantId = tenantInsert.id;
 
-    // Step 3: Update Profile
-    await supabase
-      .from("profiles")
-      .update({ tenant_id: tenantId })
-      .eq("id", userId);
+    // 2. Update Profile
+    await supabase.from("profiles").update({ tenant_id: newTenantId }).eq("id", userId);
 
-    // Step 4: Upload Logo
+    // 3. Insert Teams
+    for (let team of teams) {
+      await supabase.from("teams").insert({ tenant_id: newTenantId, name: team });
+    }
+
+    // 4. Insert tenant_settings (with or without logo for now)
     let logoUrl = "";
     if (logoFile) {
-      const { error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from("tenant-logos")
-        .upload(`${subdomain}/logo.png`, logoFile, { upsert: true });
+        .upload(`${subdomain}/logo.png`, logoFile, {
+          cacheControl: "3600",
+          upsert: true,
+        });
 
       if (uploadError) {
-        return setStatus({ type: "error", message: "Logo upload failed: " + uploadError.message });
+        return setStatus({ type: "error", message: `Logo upload failed: ${uploadError.message}` });
       }
 
-      logoUrl = supabase
-        .storage
+      const { data: publicUrlData } = supabase.storage
         .from("tenant-logos")
-        .getPublicUrl(`${subdomain}/logo.png`)
-        .data.publicUrl;
+        .getPublicUrl(`${subdomain}/logo.png`);
+      logoUrl = publicUrlData.publicUrl;
     }
 
-    // Step 5: Insert tenant_settings
-    const { error: settingsError } = await supabase
-      .from("tenant_settings")
-      .insert([{ tenant_id: tenantId, logo_url: logoUrl }]);
+    await supabase.from("tenant_settings").insert({
+      tenant_id: newTenantId,
+      logo_url: logoUrl,
+      modules,
+    });
 
-    if (settingsError) {
-      return setStatus({ type: "error", message: "Settings insert failed: " + settingsError.message });
-    }
-
-    // Step 6: Insert teams
-    for (const team of teams) {
-      await supabase.from("teams").insert({ tenant_id: tenantId, name: team });
-    }
-
-    // Final Redirect
+    // Redirect to tenant
     window.location.href = `https://${subdomain}.hi5tech.co.uk/dashboard`;
   };
 
@@ -143,6 +159,25 @@ const TenantSetupWizard = () => {
 
       <Box sx={{ mt: 4 }}>
         {step === 0 && (
+          <>
+            <TextField label="Full Name" name="adminName" fullWidth margin="normal" onChange={handleChange} />
+            <TextField label="Email" name="adminEmail" fullWidth margin="normal" onChange={handleChange} />
+            <TextField label="Password" name="adminPassword" type="password" fullWidth margin="normal" onChange={handleChange} />
+
+            <Button variant="contained" sx={{ mt: 2 }} onClick={handleSignup}>Sign Up</Button>
+
+            {status && <Alert severity={status.type} sx={{ mt: 2 }}>{status.message}</Alert>}
+
+            {userConfirmed && (
+              <Box sx={{ mt: 4 }}>
+                <Alert severity="success">Email confirmed! You may now continue setup.</Alert>
+                <Button variant="contained" sx={{ mt: 2 }} onClick={handleNext}>Continue</Button>
+              </Box>
+            )}
+          </>
+        )}
+
+        {step === 1 && (
           <>
             <TextField
               label="Company Name"
@@ -168,14 +203,6 @@ const TenantSetupWizard = () => {
               onChange={handleChange}
               InputProps={{ endAdornment: <Typography>.hi5tech.co.uk</Typography> }}
             />
-          </>
-        )}
-
-        {step === 1 && (
-          <>
-            <TextField label="Full Name" name="adminName" fullWidth margin="normal" value={formData.adminName} onChange={handleChange} />
-            <TextField label="Email" name="adminEmail" fullWidth margin="normal" value={formData.adminEmail} onChange={handleChange} />
-            <TextField label="Password" name="adminPassword" type="password" fullWidth margin="normal" value={formData.adminPassword} onChange={handleChange} />
           </>
         )}
 
@@ -232,18 +259,16 @@ const TenantSetupWizard = () => {
           <Typography variant="body1">Setup complete! Redirecting...</Typography>
         )}
 
-        {status && (
-          <Alert severity={status.type} sx={{ mt: 2 }}>{status.message}</Alert>
-        )}
+        {status && <Alert severity={status.type} sx={{ mt: 2 }}>{status.message}</Alert>}
 
         <Box sx={{ mt: 4, display: "flex", justifyContent: "space-between" }}>
           {step > 0 && step < steps.length - 1 && (
             <Button onClick={handleBack}>Back</Button>
           )}
-          {step < steps.length - 2 && (
+          {step < steps.length - 2 && userConfirmed && (
             <Button variant="contained" onClick={handleNext}>Next</Button>
           )}
-          {step === steps.length - 2 && (
+          {step === steps.length - 2 && userConfirmed && (
             <Button variant="contained" onClick={handleSubmit}>Submit</Button>
           )}
         </Box>
