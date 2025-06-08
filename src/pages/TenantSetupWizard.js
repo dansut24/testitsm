@@ -54,6 +54,11 @@ const TenantSetupWizard = () => {
       companyName, subdomain, adminEmail, adminName,
       adminPassword, modules, teams
     } = formData;
+
+    if (!subdomain) {
+      return setStatus({ type: "error", message: "Subdomain is required." });
+    }
+
     const domain = `${subdomain.toLowerCase()}.hi5tech.co.uk`;
 
     // 1. Create Supabase Auth User
@@ -74,7 +79,7 @@ const TenantSetupWizard = () => {
     // 2. Create Tenant
     const { data: tenantInsert, error: tenantError } = await supabase
       .from("tenants")
-      .insert([{ name: companyName, domain, created_by: userId }])
+      .insert([{ name: companyName, domain, subdomain, created_by: userId }])
       .select()
       .single();
 
