@@ -15,11 +15,10 @@ export const AuthProvider = ({ children }) => {
     const host = window.location.hostname;
     if (host.includes("localhost")) return "local";
     const parts = host.split(".");
-    if (parts.length < 3) return null; // not a subdomain
-    return parts[0].replace("-itsm", ""); // extract 'test' from test-itsm.hi5tech.co.uk
+    if (parts.length < 3) return null; // no subdomain
+    return parts[0].replace("-itsm", ""); // e.g., "test" from test-itsm.hi5tech.co.uk
   };
 
-  // Load session + tenant
   useEffect(() => {
     const init = async () => {
       const subdomain = getSubdomain();
@@ -32,13 +31,15 @@ export const AuthProvider = ({ children }) => {
           .single();
 
         if (error || !data) {
-          setTenant(null);
-          setTenantError("🚫 Tenant not found for this domain.");
+          setTenantError("🚫 Tenant not found for this subdomain.");
           setAuthLoading(false);
           return;
         }
 
         setTenant(data);
+      } else {
+        // No subdomain: assume root domain (marketing site)
+        setTenant(null);
       }
 
       const {
@@ -68,7 +69,6 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch role from `profiles` table
   const fetchUserProfile = async (supabaseUser) => {
     const { data: profile, error } = await supabase
       .from("profiles")
@@ -100,8 +100,8 @@ export const AuthProvider = ({ children }) => {
     navigate("/login");
   };
 
-  // Optional: block UI if tenant doesn't exist
-  if (tenantError) {
+  // ✅ Only show error if on a subdomain
+  if (tenantError && getSubdomain()) {
     return (
       <div style={{ padding: 40 }}>
         <h2>{tenantError}</h2>
