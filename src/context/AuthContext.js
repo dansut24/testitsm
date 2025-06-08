@@ -21,27 +21,32 @@ export const AuthProvider = ({ children }) => {
     return parts[0].replace("-itsm", ""); // extract 'demo' from demo-itsm.hi5tech.co.uk
   };
 
+  const isRootDomain = () => {
+    const host = window.location.hostname;
+    return host === "hi5tech.co.uk" || host === "www.hi5tech.co.uk";
+  };
+
   useEffect(() => {
     const init = async () => {
-      const subdomain = getSubdomain();
+      if (!isRootDomain()) {
+        const subdomain = getSubdomain();
 
-      if (subdomain && subdomain !== "local") {
-        const { data, error } = await supabase
-          .from("tenants")
-          .select("*")
-          .eq("subdomain", subdomain)
-          .single();
+        if (subdomain && subdomain !== "local") {
+          const { data, error } = await supabase
+            .from("tenants")
+            .select("*")
+            .eq("subdomain", subdomain)
+            .single();
 
-        if (error || !data) {
-          setTenant(null);
-          setTenantError("🚫 Tenant not found for this domain.");
-          setAuthLoading(false);
-          return;
+          if (error || !data) {
+            setTenant(null);
+            setTenantError("🚫 Tenant not found for this subdomain.");
+            setAuthLoading(false);
+            return;
+          }
+
+          setTenant(data);
         }
-
-        setTenant(data);
-      } else {
-        setTenant(null); // root domain → marketing site
       }
 
       const {
@@ -102,8 +107,8 @@ export const AuthProvider = ({ children }) => {
     navigate("/login");
   };
 
-  // Show error if subdomain is invalid
-  if (tenantError) {
+  // Show error if subdomain is invalid (but not on root domain)
+  if (!isRootDomain() && tenantError) {
     return (
       <div style={{ padding: 40 }}>
         <h2>{tenantError}</h2>
