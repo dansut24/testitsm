@@ -1,7 +1,9 @@
 import React from "react";
 import { CssBaseline, Box } from "@mui/material";
 import { Routes, Route } from "react-router-dom";
+import { useAuth } from "./context/AuthContext";
 
+// ITSM Pages
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import UserDashboard from "./pages/UserDashboard";
@@ -33,11 +35,9 @@ import ArticleDetail from "./pages/ArticleDetail";
 import Announcements from "./pages/Announcements";
 import WorkScheduler from "./pages/WorkScheduler";
 import LinkComplete from "./pages/LinkComplete";
-
-// 🆕 Pricing and Trial pages
 import Pricing from "./pages/Pricing";
 import StartTrial from "./pages/StartTrial";
-import TenantSetupWizard from "./pages/TenantSetupWizard"; // ✅ Added
+import TenantSetupWizard from "./pages/TenantSetupWizard";
 
 // Self-Service Portal
 import SelfServiceLayout from "./layouts/SelfServiceLayout";
@@ -49,33 +49,56 @@ import ServiceCatalog from "./pages/SelfService/ServiceCatalog";
 import Checkout from "./pages/SelfService/Checkout";
 import Confirmation from "./pages/SelfService/Confirmation";
 
+// Public Pages
 import NotFound from "./pages/NotFound";
 import NotAuthorised from "./pages/NotAuthorised";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { useAuth } from "./context/AuthContext";
-
 import Viewer from "./pages/rdp/Viewer";
 import ConnectivityTest from "./pages/rdp/ConnectivityTest";
 
+// Marketing Pages
+import MarketingHome from "./pages/Marketing/Home";
+import About from "./pages/Marketing/About";
+import Contact from "./pages/Marketing/Contact";
+import Products from "./pages/Marketing/Products";
+
+function isRootDomain() {
+  const host = window.location.hostname;
+  return host === "hi5tech.co.uk" || host === "www.hi5tech.co.uk";
+}
+
 function AppRoutes() {
   const { user, authLoading } = useAuth();
-
   if (authLoading) return <div>Loading...</div>;
 
   const isLoggedIn = !!user;
 
+  if (isRootDomain()) {
+    // Public Marketing Site
+    return (
+      <Routes>
+        <Route path="/" element={<MarketingHome />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/products" element={<Products />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/start-trial" element={<StartTrial />} />
+        <Route path="/tenant-setup" element={<TenantSetupWizard />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    );
+  }
+
+  // ITSM Tenant Site
   return (
     <Routes>
-      {/* Public Routes */}
+      {/* Public Auth Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/loading" element={<Loading />} />
       <Route path="/not-authorised" element={<NotAuthorised />} />
       <Route path="/connectivity-test" element={<ConnectivityTest />} />
       <Route path="/link-complete" element={<LinkComplete />} />
-      <Route path="/pricing" element={<Pricing />} />
-      <Route path="/start-trial" element={<StartTrial />} />
-      <Route path="/tenant-setup" element={<TenantSetupWizard />} /> {/* ✅ Added */}
 
       {/* Self-Service Portal */}
       <Route path="/self-service" element={<SelfServiceLayout />}>
@@ -88,7 +111,7 @@ function AppRoutes() {
         <Route path="knowledge-base" element={<SelfServiceKnowledgeBase />} />
       </Route>
 
-      {/* Main Authenticated Layout */}
+      {/* Main ITSM Layout */}
       <Route path="/" element={isLoggedIn ? <Layout /> : <Login />}>
         <Route
           path="dashboard"
@@ -115,8 +138,6 @@ function AppRoutes() {
         <Route path="profile" element={<UserProfile />} />
         <Route path="settings" element={<Settings />} />
         <Route path="rdp-viewer" element={<Viewer />} />
-
-        {/* Admin-only */}
         <Route
           path="admin-settings"
           element={
@@ -125,15 +146,11 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-
-        {/* Creation Pages */}
         <Route path="new-incident" element={<NewIncident />} />
         <Route path="new-service-request" element={<NewServiceRequest />} />
         <Route path="new-change" element={<NewChange />} />
         <Route path="new-problem" element={<NewProblem />} />
         <Route path="new-asset" element={<NewAsset />} />
-
-        {/* Detail Views */}
         <Route path="incidents/:id" element={<IncidentDetail />} />
         <Route path="service-requests/:id" element={<ServiceRequestDetail />} />
         <Route path="changes/:id" element={<ChangeDetail />} />
@@ -144,7 +161,6 @@ function AppRoutes() {
         <Route path="work-scheduler" element={<WorkScheduler />} />
       </Route>
 
-      {/* Fallback */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
