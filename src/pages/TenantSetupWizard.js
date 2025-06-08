@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
-  Box, Typography, TextField, Button, Stepper, Step, StepLabel,
-  Checkbox, FormControlLabel, Grid, Alert
+  Box, Typography, TextField, Button, Stepper, Step, StepLabel, Checkbox,
+  FormControlLabel, Grid, Alert
 } from "@mui/material";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
@@ -57,7 +57,7 @@ const TenantSetupWizard = () => {
     setStatus(null);
     const {
       companyName, subdomain, adminEmail, adminName,
-      adminPassword, teams, logoFile
+      adminPassword, modules, teams, logoFile
     } = formData;
 
     const domain = `${subdomain.toLowerCase()}.hi5tech.co.uk`;
@@ -92,19 +92,39 @@ const TenantSetupWizard = () => {
     const newTenantId = tenantInsert.id;
     setTenantId(newTenantId);
 
-    // 3. Update Profile with tenant_id
+    // 3. Sign the user in so RLS policies allow further actions
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: adminEmail,
+      password: adminPassword,
+    });
+
+    if (signInError) {
+      return setStatus({ type: "error", message: `Login failed: ${signInError.message}` });
+    }
+
+    // 4. Wait briefly for session to be fully established
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // 5. Update Profile
     await supabase
       .from("profiles")
       .update({ tenant_id: newTenantId })
       .eq("id", newUserId);
 
-    // 4. Insert Teams
-    for (let team of teams) {
-      await supabase.from("teams").insert({ tenant_id: newTenantId, name: team });
+    // 6. Insert tenant_settings
+    const { error: settingsError } = await supabase
+      .from("tenant_settings")
+      .insert({
+        tenant_id: newTenantId,
+        modules,
+        logo_url: "",
+      });
+
+    if (settingsError) {
+      return setStatus({ type: "error", message: `Settings insert failed: ${settingsError.message}` });
     }
 
-    // 5. Upload Logo (optional)
-    let logoUrl = "";
+    // 7. Upload Logo (if provided)
     if (logoFile) {
       const { error: uploadError } = await supabase.storage
         .from("tenant-logos")
@@ -117,26 +137,22 @@ const TenantSetupWizard = () => {
         return setStatus({ type: "error", message: `Logo upload failed: ${uploadError.message}` });
       }
 
-      const { data: publicData } = supabase.storage
+      const publicURL = supabase.storage
         .from("tenant-logos")
-        .getPublicUrl(`${subdomain}/logo.png`);
+        .getPublicUrl(`${subdomain}/logo.png`).data.publicUrl;
 
-      logoUrl = publicData?.publicUrl || "";
+      await supabase
+        .from("tenant_settings")
+        .update({ logo_url: publicURL })
+        .eq("tenant_id", newTenantId);
     }
 
-    // 6. Insert tenant_settings
-    const { error: settingsError } = await supabase
-      .from("tenant_settings")
-      .insert({
-        tenant_id: newTenantId,
-        logo_url: logoUrl,
-      });
-
-    if (settingsError) {
-      return setStatus({ type: "error", message: `Settings insert failed: ${settingsError.message}` });
+    // 8. Create Teams
+    for (let team of teams) {
+      await supabase.from("teams").insert({ tenant_id: newTenantId, name: team });
     }
 
-    // Redirect
+    // ✅ Done
     window.location.href = `https://${subdomain}.hi5tech.co.uk/dashboard`;
   };
 
