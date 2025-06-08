@@ -1,0 +1,78 @@
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { supabase } from "../supabaseClient";
+
+const TenantContext = createContext();
+
+export const useTenant = () => useContext(TenantContext);
+
+// Extracts the subdomain like "company-itsm" from "company-itsm.hi5tech.co.uk"
+const getSubdomain = () => {
+  const host = window.location.hostname;
+  const parts = host.split(".");
+  if (parts.length >= 3) return parts[0]; // assumes wildcard on *.hi5tech.co.uk
+  return null;
+};
+
+export const TenantProvider = ({ children }) => {
+  const [tenant, setTenant] = useState(null);
+  const [tenantSettings, setTenantSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadTenant = async () => {
+      setLoading(true);
+
+      const subdomain = getSubdomain();
+      if (!subdomain) {
+        console.warn("No subdomain found.");
+        setLoading(false);
+        return;
+      }
+
+      const fullDomain = `${subdomain}.hi5tech.co.uk`;
+
+      const { data: tenantData, error: tenantError } = await supabase
+        .from("tenants")
+        .select("*")
+        .eq("domain", fullDomain)
+        .single();
+
+      if (tenantError) {
+        console.error("❌ Failed to load tenant:", tenantError.message);
+        setLoading(false);
+        return;
+      }
+
+      setTenant(tenantData);
+
+      const { data: settingsData, error: settingsError } = await supabase
+        .from("tenant_settings")
+        .select("*")
+        .eq("tenant_id", tenantData.id)
+        .single();
+
+      if (settingsError) {
+        console.warn("⚠️ No settings found for tenant");
+      } else {
+        setTenantSettings(settingsData);
+      }
+
+      setLoading(false);
+    };
+
+    loadTenant();
+  }, []);
+
+  return (
+    <TenantContext.Provider
+      value={{
+        tenant,
+        tenantId: tenant?.id || null,
+        tenantSettings,
+        loading,
+      }}
+    >
+      {children}
+    </TenantContext.Provider>
+  );
+};
