@@ -1,5 +1,3 @@
-// src/pages/TenantSetupWizard.js
-
 import React, { useState } from "react";
 import {
   Box, Typography, TextField, Button, Stepper, Step, StepLabel,
@@ -32,12 +30,13 @@ const TenantSetupWizard = () => {
     logoFile: null,
   });
   const [status, setStatus] = useState(null);
+  const [tenantId, setTenantId] = useState(null);
+  const [userId, setUserId] = useState(null);
 
   const handleNext = () => setStep((prev) => prev + 1);
   const handleBack = () => setStep((prev) => prev - 1);
 
-  const handleChange = (e) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleCheckboxChange = (field, value) => {
     const current = formData[field];
@@ -50,7 +49,7 @@ const TenantSetupWizard = () => {
   };
 
   const handleLogoChange = (e) => {
-    const file = e.target.files?.[0];
+    const file = e.target.files[0];
     if (file) setFormData({ ...formData, logoFile: file });
   };
 
@@ -58,12 +57,12 @@ const TenantSetupWizard = () => {
     setStatus(null);
     const {
       companyName, subdomain, adminEmail, adminName,
-      adminPassword, modules, teams, logoFile
+      adminPassword, teams, logoFile
     } = formData;
 
     const domain = `${subdomain.toLowerCase()}.hi5tech.co.uk`;
 
-    // 1. Sign Up User
+    // 1. Create Supabase Auth User
     const { data: userData, error: signUpError } = await supabase.auth.signUp({
       email: adminEmail,
       password: adminPassword,
@@ -76,44 +75,40 @@ const TenantSetupWizard = () => {
       return setStatus({ type: "error", message: signUpError?.message || "User creation failed" });
     }
 
-    const userId = userData.user.id;
+    const newUserId = userData.user.id;
+    setUserId(newUserId);
 
-    // 2. Create Tenant
-    const { data: tenant, error: tenantError } = await supabase
+    // 2. Insert Tenant
+    const { data: tenantInsert, error: tenantError } = await supabase
       .from("tenants")
-      .insert([{ name: companyName, domain, subdomain, created_by: userId }])
+      .insert([{ name: companyName, domain, subdomain, created_by: newUserId }])
       .select()
       .single();
 
-    if (tenantError || !tenant?.id) {
+    if (tenantError || !tenantInsert?.id) {
       return setStatus({ type: "error", message: tenantError?.message || "Tenant creation failed" });
     }
 
-    const tenantId = tenant.id;
+    const newTenantId = tenantInsert.id;
+    setTenantId(newTenantId);
 
-    // 3. Update Profile with tenant ID
-    await supabase.from("profiles").update({ tenant_id: tenantId }).eq("id", userId);
+    // 3. Update Profile with tenant_id
+    await supabase
+      .from("profiles")
+      .update({ tenant_id: newTenantId })
+      .eq("id", newUserId);
 
-    // 4. Create tenant_settings row (logo URL to be updated next)
-    const { error: settingsError } = await supabase
-      .from("tenant_settings")
-      .insert({ tenant_id: tenantId, modules, logo_url: "" });
-
-    if (settingsError) {
-      return setStatus({ type: "error", message: `Settings insert failed: ${settingsError.message}` });
-    }
-
-    // 5. Create teams
+    // 4. Insert Teams
     for (let team of teams) {
-      await supabase.from("teams").insert({ tenant_id: tenantId, name: team });
+      await supabase.from("teams").insert({ tenant_id: newTenantId, name: team });
     }
 
-    // 6. Upload logo if provided
+    // 5. Upload Logo (optional)
+    let logoUrl = "";
     if (logoFile) {
-      const path = `${subdomain}/logo.png`;
       const { error: uploadError } = await supabase.storage
         .from("tenant-logos")
-        .upload(path, logoFile, {
+        .upload(`${subdomain}/logo.png`, logoFile, {
           cacheControl: "3600",
           upsert: true,
         });
@@ -122,17 +117,26 @@ const TenantSetupWizard = () => {
         return setStatus({ type: "error", message: `Logo upload failed: ${uploadError.message}` });
       }
 
-      const { data: publicUrlData } = supabase.storage
+      const { data: publicData } = supabase.storage
         .from("tenant-logos")
-        .getPublicUrl(path);
+        .getPublicUrl(`${subdomain}/logo.png`);
 
-      await supabase
-        .from("tenant_settings")
-        .update({ logo_url: publicUrlData.publicUrl })
-        .eq("tenant_id", tenantId);
+      logoUrl = publicData?.publicUrl || "";
     }
 
-    // 7. Redirect
+    // 6. Insert tenant_settings
+    const { error: settingsError } = await supabase
+      .from("tenant_settings")
+      .insert({
+        tenant_id: newTenantId,
+        logo_url: logoUrl,
+      });
+
+    if (settingsError) {
+      return setStatus({ type: "error", message: `Settings insert failed: ${settingsError.message}` });
+    }
+
+    // Redirect
     window.location.href = `https://${subdomain}.hi5tech.co.uk/dashboard`;
   };
 
@@ -170,9 +174,7 @@ const TenantSetupWizard = () => {
               margin="normal"
               value={formData.subdomain}
               onChange={handleChange}
-              InputProps={{
-                endAdornment: <Typography>.hi5tech.co.uk</Typography>,
-              }}
+              InputProps={{ endAdornment: <Typography>.hi5tech.co.uk</Typography> }}
             />
           </>
         )}
@@ -243,9 +245,15 @@ const TenantSetupWizard = () => {
         )}
 
         <Box sx={{ mt: 4, display: "flex", justifyContent: "space-between" }}>
-          {step > 0 && step < steps.length - 1 && <Button onClick={handleBack}>Back</Button>}
-          {step < steps.length - 2 && <Button variant="contained" onClick={handleNext}>Next</Button>}
-          {step === steps.length - 2 && <Button variant="contained" onClick={handleSubmit}>Submit</Button>}
+          {step > 0 && step < steps.length - 1 && (
+            <Button onClick={handleBack}>Back</Button>
+          )}
+          {step < steps.length - 2 && (
+            <Button variant="contained" onClick={handleNext}>Next</Button>
+          )}
+          {step === steps.length - 2 && (
+            <Button variant="contained" onClick={handleSubmit}>Submit</Button>
+          )}
         </Box>
       </Box>
     </Box>
