@@ -1,7 +1,9 @@
+// src/pages/TenantSetupWizard.js
+
 import React, { useState } from "react";
 import {
-  Box, Typography, TextField, Button, Stepper, Step, StepLabel, Checkbox,
-  FormControlLabel, Grid, Alert
+  Box, Typography, TextField, Button, Stepper, Step, StepLabel,
+  Checkbox, FormControlLabel, Grid, Alert
 } from "@mui/material";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
@@ -30,8 +32,6 @@ const TenantSetupWizard = () => {
     logoFile: null,
   });
   const [status, setStatus] = useState(null);
-  const [tenantId, setTenantId] = useState(null);
-  const [userId, setUserId] = useState(null);
 
   const handleNext = () => setStep((prev) => prev + 1);
   const handleBack = () => setStep((prev) => prev - 1);
@@ -62,7 +62,7 @@ const TenantSetupWizard = () => {
 
     const domain = `${subdomain.toLowerCase()}.hi5tech.co.uk`;
 
-    // 1. Create Supabase Auth User
+    // Step 1: Create Auth User
     const { data: userData, error: signUpError } = await supabase.auth.signUp({
       email: adminEmail,
       password: adminPassword,
@@ -75,84 +75,60 @@ const TenantSetupWizard = () => {
       return setStatus({ type: "error", message: signUpError?.message || "User creation failed" });
     }
 
-    const newUserId = userData.user.id;
-    setUserId(newUserId);
+    const userId = userData.user.id;
 
-    // 2. Insert Tenant
-    const { data: tenantInsert, error: tenantError } = await supabase
+    // Step 2: Insert Tenant
+    const { data: tenantData, error: tenantError } = await supabase
       .from("tenants")
-      .insert([{ name: companyName, domain, subdomain, created_by: newUserId }])
+      .insert([{ name: companyName, subdomain, domain, created_by: userId }])
       .select()
       .single();
 
-    if (tenantError || !tenantInsert?.id) {
+    if (tenantError || !tenantData?.id) {
       return setStatus({ type: "error", message: tenantError?.message || "Tenant creation failed" });
     }
 
-    const newTenantId = tenantInsert.id;
-    setTenantId(newTenantId);
+    const tenantId = tenantData.id;
 
-    // 3. Sign the user in so RLS policies allow further actions
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: adminEmail,
-      password: adminPassword,
-    });
-
-    if (signInError) {
-      return setStatus({ type: "error", message: `Login failed: ${signInError.message}` });
-    }
-
-    // 4. Wait briefly for session to be fully established
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // 5. Update Profile
+    // Step 3: Update Profile
     await supabase
       .from("profiles")
-      .update({ tenant_id: newTenantId })
-      .eq("id", newUserId);
+      .update({ tenant_id: tenantId })
+      .eq("id", userId);
 
-    // 6. Insert tenant_settings
-    const { error: settingsError } = await supabase
-      .from("tenant_settings")
-      .insert({
-        tenant_id: newTenantId,
-        modules,
-        logo_url: "",
-      });
-
-    if (settingsError) {
-      return setStatus({ type: "error", message: `Settings insert failed: ${settingsError.message}` });
-    }
-
-    // 7. Upload Logo (if provided)
+    // Step 4: Upload Logo
+    let logoUrl = "";
     if (logoFile) {
       const { error: uploadError } = await supabase.storage
         .from("tenant-logos")
-        .upload(`${subdomain}/logo.png`, logoFile, {
-          cacheControl: "3600",
-          upsert: true,
-        });
+        .upload(`${subdomain}/logo.png`, logoFile, { upsert: true });
 
       if (uploadError) {
-        return setStatus({ type: "error", message: `Logo upload failed: ${uploadError.message}` });
+        return setStatus({ type: "error", message: "Logo upload failed: " + uploadError.message });
       }
 
-      const publicURL = supabase.storage
+      logoUrl = supabase
+        .storage
         .from("tenant-logos")
-        .getPublicUrl(`${subdomain}/logo.png`).data.publicUrl;
-
-      await supabase
-        .from("tenant_settings")
-        .update({ logo_url: publicURL })
-        .eq("tenant_id", newTenantId);
+        .getPublicUrl(`${subdomain}/logo.png`)
+        .data.publicUrl;
     }
 
-    // 8. Create Teams
-    for (let team of teams) {
-      await supabase.from("teams").insert({ tenant_id: newTenantId, name: team });
+    // Step 5: Insert tenant_settings
+    const { error: settingsError } = await supabase
+      .from("tenant_settings")
+      .insert([{ tenant_id: tenantId, logo_url: logoUrl }]);
+
+    if (settingsError) {
+      return setStatus({ type: "error", message: "Settings insert failed: " + settingsError.message });
     }
 
-    // ✅ Done
+    // Step 6: Insert teams
+    for (const team of teams) {
+      await supabase.from("teams").insert({ tenant_id: tenantId, name: team });
+    }
+
+    // Final Redirect
     window.location.href = `https://${subdomain}.hi5tech.co.uk/dashboard`;
   };
 
