@@ -15,14 +15,10 @@ export const AuthProvider = ({ children }) => {
 
   const getSubdomain = () => {
     const host = window.location.hostname;
-
     if (host.includes("localhost")) return "local";
-
     const parts = host.split(".");
-    const domain = parts.slice(-2).join("."); // hi5tech.co.uk
-    if (host === domain) return null; // root domain
-
-    return parts[0].replace("-itsm", ""); // extract subdomain before -itsm
+    if (parts.length < 3) return null; // root domain
+    return parts[0].replace("-itsm", ""); // extract 'demo' from demo-itsm.hi5tech.co.uk
   };
 
   useEffect(() => {
@@ -38,12 +34,14 @@ export const AuthProvider = ({ children }) => {
 
         if (error || !data) {
           setTenant(null);
-          setTenantError("🚫 Tenant not found for this subdomain.");
+          setTenantError("🚫 Tenant not found for this domain.");
           setAuthLoading(false);
           return;
         }
 
         setTenant(data);
+      } else {
+        setTenant(null); // root domain → marketing site
       }
 
       const {
@@ -104,7 +102,7 @@ export const AuthProvider = ({ children }) => {
     navigate("/login");
   };
 
-  // Optional: Show tenant error message only for subdomains
+  // Show error if subdomain is invalid
   if (tenantError) {
     return (
       <div style={{ padding: 40 }}>
