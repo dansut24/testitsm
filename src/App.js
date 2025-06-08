@@ -34,9 +34,10 @@ import Announcements from "./pages/Announcements";
 import WorkScheduler from "./pages/WorkScheduler";
 import LinkComplete from "./pages/LinkComplete";
 
-// 🆕 Add Pricing and Trial pages
+// 🆕 Pricing and Trial pages
 import Pricing from "./pages/Pricing";
 import StartTrial from "./pages/StartTrial";
+import TenantSetupWizard from "./pages/TenantSetupWizard"; // ✅ Added
 
 // Self-Service Portal
 import SelfServiceLayout from "./layouts/SelfServiceLayout";
@@ -72,8 +73,9 @@ function AppRoutes() {
       <Route path="/not-authorised" element={<NotAuthorised />} />
       <Route path="/connectivity-test" element={<ConnectivityTest />} />
       <Route path="/link-complete" element={<LinkComplete />} />
-      <Route path="/pricing" element={<Pricing />} /> {/* ✅ Added */}
-      <Route path="/start-trial" element={<StartTrial />} /> {/* ✅ Added */}
+      <Route path="/pricing" element={<Pricing />} />
+      <Route path="/start-trial" element={<StartTrial />} />
+      <Route path="/tenant-setup" element={<TenantSetupWizard />} /> {/* ✅ Added */}
 
       {/* Self-Service Portal */}
       <Route path="/self-service" element={<SelfServiceLayout />}>
@@ -102,7 +104,6 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-
         <Route path="incidents" element={<Incidents />} />
         <Route path="service-requests" element={<ServiceRequests />} />
         <Route path="changes" element={<Changes />} />
