@@ -7,11 +7,40 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [tenant, setTenant] = useState(null);
+  const [tenantError, setTenantError] = useState(null);
   const navigate = useNavigate();
 
-  // Load initial session and profile
+  const getSubdomain = () => {
+    const host = window.location.hostname;
+    if (host.includes("localhost")) return "local";
+    const parts = host.split(".");
+    if (parts.length < 3) return null; // not a subdomain
+    return parts[0].replace("-itsm", ""); // extract 'test' from test-itsm.hi5tech.co.uk
+  };
+
+  // Load session + tenant
   useEffect(() => {
-    const initAuth = async () => {
+    const init = async () => {
+      const subdomain = getSubdomain();
+
+      if (subdomain && subdomain !== "local") {
+        const { data, error } = await supabase
+          .from("tenants")
+          .select("*")
+          .eq("subdomain", subdomain)
+          .single();
+
+        if (error || !data) {
+          setTenant(null);
+          setTenantError("🚫 Tenant not found for this domain.");
+          setAuthLoading(false);
+          return;
+        }
+
+        setTenant(data);
+      }
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -24,7 +53,7 @@ export const AuthProvider = ({ children }) => {
       }
     };
 
-    initAuth();
+    init();
 
     const {
       data: { subscription },
@@ -58,6 +87,7 @@ export const AuthProvider = ({ children }) => {
         role,
         roles: [role],
         full_name: profile.full_name,
+        tenant_id: profile.tenant_id,
       });
     }
 
@@ -70,8 +100,18 @@ export const AuthProvider = ({ children }) => {
     navigate("/login");
   };
 
+  // Optional: block UI if tenant doesn't exist
+  if (tenantError) {
+    return (
+      <div style={{ padding: 40 }}>
+        <h2>{tenantError}</h2>
+        <p>This subdomain is not linked to a tenant.</p>
+      </div>
+    );
+  }
+
   return (
-    <AuthContext.Provider value={{ user, authLoading, logout }}>
+    <AuthContext.Provider value={{ user, authLoading, logout, tenant }}>
       {children}
     </AuthContext.Provider>
   );
