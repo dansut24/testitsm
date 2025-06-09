@@ -16,16 +16,18 @@ import { Link, useNavigate } from "react-router-dom";
 import GoogleIcon from "@mui/icons-material/Google";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import BusinessIcon from "@mui/icons-material/Business";
-import logo from "../assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
 import { useThemeMode } from "../context/ThemeContext";
+import { useAuth } from "../context/AuthContext";
 import AuthService from "../services/AuthService";
 import { supabase } from "../supabaseClient";
+import defaultLogo from "../assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { mode } = useThemeMode();
+  const { tenant } = useAuth();
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -77,12 +79,14 @@ const Login = () => {
     }
   };
 
+  const logoSrc = tenant?.settings?.logo_url || tenant?.logo_url || defaultLogo;
+
   return (
     <Container maxWidth="sm" sx={{ mt: 10 }}>
       <Paper elevation={4} sx={{ p: 4, textAlign: "center", borderRadius: 4 }}>
-        <img src={logo} alt="Hi5Tech Logo" style={{ height: 60, marginBottom: 16 }} />
+        <img src={logoSrc} alt="Tenant Logo" style={{ height: 60, marginBottom: 16 }} />
         <Typography variant="h5" fontWeight={600} gutterBottom>
-          Welcome to Hi5Tech
+          Welcome to {tenant?.name || "Hi5Tech"}
         </Typography>
         <Typography variant="body2" color="text.secondary" mb={3}>
           Sign in to your workspace
