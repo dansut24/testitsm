@@ -1,4 +1,3 @@
-// src/pages/TenantSetupWizard.js
 import React, { useState, useEffect } from "react";
 import {
   Box, Typography, TextField, Button, Stepper, Step, StepLabel,
@@ -7,7 +6,7 @@ import {
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
 
-const steps = ["Company Info", "Admin Setup", "Verification", "Finish"];
+const steps = ["Company Info", "Admin Setup", "Verify Email", "Complete"];
 
 const TenantSetupWizard = () => {
   const navigate = useNavigate();
@@ -19,19 +18,18 @@ const TenantSetupWizard = () => {
     adminEmail: "",
     adminPassword: "",
   });
-  const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState(null);
   const [polling, setPolling] = useState(false);
   const [emailConfirmed, setEmailConfirmed] = useState(false);
 
-  const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleNext = async () => {
+    setStatus(null);
+
     if (step === 1) {
-      // Handle signup
-      setStatus(null);
+      // Signup
       setLoading(true);
       const { adminEmail, adminPassword, adminName } = formData;
 
@@ -47,34 +45,34 @@ const TenantSetupWizard = () => {
       setLoading(false);
 
       if (error) {
-        setStatus({ type: "error", message: error.message });
-        return;
+        return setStatus({ type: "error", message: error.message });
       }
 
       setStep(2);
       setPolling(true);
     } else {
-      setStep((prev) => prev + 1);
+      setStep(step + 1);
     }
   };
 
-  const handleBack = () => setStep((prev) => prev - 1);
-
-  // Poll for email confirmation
+  // Email confirmation polling
   useEffect(() => {
     let interval;
-    if (polling) {
-      interval = setInterval(async () => {
-        const { data: refreshedSession } = await supabase.auth.refreshSession();
-        const { data: userInfo } = await supabase.auth.getUser();
 
-        if (userInfo?.user?.email_confirmed_at) {
-          clearInterval(interval);
-          setEmailConfirmed(true);
-          setPolling(false);
-          setStep((prev) => prev + 1);
-        }
-      }, 3000);
+    const checkConfirmation = async () => {
+      await supabase.auth.refreshSession(); // ✅ ensure refresh token
+      const { data: userData } = await supabase.auth.getUser();
+
+      if (userData?.user?.email_confirmed_at) {
+        clearInterval(interval);
+        setEmailConfirmed(true);
+        setPolling(false);
+        setStep(3);
+      }
+    };
+
+    if (polling) {
+      interval = setInterval(checkConfirmation, 3000);
     }
 
     return () => clearInterval(interval);
@@ -83,6 +81,7 @@ const TenantSetupWizard = () => {
   return (
     <Box sx={{ maxWidth: 600, mx: "auto", mt: 4, p: 2 }}>
       <Typography variant="h4" gutterBottom>Tenant Setup</Typography>
+
       <Stepper activeStep={step} alternativeLabel sx={{ mb: 4 }}>
         {steps.map((label) => (
           <Step key={label}><StepLabel>{label}</StepLabel></Step>
@@ -92,9 +91,8 @@ const TenantSetupWizard = () => {
       {step === 0 && (
         <>
           <TextField
-            fullWidth margin="normal"
-            label="Company Name" name="companyName"
-            value={formData.companyName}
+            label="Company Name" fullWidth margin="normal"
+            name="companyName" value={formData.companyName}
             onChange={(e) => {
               const name = e.target.value;
               setFormData({
@@ -105,74 +103,58 @@ const TenantSetupWizard = () => {
             }}
           />
           <TextField
-            fullWidth margin="normal"
-            label="Subdomain" name="subdomain"
-            value={formData.subdomain}
+            label="Subdomain" fullWidth margin="normal"
+            name="subdomain" value={formData.subdomain}
             onChange={handleChange}
-            InputProps={{
-              endAdornment: <Typography>.hi5tech.co.uk</Typography>
-            }}
+            InputProps={{ endAdornment: <Typography>.hi5tech.co.uk</Typography> }}
           />
         </>
       )}
 
       {step === 1 && (
         <>
-          <TextField
-            fullWidth margin="normal"
-            label="Full Name" name="adminName"
-            value={formData.adminName}
-            onChange={handleChange}
-          />
-          <TextField
-            fullWidth margin="normal"
-            label="Email" name="adminEmail"
-            value={formData.adminEmail}
-            onChange={handleChange}
-          />
-          <TextField
-            fullWidth margin="normal" type="password"
-            label="Password" name="adminPassword"
-            value={formData.adminPassword}
-            onChange={handleChange}
-          />
+          <TextField label="Admin Name" fullWidth name="adminName" margin="normal" value={formData.adminName} onChange={handleChange} />
+          <TextField label="Admin Email" fullWidth name="adminEmail" margin="normal" value={formData.adminEmail} onChange={handleChange} />
+          <TextField label="Password" type="password" fullWidth name="adminPassword" margin="normal" value={formData.adminPassword} onChange={handleChange} />
         </>
       )}
 
       {step === 2 && (
         <Box sx={{ textAlign: "center" }}>
-          <Typography variant="body1">
-            We've sent a confirmation email to <strong>{formData.adminEmail}</strong>.
-            Please check your inbox and click the link to verify your email.
-          </Typography>
-          {polling && <CircularProgress sx={{ mt: 3 }} />}
+          <Typography>We’ve sent a confirmation link to:</Typography>
+          <Typography variant="h6">{formData.adminEmail}</Typography>
+          <Typography>Please check your inbox and click the link to verify.</Typography>
+
+          {polling && <CircularProgress sx={{ mt: 2 }} />}
+
+          <Box sx={{ mt: 3 }}>
+            <Button variant="outlined" onClick={() => setPolling(true)}>Retry Check</Button>
+          </Box>
         </Box>
       )}
 
       {step === 3 && (
         <>
           <Alert severity="success" sx={{ mb: 2 }}>
-            Email verified! You may now proceed to complete your setup.
+            ✅ Email verified. You can now continue to setup your company.
           </Alert>
           <Button
             variant="contained"
             onClick={() => navigate("/start-trial")}
           >
-            Continue
+            Continue Setup
           </Button>
         </>
       )}
 
-      {status && (
-        <Alert severity={status.type} sx={{ mt: 2 }}>{status.message}</Alert>
-      )}
+      {status && <Alert severity={status.type} sx={{ mt: 2 }}>{status.message}</Alert>}
 
       <Box sx={{ mt: 4, display: "flex", justifyContent: "space-between" }}>
         {step > 0 && step < steps.length - 1 && (
-          <Button onClick={handleBack}>Back</Button>
+          <Button onClick={() => setStep(step - 1)}>Back</Button>
         )}
-        {step < steps.length - 2 && (
-          <Button variant="contained" onClick={handleNext} disabled={loading}>
+        {step < 2 && (
+          <Button onClick={handleNext} variant="contained" disabled={loading}>
             {loading ? "Submitting..." : "Next"}
           </Button>
         )}
