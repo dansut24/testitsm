@@ -1,4 +1,5 @@
 // src/pages/TenantSetupWizard.js
+
 import React, { useState } from "react";
 import {
   Box, Typography, TextField, Button, Stepper, Step, StepLabel,
@@ -7,17 +8,10 @@ import {
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
 
-const defaultTeams = [
-  "Service Desk", "Desktop Support", "Server Support", "Network Team"
-];
+const steps = ["Company Info", "Admin Info", "Email Verification", "Modules", "Teams", "Logo", "Finish"];
 
-const defaultModules = [
-  "Incidents", "Service Requests", "Changes", "Problems", "Assets", "Knowledge Base"
-];
-
-const steps = [
-  "Company Info", "Admin Contact", "Verify Phone", "Modules", "Teams", "Logo", "Finish"
-];
+const defaultTeams = ["Service Desk", "Desktop Support", "Server Support", "Network Team"];
+const defaultModules = ["Incidents", "Service Requests", "Changes", "Problems", "Assets", "Knowledge Base"];
 
 const TenantSetupWizard = () => {
   const navigate = useNavigate();
@@ -25,17 +19,29 @@ const TenantSetupWizard = () => {
   const [formData, setFormData] = useState({
     companyName: "",
     subdomain: "",
-    fullName: "",
-    phone: "",
+    adminEmail: "",
+    adminName: "",
     otp: "",
     modules: [],
     teams: [],
     logoFile: null,
   });
   const [status, setStatus] = useState(null);
-  const [verified, setVerified] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [verified, setVerified] = useState(false];
+  const [session, setSession] = useState(null);
 
-  const handleNext = () => setStep((prev) => prev + 1);
+  const handleNext = async () => {
+    setStatus(null);
+
+    if (step === 2 && !verified) {
+      setStatus({ type: "error", message: "Please verify your email before continuing." });
+      return;
+    }
+
+    setStep((prev) => prev + 1);
+  };
+
   const handleBack = () => setStep((prev) => prev - 1);
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -55,99 +61,75 @@ const TenantSetupWizard = () => {
     if (file) setFormData({ ...formData, logoFile: file });
   };
 
-  const handleSendOTP = async () => {
-    setStatus(null);
-    const { phone } = formData;
-    const { error } = await supabase.auth.signInWithOtp({
-      phone,
+  const sendOtp = async () => {
+    const { adminEmail } = formData;
+
+    const { data, error } = await supabase.auth.signInWithOtp({
+      email: adminEmail,
+      options: { shouldCreateUser: true },
     });
 
     if (error) {
       setStatus({ type: "error", message: error.message });
     } else {
-      setStatus({ type: "success", message: "OTP sent. Please enter the code." });
+      setVerificationSent(true);
+      setStatus({ type: "success", message: "OTP sent to your email." });
     }
   };
 
-  const handleVerifyOTP = async () => {
-    setStatus(null);
-    const { phone, otp } = formData;
+  const verifyOtp = async () => {
+    const { adminEmail, otp } = formData;
+
     const { data, error } = await supabase.auth.verifyOtp({
-      phone,
+      email: adminEmail,
       token: otp,
-      type: "sms",
+      type: "email",
     });
 
-    if (error || !data?.user) {
-      setStatus({ type: "error", message: error?.message || "Verification failed." });
+    if (error || !data.session) {
+      setStatus({ type: "error", message: "OTP verification failed. Please check and try again." });
     } else {
+      setSession(data.session);
       setVerified(true);
-      setStatus({ type: "success", message: "Phone number verified." });
-      handleNext();
+      setStatus({ type: "success", message: "Email verified successfully." });
     }
   };
 
   const handleSubmit = async () => {
     setStatus(null);
-    const {
-      companyName, subdomain, fullName, phone,
-      modules, teams, logoFile
-    } = formData;
+    const { companyName, subdomain, adminName, modules, teams, logoFile } = formData;
 
     const domain = `${subdomain.toLowerCase()}.hi5tech.co.uk`;
+    const userId = session.user.id;
 
-    // Get authenticated user
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return setStatus({ type: "error", message: "No verified user session." });
-    }
-
-    const userId = user.id;
-
-    // 1. Insert Tenant
     const { data: tenantData, error: tenantError } = await supabase
       .from("tenants")
-      .insert([{ name: companyName, domain, subdomain, created_by: userId }])
+      .insert({ name: companyName, subdomain, domain, created_by: userId })
       .select()
       .single();
 
-    if (tenantError || !tenantData?.id) {
-      return setStatus({ type: "error", message: tenantError?.message || "Tenant creation failed" });
-    }
+    if (tenantError) return setStatus({ type: "error", message: tenantError.message });
 
     const tenantId = tenantData.id;
 
-    // 2. Update Profile
-    await supabase.from("profiles").update({
-      full_name: fullName,
-      tenant_id: tenantId,
-      role: "admin"
-    }).eq("id", userId);
+    await supabase.from("profiles").update({ tenant_id: tenantId, full_name: adminName }).eq("id", userId);
 
-    // 3. Insert Tenant Settings
     await supabase.from("tenant_settings").insert({
       tenant_id: tenantId,
-      logo_url: ""
+      logo_url: "",
+      modules,
     });
 
-    // 4. Insert Teams
     for (let team of teams) {
       await supabase.from("teams").insert({ tenant_id: tenantId, name: team });
     }
 
-    // 5. Upload Logo
     if (logoFile) {
-      const upload = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("tenant-logos")
-        .upload(`${subdomain}/logo.png`, logoFile, {
-          cacheControl: "3600",
-          upsert: true,
-        });
+        .upload(`${subdomain}/logo.png`, logoFile, { upsert: true });
 
-      if (!upload.error) {
+      if (!uploadError) {
         const publicUrl = supabase.storage
           .from("tenant-logos")
           .getPublicUrl(`${subdomain}/logo.png`).data.publicUrl;
@@ -173,71 +155,36 @@ const TenantSetupWizard = () => {
       <Box sx={{ mt: 4 }}>
         {step === 0 && (
           <>
-            <TextField
-              label="Company Name"
-              name="companyName"
-              fullWidth
-              margin="normal"
+            <TextField label="Company Name" name="companyName" fullWidth margin="normal"
               value={formData.companyName}
               onChange={(e) => {
                 const name = e.target.value;
-                setFormData({
-                  ...formData,
-                  companyName: name,
-                  subdomain: name.toLowerCase().replace(/\s+/g, ""),
-                });
-              }}
-            />
-            <TextField
-              label="Subdomain"
-              name="subdomain"
-              fullWidth
-              margin="normal"
-              value={formData.subdomain}
-              onChange={handleChange}
-              InputProps={{
-                endAdornment: <Typography>.hi5tech.co.uk</Typography>,
-              }}
-            />
-            <Button sx={{ mt: 2 }} variant="contained" onClick={handleNext}>Next</Button>
+                setFormData({ ...formData, companyName: name, subdomain: name.toLowerCase().replace(/\s+/g, "") });
+              }} />
+            <TextField label="Subdomain" name="subdomain" fullWidth margin="normal"
+              value={formData.subdomain} onChange={handleChange}
+              InputProps={{ endAdornment: <Typography>.hi5tech.co.uk</Typography> }} />
           </>
         )}
 
         {step === 1 && (
           <>
-            <TextField
-              label="Full Name"
-              name="fullName"
-              fullWidth
-              margin="normal"
-              value={formData.fullName}
-              onChange={handleChange}
-            />
-            <TextField
-              label="Phone Number"
-              name="phone"
-              fullWidth
-              margin="normal"
-              value={formData.phone}
-              onChange={handleChange}
-            />
-            <Button sx={{ mt: 2 }} variant="contained" onClick={handleSendOTP}>Send OTP</Button>
+            <TextField label="Full Name" name="adminName" fullWidth margin="normal"
+              value={formData.adminName} onChange={handleChange} />
+            <TextField label="Email" name="adminEmail" fullWidth margin="normal"
+              value={formData.adminEmail} onChange={handleChange} />
+            <Button variant="outlined" onClick={sendOtp} disabled={verificationSent}>
+              {verificationSent ? "OTP Sent" : "Send OTP"}
+            </Button>
           </>
         )}
 
         {step === 2 && (
           <>
-            <TextField
-              label="Enter OTP"
-              name="otp"
-              fullWidth
-              margin="normal"
-              value={formData.otp}
-              onChange={handleChange}
-            />
-            <Button sx={{ mt: 2 }} variant="contained" onClick={handleVerifyOTP}>
-              Verify Code
-            </Button>
+            <TextField label="Enter OTP" name="otp" fullWidth margin="normal"
+              value={formData.otp} onChange={handleChange} />
+            <Button variant="contained" onClick={verifyOtp}>Verify</Button>
+            <Button sx={{ ml: 2 }} onClick={sendOtp}>Resend OTP</Button>
           </>
         )}
 
@@ -259,7 +206,6 @@ const TenantSetupWizard = () => {
                 </Grid>
               ))}
             </Grid>
-            <Button sx={{ mt: 2 }} variant="contained" onClick={handleNext}>Next</Button>
           </>
         )}
 
@@ -281,7 +227,6 @@ const TenantSetupWizard = () => {
                 </Grid>
               ))}
             </Grid>
-            <Button sx={{ mt: 2 }} variant="contained" onClick={handleNext}>Next</Button>
           </>
         )}
 
@@ -289,15 +234,11 @@ const TenantSetupWizard = () => {
           <>
             <Typography>Upload Company Logo</Typography>
             <input type="file" accept="image/*" onChange={handleLogoChange} />
-            <Button sx={{ mt: 2 }} variant="contained" onClick={handleNext}>Next</Button>
           </>
         )}
 
         {step === 6 && (
-          <>
-            <Typography variant="body1">Click Submit to finalise setup.</Typography>
-            <Button sx={{ mt: 2 }} variant="contained" onClick={handleSubmit}>Submit</Button>
-          </>
+          <Typography variant="body1">Setup complete! Redirecting...</Typography>
         )}
 
         {status && (
@@ -305,7 +246,15 @@ const TenantSetupWizard = () => {
         )}
 
         <Box sx={{ mt: 4, display: "flex", justifyContent: "space-between" }}>
-          {step > 0 && <Button onClick={handleBack}>Back</Button>}
+          {step > 0 && step < steps.length - 1 && (
+            <Button onClick={handleBack}>Back</Button>
+          )}
+          {step < steps.length - 2 && (
+            <Button variant="contained" onClick={handleNext}>Next</Button>
+          )}
+          {step === steps.length - 2 && (
+            <Button variant="contained" onClick={handleSubmit}>Submit</Button>
+          )}
         </Box>
       </Box>
     </Box>
