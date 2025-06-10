@@ -34,31 +34,42 @@ const Login = () => {
   useEffect(() => {
     const fetchLogo = async () => {
       try {
+        // Step 1: Get tenant
         const { data: tenantData, error: tenantError } = await supabase
           .from("tenants")
           .select("id")
           .eq("subdomain", subdomain)
-          .single();
+          .maybeSingle();
 
-        if (tenantError || !tenantData) {
+        if (tenantError || !tenantData?.id) {
           console.warn("Tenant not found:", tenantError);
           return;
         }
 
         const tenantId = tenantData.id;
 
+        // Step 2: Get tenant_settings.logo_url
         const { data: settings, error: settingsError } = await supabase
           .from("tenant_settings")
           .select("logo_url")
           .eq("tenant_id", tenantId)
-          .single();
+          .maybeSingle();
 
-        if (settingsError || !settings || !settings.logo_url) {
+        if (settingsError || !settings?.logo_url) {
           console.warn("No logo found for tenant.");
           return;
         }
 
-        setLogoUrl(settings.logo_url);
+        // Step 3: Convert to public URL from storage bucket
+        const { data: publicData } = supabase.storage
+          .from("tenant-logos")
+          .getPublicUrl(settings.logo_url);
+
+        if (publicData?.publicUrl) {
+          setLogoUrl(publicData.publicUrl);
+        } else {
+          console.warn("Could not resolve public URL.");
+        }
       } catch (err) {
         console.error("Error loading logo:", err.message);
       }
@@ -106,19 +117,23 @@ const Login = () => {
       .from("tenants")
       .select("id, subdomain")
       .eq("subdomain", subdomain)
-      .single();
+      .maybeSingle();
 
     if (tenantData?.id) {
       const { data: settings } = await supabase
         .from("tenant_settings")
         .select("logo_url")
         .eq("tenant_id", tenantData.id)
-        .single();
+        .maybeSingle();
+
+      const { data: publicData } = settings?.logo_url
+        ? supabase.storage.from("tenant-logos").getPublicUrl(settings.logo_url)
+        : { data: { publicUrl: "Not found" } };
 
       setDebugInfo({
         subdomain: tenantData.subdomain,
         tenantId: tenantData.id,
-        logoUrl: settings?.logo_url || "Not found",
+        logoUrl: publicData?.publicUrl || "Not found",
       });
     } else {
       setDebugInfo({
