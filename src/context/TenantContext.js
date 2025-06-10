@@ -1,3 +1,4 @@
+// TenantContext.js
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 
@@ -61,9 +62,7 @@ export const TenantProvider = ({ children }) => {
         .maybeSingle();
 
       if (settingsError || !settingsData) {
-        if (window.location.pathname !== "/tenant-setup") {
-          console.warn("⚠️ No settings found for tenant");
-        }
+        console.warn("⚠️ No settings found for tenant");
       } else {
         setTenantSettings(settingsData);
       }
