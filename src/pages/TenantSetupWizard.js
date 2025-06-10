@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import {
   Box, Typography, TextField, Button, Stepper, Step, StepLabel,
-  Container, Alert, CircularProgress
+  Container, Alert
 } from "@mui/material";
 import { supabase } from "../supabaseClient";
 
@@ -18,15 +18,13 @@ const TenantSetupWizard = () => {
     logoFile: null,
   });
   const [status, setStatus] = useState(null);
-  const [otpSent, setOtpSent] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [session, setSession] = useState(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const timer = setInterval(() => {
       if (resendCooldown > 0) setResendCooldown((c) => c - 1);
     }, 1000);
-    return () => clearInterval(interval);
+    return () => clearInterval(timer);
   }, [resendCooldown]);
 
   const handleChange = (e) =>
@@ -36,36 +34,48 @@ const TenantSetupWizard = () => {
     setFormData({ ...formData, logoFile: e.target.files[0] });
 
   const sendOtp = async () => {
-    const { adminEmail, adminPassword } = formData;
-    const { data, error } = await supabase.auth.signInWithOtp({
+    setStatus(null);
+    const { adminEmail } = formData;
+
+    const { error } = await supabase.auth.signInWithOtp({
       email: adminEmail,
       options: {
         data: { role: "admin" },
         shouldCreateUser: true,
       },
     });
-    if (error) return setStatus({ type: "error", message: error.message });
-    setStatus({ type: "success", message: "OTP sent to email." });
-    setOtpSent(true);
-    setResendCooldown(60);
+
+    if (error) {
+      setStatus({ type: "error", message: error.message });
+    } else {
+      setResendCooldown(60);
+      setStatus({ type: "success", message: "OTP sent to email." });
+      setStep(2);  // Show OTP screen after sending code
+    }
   };
 
   const verifyOtp = async () => {
+    setStatus(null);
     const { adminEmail, otp } = formData;
+
     const { data, error } = await supabase.auth.verifyOtp({
       email: adminEmail,
       token: otp,
       type: "email",
     });
-    if (error) return setStatus({ type: "error", message: error.message });
-    setSession(data.session);
-    setStatus({ type: "success", message: "Email verified!" });
-    setStep(2);
+
+    if (error) {
+      setStatus({ type: "error", message: error.message });
+    } else {
+      setStatus({ type: "success", message: "Email verified!" });
+      setStep(3);
+    }
   };
 
   const handleSubmit = async () => {
     const { companyName, subdomain, logoFile } = formData;
-    const domain = `${subdomain.toLowerCase()}-itsm.hi5tech.co.uk`;
+    const domain = `${subdomain}-itsm.hi5tech.co.uk`;
+
     const user = (await supabase.auth.getUser()).data.user;
 
     const { data: tenant, error } = await supabase
@@ -101,15 +111,18 @@ const TenantSetupWizard = () => {
     <Container maxWidth="sm" sx={{ mt: 4 }}>
       <Typography variant="h4" gutterBottom>Tenant Setup</Typography>
       <Stepper activeStep={step} alternativeLabel>
-        {["Company Info", "Admin", "Verification", "Logo", "Finish"].map((label) => (
+        {["Company Info", "Admin", "Verify Email", "Logo", "Finish"].map((label) => (
           <Step key={label}><StepLabel>{label}</StepLabel></Step>
         ))}
       </Stepper>
 
-      <Box sx={{ mt: 3 }}>
+      <Box sx={{ mt: 4 }}>
         {step === 0 && (
           <>
-            <TextField label="Company Name" fullWidth margin="normal"
+            <TextField
+              label="Company Name"
+              name="companyName"
+              fullWidth margin="normal"
               value={formData.companyName}
               onChange={(e) => {
                 const name = e.target.value;
@@ -122,11 +135,13 @@ const TenantSetupWizard = () => {
             />
             <TextField
               label="Subdomain"
+              name="subdomain"
+              fullWidth margin="normal"
               value={formData.subdomain}
+              onChange={handleChange}
               InputProps={{ endAdornment: <Typography>.hi5tech.co.uk</Typography> }}
-              fullWidth margin="normal" disabled
             />
-            <Button variant="contained" fullWidth onClick={() => setStep(1)}>Next</Button>
+            <Button fullWidth variant="contained" sx={{ mt: 2 }} onClick={() => setStep(1)}>Next</Button>
           </>
         )}
 
@@ -135,7 +150,11 @@ const TenantSetupWizard = () => {
             <TextField label="Admin Email" name="adminEmail" fullWidth margin="normal" value={formData.adminEmail} onChange={handleChange} />
             <TextField label="Password" name="adminPassword" type="password" fullWidth margin="normal" value={formData.adminPassword} onChange={handleChange} />
             <TextField label="Confirm Password" name="confirmPassword" type="password" fullWidth margin="normal" value={formData.confirmPassword} onChange={handleChange} />
-            <Button variant="contained" fullWidth onClick={sendOtp} disabled={resendCooldown > 0}>
+            <Button
+              fullWidth variant="contained" sx={{ mt: 2 }}
+              onClick={sendOtp}
+              disabled={resendCooldown > 0}
+            >
               {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Send Verification Code"}
             </Button>
           </>
@@ -144,7 +163,7 @@ const TenantSetupWizard = () => {
         {step === 2 && (
           <>
             <TextField label="Enter OTP Code" name="otp" fullWidth margin="normal" value={formData.otp} onChange={handleChange} />
-            <Button variant="contained" fullWidth onClick={verifyOtp}>Verify Code</Button>
+            <Button variant="contained" fullWidth sx={{ mt: 2 }} onClick={verifyOtp}>Verify Code</Button>
           </>
         )}
 
@@ -152,7 +171,7 @@ const TenantSetupWizard = () => {
           <>
             <Typography>Upload Company Logo</Typography>
             <input type="file" accept="image/*" onChange={handleFileChange} />
-            <Button fullWidth sx={{ mt: 2 }} onClick={() => setStep(4)}>Next</Button>
+            <Button variant="contained" fullWidth sx={{ mt: 2 }} onClick={() => setStep(4)}>Next</Button>
           </>
         )}
 
