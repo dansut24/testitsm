@@ -32,19 +32,19 @@ export const TenantProvider = ({ children }) => {
 
       setLoading(true);
 
-      const subdomain = getSubdomain();
+      const rawSubdomain = getSubdomain();
+      const subdomain = rawSubdomain?.replace("-itsm", "");
+
       if (!subdomain) {
         console.warn("No subdomain found.");
         setLoading(false);
         return;
       }
 
-      const fullDomain = `${subdomain}.hi5tech.co.uk`;
-
       const { data: tenantData, error: tenantError } = await supabase
         .from("tenants")
         .select("*")
-        .eq("domain", fullDomain)
+        .eq("subdomain", subdomain)
         .maybeSingle();
 
       if (tenantError || !tenantData) {
@@ -62,8 +62,20 @@ export const TenantProvider = ({ children }) => {
         .maybeSingle();
 
       if (settingsError || !settingsData) {
-        console.warn("⚠️ No settings found for tenant");
+        if (window.location.pathname !== "/tenant-setup") {
+          console.warn("⚠️ No settings found for tenant");
+        }
       } else {
+        // Handle both full URLs and relative paths
+        const logoUrl = settingsData.logo_url;
+        if (logoUrl?.startsWith("http")) {
+          settingsData.logo_url = logoUrl;
+        } else {
+          const { data: publicData } = supabase.storage
+            .from("tenant-logos")
+            .getPublicUrl(logoUrl);
+          settingsData.logo_url = publicData?.publicUrl || "";
+        }
         setTenantSettings(settingsData);
       }
 
