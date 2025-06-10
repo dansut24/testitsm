@@ -27,7 +27,8 @@ const Login = () => {
   const navigate = useNavigate();
   const { mode } = useThemeMode();
 
-  const subdomain = window.location.hostname.split(".")[0];
+  const rawSubdomain = window.location.hostname.split(".")[0];
+  const subdomain = rawSubdomain.replace(/-itsm$/, "");
 
   useEffect(() => {
     const fetchLogo = async () => {
