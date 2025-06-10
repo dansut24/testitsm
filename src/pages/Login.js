@@ -30,10 +30,11 @@ const Login = () => {
   };
 
   useEffect(() => {
-    const fetchLogo = async () => {
+    const fetchLogoFromStorage = async () => {
       const subdomain = getSubdomain();
       if (!subdomain) return;
 
+      // Step 1: Get tenant ID by subdomain
       const { data: tenant, error: tenantError } = await supabase
         .from("tenants")
         .select("id")
@@ -45,24 +46,32 @@ const Login = () => {
         return;
       }
 
+      // Step 2: Get logo path from tenant_settings
       const { data: settings, error: settingsError } = await supabase
         .from("tenant_settings")
         .select("logo_url")
         .eq("tenant_id", tenant.id)
         .single();
 
-      if (settingsError) {
-        console.error("Failed to load logo_url:", settingsError.message);
+      if (settingsError || !settings?.logo_url) {
+        console.error("Logo path not found in tenant_settings:", settingsError?.message);
         return;
       }
 
-      if (settings?.logo_url) {
-        setLogoUrl(settings.logo_url);
-        setDebugInfo(`Subdomain: ${subdomain}\nLogo URL: ${settings.logo_url}`);
+      // Step 3: Convert logo path to full public URL
+      const { data: publicUrlData } = supabase.storage
+        .from("tenant-logos")
+        .getPublicUrl(settings.logo_url);
+
+      if (publicUrlData?.publicUrl) {
+        setLogoUrl(publicUrlData.publicUrl);
+        setDebugInfo(`Subdomain: ${subdomain}\nPublic URL: ${publicUrlData.publicUrl}`);
+      } else {
+        console.warn("Public URL could not be resolved.");
       }
     };
 
-    fetchLogo();
+    fetchLogoFromStorage();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -99,12 +108,16 @@ const Login = () => {
         textAlign: "center",
       }}
     >
-      {logoUrl && (
+      {logoUrl ? (
         <img
           src={logoUrl}
           alt="Tenant Logo"
           style={{ width: "150px", marginBottom: 20 }}
         />
+      ) : (
+        <Typography variant="body2" color="text.secondary" mb={2}>
+          No logo loaded
+        </Typography>
       )}
 
       <Typography variant="h5" mb={3}>
@@ -154,11 +167,11 @@ const Login = () => {
         Sign in with Microsoft
       </Button>
 
-      {/* Optional: Debug Info Button */}
+      {/* Optional Debug */}
       <Button
-        variant="text"
         size="small"
-        onClick={() => alert(debugInfo || "No logo loaded")}
+        variant="text"
+        onClick={() => alert(debugInfo || "No info available")}
       >
         Show Logo Debug Info
       </Button>
