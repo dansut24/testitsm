@@ -36,7 +36,7 @@ const Login = () => {
         const { data: tenantData } = await supabase
           .from("tenants")
           .select("id")
-          .eq("subdomain", subdomain)
+          .eq("subdomain", baseSubdomain)
           .maybeSingle();
 
         if (!tenantData) {
@@ -109,7 +109,7 @@ const Login = () => {
       const { data: tenantData } = await supabase
         .from("tenants")
         .select("id, subdomain")
-        .eq("subdomain", subdomain)
+        .eq("subdomain", baseSubdomain)
         .maybeSingle();
 
       if (!tenantData) {
