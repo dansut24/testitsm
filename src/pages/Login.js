@@ -19,16 +19,46 @@ import BusinessIcon from "@mui/icons-material/Business";
 import { useThemeMode } from "../context/ThemeContext";
 import AuthService from "../services/AuthService";
 import { supabase } from "../supabaseClient";
+import defaultLogo from "../assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [logoUrl, setLogoUrl] = useState(null);
-  const [subdomain, setSubdomain] = useState("");
-  const [testInfo, setTestInfo] = useState(null);
-
   const navigate = useNavigate();
   const { mode } = useThemeMode();
+
+  useEffect(() => {
+    const fetchLogo = async () => {
+      const rawSubdomain = window.location.hostname.split(".")[0];
+      const cleanSub = rawSubdomain.replace("-itsm", "");
+
+      const { data: tenant, error: tenantError } = await supabase
+        .from("tenants")
+        .select("id")
+        .eq("subdomain", cleanSub)
+        .single();
+
+      if (tenantError || !tenant?.id) {
+        console.error("Tenant not found:", tenantError?.message);
+        return;
+      }
+
+      const { data: settings, error: settingsError } = await supabase
+        .from("tenant_settings")
+        .select("logo_url")
+        .eq("tenant_id", tenant.id)
+        .single();
+
+      if (settings?.logo_url) {
+        setLogoUrl(settings.logo_url);
+      } else {
+        console.warn("No logo found for tenant.");
+      }
+    };
+
+    fetchLogo();
+  }, []);
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -64,58 +94,47 @@ const Login = () => {
     }
   };
 
-  const fetchTenantLogo = async () => {
-    const host = window.location.hostname;
-    const sub = host.split(".")[0]; // extract subdomain like testytech-itsm
-    setSubdomain(sub);
+  const handleTestSubdomain = async () => {
+    const rawSubdomain = window.location.hostname.split(".")[0];
+    const cleanSub = rawSubdomain.replace("-itsm", "");
 
-    const { data: tenant, error } = await supabase
+    const { data: tenant } = await supabase
       .from("tenants")
       .select("id")
-      .eq("subdomain", sub)
+      .eq("subdomain", cleanSub)
       .single();
-
-    if (!tenant?.id) return;
 
     const { data: settings } = await supabase
       .from("tenant_settings")
       .select("logo_url")
-      .eq("tenant_id", tenant.id)
+      .eq("tenant_id", tenant?.id)
       .single();
 
-    if (settings?.logo_url) {
-      setLogoUrl(settings.logo_url);
-    }
+    alert(`Subdomain: ${cleanSub}\nLogo URL: ${settings?.logo_url || "Not found"}`);
   };
-
-  const handleTestSubdomain = () => {
-    alert(`Subdomain: ${subdomain}\nLogo URL: ${logoUrl || "Not found"}`);
-  };
-
-  useEffect(() => {
-    fetchTenantLogo();
-  }, []);
 
   return (
     <Container maxWidth="sm" sx={{ mt: 10 }}>
       <Paper elevation={4} sx={{ p: 4, textAlign: "center", borderRadius: 4 }}>
-        {logoUrl ? (
-          <img src={logoUrl} alt="Company Logo" style={{ height: 60, marginBottom: 16 }} />
-        ) : (
-          <Typography variant="h6" color="text.secondary">
-            Hi5Tech
-          </Typography>
-        )}
-
+        <img
+          src={logoUrl || defaultLogo}
+          alt="Tenant Logo"
+          style={{ height: 60, marginBottom: 16 }}
+        />
         <Typography variant="h5" fontWeight={600} gutterBottom>
-          Welcome to {subdomain}
+          Welcome to Hi5Tech
         </Typography>
         <Typography variant="body2" color="text.secondary" mb={3}>
           Sign in to your workspace
         </Typography>
 
         <Stack spacing={1.5} mb={3}>
-          <Button variant="outlined" startIcon={<GoogleIcon />} fullWidth onClick={handleGoogleLogin}>
+          <Button
+            variant="outlined"
+            startIcon={<GoogleIcon />}
+            fullWidth
+            onClick={handleGoogleLogin}
+          >
             Sign in with Google
           </Button>
           <Button variant="outlined" startIcon={<BusinessIcon />} fullWidth disabled>
