@@ -6,13 +6,14 @@ import {
   Typography,
   CircularProgress,
   Alert,
+  Divider,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
-  const { login } = useAuth();
+  const { login, loginWithMicrosoft } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -20,6 +21,7 @@ const Login = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [logoUrl, setLogoUrl] = useState(null);
+  const [debugInfo, setDebugInfo] = useState("");
 
   const getSubdomain = () => {
     const host = window.location.hostname;
@@ -56,6 +58,7 @@ const Login = () => {
 
       if (settings?.logo_url) {
         setLogoUrl(settings.logo_url);
+        setDebugInfo(`Subdomain: ${subdomain}\nLogo URL: ${settings.logo_url}`);
       }
     };
 
@@ -75,6 +78,11 @@ const Login = () => {
     } else {
       navigate("/user-dashboard");
     }
+  };
+
+  const handleMicrosoftLogin = async () => {
+    const { error: msError } = await loginWithMicrosoft();
+    if (msError) setError("Microsoft login failed.");
   };
 
   return (
@@ -98,10 +106,13 @@ const Login = () => {
           style={{ width: "150px", marginBottom: 20 }}
         />
       )}
+
       <Typography variant="h5" mb={3}>
         Login
       </Typography>
+
       {error && <Alert severity="error">{error}</Alert>}
+
       <form onSubmit={handleSubmit}>
         <TextField
           fullWidth
@@ -131,6 +142,26 @@ const Login = () => {
           {loading ? <CircularProgress size={24} /> : "Login"}
         </Button>
       </form>
+
+      <Divider sx={{ my: 3 }}>or</Divider>
+
+      <Button
+        fullWidth
+        variant="outlined"
+        onClick={handleMicrosoftLogin}
+        sx={{ mb: 2 }}
+      >
+        Sign in with Microsoft
+      </Button>
+
+      {/* Optional: Debug Info Button */}
+      <Button
+        variant="text"
+        size="small"
+        onClick={() => alert(debugInfo || "No logo loaded")}
+      >
+        Show Logo Debug Info
+      </Button>
     </Box>
   );
 };
