@@ -1,5 +1,3 @@
-// src/pages/Login.js
-
 import React, { useEffect, useState } from "react";
 import {
   Container,
@@ -34,41 +32,34 @@ const Login = () => {
   useEffect(() => {
     const fetchLogo = async () => {
       try {
-        // Step 1: Get tenant
-        const { data: tenantData, error: tenantError } = await supabase
+        const { data: tenantData } = await supabase
           .from("tenants")
           .select("id")
           .eq("subdomain", subdomain)
           .maybeSingle();
 
-        if (tenantError || !tenantData?.id) {
-          console.warn("Tenant not found:", tenantError);
+        if (!tenantData) {
+          console.warn("Tenant not found for subdomain:", subdomain);
           return;
         }
 
-        const tenantId = tenantData.id;
-
-        // Step 2: Get tenant_settings.logo_url
-        const { data: settings, error: settingsError } = await supabase
+        const { data: settings } = await supabase
           .from("tenant_settings")
           .select("logo_url")
-          .eq("tenant_id", tenantId)
+          .eq("tenant_id", tenantData.id)
           .maybeSingle();
 
-        if (settingsError || !settings?.logo_url) {
+        if (!settings?.logo_url) {
           console.warn("No logo found for tenant.");
           return;
         }
 
-        // Step 3: Convert to public URL from storage bucket
         const { data: publicData } = supabase.storage
           .from("tenant-logos")
           .getPublicUrl(settings.logo_url);
 
         if (publicData?.publicUrl) {
           setLogoUrl(publicData.publicUrl);
-        } else {
-          console.warn("Could not resolve public URL.");
         }
       } catch (err) {
         console.error("Error loading logo:", err.message);
