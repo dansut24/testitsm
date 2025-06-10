@@ -28,7 +28,7 @@ const Login = () => {
   const { mode } = useThemeMode();
 
   const rawSubdomain = window.location.hostname.split(".")[0];
-  const subdomain = rawSubdomain.replace(/-itsm$/, "");
+  const baseSubdomain = rawSubdomain.replace("-itsm", "");
 
   useEffect(() => {
     const fetchLogo = async () => {
@@ -40,7 +40,7 @@ const Login = () => {
           .maybeSingle();
 
         if (!tenantData) {
-          console.warn("Tenant not found for subdomain:", subdomain);
+          console.warn("Tenant not found for subdomain:", baseSubdomain);
           return;
         }
 
@@ -68,7 +68,7 @@ const Login = () => {
     };
 
     fetchLogo();
-  }, [subdomain]);
+  }, [baseSubdomain]);
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -114,7 +114,7 @@ const Login = () => {
 
       if (!tenantData) {
         setDebugInfo({
-          subdomain,
+          subdomain: baseSubdomain,
           tenantId: "Not found",
           logoUrl: "Not found",
           error: "❌ Tenant not found",
@@ -142,7 +142,7 @@ const Login = () => {
     } catch (error) {
       console.error("Test logo fetch failed:", error.message);
       setDebugInfo({
-        subdomain,
+        subdomain: baseSubdomain,
         tenantId: "Unknown",
         logoUrl: "Unknown",
         error: "Unexpected error occurred.",
