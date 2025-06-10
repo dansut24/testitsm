@@ -94,9 +94,7 @@ const TenantSetupWizard = () => {
         .from("tenant-logos")
         .upload(`${subdomain}/logo.png`, logoFile, { upsert: true });
       if (!uploadError) {
-        logo_url = supabase.storage
-          .from("tenant-logos")
-          .getPublicUrl(`${subdomain}/logo.png`).data.publicUrl;
+        logo_url = `${subdomain}/logo.png`;
       }
     }
 
