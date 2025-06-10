@@ -104,51 +104,76 @@ const Login = () => {
     }
   };
 
-  const handleTestLogo = async () => {
-    try {
-      const { data: tenantData } = await supabase
-        .from("tenants")
-        .select("id, subdomain")
-        .eq("subdomain", baseSubdomain)
-        .maybeSingle();
+ const handleTestLogo = async () => {
+  try {
+    const { data: tenantData, error: tenantError } = await supabase
+      .from("tenants")
+      .select("id, subdomain")
+      .eq("subdomain", baseSubdomain)
+      .maybeSingle();
 
-      if (!tenantData) {
-        setDebugInfo({
-          subdomain: baseSubdomain,
-          tenantId: "Not found",
-          logoUrl: "Not found",
-          error: "❌ Tenant not found",
-        });
-        return;
-      }
+    console.log("🔍 Tenant Data:", tenantData);
 
-      const { data: settings } = await supabase
-        .from("tenant_settings")
-        .select("logo_url")
-        .eq("tenant_id", tenantData.id)
-        .maybeSingle();
+    if (!tenantData) {
+      setDebugInfo({
+        subdomain: baseSubdomain,
+        tenantId: "Not found",
+        logoUrl: "Not found",
+        error: "❌ Tenant not found",
+      });
+      return;
+    }
 
-      const logoPath = settings?.logo_url || null;
+    const { data: settings, error: settingsError } = await supabase
+      .from("tenant_settings")
+      .select("logo_url")
+      .eq("tenant_id", tenantData.id)
+      .maybeSingle();
 
-      const { data: publicData } = logoPath
-        ? supabase.storage.from("tenant-logos").getPublicUrl(logoPath)
-        : { data: { publicUrl: "Not found" } };
+    console.log("⚙️ Settings:", settings);
 
+    if (!settings || !settings.logo_url) {
       setDebugInfo({
         subdomain: tenantData.subdomain,
         tenantId: tenantData.id,
-        logoUrl: publicData?.publicUrl || "Not found",
+        logoUrl: "Not found",
+        error: "⚠️ No logo_url set in tenant_settings",
       });
-    } catch (error) {
-      console.error("Test logo fetch failed:", error.message);
+      return;
+    }
+
+    const logoPath = settings.logo_url;
+
+    const { data: publicData } = supabase.storage
+      .from("tenant-logos")
+      .getPublicUrl(logoPath);
+
+    console.log("🌐 Public URL Data:", publicData);
+
+    if (!publicData?.publicUrl) {
       setDebugInfo({
-        subdomain: baseSubdomain,
-        tenantId: "Unknown",
-        logoUrl: "Unknown",
-        error: "Unexpected error occurred.",
+        subdomain: tenantData.subdomain,
+        tenantId: tenantData.id,
+        logoUrl: "Not found",
+        error: "⚠️ Could not resolve public URL",
+      });
+    } else {
+      setDebugInfo({
+        subdomain: tenantData.subdomain,
+        tenantId: tenantData.id,
+        logoUrl: publicData.publicUrl,
       });
     }
-  };
+  } catch (error) {
+    console.error("❌ Test logo fetch failed:", error);
+    setDebugInfo({
+      subdomain: baseSubdomain,
+      tenantId: "Unknown",
+      logoUrl: "Unknown",
+      error: "Unexpected error occurred.",
+    });
+  }
+};
 
   return (
     <Container maxWidth="sm" sx={{ mt: 10 }}>
