@@ -1,5 +1,4 @@
-// src/context/AuthContext.js
-
+// AuthContext.js
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
@@ -17,8 +16,8 @@ export const AuthProvider = ({ children }) => {
     const host = window.location.hostname;
     if (host.includes("localhost")) return "local";
     const parts = host.split(".");
-    if (parts.length < 3) return null; // root domain
-    return parts[0].replace("-itsm", ""); // extract 'demo' from demo-itsm.hi5tech.co.uk
+    if (parts.length < 3) return null;
+    return parts[0].replace("-itsm", "");
   };
 
   const isRootDomain = () => {
@@ -36,7 +35,7 @@ export const AuthProvider = ({ children }) => {
             .from("tenants")
             .select("*")
             .eq("subdomain", subdomain)
-            .single();
+            .maybeSingle();
 
           if (error || !data) {
             setTenant(null);
@@ -81,10 +80,10 @@ export const AuthProvider = ({ children }) => {
       .from("profiles")
       .select("*")
       .eq("id", supabaseUser.id)
-      .single();
+      .maybeSingle();
 
-    if (error) {
-      console.error("Failed to fetch user profile:", error.message);
+    if (error || !profile) {
+      console.error("Failed to fetch user profile:", error?.message);
       setUser(null);
     } else {
       const role = profile.role || "user";
@@ -107,7 +106,6 @@ export const AuthProvider = ({ children }) => {
     navigate("/login");
   };
 
-  // Show error if subdomain is invalid (but not on root domain)
   if (!isRootDomain() && tenantError) {
     return (
       <div style={{ padding: 40 }}>
