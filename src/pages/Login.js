@@ -1,6 +1,6 @@
 // src/pages/Login.js
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Container,
   Paper,
@@ -24,41 +24,48 @@ import defaultLogo from "../assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
 const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
-  const [logoUrl, setLogoUrl] = useState(null);
+  const [logoUrl, setLogoUrl] = useState(defaultLogo);
+  const [debugInfo, setDebugInfo] = useState(null);
   const navigate = useNavigate();
   const { mode } = useThemeMode();
 
+  const subdomain = window.location.hostname.split(".")[0];
+
   useEffect(() => {
     const fetchLogo = async () => {
-      const rawSubdomain = window.location.hostname.split(".")[0];
-      const cleanSub = rawSubdomain.replace("-itsm", "");
+      try {
+        const { data: tenantData, error: tenantError } = await supabase
+          .from("tenants")
+          .select("id")
+          .eq("subdomain", subdomain)
+          .single();
 
-      const { data: tenant, error: tenantError } = await supabase
-        .from("tenants")
-        .select("id")
-        .eq("subdomain", cleanSub)
-        .single();
+        if (tenantError || !tenantData) {
+          console.warn("Tenant not found:", tenantError);
+          return;
+        }
 
-      if (tenantError || !tenant?.id) {
-        console.error("Tenant not found:", tenantError?.message);
-        return;
-      }
+        const tenantId = tenantData.id;
 
-      const { data: settings, error: settingsError } = await supabase
-        .from("tenant_settings")
-        .select("logo_url")
-        .eq("tenant_id", tenant.id)
-        .single();
+        const { data: settings, error: settingsError } = await supabase
+          .from("tenant_settings")
+          .select("logo_url")
+          .eq("tenant_id", tenantId)
+          .single();
 
-      if (settings?.logo_url) {
+        if (settingsError || !settings || !settings.logo_url) {
+          console.warn("No logo found for tenant.");
+          return;
+        }
+
         setLogoUrl(settings.logo_url);
-      } else {
-        console.warn("No logo found for tenant.");
+      } catch (err) {
+        console.error("Error loading logo:", err.message);
       }
     };
 
     fetchLogo();
-  }, []);
+  }, [subdomain]);
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -94,33 +101,37 @@ const Login = () => {
     }
   };
 
-  const handleTestSubdomain = async () => {
-    const rawSubdomain = window.location.hostname.split(".")[0];
-    const cleanSub = rawSubdomain.replace("-itsm", "");
-
-    const { data: tenant } = await supabase
+  const handleTestLogo = async () => {
+    const { data: tenantData } = await supabase
       .from("tenants")
-      .select("id")
-      .eq("subdomain", cleanSub)
+      .select("id, subdomain")
+      .eq("subdomain", subdomain)
       .single();
 
-    const { data: settings } = await supabase
-      .from("tenant_settings")
-      .select("logo_url")
-      .eq("tenant_id", tenant?.id)
-      .single();
+    if (tenantData?.id) {
+      const { data: settings } = await supabase
+        .from("tenant_settings")
+        .select("logo_url")
+        .eq("tenant_id", tenantData.id)
+        .single();
 
-    alert(`Subdomain: ${cleanSub}\nLogo URL: ${settings?.logo_url || "Not found"}`);
+      setDebugInfo({
+        subdomain: tenantData.subdomain,
+        tenantId: tenantData.id,
+        logoUrl: settings?.logo_url || "Not found",
+      });
+    } else {
+      setDebugInfo({
+        subdomain,
+        error: "Tenant not found",
+      });
+    }
   };
 
   return (
     <Container maxWidth="sm" sx={{ mt: 10 }}>
       <Paper elevation={4} sx={{ p: 4, textAlign: "center", borderRadius: 4 }}>
-        <img
-          src={logoUrl || defaultLogo}
-          alt="Tenant Logo"
-          style={{ height: 60, marginBottom: 16 }}
-        />
+        <img src={logoUrl} alt="Tenant Logo" style={{ height: 60, marginBottom: 16 }} />
         <Typography variant="h5" fontWeight={600} gutterBottom>
           Welcome to Hi5Tech
         </Typography>
@@ -129,12 +140,7 @@ const Login = () => {
         </Typography>
 
         <Stack spacing={1.5} mb={3}>
-          <Button
-            variant="outlined"
-            startIcon={<GoogleIcon />}
-            fullWidth
-            onClick={handleGoogleLogin}
-          >
+          <Button variant="outlined" startIcon={<GoogleIcon />} fullWidth onClick={handleGoogleLogin}>
             Sign in with Google
           </Button>
           <Button variant="outlined" startIcon={<BusinessIcon />} fullWidth disabled>
@@ -190,10 +196,18 @@ const Login = () => {
           variant="outlined"
           fullWidth
           sx={{ mt: 2 }}
-          onClick={handleTestSubdomain}
+          onClick={handleTestLogo}
         >
-          Test Subdomain & Logo
+          Test Logo & Subdomain
         </Button>
+
+        {debugInfo && (
+          <Box sx={{ mt: 2, p: 2, backgroundColor: "#f5f5f5", borderRadius: 2, textAlign: "left" }}>
+            <Typography variant="body2">Subdomain: {debugInfo.subdomain}</Typography>
+            <Typography variant="body2">Tenant ID: {debugInfo.tenantId}</Typography>
+            <Typography variant="body2">Logo URL: {debugInfo.logoUrl}</Typography>
+          </Box>
+        )}
       </Paper>
 
       <Typography
