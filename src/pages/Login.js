@@ -28,41 +28,36 @@ const Login = () => {
   const navigate = useNavigate();
   const { mode } = useThemeMode();
 
-  useEffect(() => {
-    const fetchTenantLogo = async () => {
-      const subdomain = window.location.hostname.split(".")[0];
+  const subdomain = window.location.hostname.split(".")[0];
 
-      // 1. Get tenant by subdomain
-      const { data: tenant, error: tenantError } = await supabase
+  useEffect(() => {
+    const fetchLogo = async () => {
+      const { data, error } = await supabase
         .from("tenants")
         .select("id")
         .eq("subdomain", subdomain)
         .single();
 
-      if (tenantError || !tenant) {
-        console.warn("❌ Tenant not found:", subdomain);
+      if (error || !data?.id) {
+        console.warn("Tenant not found or error", error);
         return;
       }
 
-      // 2. Get tenant_settings using tenant.id
+      const tenantId = data.id;
+
       const { data: settings, error: settingsError } = await supabase
         .from("tenant_settings")
         .select("logo_url")
-        .eq("tenant_id", tenant.id)
+        .eq("tenant_id", tenantId)
         .single();
 
-      if (settingsError || !settings) {
-        console.warn("❌ tenant_settings not found:", settingsError?.message);
-        return;
-      }
-
-      if (settings.logo_url) {
+      if (!settingsError && settings?.logo_url) {
         setLogoUrl(settings.logo_url);
       }
     };
 
-    fetchTenantLogo();
-  }, []);
+    fetchLogo();
+  }, [subdomain]);
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -112,6 +107,10 @@ const Login = () => {
       console.error("❌ Unexpected error:", err);
       alert("❌ Unexpected error: " + err.message);
     }
+  };
+
+  const handleTestTenantInfo = () => {
+    alert(`Detected Subdomain: ${subdomain}\nLogo URL: ${logoUrl || "Not Found"}`);
   };
 
   return (
@@ -182,13 +181,12 @@ const Login = () => {
           Login
         </Button>
 
-        <Button
-          variant="outlined"
-          fullWidth
-          sx={{ mt: 2 }}
-          onClick={handleTestConnection}
-        >
+        <Button variant="outlined" fullWidth sx={{ mt: 2 }} onClick={handleTestConnection}>
           Test Supabase Connection
+        </Button>
+
+        <Button variant="outlined" fullWidth sx={{ mt: 2 }} onClick={handleTestTenantInfo}>
+          Test Tenant Info
         </Button>
       </Paper>
 
