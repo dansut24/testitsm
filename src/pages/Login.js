@@ -16,15 +16,16 @@ import { Link, useNavigate } from "react-router-dom";
 import GoogleIcon from "@mui/icons-material/Google";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import BusinessIcon from "@mui/icons-material/Business";
-import defaultLogo from "../assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
 import { useThemeMode } from "../context/ThemeContext";
 import AuthService from "../services/AuthService";
 import { supabase } from "../supabaseClient";
+import defaultLogo from "../assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
+  const [logoUrl, setLogoUrl] = useState(defaultLogo);
+  const [testInfo, setTestInfo] = useState(null);
   const navigate = useNavigate();
   const { mode } = useThemeMode();
 
@@ -32,27 +33,16 @@ const Login = () => {
 
   useEffect(() => {
     const fetchLogo = async () => {
+      if (!subdomain) return;
+
       const { data, error } = await supabase
-        .from("tenants")
-        .select("id")
+        .from("tenant_settings")
+        .select("logo_url")
         .eq("subdomain", subdomain)
         .single();
 
-      if (error || !data?.id) {
-        console.warn("Tenant not found or error", error);
-        return;
-      }
-
-      const tenantId = data.id;
-
-      const { data: settings, error: settingsError } = await supabase
-        .from("tenant_settings")
-        .select("logo_url")
-        .eq("tenant_id", tenantId)
-        .single();
-
-      if (!settingsError && settings?.logo_url) {
-        setLogoUrl(settings.logo_url);
+      if (data?.logo_url) {
+        setLogoUrl(data.logo_url);
       }
     };
 
@@ -95,32 +85,29 @@ const Login = () => {
 
   const handleTestConnection = async () => {
     try {
-      const { data, error } = await supabase.from("profiles").select("*").limit(1);
+      const { data, error } = await supabase.from("tenant_settings")
+        .select("logo_url, subdomain")
+        .eq("subdomain", subdomain)
+        .single();
+
       if (error) {
-        console.error("❌ Supabase connection failed:", error.message);
-        alert("❌ Connection failed: " + error.message);
-      } else {
-        console.log("✅ Supabase connection successful:", data);
-        alert("✅ Connection successful. First profile: " + (data[0]?.full_name || "No users found"));
+        alert(`❌ Error: ${error.message}`);
+        return;
       }
+
+      setTestInfo({
+        subdomain,
+        logoUrl: data.logo_url || "Not set",
+      });
     } catch (err) {
-      console.error("❌ Unexpected error:", err);
       alert("❌ Unexpected error: " + err.message);
     }
-  };
-
-  const handleTestTenantInfo = () => {
-    alert(`Detected Subdomain: ${subdomain}\nLogo URL: ${logoUrl || "Not Found"}`);
   };
 
   return (
     <Container maxWidth="sm" sx={{ mt: 10 }}>
       <Paper elevation={4} sx={{ p: 4, textAlign: "center", borderRadius: 4 }}>
-        <img
-          src={logoUrl || defaultLogo}
-          alt="Tenant Logo"
-          style={{ height: 60, marginBottom: 16 }}
-        />
+        <img src={logoUrl} alt="Tenant Logo" style={{ height: 60, marginBottom: 16 }} />
         <Typography variant="h5" fontWeight={600} gutterBottom>
           Welcome to Hi5Tech
         </Typography>
@@ -181,13 +168,21 @@ const Login = () => {
           Login
         </Button>
 
-        <Button variant="outlined" fullWidth sx={{ mt: 2 }} onClick={handleTestConnection}>
-          Test Supabase Connection
+        <Button
+          variant="outlined"
+          fullWidth
+          sx={{ mt: 2 }}
+          onClick={handleTestConnection}
+        >
+          Test Tenant Logo Connection
         </Button>
 
-        <Button variant="outlined" fullWidth sx={{ mt: 2 }} onClick={handleTestTenantInfo}>
-          Test Tenant Info
-        </Button>
+        {testInfo && (
+          <Box mt={2}>
+            <Typography variant="body2">Subdomain: {testInfo.subdomain}</Typography>
+            <Typography variant="body2">Logo URL: {testInfo.logoUrl}</Typography>
+          </Box>
+        )}
       </Paper>
 
       <Typography
