@@ -1,182 +1,191 @@
+// src/pages/Login.js
+
 import React, { useState, useEffect } from "react";
 import {
-  Box,
-  Button,
+  Container,
+  Paper,
   TextField,
+  Button,
   Typography,
-  CircularProgress,
-  Alert,
   Divider,
+  Stack,
+  Box,
+  Link as MuiLink,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import GoogleIcon from "@mui/icons-material/Google";
+import GitHubIcon from "@mui/icons-material/GitHub";
+import BusinessIcon from "@mui/icons-material/Business";
+import { useThemeMode } from "../context/ThemeContext";
+import AuthService from "../services/AuthService";
 import { supabase } from "../supabaseClient";
-import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
-  const { login, loginWithMicrosoft } = useAuth();
-  const navigate = useNavigate();
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const [logoUrl, setLogoUrl] = useState(null);
-  const [debugInfo, setDebugInfo] = useState("");
+  const [subdomain, setSubdomain] = useState("");
+  const [testInfo, setTestInfo] = useState(null);
 
-  const getSubdomain = () => {
-    const host = window.location.hostname;
-    const parts = host.split(".");
-    return parts.length >= 3 ? parts[0] : null;
-  };
+  const navigate = useNavigate();
+  const { mode } = useThemeMode();
 
-  useEffect(() => {
-    const fetchLogoFromStorage = async () => {
-      const subdomain = getSubdomain();
-      if (!subdomain) return;
+  const handleChange = (e) =>
+    setFormData({ ...formData, [e.target.name]: e.target.value });
 
-      // Step 1: Get tenant ID by subdomain
-      const { data: tenant, error: tenantError } = await supabase
-        .from("tenants")
-        .select("id")
-        .eq("subdomain", subdomain)
-        .single();
-
-      if (tenantError || !tenant?.id) {
-        console.error("Tenant not found:", tenantError?.message);
-        return;
-      }
-
-      // Step 2: Get logo_url from tenant_settings
-      const { data: settings, error: settingsError } = await supabase
-        .from("tenant_settings")
-        .select("logo_url")
-        .eq("tenant_id", tenant.id)
-        .single();
-
-      if (settingsError || !settings?.logo_url) {
-        console.error("Logo path not found in tenant_settings:", settingsError?.message);
-        return;
-      }
-
-      const logoPath = settings.logo_url;
-
-      // Step 3: Convert to public URL using Supabase Storage
-      const { data: publicData } = supabase.storage
-        .from("tenant-logos")
-        .getPublicUrl(logoPath);
-
-      if (publicData?.publicUrl) {
-        setLogoUrl(publicData.publicUrl);
-        setDebugInfo(`Subdomain: ${subdomain}\nLogo Path: ${logoPath}\nPublic URL: ${publicData.publicUrl}`);
-      } else {
-        console.warn("Could not resolve public URL for logo.");
-      }
-    };
-
-    fetchLogoFromStorage();
-  }, []);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleLogin = async () => {
     setError("");
-    setLoading(true);
+    const { email, password } = formData;
 
-    const { error: loginError } = await login(email, password);
-    setLoading(false);
+    if (!email || !password) {
+      setError("Please enter both email and password.");
+      return;
+    }
+
+    const { error: loginError } = await AuthService.signIn(email, password);
 
     if (loginError) {
-      setError("Invalid email or password.");
-    } else {
-      navigate("/user-dashboard");
+      console.error("Login error:", loginError.message);
+      setError("Invalid login credentials.");
+      return;
+    }
+
+    navigate("/loading");
+  };
+
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+    });
+
+    if (error) {
+      console.error("Google sign-in error:", error.message);
+      setError("Google sign-in failed.");
     }
   };
 
-  const handleMicrosoftLogin = async () => {
-    const { error: msError } = await loginWithMicrosoft();
-    if (msError) setError("Microsoft login failed.");
+  const fetchTenantLogo = async () => {
+    const host = window.location.hostname;
+    const sub = host.split(".")[0]; // extract subdomain like testytech-itsm
+    setSubdomain(sub);
+
+    const { data: tenant, error } = await supabase
+      .from("tenants")
+      .select("id")
+      .eq("subdomain", sub)
+      .single();
+
+    if (!tenant?.id) return;
+
+    const { data: settings } = await supabase
+      .from("tenant_settings")
+      .select("logo_url")
+      .eq("tenant_id", tenant.id)
+      .single();
+
+    if (settings?.logo_url) {
+      setLogoUrl(settings.logo_url);
+    }
   };
 
+  const handleTestSubdomain = () => {
+    alert(`Subdomain: ${subdomain}\nLogo URL: ${logoUrl || "Not found"}`);
+  };
+
+  useEffect(() => {
+    fetchTenantLogo();
+  }, []);
+
   return (
-    <Box
-      sx={{
-        maxWidth: 400,
-        mx: "auto",
-        mt: 10,
-        px: 3,
-        py: 4,
-        boxShadow: 3,
-        borderRadius: 2,
-        backgroundColor: "white",
-        textAlign: "center",
-      }}
-    >
-      {logoUrl ? (
-        <img
-          src={logoUrl}
-          alt="Tenant Logo"
-          style={{ width: "150px", marginBottom: 20 }}
-        />
-      ) : (
-        <Typography variant="body2" color="text.secondary" mb={2}>
-          No logo loaded
+    <Container maxWidth="sm" sx={{ mt: 10 }}>
+      <Paper elevation={4} sx={{ p: 4, textAlign: "center", borderRadius: 4 }}>
+        {logoUrl ? (
+          <img src={logoUrl} alt="Company Logo" style={{ height: 60, marginBottom: 16 }} />
+        ) : (
+          <Typography variant="h6" color="text.secondary">
+            Hi5Tech
+          </Typography>
+        )}
+
+        <Typography variant="h5" fontWeight={600} gutterBottom>
+          Welcome to {subdomain}
         </Typography>
-      )}
+        <Typography variant="body2" color="text.secondary" mb={3}>
+          Sign in to your workspace
+        </Typography>
 
-      <Typography variant="h5" mb={3}>
-        Login
-      </Typography>
+        <Stack spacing={1.5} mb={3}>
+          <Button variant="outlined" startIcon={<GoogleIcon />} fullWidth onClick={handleGoogleLogin}>
+            Sign in with Google
+          </Button>
+          <Button variant="outlined" startIcon={<BusinessIcon />} fullWidth disabled>
+            Sign in with Microsoft
+          </Button>
+          <Button variant="outlined" startIcon={<GitHubIcon />} fullWidth disabled>
+            Sign in with GitHub
+          </Button>
+        </Stack>
 
-      {error && <Alert severity="error">{error}</Alert>}
+        <Divider sx={{ my: 3 }}>or</Divider>
 
-      <form onSubmit={handleSubmit}>
         <TextField
           fullWidth
           label="Email"
-          margin="normal"
+          name="email"
           type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
+          value={formData.email}
+          onChange={handleChange}
+          margin="dense"
         />
         <TextField
           fullWidth
           label="Password"
-          margin="normal"
+          name="password"
           type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
+          value={formData.password}
+          onChange={handleChange}
+          margin="dense"
         />
+        <Box sx={{ textAlign: "right", mt: 1 }}>
+          <MuiLink component={Link} to="/reset-password" underline="hover" fontSize="0.875rem">
+            Forgot password?
+          </MuiLink>
+        </Box>
+
+        {error && (
+          <Typography color="error" mt={1}>
+            {error}
+          </Typography>
+        )}
+
         <Button
-          fullWidth
-          type="submit"
           variant="contained"
-          sx={{ mt: 2 }}
-          disabled={loading}
+          fullWidth
+          sx={{ mt: 3, py: 1.2, fontWeight: "bold" }}
+          onClick={handleLogin}
         >
-          {loading ? <CircularProgress size={24} /> : "Login"}
+          Login
         </Button>
-      </form>
 
-      <Divider sx={{ my: 3 }}>or</Divider>
+        <Button
+          variant="outlined"
+          fullWidth
+          sx={{ mt: 2 }}
+          onClick={handleTestSubdomain}
+        >
+          Test Subdomain & Logo
+        </Button>
+      </Paper>
 
-      <Button
-        fullWidth
-        variant="outlined"
-        onClick={handleMicrosoftLogin}
-        sx={{ mb: 2 }}
+      <Typography
+        variant="caption"
+        display="block"
+        align="center"
+        sx={{ mt: 3, color: "text.secondary" }}
       >
-        Sign in with Microsoft
-      </Button>
-
-      <Button
-        variant="text"
-        size="small"
-        onClick={() => alert(debugInfo || "No logo info loaded")}
-      >
-        Show Logo Debug Info
-      </Button>
-    </Box>
+        Powered by Hi5Tech
+      </Typography>
+    </Container>
   );
 };
 
