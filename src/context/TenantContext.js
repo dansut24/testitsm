@@ -1,3 +1,4 @@
+// TenantContext.js
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 
@@ -5,12 +6,16 @@ const TenantContext = createContext();
 
 export const useTenant = () => useContext(TenantContext);
 
-// Extracts the subdomain like "company-itsm" from "company-itsm.hi5tech.co.uk"
 const getSubdomain = () => {
   const host = window.location.hostname;
   const parts = host.split(".");
-  if (parts.length >= 3) return parts[0]; // assumes wildcard on *.hi5tech.co.uk
+  if (parts.length >= 3) return parts[0];
   return null;
+};
+
+const isRootDomain = () => {
+  const host = window.location.hostname;
+  return host === "hi5tech.co.uk" || host === "www.hi5tech.co.uk";
 };
 
 export const TenantProvider = ({ children }) => {
@@ -20,6 +25,11 @@ export const TenantProvider = ({ children }) => {
 
   useEffect(() => {
     const loadTenant = async () => {
+      if (isRootDomain()) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
 
       const subdomain = getSubdomain();
@@ -35,10 +45,10 @@ export const TenantProvider = ({ children }) => {
         .from("tenants")
         .select("*")
         .eq("domain", fullDomain)
-        .single();
+        .maybeSingle();
 
-      if (tenantError) {
-        console.error("❌ Failed to load tenant:", tenantError.message);
+      if (tenantError || !tenantData) {
+        console.error("❌ Failed to load tenant:", tenantError?.message);
         setLoading(false);
         return;
       }
@@ -49,9 +59,9 @@ export const TenantProvider = ({ children }) => {
         .from("tenant_settings")
         .select("*")
         .eq("tenant_id", tenantData.id)
-        .single();
+        .maybeSingle();
 
-      if (settingsError) {
+      if (settingsError || !settingsData) {
         console.warn("⚠️ No settings found for tenant");
       } else {
         setTenantSettings(settingsData);
