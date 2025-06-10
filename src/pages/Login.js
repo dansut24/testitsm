@@ -104,21 +104,33 @@ const Login = () => {
   };
 
   const handleTestLogo = async () => {
-    const { data: tenantData } = await supabase
-      .from("tenants")
-      .select("id, subdomain")
-      .eq("subdomain", subdomain)
-      .maybeSingle();
+    try {
+      const { data: tenantData } = await supabase
+        .from("tenants")
+        .select("id, subdomain")
+        .eq("subdomain", subdomain)
+        .maybeSingle();
 
-    if (tenantData?.id) {
+      if (!tenantData) {
+        setDebugInfo({
+          subdomain,
+          tenantId: "Not found",
+          logoUrl: "Not found",
+          error: "❌ Tenant not found",
+        });
+        return;
+      }
+
       const { data: settings } = await supabase
         .from("tenant_settings")
         .select("logo_url")
         .eq("tenant_id", tenantData.id)
         .maybeSingle();
 
-      const { data: publicData } = settings?.logo_url
-        ? supabase.storage.from("tenant-logos").getPublicUrl(settings.logo_url)
+      const logoPath = settings?.logo_url || null;
+
+      const { data: publicData } = logoPath
+        ? supabase.storage.from("tenant-logos").getPublicUrl(logoPath)
         : { data: { publicUrl: "Not found" } };
 
       setDebugInfo({
@@ -126,10 +138,13 @@ const Login = () => {
         tenantId: tenantData.id,
         logoUrl: publicData?.publicUrl || "Not found",
       });
-    } else {
+    } catch (error) {
+      console.error("Test logo fetch failed:", error.message);
       setDebugInfo({
         subdomain,
-        error: "Tenant not found",
+        tenantId: "Unknown",
+        logoUrl: "Unknown",
+        error: "Unexpected error occurred.",
       });
     }
   };
@@ -212,6 +227,9 @@ const Login = () => {
             <Typography variant="body2">Subdomain: {debugInfo.subdomain}</Typography>
             <Typography variant="body2">Tenant ID: {debugInfo.tenantId}</Typography>
             <Typography variant="body2">Logo URL: {debugInfo.logoUrl}</Typography>
+            {debugInfo.error && (
+              <Typography variant="body2" color="error">{debugInfo.error}</Typography>
+            )}
           </Box>
         )}
       </Paper>
