@@ -46,7 +46,7 @@ const Login = () => {
         return;
       }
 
-      // Step 2: Get logo path from tenant_settings
+      // Step 2: Get logo_url from tenant_settings
       const { data: settings, error: settingsError } = await supabase
         .from("tenant_settings")
         .select("logo_url")
@@ -58,16 +58,18 @@ const Login = () => {
         return;
       }
 
-      // Step 3: Convert logo path to full public URL
-      const { data: publicUrlData } = supabase.storage
-        .from("tenant-logos")
-        .getPublicUrl(settings.logo_url);
+      const logoPath = settings.logo_url;
 
-      if (publicUrlData?.publicUrl) {
-        setLogoUrl(publicUrlData.publicUrl);
-        setDebugInfo(`Subdomain: ${subdomain}\nPublic URL: ${publicUrlData.publicUrl}`);
+      // Step 3: Convert to public URL using Supabase Storage
+      const { data: publicData } = supabase.storage
+        .from("tenant-logos")
+        .getPublicUrl(logoPath);
+
+      if (publicData?.publicUrl) {
+        setLogoUrl(publicData.publicUrl);
+        setDebugInfo(`Subdomain: ${subdomain}\nLogo Path: ${logoPath}\nPublic URL: ${publicData.publicUrl}`);
       } else {
-        console.warn("Public URL could not be resolved.");
+        console.warn("Could not resolve public URL for logo.");
       }
     };
 
@@ -167,11 +169,10 @@ const Login = () => {
         Sign in with Microsoft
       </Button>
 
-      {/* Optional Debug */}
       <Button
-        size="small"
         variant="text"
-        onClick={() => alert(debugInfo || "No info available")}
+        size="small"
+        onClick={() => alert(debugInfo || "No logo info loaded")}
       >
         Show Logo Debug Info
       </Button>
