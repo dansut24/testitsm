@@ -54,23 +54,37 @@ const TenantSetupWizard = () => {
     }
   };
 
-  const verifyOtp = async () => {
-    setStatus(null);
-    const { adminEmail, otp } = formData;
+ const verifyOtp = async () => {
+  setStatus(null);
+  const { adminEmail, otp, adminPassword } = formData;
 
-    const { data, error } = await supabase.auth.verifyOtp({
-      email: adminEmail,
-      token: otp,
-      type: "email",
-    });
+  const { data, error } = await supabase.auth.verifyOtp({
+    email: adminEmail,
+    token: otp,
+    type: "email",
+  });
 
-    if (error) {
-      setStatus({ type: "error", message: error.message });
-    } else {
-      setStatus({ type: "success", message: "Email verified!" });
-      setStep(3);
+  if (error) {
+    setStatus({ type: "error", message: error.message });
+  } else {
+    setStatus({ type: "success", message: "Email verified!" });
+
+    // ✅ Set the password for the now-verified user
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData?.session?.user) {
+      const { error: pwError } = await supabase.auth.updateUser({
+        password: adminPassword,
+      });
+      if (pwError) {
+        console.error("Password update failed:", pwError.message);
+        setStatus({ type: "error", message: "Email verified, but password not set." });
+        return;
+      }
     }
-  };
+
+    setStep(3);
+  }
+};
 
   const handleSubmit = async () => {
     const { companyName, subdomain, logoFile } = formData;
