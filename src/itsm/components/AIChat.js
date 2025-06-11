@@ -14,7 +14,7 @@ import {
 import ChatIcon from "@mui/icons-material/Chat";
 import SendIcon from "@mui/icons-material/Send";
 import CloseIcon from "@mui/icons-material/Close";
-import askOpenAI from "../utils/openai";
+import askOpenAI from "../../common/utils/openai";
 
 const AiChat = () => {
   const [open, setOpen] = useState(false);
