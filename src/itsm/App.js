@@ -6,7 +6,6 @@ import { useAuth } from "../common/context/AuthContext";
 // Layout & Auth
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
-import Signup from "./pages/Signup";
 import Loading from "./pages/Loading";
 import NotAuthorised from "./pages/NotAuthorised";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -54,7 +53,6 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
       <Route path="/loading" element={<Loading />} />
       <Route path="/not-authorised" element={<NotAuthorised />} />
 
