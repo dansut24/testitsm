@@ -1,12 +1,11 @@
-// src/components/Navbar.js — updated with full logout
-
 import React, { useState } from "react";
 import {
   AppBar, Toolbar, Typography, IconButton, InputBase, useMediaQuery,
   useTheme, Box, Tooltip, Select, MenuItem, Avatar, SwipeableDrawer
 } from "@mui/material";
-import { useThemeMode } from "../context/ThemeContext";
+import { useThemeMode } from "../../common/context/ThemeContext"; // ✅ fixed
 import { useNavigate } from "react-router-dom";
+
 import MenuIcon from "@mui/icons-material/Menu";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import SearchIcon from "@mui/icons-material/Search";
@@ -15,10 +14,10 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import SettingsIcon from "@mui/icons-material/Settings";
 import HistoryIcon from "@mui/icons-material/History";
 import CloseIcon from "@mui/icons-material/Close";
-import NotificationDrawer from "./NotificationDrawer";
-import UserActivityLogDrawer from "../components/UserActivityLogDrawer";
-import ProfileDrawer from "./ProfileDrawer";
 
+import NotificationDrawer from "./NotificationDrawer"; // ✅ assumes same dir
+import UserActivityLogDrawer from "./UserActivityLogDrawer"; // ✅ assumes same dir
+import ProfileDrawer from "./ProfileDrawer"; // ✅ assumes same dir
 const Navbar = ({
   sidebarWidth,
   collapsedWidth,
