@@ -1,6 +1,6 @@
 // AuthContext.js
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "supabaseClient";
+import { supabase } from "../../supabaseClient";
 import { useNavigate } from "react-router-dom";
 
 const AuthContext = createContext();
