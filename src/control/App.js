@@ -7,7 +7,6 @@ import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
-
 import Home from "./pages/Home";
 import Devices from "./pages/Devices";
 import Reports from "./pages/Reports";
@@ -24,9 +23,11 @@ function getTenantSlug() {
 
 function App() {
   const tenantSlug = getTenantSlug();
-  const [tenantValid, setTenantValid] = useState(null); // null = loading
+  const [tenantValid, setTenantValid] = useState(null);
   const [loading, setLoading] = useState(true);
+
   const currentPath = window.location.pathname;
+  const isLoginPage = currentPath === "/control-login";
 
   useEffect(() => {
     const validateTenant = async () => {
@@ -44,7 +45,6 @@ function App() {
       setTenantValid(true);
 
       const { data: userData } = await supabase.auth.getUser();
-      const isLoginPage = currentPath === "/control-login";
 
       if (!userData?.user && !isLoginPage) {
         const redirectURL = encodeURIComponent(window.location.href);
@@ -54,8 +54,15 @@ function App() {
       }
     };
 
-    if (tenantSlug) validateTenant();
-    else setTenantValid(false);
+    if (isLoginPage) {
+      // Allow login page to render immediately
+      setTenantValid(true);
+      setLoading(false);
+    } else if (tenantSlug) {
+      validateTenant();
+    } else {
+      setTenantValid(false);
+    }
   }, [tenantSlug, currentPath]);
 
   if (tenantValid === null) return <div>🔄 Checking tenant...</div>;
@@ -64,19 +71,26 @@ function App() {
 
   return (
     <Router>
-      <div style={{ display: "flex" }}>
-        <Sidebar />
-        <main style={{ flex: 1, padding: "1rem" }}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/devices" element={<Devices />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/control-login" element={<ControlLogin />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </main>
-      </div>
+      <Routes>
+        <Route path="/control-login" element={<ControlLogin />} />
+        <Route
+          path="*"
+          element={
+            <div style={{ display: "flex" }}>
+              <Sidebar />
+              <main style={{ flex: 1, padding: "1rem" }}>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/devices" element={<Devices />} />
+                  <Route path="/reports" element={<Reports />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </main>
+            </div>
+          }
+        />
+      </Routes>
     </Router>
   );
 }
