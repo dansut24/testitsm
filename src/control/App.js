@@ -4,9 +4,10 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
+  Navigate,
   useLocation,
-  useNavigate,
 } from "react-router-dom";
+
 import Home from "./pages/Home";
 import Devices from "./pages/Devices";
 import Reports from "./pages/Reports";
@@ -21,16 +22,26 @@ function getTenantSlug() {
   return match ? match[1] : null;
 }
 
+const Layout = ({ children }) => (
+  <div style={{ display: "flex" }}>
+    <Sidebar />
+    <main style={{ flex: 1, padding: "1rem" }}>{children}</main>
+  </div>
+);
+
 function App() {
-  const tenantSlug = getTenantSlug();
   const [tenantValid, setTenantValid] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const currentPath = window.location.pathname;
-  const isLoginPage = currentPath === "/control-login";
+  const location = window.location;
+  const path = location.pathname;
+  const tenantSlug = getTenantSlug();
+  const isLoginRoute = path.startsWith("/control-login");
 
   useEffect(() => {
-    const validateTenant = async () => {
+    const validate = async () => {
+      if (!tenantSlug) return setTenantValid(false);
+
       const { data, error } = await supabase
         .from("tenants")
         .select("id")
@@ -46,24 +57,23 @@ function App() {
 
       const { data: userData } = await supabase.auth.getUser();
 
-      if (!userData?.user && !isLoginPage) {
-        const redirectURL = encodeURIComponent(window.location.href);
+      const isAuthenticated = userData?.user != null;
+
+      if (!isAuthenticated && !isLoginRoute) {
+        const redirectURL = encodeURIComponent(location.href);
         window.location.href = `/control-login?redirect=${redirectURL}`;
       } else {
         setLoading(false);
       }
     };
 
-    if (isLoginPage) {
-      // Allow login page to render immediately
-      setTenantValid(true);
+    if (isLoginRoute) {
+      setTenantValid(true); // allow login route to render
       setLoading(false);
-    } else if (tenantSlug) {
-      validateTenant();
     } else {
-      setTenantValid(false);
+      validate();
     }
-  }, [tenantSlug, currentPath]);
+  }, [tenantSlug, path]);
 
   if (tenantValid === null) return <div>🔄 Checking tenant...</div>;
   if (tenantValid === false) return <div>🚫 Tenant not found for this subdomain.</div>;
@@ -74,20 +84,43 @@ function App() {
       <Routes>
         <Route path="/control-login" element={<ControlLogin />} />
         <Route
+          path="/"
+          element={
+            <Layout>
+              <Home />
+            </Layout>
+          }
+        />
+        <Route
+          path="/devices"
+          element={
+            <Layout>
+              <Devices />
+            </Layout>
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            <Layout>
+              <Reports />
+            </Layout>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <Layout>
+              <Settings />
+            </Layout>
+          }
+        />
+        <Route
           path="*"
           element={
-            <div style={{ display: "flex" }}>
-              <Sidebar />
-              <main style={{ flex: 1, padding: "1rem" }}>
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/devices" element={<Devices />} />
-                  <Route path="/reports" element={<Reports />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </main>
-            </div>
+            <Layout>
+              <NotFound />
+            </Layout>
           }
         />
       </Routes>
