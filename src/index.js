@@ -9,10 +9,11 @@ import "./index.css";
 const root = ReactDOM.createRoot(document.getElementById("root"));
 
 const host = window.location.hostname;
+const isControlPortal = host.includes("-control.");
 
-if (host === "control.hi5tech.co.uk") {
+if (isControlPortal) {
   // Load the Control Portal
-  import("./control/index").then(({ default: ControlApp }) => {
+  import("./control/App").then(({ default: ControlApp }) => {
     root.render(
       <React.StrictMode>
         <ControlApp />
@@ -20,7 +21,7 @@ if (host === "control.hi5tech.co.uk") {
     );
   });
 } else {
-  // Load the Main ITSM App
+  // Load the ITSM App
   import("./App").then(({ default: App }) => {
     root.render(
       <React.StrictMode>
