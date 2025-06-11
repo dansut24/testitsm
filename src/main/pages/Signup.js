@@ -9,7 +9,7 @@ import {
   Stack,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../supabaseClient";
+import { supabase } from "../../common/utils/supabaseClient";
 
 const Signup = () => {
   const [formData, setFormData] = useState({
