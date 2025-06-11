@@ -2,7 +2,7 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
 import NotAuthorised from "../pages/NotAuthorised";
-import { useAuth } from "../context/AuthContext"; // ✅ Import context
+import { useAuth } from "../../common/context/AuthContext"; // ✅ Corrected relative path
 
 const ProtectedRoute = ({ allowedRoles, children }) => {
   const { user, authLoading } = useAuth(); // ✅ Use context
