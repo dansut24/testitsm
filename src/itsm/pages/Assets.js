@@ -17,7 +17,7 @@ import {
   exportToCSV,
   exportToXLSX,
   exportToPDF,
-} from "../utils/exportUtils";
+} from "../../common/utils/exportUtils";
 import ExportPreviewModal from "../components/ExportPreviewModal";
 
 const testAssets = Array.from({ length: 12 }, (_, i) => ({
