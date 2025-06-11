@@ -20,33 +20,37 @@ function App() {
   const [tenantValid, setTenantValid] = useState(null); // null = loading, false = invalid, true = valid
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const validateTenant = async () => {
-      const { data, error } = await supabase
-        .from("tenants")
-        .select("id")
-        .eq("subdomain", tenantSlug)
-        .single();
+useEffect(() => {
+  const validateTenant = async () => {
+    const { data, error } = await supabase
+      .from("tenants")
+      .select("id")
+      .eq("subdomain", tenantSlug)
+      .single();
 
-      if (error || !data) {
-        setTenantValid(false);
-        return;
-      }
+    if (error || !data) {
+      setTenantValid(false);
+      return;
+    }
 
-      setTenantValid(true);
+    setTenantValid(true);
 
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) {
-        const redirectURL = encodeURIComponent(window.location.href);
-        window.location.href = `/control-login?redirect=${redirectURL}`;
-      } else {
-        setLoading(false);
-      }
-    };
+    const { data: userData } = await supabase.auth.getUser();
+    const currentPath = window.location.pathname;
 
-    if (tenantSlug) validateTenant();
-    else setTenantValid(false);
-  }, [tenantSlug]);
+    const isLoginPage = currentPath === "/control-login";
+
+    if (!userData?.user && !isLoginPage) {
+      const redirectURL = encodeURIComponent(window.location.href);
+      window.location.href = `/control-login?redirect=${redirectURL}`;
+    } else {
+      setLoading(false);
+    }
+  };
+
+  if (tenantSlug) validateTenant();
+  else setTenantValid(false);
+}, [tenantSlug]);
 
   if (tenantValid === null) return <div>🔄 Checking tenant...</div>;
   if (tenantValid === false) return <div>🚫 Tenant not found for this subdomain.</div>;
