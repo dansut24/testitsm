@@ -19,16 +19,41 @@ const supabase = createClient("https://YOUR_PROJECT.supabase.co", "YOUR_ANON_KEY
 
 function App() {
   const [tenantSlug] = useState(getTenantSlug());
+  const [validTenant, setValidTenant] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
+    const checkTenant = async () => {
+      if (!tenantSlug) {
+        setError("🚫 Invalid subdomain.");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("tenants")
+        .select("id")
+        .eq("subdomain", tenantSlug)
+        .single();
+
+      if (error || !data) {
+        setError("🚫 Tenant not found for this subdomain.");
+      } else {
+        setValidTenant(true);
+      }
+    };
+
     const checkAuth = async () => {
       const { data, error } = await supabase.auth.getUser();
       if (error || !data?.user) {
         window.location.href = "https://hi5tech.co.uk/login";
       }
     };
-    checkAuth();
-  }, []);
+
+    checkTenant().then(checkAuth);
+  }, [tenantSlug]);
+
+  if (error) return <div style={{ padding: "2rem", fontSize: "1.25rem", color: "red" }}>{error}</div>;
+  if (!validTenant) return <div style={{ padding: "2rem" }}>🔄 Verifying tenant...</div>;
 
   return (
     <Router>
