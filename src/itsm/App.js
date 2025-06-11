@@ -39,7 +39,6 @@ import AssetDetail from "./pages/AssetDetail";
 import ArticleDetail from "./pages/ArticleDetail";
 
 // Other ITSM Features
-import Viewer from "./pages/rdp/Viewer";
 import Announcements from "./pages/Announcements";
 import WorkScheduler from "./pages/WorkScheduler";
 import NotFound from "./pages/NotFound";
@@ -69,7 +68,6 @@ function AppRoutes() {
         <Route path="approvals" element={<Approvals />} />
         <Route path="profile" element={<UserProfile />} />
         <Route path="settings" element={<Settings />} />
-        <Route path="rdp-viewer" element={<Viewer />} />
         <Route
           path="admin-settings"
           element={
