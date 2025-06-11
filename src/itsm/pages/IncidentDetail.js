@@ -16,7 +16,7 @@ import {
 import ComputerIcon from "@mui/icons-material/Computer";
 import CommentSection from "../components/CommentSection";
 import { getSlaDueDate, getSlaStatus } from "../utils/slaUtils";
-import { supabase } from '../supabaseClient';
+import { supabase } from "../../common/utils/supabaseClient";
 
 const IncidentDetail = () => {
   const { id } = useParams();
