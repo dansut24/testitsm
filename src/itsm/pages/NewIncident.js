@@ -10,7 +10,7 @@ import {
   MenuItem,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../supabaseClient";
+import { supabase } from "../../common/utils/supabaseClient";
 
 const StepIndicator = ({ step, active }) => (
   <Box
