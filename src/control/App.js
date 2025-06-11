@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
-import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+
 import Home from "./pages/Home";
 import Devices from "./pages/Devices";
 import Reports from "./pages/Reports";
@@ -17,40 +24,39 @@ function getTenantSlug() {
 
 function App() {
   const tenantSlug = getTenantSlug();
-  const [tenantValid, setTenantValid] = useState(null); // null = loading, false = invalid, true = valid
+  const [tenantValid, setTenantValid] = useState(null); // null = loading
   const [loading, setLoading] = useState(true);
+  const currentPath = window.location.pathname;
 
-useEffect(() => {
-  const validateTenant = async () => {
-    const { data, error } = await supabase
-      .from("tenants")
-      .select("id")
-      .eq("subdomain", tenantSlug)
-      .single();
+  useEffect(() => {
+    const validateTenant = async () => {
+      const { data, error } = await supabase
+        .from("tenants")
+        .select("id")
+        .eq("subdomain", tenantSlug)
+        .single();
 
-    if (error || !data) {
-      setTenantValid(false);
-      return;
-    }
+      if (error || !data) {
+        setTenantValid(false);
+        return;
+      }
 
-    setTenantValid(true);
+      setTenantValid(true);
 
-    const { data: userData } = await supabase.auth.getUser();
-    const currentPath = window.location.pathname;
+      const { data: userData } = await supabase.auth.getUser();
+      const isLoginPage = currentPath === "/control-login";
 
-    const isLoginPage = currentPath === "/control-login";
+      if (!userData?.user && !isLoginPage) {
+        const redirectURL = encodeURIComponent(window.location.href);
+        window.location.href = `/control-login?redirect=${redirectURL}`;
+      } else {
+        setLoading(false);
+      }
+    };
 
-    if (!userData?.user && !isLoginPage) {
-      const redirectURL = encodeURIComponent(window.location.href);
-      window.location.href = `/control-login?redirect=${redirectURL}`;
-    } else {
-      setLoading(false);
-    }
-  };
-
-  if (tenantSlug) validateTenant();
-  else setTenantValid(false);
-}, [tenantSlug]);
+    if (tenantSlug) validateTenant();
+    else setTenantValid(false);
+  }, [tenantSlug, currentPath]);
 
   if (tenantValid === null) return <div>🔄 Checking tenant...</div>;
   if (tenantValid === false) return <div>🚫 Tenant not found for this subdomain.</div>;
