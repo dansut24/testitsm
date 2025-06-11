@@ -3,14 +3,15 @@ import { CssBaseline, Box } from "@mui/material";
 import { Routes, Route } from "react-router-dom";
 import SelfServiceLayout from "./layouts/SelfServiceLayout";
 
-import SelfServiceHome from "./pages/Home";
+// Correct imports based on your file names
+import SelfServiceHome from "./pages/SelfServiceHome";
 import RaiseRequest from "./pages/RaiseRequest";
 import RaiseIncident from "./pages/RaiseIncident";
 import ServiceCatalog from "./pages/ServiceCatalog";
 import Checkout from "./pages/Checkout";
-import Confirmation from "./pages/Confirmation";
+import Confirmation from "./pages/CheckoutConfirmation";
 import KnowledgeBase from "./pages/KnowledgeBase";
-import NotFound from "./pages/NotFound";
+import NotFound from "./pages/NotFound"; // Make sure this exists in /pages
 
 function App() {
   return (
