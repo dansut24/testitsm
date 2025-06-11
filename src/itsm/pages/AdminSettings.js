@@ -11,7 +11,7 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
-import { supabase } from "../supabaseClient";
+import { supabase } from "../../common/utils/supabaseClient";
 
 const AdminSettings = () => {
   const [tab, setTab] = useState(0);
