@@ -8,6 +8,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Products from "./pages/Products";
 import Pricing from "./pages/Pricing";
+import NotFound from "./pages/NotFound";
 
 function App() {
   return (
