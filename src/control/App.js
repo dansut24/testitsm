@@ -8,7 +8,7 @@ import Reports from "./pages/Reports";
 import ControlSettings from "./pages/Settings";
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
-import Login from "./pages/Login";
+import Login from "./pages/ControlLogin";
 
 function App() {
   return (
