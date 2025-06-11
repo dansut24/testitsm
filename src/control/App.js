@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Home from "./pages/Home";
@@ -7,9 +7,19 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import { createClient } from "@supabase/supabase-js";
 
+// Parse tenant from subdomain: e.g. test123-control.hi5tech.co.uk => test123
+function getTenantSlug() {
+  const host = window.location.hostname;
+  const parts = host.split("-");
+  if (parts.length >= 2) return parts[0];
+  return null;
+}
+
 const supabase = createClient("https://YOUR_PROJECT.supabase.co", "YOUR_ANON_KEY");
 
 function App() {
+  const [tenantSlug] = useState(getTenantSlug());
+
   useEffect(() => {
     const checkAuth = async () => {
       const { data, error } = await supabase.auth.getUser();
@@ -26,10 +36,10 @@ function App() {
         <Sidebar />
         <div style={{ flex: 1, padding: "2rem" }}>
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/devices" element={<Devices />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/" element={<Home tenantSlug={tenantSlug} />} />
+            <Route path="/devices" element={<Devices tenantSlug={tenantSlug} />} />
+            <Route path="/reports" element={<Reports tenantSlug={tenantSlug} />} />
+            <Route path="/settings" element={<Settings tenantSlug={tenantSlug} />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </div>
