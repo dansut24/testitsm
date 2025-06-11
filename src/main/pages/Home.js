@@ -2,7 +2,7 @@
 import React from "react";
 import { Box, Typography, Button, Grid } from "@mui/material";
 import { Link } from "react-router-dom";
-import MarketingLayout from "../../layouts/MarketingLayout";
+import MarketingLayout from "./layouts/MarketingLayout";
 
 const Home = () => {
   return (
