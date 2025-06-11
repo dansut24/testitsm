@@ -14,8 +14,10 @@ import {
   CircularProgress,
 } from "@mui/material";
 import ComputerIcon from "@mui/icons-material/Computer";
+
+// ✅ Updated paths:
 import CommentSection from "../components/CommentSection";
-import { getSlaDueDate, getSlaStatus } from "../utils/slaUtils";
+import { getSlaDueDate, getSlaStatus } from "../../common/utils/slaUtils";
 import { supabase } from "../../common/utils/supabaseClient";
 
 const IncidentDetail = () => {
