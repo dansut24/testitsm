@@ -1,34 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import Sidebar from "./components/Sidebar";
+import { supabase } from "../utils/supabaseClient";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import Devices from "./pages/Devices";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
-import { createClient } from "@supabase/supabase-js";
+import NotFound from "./pages/NotFound";
+import Sidebar from "./components/Sidebar";
 
-// Parse tenant from subdomain: e.g. test123-control.hi5tech.co.uk => test123
 function getTenantSlug() {
   const host = window.location.hostname;
-  const parts = host.split("-");
-  if (parts.length >= 2) return parts[0];
-  return null;
+  const match = host.match(/^([a-z0-9-]+)-control\./);
+  return match ? match[1] : null;
 }
 
-const supabase = createClient("https://YOUR_PROJECT.supabase.co", "YOUR_ANON_KEY");
-
 function App() {
-  const [tenantSlug] = useState(getTenantSlug());
-  const [validTenant, setValidTenant] = useState(false);
-  const [error, setError] = useState(null);
+  const tenantSlug = getTenantSlug();
+  const [tenantValid, setTenantValid] = useState(null); // null = loading, false = invalid, true = valid
 
   useEffect(() => {
-    const checkTenant = async () => {
-      if (!tenantSlug) {
-        setError("🚫 Invalid subdomain.");
-        return;
-      }
-
+    const validateTenant = async () => {
       const { data, error } = await supabase
         .from("tenants")
         .select("id")
@@ -36,38 +27,39 @@ function App() {
         .single();
 
       if (error || !data) {
-        setError("🚫 Tenant not found for this subdomain.");
-      } else {
-        setValidTenant(true);
+        setTenantValid(false);
+        return;
+      }
+
+      setTenantValid(true);
+
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) {
+        const redirectURL = encodeURIComponent(window.location.href);
+        window.location.href = `https://${tenantSlug}-itsm.hi5tech.co.uk/login?redirect=${redirectURL}`;
       }
     };
 
-    const checkAuth = async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (error || !data?.user) {
-        window.location.href = "https://hi5tech.co.uk/login";
-      }
-    };
-
-    checkTenant().then(checkAuth);
+    if (tenantSlug) validateTenant();
+    else setTenantValid(false);
   }, [tenantSlug]);
 
-  if (error) return <div style={{ padding: "2rem", fontSize: "1.25rem", color: "red" }}>{error}</div>;
-  if (!validTenant) return <div style={{ padding: "2rem" }}>🔄 Verifying tenant...</div>;
+  if (tenantValid === null) return <div>ð Checking tenant...</div>;
+  if (tenantValid === false) return <div>ð« Tenant not found for this subdomain.</div>;
 
   return (
     <Router>
-      <div style={{ display: "flex", minHeight: "100vh" }}>
+      <div style={{ display: "flex" }}>
         <Sidebar />
-        <div style={{ flex: 1, padding: "2rem" }}>
+        <main style={{ flex: 1, padding: "1rem" }}>
           <Routes>
-            <Route path="/" element={<Home tenantSlug={tenantSlug} />} />
-            <Route path="/devices" element={<Devices tenantSlug={tenantSlug} />} />
-            <Route path="/reports" element={<Reports tenantSlug={tenantSlug} />} />
-            <Route path="/settings" element={<Settings tenantSlug={tenantSlug} />} />
-            <Route path="*" element={<Navigate to="/" />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/devices" element={<Devices />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
-        </div>
+        </main>
       </div>
     </Router>
   );
