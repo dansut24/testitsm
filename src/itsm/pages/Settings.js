@@ -16,9 +16,9 @@ import {
   DialogActions,
   Stack,
 } from "@mui/material";
-import { supabase } from "../supabaseClient";
-import { useAuth } from "../context/AuthContext";
-import { widgetRegistry } from "../components/widgetRegistry";
+import { supabase } from "../../common/utils/supabaseClient";
+import { useAuth } from "../../common/context/AuthContext";
+import { widgetRegistry } from "../../itsm/components/widgetRegistry";
 import LinkOffIcon from "@mui/icons-material/LinkOff";
 import GoogleIcon from "@mui/icons-material/Google";
 import GitHubIcon from "@mui/icons-material/GitHub";
