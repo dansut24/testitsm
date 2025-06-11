@@ -9,6 +9,8 @@ import "./index.css";
 const root = ReactDOM.createRoot(document.getElementById("root"));
 const host = window.location.hostname;
 
+console.log("Detected host:", host);
+
 const renderWithProviders = (AppComponent) => {
   root.render(
     <React.StrictMode>
@@ -39,10 +41,6 @@ if (host.includes("-control.")) {
   });
 } else {
   import("./main").then(({ default: MarketingApp }) => {
-    root.render(
-      <React.StrictMode>
-        <MarketingApp />
-      </React.StrictMode>
-    );
+    renderWithProviders(MarketingApp); // now consistent
   });
 }
