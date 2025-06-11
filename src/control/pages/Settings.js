@@ -1,6 +1,6 @@
 import React from "react";
 import { Button, Typography, Box } from "@mui/material";
-import { supabase } from "../../utils/supabaseClient";
+import { supabase } from "../../common/utils/supabaseClient";
 
 const Settings = () => {
   const handleLogout = async () => {
