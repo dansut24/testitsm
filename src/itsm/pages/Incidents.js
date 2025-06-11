@@ -21,7 +21,7 @@ import {
 import ExportPreviewModal from "../components/ExportPreviewModal";
 import { useNavigate } from "react-router-dom";
 import { getSlaDueDate, getSlaStatus } from "../../common/utils/slaUtils"; // ✅ fixed path
-import { supabase } from "../../common/supabaseClient"; // ✅ fixed path
+import { supabase } from "../../common/utils/supabaseClient"; // ✅ fixed path
 
 const Incidents = () => {
   const [anchorEl, setAnchorEl] = useState(null);
