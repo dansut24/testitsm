@@ -5,8 +5,10 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { supabase } from "../supabaseClient";
-import { useAuth } from "../context/AuthContext";
+
+// ✅ Corrected relative imports
+import { supabase } from "../../common/utils/supabaseClient";
+import { useAuth } from "../../common/context/AuthContext";
 import { widgetRegistry } from "./widgetRegistry";
 
 import IncidentWidget from "./IncidentWidget";
