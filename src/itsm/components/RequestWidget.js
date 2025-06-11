@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Typography, List, ListItem, ListItemText, CircularProgress } from "@mui/material";
-import { supabase } from "../supabaseClient";
+import { supabase } from "../../common/utils/supabaseClient";
 
 const RequestWidget = ({ userId }) => {
   const [requests, setRequests] = useState([]);
