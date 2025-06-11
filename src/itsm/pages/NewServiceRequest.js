@@ -14,8 +14,8 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../supabaseClient";
-import { workflowTemplates } from "../data/workflowTemplates";
+import { supabase } from "../../common/utils/supabaseClient";
+import { workflowTemplates } from "../../itsm/data/workflowTemplates";
 
 const categoryOptions = Object.keys(workflowTemplates);
 const priorityOptions = ["Low", "Medium", "High", "Critical"];
