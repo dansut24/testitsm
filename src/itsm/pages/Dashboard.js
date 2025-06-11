@@ -1,12 +1,27 @@
 import React, { useState, useEffect } from "react";
 import {
-  Box, Typography, Paper, IconButton, Stack,
-  Button, Chip, FormControlLabel, Switch
+  Box,
+  Typography,
+  Paper,
+  IconButton,
+  Stack,
+  Button,
+  Chip,
+  FormControlLabel,
+  Switch
 } from "@mui/material";
 import {
-  PieChart, Pie, Cell, Tooltip as RechartTooltip,
-  BarChart, Bar, XAxis, YAxis,
-  LineChart, Line, CartesianGrid,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip as RechartTooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  LineChart,
+  Line,
+  CartesianGrid,
   ResponsiveContainer
 } from "recharts";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
