@@ -12,7 +12,7 @@ import {
   ListItemText,
 } from "@mui/material";
 import LogoutIcon from "@mui/icons-material/Logout";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../common/context/AuthContext";
 
 const ProfileDrawer = ({ onLogout }) => {
   const { user } = useAuth();
