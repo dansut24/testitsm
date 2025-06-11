@@ -14,8 +14,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import GoogleIcon from "@mui/icons-material/Google";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import BusinessIcon from "@mui/icons-material/Business";
-import { useThemeMode } from "../../context/ThemeContext";
-import AuthService from "../../services/AuthService";
+import { useThemeMode } from "../../common/context/ThemeContext";
 import { supabase } from "../../common/utils/supabaseClient";
 import defaultLogo from "../../assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
 
