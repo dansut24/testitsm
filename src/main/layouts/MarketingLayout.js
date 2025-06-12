@@ -1,7 +1,6 @@
-// src/layouts/MarketingLayout.js
 import React from "react";
 import { AppBar, Toolbar, Typography, Box, Button, Container } from "@mui/material";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, Outlet } from "react-router-dom"; // ✅ Add Outlet
 
 const navLinks = [
   { label: "Home", path: "/" },
@@ -10,7 +9,7 @@ const navLinks = [
   { label: "Contact", path: "/contact" },
 ];
 
-const MarketingLayout = ({ children }) => {
+const MarketingLayout = () => {
   const location = useLocation();
 
   return (
@@ -47,7 +46,10 @@ const MarketingLayout = ({ children }) => {
         </Toolbar>
       </AppBar>
 
-      <Container sx={{ mt: 4, mb: 4, flexGrow: 1 }}>{children}</Container>
+      {/* ✅ Use Outlet instead of children */}
+      <Container sx={{ mt: 4, mb: 4, flexGrow: 1 }}>
+        <Outlet />
+      </Container>
 
       <Box
         component="footer"
