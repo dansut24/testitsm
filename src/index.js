@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { ThemeModeProvider } from "./common/context/ThemeContext";
 import { AuthProvider } from "./common/context/AuthContext";
 import { TenantProvider } from "./common/context/TenantContext";
+import { BrowserRouter as Router } from "react-router-dom";
 import "./index.css";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
@@ -13,13 +14,15 @@ console.log("Detected host:", host);
 const renderWithProviders = (AppComponent) => {
   root.render(
     <React.StrictMode>
-      <TenantProvider>
-        <AuthProvider>
-          <ThemeModeProvider>
-            <AppComponent />
-          </ThemeModeProvider>
-        </AuthProvider>
-      </TenantProvider>
+      <Router>
+        <TenantProvider>
+          <AuthProvider>
+            <ThemeModeProvider>
+              <AppComponent />
+            </ThemeModeProvider>
+          </AuthProvider>
+        </TenantProvider>
+      </Router>
     </React.StrictMode>
   );
 };
@@ -38,6 +41,6 @@ if (host.includes("-control.")) {
   });
 } else {
   import("./main").then(({ default: MarketingApp }) => {
-    renderWithProviders(MarketingApp);
+    renderWithProviders(MarketingApp); // ✅ FIXED HERE
   });
 }
