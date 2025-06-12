@@ -12,7 +12,7 @@ import {
   CircularProgress,
   Alert,
 } from "@mui/material";
-import { supabase } from "../../common/supabaseClient";
+import { supabase } from "../../common/utils/supabaseClient";
 import { useNavigate } from "react-router-dom";
 
 const steps = [
