@@ -1,95 +1,141 @@
-// main/pages/TenantSetupWizard.js
+// src/main/pages/TenantSetupWizard.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
   Container,
-  TextField,
-  Typography,
-  Stepper,
   Step,
   StepLabel,
+  Stepper,
+  TextField,
+  Typography,
   CircularProgress,
-  Alert,
 } from "@mui/material";
-import { supabase } from "../../common/utils/supabaseClient";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../../common/utils/supabaseClient";
 
-const steps = ["Company Info", "Admin Account", "Verify Email", "Finish"];
+const steps = ["Company Info", "Admin Setup", "Verification", "Complete"];
 
 const TenantSetupWizard = () => {
+  const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
   const [companyName, setCompanyName] = useState("");
-  const [subdomain, setSubdomain] = useState("");
+  const [domainSlug, setDomainSlug] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-  const [userId, setUserId] = useState(null);
 
-  const navigate = useNavigate();
+  useEffect(() => {
+    const slug = companyName.trim().toLowerCase().replace(/\s+/g, "");
+    setDomainSlug(slug);
+  }, [companyName]);
 
-  const handleNext = async () => {
+  const sendOtp = async () => {
+    setLoading(true);
     setError("");
-    if (activeStep === 1) {
-      // Register with OTP
-      setLoading(true);
-      const { error } = await supabase.auth.signInWithOtp({ email });
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true },
+    });
+
+    setLoading(false);
+    if (error) return setError(error.message);
+
+    setOtpSent(true);
+  };
+
+  const verifyOtpAndRegister = async () => {
+    setLoading(true);
+    setError("");
+
+    const { data, error: verifyError } = await supabase.auth.verifyOtp({
+      email,
+      token: otp,
+      type: "email",
+    });
+
+    if (verifyError) {
       setLoading(false);
-      if (error) return setError(error.message);
-      setOtpSent(true);
+      return setError(verifyError.message);
     }
-    if (activeStep === 2) {
-      setLoading(true);
-      const { data, error } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: "email",
-      });
+
+    const user = data.user;
+    if (!user) {
       setLoading(false);
-      if (error) return setError(error.message);
-      setUserId(data.user.id);
+      return setError("Verification failed.");
     }
+
+    // Set password after verifying
+    const { error: pwError } = await supabase.auth.updateUser({
+      password,
+    });
+
+    if (pwError) {
+      setLoading(false);
+      return setError(pwError.message);
+    }
+
+    const { error: tenantError } = await supabase.from("tenants").insert([
+      {
+        name: companyName,
+        subdomain: domainSlug,
+        domain: `${domainSlug}-itsm.hi5tech.co.uk`,
+        created_by: user.id,
+      },
+    ]);
+
+    if (tenantError) {
+      setLoading(false);
+      return setError(tenantError.message);
+    }
+
+    setLoading(false);
+    setActiveStep((prev) => prev + 1);
+    setTimeout(() => {
+      window.location.href = `https://${domainSlug}-itsm.hi5tech.co.uk`;
+    }, 2000);
+  };
+
+  const handleNext = () => {
+    if (activeStep === 0 && !companyName) {
+      return setError("Please enter your company name.");
+    }
+
+    if (activeStep === 1 && (!email || !password || password !== confirmPassword)) {
+      return setError("Check your email and password fields.");
+    }
+
+    if (activeStep === 2 && otp.length !== 6) {
+      return setError("Enter a 6-digit code.");
+    }
+
+    setError("");
     setActiveStep((prev) => prev + 1);
   };
 
-  const handleFinish = async () => {
-    if (!userId) return setError("User not verified.");
-    const domain = `${subdomain}-itsm.hi5tech.co.uk`;
-    setLoading(true);
-    const { error: insertError } = await supabase.from("tenants").insert([
-      {
-        name: companyName,
-        domain,
-        created_by: userId,
-      },
-    ]);
-    setLoading(false);
-    if (insertError) return setError(insertError.message);
-    navigate(`https://${subdomain}-itsm.hi5tech.co.uk`);
-  };
-
-  const renderStep = () => {
+  const renderStepContent = () => {
     switch (activeStep) {
       case 0:
         return (
           <>
             <TextField
+              fullWidth
               label="Company Name"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              fullWidth
               margin="normal"
             />
             <TextField
-              label="Subdomain"
-              value={subdomain}
-              onChange={(e) => setSubdomain(e.target.value)}
               fullWidth
+              label="Your Subdomain"
+              value={`${domainSlug}-itsm.hi5tech.co.uk`}
+              disabled
               margin="normal"
-              helperText="This will be used for your ITSM URL (e.g. your-subdomain-itsm.hi5tech.co.uk)"
             />
           </>
         );
@@ -97,90 +143,91 @@ const TenantSetupWizard = () => {
         return (
           <>
             <TextField
+              fullWidth
               label="Admin Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              fullWidth
               margin="normal"
-              type="email"
             />
             <TextField
-              label="Set Password"
+              fullWidth
+              type="password"
+              label="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              fullWidth
               margin="normal"
-              type="password"
             />
+            <TextField
+              fullWidth
+              type="password"
+              label="Confirm Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              margin="normal"
+            />
+            <Button
+              onClick={sendOtp}
+              disabled={otpSent || loading}
+              variant="contained"
+              sx={{ mt: 2 }}
+            >
+              {loading ? <CircularProgress size={20} /> : "Send Verification Code"}
+            </Button>
           </>
         );
       case 2:
         return (
           <>
-            <Typography variant="body2" mb={1}>
-              Enter the 6-digit verification code sent to your email.
-            </Typography>
             <TextField
-              label="OTP Code"
+              fullWidth
+              label="Enter Verification Code"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
-              fullWidth
               margin="normal"
-              inputProps={{ maxLength: 6 }}
             />
+            <Button
+              onClick={verifyOtpAndRegister}
+              variant="contained"
+              sx={{ mt: 2 }}
+              disabled={loading}
+            >
+              {loading ? <CircularProgress size={20} /> : "Complete Setup"}
+            </Button>
           </>
         );
       case 3:
-        return (
-          <Typography variant="h6">
-            Setup Complete! Redirecting you to your ITSM portal...
-          </Typography>
-        );
+        return <Typography variant="h6">✅ Setup Complete! Redirecting...</Typography>;
       default:
         return null;
     }
   };
 
   return (
-    <Container maxWidth="sm">
-      <Box sx={{ my: 6 }}>
-        <Typography variant="h4" gutterBottom>
-          Tenant Setup
+    <Container maxWidth="sm" sx={{ mt: 4 }}>
+      <Typography variant="h4" gutterBottom>
+        Tenant Setup Wizard
+      </Typography>
+      <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
+        {steps.map((label) => (
+          <Step key={label}>
+            <StepLabel>{label}</StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+
+      {renderStepContent()}
+
+      {error && (
+        <Typography color="error" sx={{ mt: 2 }}>
+          {error}
         </Typography>
-        <Stepper activeStep={activeStep} alternativeLabel>
-          {steps.map((label) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          ))}
-        </Stepper>
+      )}
 
-        <Box mt={4}>{renderStep()}</Box>
-
-        {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-
-        <Box mt={4} display="flex" justifyContent="flex-end">
-          {activeStep < steps.length - 1 && (
-            <Button
-              variant="contained"
-              onClick={handleNext}
-              disabled={loading}
-            >
-              {loading ? <CircularProgress size={24} /> : "Next"}
-            </Button>
-          )}
-          {activeStep === steps.length - 1 && (
-            <Button
-              variant="contained"
-              color="success"
-              onClick={handleFinish}
-              disabled={loading}
-            >
-              {loading ? <CircularProgress size={24} /> : "Finish"}
-            </Button>
-          )}
-        </Box>
-      </Box>
+      {activeStep < 2 && (
+        <Button onClick={handleNext} sx={{ mt: 3 }}>
+          Next
+        </Button>
+      )}
     </Container>
   );
 };
