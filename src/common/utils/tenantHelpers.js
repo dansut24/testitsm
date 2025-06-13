@@ -1,5 +1,5 @@
 // src/common/utils/tenantHelpers.js
-import { supabase } from "../supabaseClient";
+import { supabase } from "../../common/utils/supabaseClient";
 
 export const checkSubdomainAvailability = async (subdomain) => {
   const { data, error } = await supabase
