@@ -1,239 +1,248 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
+  Container,
   TextField,
   Typography,
-  Stepper,
-  Step,
-  StepLabel,
   CircularProgress,
 } from "@mui/material";
-import { supabase } from "../../common/utils/supabaseClient";
+import { supabase } from "../../common/supabaseClient";
 import { useNavigate } from "react-router-dom";
 
-const steps = ["Company Info", "Admin Setup", "Email Verification", "Logo Upload", "Finish"];
-
-const TenantSetupWizard = () => {
+function TenantSetupWizard() {
   const navigate = useNavigate();
 
-  const [activeStep, setActiveStep] = useState(0);
   const [companyName, setCompanyName] = useState("");
-  const [domain, setDomain] = useState("");
   const [subdomain, setSubdomain] = useState("");
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [password, setPassword] = useState("");
   const [logoFile, setLogoFile] = useState(null);
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [otp, setOtp] = useState("");
-
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [countdown, setCountdown] = useState(0);
+  const [session, setSession] = useState(null);
+  const [user, setUser] = useState(null);
 
-  const handleNext = async () => {
-    setError("");
+  // Generate subdomain slug automatically
+  useEffect(() => {
+    const slug = companyName.toLowerCase().replace(/[^a-z0-9]/g, "");
+    setSubdomain(slug);
+  }, [companyName]);
 
-    if (activeStep === 0) {
-      if (!companyName) return setError("Company name is required.");
-      const generated = companyName.toLowerCase().replace(/[^a-z0-9]/g, "");
-      setDomain(generated);
-      setSubdomain(generated);
-      setActiveStep(1);
+  // Countdown timer
+  useEffect(() => {
+    let timer;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
     }
+    return () => clearTimeout(timer);
+  }, [countdown]);
 
-    else if (activeStep === 1) {
-      if (!email || !password) return setError("Email and password are required.");
-      setLoading(true);
-      const { error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+  // Fetch latest session after OTP verification
+  const refreshSession = async () => {
+    const { data } = await supabase.auth.refreshSession();
+    setSession(data.session);
+    setUser(data.session?.user || null);
+  };
+
+  const handleSendOTP = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    setLoading(false);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    setCountdown(60);
+    setStep(2);
+  };
+
+  const handleVerifyOTP = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: otp,
+      type: "signup",
+    });
+    if (error) {
       setLoading(false);
-      if (signUpError) return setError(signUpError.message);
-      setActiveStep(2);
+      alert(error.message);
+      return;
     }
+    await refreshSession();
+    setStep(3);
+    setLoading(false);
+  };
 
-    else if (activeStep === 2) {
-      if (!otp) return setError("OTP is required.");
-      setLoading(true);
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: "email",
-      });
+  const handleSubmit = async () => {
+    if (!user) return;
+
+    setLoading(true);
+
+    const domain = `${subdomain}-itsm.hi5tech.co.uk`;
+    const tenantInsert = await supabase
+      .from("tenants")
+      .insert({
+        name: companyName,
+        domain,
+        subdomain,
+        created_by: user.id,
+      })
+      .select()
+      .single();
+
+    if (tenantInsert.error) {
       setLoading(false);
-      if (verifyError) return setError(verifyError.message);
-      setActiveStep(3);
+      return alert(tenantInsert.error.message);
     }
 
-    else if (activeStep === 3) {
-      setActiveStep(4);
-    }
+    const tenantId = tenantInsert.data.id;
 
-    else if (activeStep === 4) {
-      setLoading(true);
-      const session = await supabase.auth.getSession();
-      const user = session.data.session?.user;
+    // Insert default team
+    await supabase.from("teams").insert([
+      {
+        name: "Service Desk",
+        tenant_id: tenantId,
+      },
+    ]);
 
-      if (!user) {
-        setLoading(false);
-        return setError("User session not found.");
-      }
-
-      const fullDomain = `${subdomain}-itsm.hi5tech.co.uk`;
-
-      const { data: tenantData, error: tenantError } = await supabase
-        .from("tenants")
-        .insert({
-          name: companyName,
-          domain,
-          subdomain: fullDomain,
-          created_by: user.id,
-        })
-        .select()
-        .single();
-
-      if (tenantError) {
-        setLoading(false);
-        return setError("Error creating tenant: " + tenantError.message);
-      }
-
-      const logoPath = `${subdomain}-itsm/logo.png`;
-
-      if (logoFile) {
-        const { error: uploadError } = await supabase.storage
-          .from("tenant-logos")
-          .upload(logoPath, logoFile, { upsert: true });
-        if (uploadError) {
-          setLoading(false);
-          return setError("Error uploading logo: " + uploadError.message);
-        }
-      }
-
-      const { error: settingsError } = await supabase
-        .from("tenant_settings")
-        .insert({
-          tenant_id: tenantData.id,
-          logo_url: logoFile ? `https://ciilmjntkujdhxtsmsho.supabase.co/storage/v1/object/public/tenant-logos/${logoPath}` : null,
+    // Upload logo if provided
+    if (logoFile) {
+      const path = `${subdomain}-itsm/logo.png`;
+      const { error: uploadError } = await supabase.storage
+        .from("tenant-logos")
+        .upload(path, logoFile, {
+          upsert: true,
+          contentType: logoFile.type,
         });
 
-      if (settingsError) {
-        setLoading(false);
-        return setError("Error saving settings: " + settingsError.message);
+      if (uploadError) {
+        console.error("Logo upload failed:", uploadError.message);
+      } else {
+        const logoUrl = `https://ciilmjntkujdhxtsmsho.supabase.co/storage/v1/object/public/tenant-logos/${path}`;
+        await supabase
+          .from("tenant_settings")
+          .insert({ tenant_id: tenantId, logo_url: logoUrl });
       }
-
-      setLoading(false);
-      navigate(`https://${subdomain}-itsm.hi5tech.co.uk`);
+    } else {
+      await supabase
+        .from("tenant_settings")
+        .insert({ tenant_id: tenantId });
     }
-  };
 
-  const handleLogoChange = (e) => {
-    setLogoFile(e.target.files?.[0] || null);
-  };
-
-  const renderStep = () => {
-    switch (activeStep) {
-      case 0:
-        return (
-          <>
-            <TextField
-              fullWidth
-              label="Company Name"
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              margin="normal"
-            />
-            <TextField
-              fullWidth
-              label="Subdomain"
-              value={`${companyName.toLowerCase().replace(/[^a-z0-9]/g, "")}-itsm.hi5tech.co.uk`}
-              margin="normal"
-              disabled
-            />
-          </>
-        );
-
-      case 1:
-        return (
-          <>
-            <TextField
-              fullWidth
-              label="Admin Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              margin="normal"
-            />
-            <TextField
-              fullWidth
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              margin="normal"
-            />
-          </>
-        );
-
-      case 2:
-        return (
-          <>
-            <Typography>Enter the 6-digit OTP sent to your email.</Typography>
-            <TextField
-              fullWidth
-              label="OTP"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-              margin="normal"
-            />
-          </>
-        );
-
-      case 3:
-        return (
-          <>
-            <Typography>Upload your company logo (optional):</Typography>
-            <input type="file" accept="image/*" onChange={handleLogoChange} />
-          </>
-        );
-
-      case 4:
-        return <Typography>Finalising setup...</Typography>;
-
-      default:
-        return null;
-    }
+    setLoading(false);
+    navigate(`https://${subdomain}-itsm.hi5tech.co.uk/dashboard`);
   };
 
   return (
-    <Box maxWidth={600} mx="auto" mt={4} p={3}>
+    <Container maxWidth="sm" sx={{ mt: 6 }}>
       <Typography variant="h4" gutterBottom>
-        Tenant Setup Wizard
+        Setup Your Hi5Tech ITSM
       </Typography>
 
-      <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
-        {steps.map((label) => (
-          <Step key={label}>
-            <StepLabel>{label}</StepLabel>
-          </Step>
-        ))}
-      </Stepper>
-
-      {renderStep()}
-
-      {error && (
-        <Typography color="error" mt={2}>
-          {error}
-        </Typography>
+      {step === 1 && (
+        <>
+          <TextField
+            label="Company Name"
+            fullWidth
+            margin="normal"
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+          />
+          <TextField
+            label="Admin Email"
+            fullWidth
+            margin="normal"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+          />
+          <TextField
+            label="Password"
+            fullWidth
+            margin="normal"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            type="password"
+          />
+          <Box display="flex" alignItems="center" mt={2}>
+            <TextField
+              label="Subdomain"
+              fullWidth
+              margin="normal"
+              value={subdomain}
+              disabled
+              InputProps={{
+                endAdornment: (
+                  <Typography sx={{ ml: 1, color: "#888" }}>
+                    -itsm.hi5tech.co.uk
+                  </Typography>
+                ),
+              }}
+            />
+          </Box>
+          <Box mt={2}>
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={handleSendOTP}
+              disabled={countdown > 0}
+            >
+              {countdown > 0 ? `Resend Code (${countdown}s)` : "Send Verification Code"}
+            </Button>
+          </Box>
+        </>
       )}
 
-      <Box mt={3}>
-        <Button variant="contained" onClick={handleNext} disabled={loading}>
-          {loading ? <CircularProgress size={24} /> : activeStep === steps.length - 1 ? "Finish" : "Next"}
-        </Button>
-      </Box>
-    </Box>
+      {step === 2 && (
+        <>
+          <TextField
+            label="Enter OTP Code"
+            fullWidth
+            margin="normal"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value)}
+          />
+          <Button variant="contained" fullWidth onClick={handleVerifyOTP} sx={{ mt: 2 }}>
+            Verify OTP
+          </Button>
+        </>
+      )}
+
+      {step === 3 && (
+        <>
+          <Box mt={2}>
+            <Typography variant="subtitle1">Upload Company Logo</Typography>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setLogoFile(e.target.files[0])}
+            />
+          </Box>
+          <Button
+            variant="contained"
+            fullWidth
+            sx={{ mt: 3 }}
+            onClick={handleSubmit}
+          >
+            Finish Setup
+          </Button>
+        </>
+      )}
+
+      {loading && (
+        <Box mt={3} display="flex" justifyContent="center">
+          <CircularProgress />
+        </Box>
+      )}
+    </Container>
   );
-};
+}
 
 export default TenantSetupWizard;
