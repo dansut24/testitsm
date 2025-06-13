@@ -3,7 +3,7 @@ import {
   Box, Button, TextField, Typography, Stepper, Step, StepLabel,
   CircularProgress, Alert
 } from "@mui/material";
-import supabase from "../../common/utils/supabaseClient";
+import { supabase } from "../../common/utils/supabaseClient";
 import { uploadTenantLogo } from "../../common/utils/storageHelpers";
 
 const steps = ["Company Info", "Admin Setup", "Verify OTP", "Logo", "Complete"];
