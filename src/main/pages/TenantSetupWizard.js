@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import {
   Box, Button, TextField, Typography, Stepper, Step, StepLabel, CircularProgress, Alert,
 } from "@mui/material";
-import { supabase } from "../../common/supabaseClient";
+import { supabase } from "../../common/utils/supabaseClient";
 import { uploadTenantLogo, checkSubdomainAvailability, createTenantWithSetup } from "../../common/utils/tenantHelpers";
 
 const steps = ["Company Info", "Admin Info", "Verify Email", "Set Password", "Upload Logo", "Finish"];
