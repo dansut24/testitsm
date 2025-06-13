@@ -4,7 +4,7 @@ import {
   CircularProgress, Alert
 } from "@mui/material";
 import supabase from "../../common/utils/supabaseClient";
-import { uploadTenantLogo } from "../../common/helpers/storageHelpers";
+import { uploadTenantLogo } from "../../common/utils/storageHelpers";
 
 const steps = ["Company Info", "Admin Setup", "Verify OTP", "Logo", "Complete"];
 
