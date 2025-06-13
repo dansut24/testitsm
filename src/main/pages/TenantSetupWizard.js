@@ -1,162 +1,187 @@
-// src/main/pages/TenantSetupWizard.js
-import React, { useState } from "react";
+// main/pages/TenantSetupWizard.js
+import React, { useState, useEffect } from "react";
 import {
-  Box, Button, TextField, Typography, Stepper, Step, StepLabel, CircularProgress, Alert,
+  Box,
+  Button,
+  Container,
+  TextField,
+  Typography,
+  Stepper,
+  Step,
+  StepLabel,
+  CircularProgress,
+  Alert,
 } from "@mui/material";
 import { supabase } from "../../common/utils/supabaseClient";
-import { uploadTenantLogo, checkSubdomainAvailability, createTenantWithSetup } from "../../common/utils/tenantHelpers";
+import { useNavigate } from "react-router-dom";
 
-const steps = ["Company Info", "Admin Info", "Verify Email", "Set Password", "Upload Logo", "Finish"];
+const steps = ["Company Info", "Admin Account", "Verify Email", "Finish"];
 
 const TenantSetupWizard = () => {
-  const [step, setStep] = useState(0);
-  const [formData, setFormData] = useState({
-    companyName: "",
-    subdomain: "",
-    email: "",
-    otp: "",
-    password: "",
-    confirmPassword: "",
-    logoFile: null,
-  });
+  const [activeStep, setActiveStep] = useState(0);
+  const [companyName, setCompanyName] = useState("");
+  const [subdomain, setSubdomain] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState("");
-  const [session, setSession] = useState(null);
+  const [userId, setUserId] = useState(null);
+
+  const navigate = useNavigate();
 
   const handleNext = async () => {
     setError("");
-    setLoading(true);
-
-    try {
-      if (step === 0) {
-        // Check subdomain availability
-        const available = await checkSubdomainAvailability(formData.subdomain);
-        if (!available) throw new Error("Subdomain is already taken.");
-      }
-
-      if (step === 1) {
-        // Send OTP
-        const { error } = await supabase.auth.signInWithOtp({
-          email: formData.email,
-          options: { emailRedirectTo: window.location.href },
-        });
-        if (error) throw error;
-      }
-
-      if (step === 2) {
-        // Verify OTP
-        const { data, error } = await supabase.auth.verifyOtp({
-          email: formData.email,
-          token: formData.otp,
-          type: "email",
-        });
-        if (error) throw error;
-        setSession(data.session);
-      }
-
-      if (step === 3) {
-        // Set password
-        if (formData.password !== formData.confirmPassword)
-          throw new Error("Passwords do not match.");
-        const { error } = await supabase.auth.updateUser(
-          { password: formData.password }
-        );
-        if (error) throw error;
-      }
-
-      if (step === 4) {
-        // Upload logo if present
-        if (formData.logoFile) {
-          await uploadTenantLogo(formData.subdomain, formData.logoFile);
-        }
-      }
-
-      if (step === 5) {
-        // Finalise: create tenant and related entries
-        await createTenantWithSetup({
-          company_name: formData.companyName,
-          subdomain: formData.subdomain,
-          created_by: session.user.id,
-        });
-        window.location.href = `https://${formData.subdomain}-itsm.hi5tech.co.uk/dashboard`;
-        return;
-      }
-
-      setStep((prev) => prev + 1);
-    } catch (err) {
-      setError(err.message || "Something went wrong.");
-    } finally {
+    if (activeStep === 1) {
+      // Register with OTP
+      setLoading(true);
+      const { error } = await supabase.auth.signInWithOtp({ email });
       setLoading(false);
+      if (error) return setError(error.message);
+      setOtpSent(true);
+    }
+    if (activeStep === 2) {
+      setLoading(true);
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: "email",
+      });
+      setLoading(false);
+      if (error) return setError(error.message);
+      setUserId(data.user.id);
+    }
+    setActiveStep((prev) => prev + 1);
+  };
+
+  const handleFinish = async () => {
+    if (!userId) return setError("User not verified.");
+    const domain = `${subdomain}-itsm.hi5tech.co.uk`;
+    setLoading(true);
+    const { error: insertError } = await supabase.from("tenants").insert([
+      {
+        name: companyName,
+        domain,
+        created_by: userId,
+      },
+    ]);
+    setLoading(false);
+    if (insertError) return setError(insertError.message);
+    navigate(`https://${subdomain}-itsm.hi5tech.co.uk`);
+  };
+
+  const renderStep = () => {
+    switch (activeStep) {
+      case 0:
+        return (
+          <>
+            <TextField
+              label="Company Name"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              fullWidth
+              margin="normal"
+            />
+            <TextField
+              label="Subdomain"
+              value={subdomain}
+              onChange={(e) => setSubdomain(e.target.value)}
+              fullWidth
+              margin="normal"
+              helperText="This will be used for your ITSM URL (e.g. your-subdomain-itsm.hi5tech.co.uk)"
+            />
+          </>
+        );
+      case 1:
+        return (
+          <>
+            <TextField
+              label="Admin Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              fullWidth
+              margin="normal"
+              type="email"
+            />
+            <TextField
+              label="Set Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              fullWidth
+              margin="normal"
+              type="password"
+            />
+          </>
+        );
+      case 2:
+        return (
+          <>
+            <Typography variant="body2" mb={1}>
+              Enter the 6-digit verification code sent to your email.
+            </Typography>
+            <TextField
+              label="OTP Code"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              fullWidth
+              margin="normal"
+              inputProps={{ maxLength: 6 }}
+            />
+          </>
+        );
+      case 3:
+        return (
+          <Typography variant="h6">
+            Setup Complete! Redirecting you to your ITSM portal...
+          </Typography>
+        );
+      default:
+        return null;
     }
   };
 
-  const handleChange = (e) => {
-    const { name, value, files } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: files ? files[0] : value,
-    }));
-  };
-
   return (
-    <Box sx={{ maxWidth: 600, mx: "auto", mt: 6 }}>
-      <Typography variant="h4" gutterBottom>
-        Setup Your Hi5Tech Workspace
-      </Typography>
-      <Stepper activeStep={step} sx={{ mb: 3 }}>
-        {steps.map((label) => (
-          <Step key={label}><StepLabel>{label}</StepLabel></Step>
-        ))}
-      </Stepper>
+    <Container maxWidth="sm">
+      <Box sx={{ my: 6 }}>
+        <Typography variant="h4" gutterBottom>
+          Tenant Setup
+        </Typography>
+        <Stepper activeStep={activeStep} alternativeLabel>
+          {steps.map((label) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        <Box mt={4}>{renderStep()}</Box>
 
-      {step === 0 && (
-        <>
-          <TextField label="Company Name" name="companyName" fullWidth margin="normal" value={formData.companyName} onChange={handleChange} />
-          <TextField label="Subdomain (e.g. acme)" name="subdomain" fullWidth margin="normal" value={formData.subdomain} onChange={handleChange} />
-        </>
-      )}
+        {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
 
-      {step === 1 && (
-        <TextField label="Admin Email" name="email" fullWidth margin="normal" value={formData.email} onChange={handleChange} />
-      )}
-
-      {step === 2 && (
-        <TextField label="Enter OTP Code" name="otp" fullWidth margin="normal" value={formData.otp} onChange={handleChange} />
-      )}
-
-      {step === 3 && (
-        <>
-          <TextField label="Password" type="password" name="password" fullWidth margin="normal" value={formData.password} onChange={handleChange} />
-          <TextField label="Confirm Password" type="password" name="confirmPassword" fullWidth margin="normal" value={formData.confirmPassword} onChange={handleChange} />
-        </>
-      )}
-
-      {step === 4 && (
-        <Box>
-          <Button component="label" variant="outlined">
-            Upload Logo
-            <input type="file" accept="image/*" name="logoFile" hidden onChange={handleChange} />
-          </Button>
-          {formData.logoFile && <Typography sx={{ mt: 1 }}>{formData.logoFile.name}</Typography>}
+        <Box mt={4} display="flex" justifyContent="flex-end">
+          {activeStep < steps.length - 1 && (
+            <Button
+              variant="contained"
+              onClick={handleNext}
+              disabled={loading}
+            >
+              {loading ? <CircularProgress size={24} /> : "Next"}
+            </Button>
+          )}
+          {activeStep === steps.length - 1 && (
+            <Button
+              variant="contained"
+              color="success"
+              onClick={handleFinish}
+              disabled={loading}
+            >
+              {loading ? <CircularProgress size={24} /> : "Finish"}
+            </Button>
+          )}
         </Box>
-      )}
-
-      {step === 5 && (
-        <Typography>Finalising setup... Click Finish to launch your portal.</Typography>
-      )}
-
-      <Box sx={{ mt: 4, textAlign: "right" }}>
-        <Button
-          variant="contained"
-          onClick={handleNext}
-          disabled={loading}
-        >
-          {loading ? <CircularProgress size={24} /> : step === steps.length - 1 ? "Finish" : "Next"}
-        </Button>
       </Box>
-    </Box>
+    </Container>
   );
 };
 
