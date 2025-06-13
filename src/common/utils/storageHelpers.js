@@ -1,4 +1,4 @@
-import supabase from "../../common/utils/supabase";
+import supabase from "../../common/utils/supabaseClient";
 
 // Upload tenant logo (e.g., for "acme" -> acme/logo.png)
 export const uploadTenantLogo = async (subdomain, file) => {
