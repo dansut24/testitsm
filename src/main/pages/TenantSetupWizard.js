@@ -1,235 +1,162 @@
 // src/main/pages/TenantSetupWizard.js
 import React, { useState } from "react";
 import {
-  Box,
-  Button,
-  Container,
-  TextField,
-  Typography,
-  Stepper,
-  Step,
-  StepLabel,
-  CircularProgress,
-  Alert,
+  Box, Button, TextField, Typography, Stepper, Step, StepLabel, CircularProgress, Alert,
 } from "@mui/material";
-import { supabase } from "../../common/utils/supabaseClient";
-import { useNavigate } from "react-router-dom";
+import { supabase } from "../../common/supabaseClient";
+import { uploadTenantLogo, checkSubdomainAvailability, createTenantWithSetup } from "../../common/utils/tenantHelpers";
 
-const steps = [
-  "Company Info",
-  "Admin Email Verification",
-  "Create Password",
-  "Domain Setup",
-  "Finish",
-];
+const steps = ["Company Info", "Admin Info", "Verify Email", "Set Password", "Upload Logo", "Finish"];
 
 const TenantSetupWizard = () => {
-  const navigate = useNavigate();
-
-  const [activeStep, setActiveStep] = useState(0);
-  const [companyName, setCompanyName] = useState("");
-  const [adminEmail, setAdminEmail] = useState("");
-  const [otpCode, setOtpCode] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [subdomain, setSubdomain] = useState("");
+  const [step, setStep] = useState(0);
+  const [formData, setFormData] = useState({
+    companyName: "",
+    subdomain: "",
+    email: "",
+    otp: "",
+    password: "",
+    confirmPassword: "",
+    logoFile: null,
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [userId, setUserId] = useState(null);
-  const [otpSent, setOtpSent] = useState(false);
+  const [session, setSession] = useState(null);
 
   const handleNext = async () => {
     setError("");
+    setLoading(true);
 
     try {
-      if (activeStep === 0) {
-        if (!companyName) throw new Error("Company name is required");
-        setActiveStep((prev) => prev + 1);
-      } else if (activeStep === 1) {
-        if (!adminEmail) throw new Error("Email is required");
-        setLoading(true);
+      if (step === 0) {
+        // Check subdomain availability
+        const available = await checkSubdomainAvailability(formData.subdomain);
+        if (!available) throw new Error("Subdomain is already taken.");
+      }
 
-        // Check if user already exists
-        const { data: existingUser, error: userFetchError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("email", adminEmail)
-          .single();
-
-        if (existingUser) {
-          throw new Error("User with this email is already registered.");
-        }
-
-        const { error: otpError } = await supabase.auth.signInWithOtp({
-          email: adminEmail,
+      if (step === 1) {
+        // Send OTP
+        const { error } = await supabase.auth.signInWithOtp({
+          email: formData.email,
+          options: { emailRedirectTo: window.location.href },
         });
+        if (error) throw error;
+      }
 
-        if (otpError) throw otpError;
-        setOtpSent(true);
-        setActiveStep((prev) => prev + 1);
-      } else if (activeStep === 2) {
-        if (password.length < 6) throw new Error("Password too short");
-        if (password !== confirmPassword)
-          throw new Error("Passwords do not match");
-
-        const {
-          data: verifyData,
-          error: verifyError,
-        } = await supabase.auth.verifyOtp({
-          email: adminEmail,
-          token: otpCode,
+      if (step === 2) {
+        // Verify OTP
+        const { data, error } = await supabase.auth.verifyOtp({
+          email: formData.email,
+          token: formData.otp,
           type: "email",
         });
-
-        if (verifyError) throw verifyError;
-
-        // Set password now
-        const { data: pwData, error: pwError } = await supabase.auth.updateUser({
-          password,
-        });
-
-        if (pwError) throw pwError;
-        setUserId(verifyData.user.id);
-        setActiveStep((prev) => prev + 1);
-      } else if (activeStep === 3) {
-        if (!subdomain.match(/^[a-z0-9]+(-[a-z0-9]+)*$/))
-          throw new Error("Invalid subdomain format");
-
-        const { error: tenantError } = await supabase.from("tenants").insert({
-          name: companyName,
-          slug: subdomain,
-          created_by: userId,
-        });
-
-        if (tenantError) throw tenantError;
-
-        const { error: settingsError } = await supabase
-          .from("tenant_settings")
-          .insert({
-            slug: subdomain,
-          });
-
-        if (settingsError) throw settingsError;
-
-        setActiveStep((prev) => prev + 1);
-      } else if (activeStep === 4) {
-        window.location.href = `https://${subdomain}-itsm.hi5tech.co.uk`;
+        if (error) throw error;
+        setSession(data.session);
       }
+
+      if (step === 3) {
+        // Set password
+        if (formData.password !== formData.confirmPassword)
+          throw new Error("Passwords do not match.");
+        const { error } = await supabase.auth.updateUser(
+          { password: formData.password }
+        );
+        if (error) throw error;
+      }
+
+      if (step === 4) {
+        // Upload logo if present
+        if (formData.logoFile) {
+          await uploadTenantLogo(formData.subdomain, formData.logoFile);
+        }
+      }
+
+      if (step === 5) {
+        // Finalise: create tenant and related entries
+        await createTenantWithSetup({
+          company_name: formData.companyName,
+          subdomain: formData.subdomain,
+          created_by: session.user.id,
+        });
+        window.location.href = `https://${formData.subdomain}-itsm.hi5tech.co.uk/dashboard`;
+        return;
+      }
+
+      setStep((prev) => prev + 1);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Something went wrong.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleBack = () => {
-    setError("");
-    setActiveStep((prev) => prev - 1);
+  const handleChange = (e) => {
+    const { name, value, files } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: files ? files[0] : value,
+    }));
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 8 }}>
+    <Box sx={{ maxWidth: 600, mx: "auto", mt: 6 }}>
       <Typography variant="h4" gutterBottom>
-        Tenant Setup Wizard
+        Setup Your Hi5Tech Workspace
       </Typography>
-      <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+      <Stepper activeStep={step} sx={{ mb: 3 }}>
         {steps.map((label) => (
-          <Step key={label}>
-            <StepLabel>{label}</StepLabel>
-          </Step>
+          <Step key={label}><StepLabel>{label}</StepLabel></Step>
         ))}
       </Stepper>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      {activeStep === 0 && (
-        <TextField
-          fullWidth
-          label="Company Name"
-          value={companyName}
-          onChange={(e) => setCompanyName(e.target.value)}
-          sx={{ mb: 2 }}
-        />
-      )}
-
-      {activeStep === 1 && (
-        <TextField
-          fullWidth
-          label="Admin Email"
-          type="email"
-          value={adminEmail}
-          onChange={(e) => setAdminEmail(e.target.value)}
-          sx={{ mb: 2 }}
-        />
-      )}
-
-      {activeStep === 2 && (
+      {step === 0 && (
         <>
-          <TextField
-            fullWidth
-            label="OTP Code"
-            value={otpCode}
-            onChange={(e) => setOtpCode(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Confirm Password"
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            sx={{ mb: 2 }}
-          />
+          <TextField label="Company Name" name="companyName" fullWidth margin="normal" value={formData.companyName} onChange={handleChange} />
+          <TextField label="Subdomain (e.g. acme)" name="subdomain" fullWidth margin="normal" value={formData.subdomain} onChange={handleChange} />
         </>
       )}
 
-      {activeStep === 3 && (
-        <TextField
-          fullWidth
-          label="Subdomain (e.g. mycompany)"
-          value={subdomain}
-          onChange={(e) => setSubdomain(e.target.value.toLowerCase())}
-          sx={{ mb: 2 }}
-        />
+      {step === 1 && (
+        <TextField label="Admin Email" name="email" fullWidth margin="normal" value={formData.email} onChange={handleChange} />
       )}
 
-      {activeStep === 4 && (
-        <Box sx={{ textAlign: "center", my: 4 }}>
-          <Typography variant="h6" gutterBottom>
-            🎉 All done!
-          </Typography>
-          <Typography>
-            Redirecting to{" "}
-            <strong>{subdomain}-itsm.hi5tech.co.uk</strong>...
-          </Typography>
+      {step === 2 && (
+        <TextField label="Enter OTP Code" name="otp" fullWidth margin="normal" value={formData.otp} onChange={handleChange} />
+      )}
+
+      {step === 3 && (
+        <>
+          <TextField label="Password" type="password" name="password" fullWidth margin="normal" value={formData.password} onChange={handleChange} />
+          <TextField label="Confirm Password" type="password" name="confirmPassword" fullWidth margin="normal" value={formData.confirmPassword} onChange={handleChange} />
+        </>
+      )}
+
+      {step === 4 && (
+        <Box>
+          <Button component="label" variant="outlined">
+            Upload Logo
+            <input type="file" accept="image/*" name="logoFile" hidden onChange={handleChange} />
+          </Button>
+          {formData.logoFile && <Typography sx={{ mt: 1 }}>{formData.logoFile.name}</Typography>}
         </Box>
       )}
 
-      <Box sx={{ display: "flex", justifyContent: "space-between", mt: 4 }}>
-        <Button disabled={activeStep === 0 || loading} onClick={handleBack}>
-          Back
-        </Button>
+      {step === 5 && (
+        <Typography>Finalising setup... Click Finish to launch your portal.</Typography>
+      )}
+
+      <Box sx={{ mt: 4, textAlign: "right" }}>
         <Button
           variant="contained"
           onClick={handleNext}
           disabled={loading}
         >
-          {loading ? <CircularProgress size={24} /> : "Next"}
+          {loading ? <CircularProgress size={24} /> : step === steps.length - 1 ? "Finish" : "Next"}
         </Button>
       </Box>
-    </Container>
+    </Box>
   );
 };
 
