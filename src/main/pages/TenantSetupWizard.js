@@ -7,8 +7,8 @@ import {
   CircularProgress,
   Avatar,
 } from "@mui/material";
-import supabase from "../common/utils/supabase";
-import { uploadTenantLogo } from "../common/utils/storageHelpers";
+import supabase from "../../common/utils/supabase";
+import { uploadTenantLogo } from "../../common/utils/storageHelpers";
 
 const DOMAIN_SUFFIX = "-itsm.hi5tech.co.uk";
 
