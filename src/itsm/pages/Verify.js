@@ -1,101 +1,73 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
-  Container,
-  Typography,
-  TextField,
+  Box,
   Button,
+  TextField,
+  Typography,
   CircularProgress,
   Alert,
-  Box,
 } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 
 const Verify = () => {
-  const navigate = useNavigate();
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [settingPassword, setSettingPassword] = useState(false);
+  const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [token, setToken] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tokenHash = params.get("token_hash");
-    const type = params.get("type");
-
-    if (tokenHash && type === "email") {
-      setToken(tokenHash);
-      supabaseClient.auth.exchangeCodeForSession(tokenHash).catch((err) => {
-        console.error(err);
-        setError("Invalid or expired token. Please try again.");
-      });
-    } else {
-      setError("Missing or invalid token.");
-    }
+    const handleSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (!data?.session || error) {
+        setError("Invalid or expired verification link.");
+      }
+      setLoading(false);
+    };
+    handleSession();
   }, []);
 
-  const handleSubmit = async () => {
-    setError("");
-    setSuccess("");
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+  const handleSetPassword = async () => {
+    if (password !== confirm) {
+      setError("Passwords do not match");
       return;
     }
 
-    setSettingPassword(true);
+    setSubmitting(true);
+    setError("");
 
     try {
-      const { data: userSession } = await supabaseClient.auth.getSession();
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
 
-      const user = userSession?.session?.user;
-      if (!user) {
-        setError("No user session found.");
-        setSettingPassword(false);
-        return;
-      }
-
-      const { error: updateError } = await supabaseClient.auth.updateUser({
-        password,
-      });
-
-      if (updateError) {
-        setError(updateError.message);
-        setSettingPassword(false);
-        return;
-      }
-
-      setSuccess("Password set successfully! Redirecting...");
-      setTimeout(() => {
-        const subdomain = window.location.hostname.split("-itsm.")[0];
-        navigate(`https://${subdomain}-itsm.hi5tech.co.uk/dashboard`);
-      }, 2000);
+      // Redirect to ITSM dashboard
+      navigate("/dashboard");
     } catch (err) {
-      console.error(err);
-      setError("Something went wrong.");
+      setError(err.message);
     } finally {
-      setSettingPassword(false);
+      setSubmitting(false);
     }
   };
 
+  if (loading) {
+    return (
+      <Box sx={{ textAlign: "center", mt: 10 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
-    <Container maxWidth="sm" sx={{ mt: 10 }}>
-      <Typography variant="h4" gutterBottom>
+    <Box
+      sx={{ maxWidth: 400, mx: "auto", mt: 8, p: 3, boxShadow: 2, borderRadius: 2 }}
+    >
+      <Typography variant="h5" gutterBottom>
         Set Your Password
       </Typography>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {success}
-        </Alert>
-      )}
+      {error && <Alert severity="error">{error}</Alert>}
 
       <TextField
         fullWidth
@@ -103,28 +75,27 @@ const Verify = () => {
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        sx={{ mb: 2 }}
+        sx={{ mt: 2 }}
       />
       <TextField
         fullWidth
         label="Confirm Password"
         type="password"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        sx={{ mb: 3 }}
+        value={confirm}
+        onChange={(e) => setConfirm(e.target.value)}
+        sx={{ mt: 2 }}
       />
 
-      <Box display="flex" justifyContent="flex-end">
-        <Button
-          variant="contained"
-          color="primary"
-          disabled={settingPassword}
-          onClick={handleSubmit}
-        >
-          {settingPassword ? <CircularProgress size={24} /> : "Set Password"}
-        </Button>
-      </Box>
-    </Container>
+      <Button
+        fullWidth
+        variant="contained"
+        onClick={handleSetPassword}
+        disabled={submitting}
+        sx={{ mt: 3 }}
+      >
+        {submitting ? <CircularProgress size={22} /> : "Confirm & Continue"}
+      </Button>
+    </Box>
   );
 };
 
