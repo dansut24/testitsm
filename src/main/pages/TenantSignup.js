@@ -39,18 +39,22 @@ function TenantSignup() {
     const fullDomain = `${form.subdomain}-itsm.hi5tech.co.uk`;
 
     try {
-      const { data: signUpData, error: signUpError } =
-        await supabase.auth.signUp({
-          email: form.email,
-          password: "Temp123!SetLater", // Temporary placeholder to satisfy API
-          options: {
-            emailRedirectTo: `https://${form.subdomain}-itsm.hi5tech.co.uk/verify`,
-            data: { name: form.name },
+      // 1. Create user with redirect to /verify on their subdomain
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: form.email,
+        password: "TEMPORARY-PLACEHOLDER", // Will be overridden on confirmation
+        options: {
+          emailRedirectTo: `https://${form.subdomain}-itsm.hi5tech.co.uk/verify`,
+          data: {
+            name: form.name,
+            company: form.company,
           },
-        });
+        },
+      });
 
       if (signUpError) throw signUpError;
 
+      // 2. Insert tenant row
       const { error: tenantError } = await supabase.from("tenants").insert({
         name: form.company,
         domain: fullDomain,
@@ -59,7 +63,7 @@ function TenantSignup() {
 
       if (tenantError) throw tenantError;
 
-      setMessage("✅ Tenant created! Check your inbox to verify your email.");
+      setMessage("✅ Tenant created! Check your email to verify your account.");
     } catch (error) {
       setMessage(`❌ ${error.message}`);
     } finally {
@@ -68,7 +72,16 @@ function TenantSignup() {
   };
 
   return (
-    <Box sx={{ maxWidth: 500, mx: "auto", mt: 8, p: 3, boxShadow: 2, borderRadius: 2 }}>
+    <Box
+      sx={{
+        maxWidth: 500,
+        mx: "auto",
+        mt: 8,
+        p: 3,
+        boxShadow: 2,
+        borderRadius: 2,
+      }}
+    >
       <Typography variant="h5" gutterBottom>
         Create Your Tenant
       </Typography>
@@ -111,11 +124,16 @@ function TenantSignup() {
           sx={{ mb: 1 }}
           required
         />
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Your portal will be: <strong>{form.subdomain || "yourcompany"}-itsm.hi5tech.co.uk</strong>
+        <Typography variant="body2" sx={{ mb: 2 }} color="text.secondary">
+          Your ITSM will be available at:{" "}
+          <strong>{form.subdomain || "yourcompany"}-itsm.hi5tech.co.uk</strong>
         </Typography>
 
-        {message && <Alert severity={message.startsWith("✅") ? "success" : "error"}>{message}</Alert>}
+        {message && (
+          <Alert severity={message.startsWith("✅") ? "success" : "error"}>
+            {message}
+          </Alert>
+        )}
 
         <Button fullWidth type="submit" variant="contained" disabled={loading}>
           {loading ? <CircularProgress size={22} /> : "Create Tenant"}
