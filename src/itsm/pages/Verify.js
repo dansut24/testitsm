@@ -9,7 +9,7 @@ import {
   Alert,
   Box,
 } from "@mui/material";
-import { supabaseClient } from "../../common/utils/supabaseClient";
+import { supabase } from "../../common/utils/supabaseClient";
 
 const Verify = () => {
   const navigate = useNavigate();
