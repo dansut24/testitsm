@@ -39,22 +39,18 @@ function TenantSignup() {
     const fullDomain = `${form.subdomain}-itsm.hi5tech.co.uk`;
 
     try {
-      // 1. Create user with redirect to /verify on their subdomain
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      // 1. Sign up the user with Supabase Auth
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: form.email,
-        password: "TEMPORARY-PLACEHOLDER", // Will be overridden on confirmation
         options: {
           emailRedirectTo: `https://${form.subdomain}-itsm.hi5tech.co.uk/verify`,
-          data: {
-            name: form.name,
-            company: form.company,
-          },
+          data: { name: form.name },
         },
       });
 
       if (signUpError) throw signUpError;
 
-      // 2. Insert tenant row
+      // 2. Create the tenant record
       const { error: tenantError } = await supabase.from("tenants").insert({
         name: form.company,
         domain: fullDomain,
@@ -63,7 +59,7 @@ function TenantSignup() {
 
       if (tenantError) throw tenantError;
 
-      setMessage("✅ Tenant created! Check your email to verify your account.");
+      setMessage("✅ Tenant created! Check your inbox for a verification email.");
     } catch (error) {
       setMessage(`❌ ${error.message}`);
     } finally {
@@ -73,14 +69,7 @@ function TenantSignup() {
 
   return (
     <Box
-      sx={{
-        maxWidth: 500,
-        mx: "auto",
-        mt: 8,
-        p: 3,
-        boxShadow: 2,
-        borderRadius: 2,
-      }}
+      sx={{ maxWidth: 500, mx: "auto", mt: 8, p: 3, boxShadow: 2, borderRadius: 2 }}
     >
       <Typography variant="h5" gutterBottom>
         Create Your Tenant
@@ -124,8 +113,8 @@ function TenantSignup() {
           sx={{ mb: 1 }}
           required
         />
-        <Typography variant="body2" sx={{ mb: 2 }} color="text.secondary">
-          Your ITSM will be available at:{" "}
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Your portal will be accessible at:{" "}
           <strong>{form.subdomain || "yourcompany"}-itsm.hi5tech.co.uk</strong>
         </Typography>
 
