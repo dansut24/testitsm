@@ -43,6 +43,9 @@ import Announcements from "./pages/Announcements";
 import WorkScheduler from "./pages/WorkScheduler";
 import NotFound from "./pages/NotFound";
 
+// Magic link verification & password setup
+import Verify from "./pages/Verify"; // ✅ Add this line
+
 function AppRoutes() {
   const { user, authLoading } = useAuth();
   if (authLoading) return <div>Loading...</div>;
@@ -54,6 +57,7 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/loading" element={<Loading />} />
       <Route path="/not-authorised" element={<NotAuthorised />} />
+      <Route path="/verify" element={<Verify />} /> {/* ✅ Add this line */}
 
       {/* Protected Routes */}
       <Route path="/" element={isLoggedIn ? <Layout /> : <Login />}>
