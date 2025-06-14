@@ -9,7 +9,7 @@ import {
   Alert,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../../common/utils/supabase";
+import { supabase } from "../../common/utils/supabaseClient";
 
 const Verify = () => {
   const [password, setPassword] = useState("");
