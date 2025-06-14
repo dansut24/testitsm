@@ -1,93 +1,80 @@
-import React, { useState, useEffect } from "react";
+// itsm/pages/Verify.js
+import React, { useEffect, useState } from "react";
 import {
   Box,
-  Button,
   TextField,
+  Button,
   Typography,
   Alert,
   CircularProgress,
 } from "@mui/material";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 
 function Verify() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [msg, setMsg] = useState("");
-  const [loading, setLoading] = useState(true); // start loading while we exchange token
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState(null);
 
   useEffect(() => {
-    const handleSessionExchange = async () => {
-      try {
-        // Required for Supabase to complete magic link login
-        const { error } = await supabase.auth.exchangeCodeForSession();
-        if (error) throw error;
+    const url = new URL(window.location.href);
+    const type = url.searchParams.get("type");
+    const code = url.searchParams.get("code");
 
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!user || !user.email) throw new Error("User session not found.");
-        setEmail(user.email);
-      } catch (err) {
-        setMsg(`❌ ${err.message}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    handleSessionExchange();
+    if (type === "email" && code) {
+      supabase.auth
+        .exchangeCodeForSession(code)
+        .then(({ data, error }) => {
+          if (error) {
+            setMessage(`❌ ${error.message}`);
+            setLoading(false);
+          } else {
+            setSession(data.session);
+            setEmail(data.user?.email ?? ""); // shows email for debug
+            setLoading(false);
+          }
+        });
+    } else {
+      setMessage("❌ Invalid verification link");
+      setLoading(false);
+    }
   }, []);
 
-  const handleSetPassword = async () => {
-    setLoading(true);
-    setMsg("");
+  const handleSubmit = async () => {
+    if (!session) return;
 
-    try {
-      if (!password || password.length < 6) {
-        throw new Error("Password must be at least 6 characters.");
-      }
+    const { error } = await supabase.auth.updateUser({
+      password,
+    });
 
-      const { error: updateError } = await supabase.auth.updateUser({
-        password,
-      });
-      if (updateError) throw updateError;
-
-      // Optional: try sign-in again to ensure token works
-      const { error: loginError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (loginError) throw loginError;
-
-      navigate("/dashboard");
-    } catch (err) {
-      setMsg(`❌ ${err.message}`);
-    } finally {
-      setLoading(false);
+    if (error) {
+      setMessage(`❌ ${error.message}`);
+    } else {
+      setMessage("✅ Password updated. Redirecting...");
+      setTimeout(() => {
+        navigate("/dashboard"); // or whatever your default route is
+      }, 2000);
     }
   };
 
-  if (loading) {
-    return (
-      <Box sx={{ mt: 8, textAlign: "center" }}>
-        <CircularProgress />
-        <Typography mt={2}>Setting up your session...</Typography>
-      </Box>
-    );
-  }
+  if (loading) return <CircularProgress sx={{ mt: 10, mx: "auto", display: "block" }} />;
 
   return (
-    <Box sx={{ maxWidth: 400, mx: "auto", mt: 8, p: 3, boxShadow: 2, borderRadius: 2 }}>
+    <Box maxWidth={400} mx="auto" mt={10} p={3} boxShadow={2} borderRadius={2}>
       <Typography variant="h5" gutterBottom>
         Set Your Password
       </Typography>
 
-      <Typography variant="body2" sx={{ mb: 2 }}>
-        Email: <strong>{email || "Not available"}</strong>
-      </Typography>
+      {email && (
+        <Typography variant="body2" sx={{ mb: 2 }}>
+          Email: <strong>{email}</strong>
+        </Typography>
+      )}
+
+      {message && <Alert severity={message.startsWith("✅") ? "success" : "error"}>{message}</Alert>}
 
       <TextField
         fullWidth
@@ -95,20 +82,10 @@ function Verify() {
         label="New Password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        sx={{ mb: 2 }}
+        sx={{ mt: 2, mb: 2 }}
       />
-
-      {msg && (
-        <Alert severity={msg.startsWith("❌") ? "error" : "success"}>{msg}</Alert>
-      )}
-
-      <Button
-        variant="contained"
-        fullWidth
-        onClick={handleSetPassword}
-        disabled={loading}
-      >
-        Save Password and Continue
+      <Button variant="contained" fullWidth onClick={handleSubmit}>
+        Set Password & Sign In
       </Button>
     </Box>
   );
