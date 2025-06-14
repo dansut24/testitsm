@@ -8,7 +8,7 @@ import {
   Alert,
   CircularProgress,
 } from "@mui/material";
-import { supabaseClient } from "../../common/utils/supabaseClient";
+import { supabase } from "../../common/utils/supabaseClient";
 
 const TenantSignup = () => {
   const [name, setName] = useState("");
