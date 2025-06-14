@@ -27,7 +27,6 @@ function TenantSignup() {
       [name]: value,
     };
 
-    // Auto-fill subdomain based on company name
     if (name === "company") {
       updatedForm.subdomain = value.replace(/\s+/g, "").toLowerCase();
     }
@@ -40,40 +39,30 @@ function TenantSignup() {
     setLoading(true);
     setMessage("");
 
-    // Validate subdomain
-    const subdomain = form.subdomain?.replace(/[^a-z0-9]/gi, "").toLowerCase();
-    if (!subdomain || subdomain.length < 3) {
-      setMessage("❌ Please provide a valid subdomain.");
-      setLoading(false);
-      return;
-    }
-
-    const fullDomain = `${subdomain}-itsm.hi5tech.co.uk`;
-    const redirectToUrl = `https://${subdomain}-itsm.hi5tech.co.uk/verify`;
+    const fullDomain = `${form.subdomain}-itsm.hi5tech.co.uk`;
 
     try {
-      // Insert tenant record
+      // 1. Create tenant
       const { error: tenantError } = await supabase.from("tenants").insert({
         name: form.company,
         domain: fullDomain,
-        subdomain: subdomain,
+        subdomain: form.subdomain,
       });
 
       if (tenantError) throw tenantError;
 
-      // Send OTP email with redirect
+      // 2. Send email OTP magic link
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email: form.email,
         options: {
-          emailRedirectTo: redirectToUrl,
-          data: { name: form.name },
+          emailRedirectTo: `https://${form.subdomain}-itsm.hi5tech.co.uk/verify`,
         },
       });
 
       if (otpError) throw otpError;
 
       setMessage(
-        "✅ Tenant created! Check your email to verify and set your password."
+        "✅ Tenant created! Check your inbox for a verification email."
       );
     } catch (error) {
       setMessage(`❌ ${error.message}`);
@@ -129,10 +118,8 @@ function TenantSignup() {
           required
         />
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Your portal will be accessible at:{" "}
-          <strong>
-            {form.subdomain ? form.subdomain : "yourcompany"}-itsm.hi5tech.co.uk
-          </strong>
+          Your portal will be accessible at:
+          <strong> {form.subdomain || "yourcompany"}-itsm.hi5tech.co.uk</strong>
         </Typography>
 
         {message && (
@@ -146,7 +133,6 @@ function TenantSignup() {
           type="submit"
           variant="contained"
           disabled={loading}
-          sx={{ mt: 2 }}
         >
           {loading ? <CircularProgress size={22} /> : "Create Tenant"}
         </Button>
