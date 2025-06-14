@@ -1,35 +1,40 @@
-import React, { useState } from 'react';
-import {
-  Container, Typography, TextField, Button, Box, Alert,
-} from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../common/utils/supabaseClient';
+import React, { useState } from "react";
+import { Box, Button, Container, TextField, Typography, CircularProgress } from "@mui/material";
+import { supabase } from "../../common/utils/supabaseClient";
 
-export default function TenantSignup() {
-  const [email, setEmail] = useState('');
-  const [companyName, setCompanyName] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+const TenantSignup = () => {
+  const [email, setEmail] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [subdomain, setSubdomain] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
 
-  const navigate = useNavigate();
+  const handleCompanyChange = (e) => {
+    const name = e.target.value;
+    setCompanyName(name);
+    setSubdomain(name.toLowerCase().replace(/\s+/g, ""));
+  };
 
-  const handleSignup = async () => {
+  const handleSignup = async (e) => {
+    e.preventDefault();
     setLoading(true);
-    setError('');
-    setSuccess('');
+    setError("");
 
-    const { error: signUpError } = await supabase.auth.signInWithOtp({
+    const redirectUrl = `https://${subdomain}-itsm.hi5tech.co.uk/setup`;
+
+    const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/verify`,
+        shouldCreateUser: true,
+        emailRedirectTo: redirectUrl,
       },
     });
 
-    if (signUpError) {
-      setError(signUpError.message);
+    if (error) {
+      setError(error.message);
     } else {
-      setSuccess('Check your inbox for a verification link.');
+      setSent(true);
     }
 
     setLoading(false);
@@ -38,38 +43,58 @@ export default function TenantSignup() {
   return (
     <Container maxWidth="sm" sx={{ mt: 8 }}>
       <Typography variant="h4" gutterBottom>
-        Start Your Free Trial
-      </Typography>
-      <Typography variant="body1" gutterBottom>
-        Enter your company name and email to begin.
+        Get Started with Hi5Tech
       </Typography>
 
-      <Box sx={{ mt: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <TextField
-          label="Company Name"
-          value={companyName}
-          onChange={(e) => setCompanyName(e.target.value)}
-          fullWidth
-        />
-        <TextField
-          label="Work Email Address"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          fullWidth
-        />
-
-        {error && <Alert severity="error">{error}</Alert>}
-        {success && <Alert severity="success">{success}</Alert>}
-
-        <Button
-          variant="contained"
-          onClick={handleSignup}
-          disabled={!email || !companyName || loading}
-        >
-          {loading ? 'Sending...' : 'Send Verification Link'}
-        </Button>
-      </Box>
+      {sent ? (
+        <Typography>
+          ✅ Check your email for a verification link. It will redirect you to complete setup at{" "}
+          <strong>{subdomain}-itsm.hi5tech.co.uk</strong>.
+        </Typography>
+      ) : (
+        <form onSubmit={handleSignup}>
+          <TextField
+            fullWidth
+            label="Company Name"
+            margin="normal"
+            value={companyName}
+            onChange={handleCompanyChange}
+            required
+          />
+          <TextField
+            fullWidth
+            label="Email"
+            type="email"
+            margin="normal"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <TextField
+            fullWidth
+            label="Subdomain"
+            value={`${subdomain}-itsm.hi5tech.co.uk`}
+            margin="normal"
+            disabled
+          />
+          {error && (
+            <Typography color="error" sx={{ mt: 1 }}>
+              {error}
+            </Typography>
+          )}
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
+            sx={{ mt: 3 }}
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} /> : "Send Verification Link"}
+          </Button>
+        </form>
+      )}
     </Container>
   );
-}
+};
+
+export default TenantSignup;
