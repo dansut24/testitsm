@@ -2,136 +2,144 @@ import React, { useState } from "react";
 import {
   Box,
   Button,
-  Container,
   TextField,
   Typography,
   Alert,
   CircularProgress,
 } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 
-const TenantSignup = () => {
-  const [name, setName] = useState("");
-  const [company, setCompany] = useState("");
-  const [email, setEmail] = useState("");
-  const [subdomain, setSubdomain] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+function TenantSignup() {
+  const navigate = useNavigate();
+  const [form, setForm] = useState({
+    name: "",
+    company: "",
+    email: "",
+    subdomain: "",
+  });
 
-  const handleCompanyChange = (value) => {
-    setCompany(value);
-    const cleaned = value
-      .toLowerCase()
-      .replace(/\s+/g, "")
-      .replace(/[^a-z0-9]/g, "");
-    setSubdomain(cleaned);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    const updatedForm = {
+      ...form,
+      [name]: value,
+    };
+
+    // Auto-fill subdomain based on company name
+    if (name === "company") {
+      updatedForm.subdomain = value.replace(/\s+/g, "").toLowerCase();
+    }
+
+    setForm(updatedForm);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
-    setSuccess(false);
+    setMessage("");
 
-    const domain = `${subdomain}-itsm.hi5tech.co.uk`;
+    const fullDomain = `${form.subdomain}-itsm.hi5tech.co.uk`;
 
-    const { data, error: signupError } = await supabaseClient.auth.signUp({
-      email,
-      options: {
-        emailRedirectTo: `https://${domain}/verify`,
-      },
-    });
+    try {
+      // Create the user with redirect to verify page
+      const { data: signUpData, error: signUpError } =
+        await supabase.auth.signUp({
+          email: form.email,
+          options: {
+            emailRedirectTo: `https://${form.subdomain}-itsm.hi5tech.co.uk/verify`,
+            data: { name: form.name },
+          },
+        });
 
-    if (signupError) {
-      setError(signupError.message);
+      if (signUpError) throw signUpError;
+
+      // Create tenant record
+      const { error: tenantError } = await supabase.from("tenants").insert({
+        name: form.company,
+        domain: fullDomain,
+        subdomain: form.subdomain,
+      });
+
+      if (tenantError) throw tenantError;
+
+      setMessage(
+        "✅ Tenant created! Check your inbox for a verification email."
+      );
+    } catch (error) {
+      setMessage(`❌ ${error.message}`);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const { error: insertError } = await supabaseClient.from("tenants").insert({
-      name,
-      company_name: company,
-      domain,
-      subdomain,
-      email,
-    });
-
-    if (insertError) {
-      setError("Tenant created but domain setup failed: " + insertError.message);
-      setLoading(false);
-      return;
-    }
-
-    setSuccess(true);
-    setLoading(false);
   };
 
   return (
-    <Container maxWidth="sm" sx={{ py: 6 }}>
-      <Typography variant="h4" gutterBottom>
-        Get Started with Hi5Tech
-      </Typography>
-      <Typography variant="subtitle1" sx={{ mb: 4 }}>
-        Set up your company portal in under a minute.
+    <Box
+      sx={{ maxWidth: 500, mx: "auto", mt: 8, p: 3, boxShadow: 2, borderRadius: 2 }}
+    >
+      <Typography variant="h5" gutterBottom>
+        Create Your Tenant
       </Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          Tenant created! Please check your email to verify your account.
-        </Alert>
-      )}
-
-      <Box component="form" onSubmit={handleSubmit} noValidate>
+      <form onSubmit={handleSubmit}>
         <TextField
           fullWidth
           label="Your Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          name="name"
+          value={form.name}
+          onChange={handleChange}
+          sx={{ mb: 2 }}
           required
-          margin="normal"
         />
         <TextField
           fullWidth
           label="Company Name"
-          value={company}
-          onChange={(e) => handleCompanyChange(e.target.value)}
+          name="company"
+          value={form.company}
+          onChange={handleChange}
+          sx={{ mb: 2 }}
           required
-          margin="normal"
         />
         <TextField
           fullWidth
           label="Email Address"
+          name="email"
           type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          value={form.email}
+          onChange={handleChange}
+          sx={{ mb: 2 }}
           required
-          margin="normal"
         />
-        <Box sx={{ display: "flex", alignItems: "center", mt: 2 }}>
-          <TextField
-            label="Subdomain"
-            value={subdomain}
-            disabled
-            sx={{ flex: 1 }}
-          />
-          <Typography sx={{ ml: 2 }}>-itsm.hi5tech.co.uk</Typography>
-        </Box>
+        <TextField
+          fullWidth
+          label="Subdomain"
+          name="subdomain"
+          value={form.subdomain}
+          onChange={handleChange}
+          sx={{ mb: 1 }}
+          required
+        />
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Your portal will be accessible at:
+          <strong> {form.subdomain || "yourcompany"}-itsm.hi5tech.co.uk</strong>
+        </Typography>
+
+        {message && <Alert severity={message.startsWith("✅") ? "success" : "error"}>{message}</Alert>}
 
         <Button
+          fullWidth
           type="submit"
           variant="contained"
-          color="primary"
-          fullWidth
-          sx={{ mt: 4 }}
           disabled={loading}
         >
-          {loading ? <CircularProgress size={24} /> : "Create Tenant"}
+          {loading ? <CircularProgress size={22} /> : "Create Tenant"}
         </Button>
-      </Box>
-    </Container>
+      </form>
+    </Box>
   );
-};
+}
 
 export default TenantSignup;
