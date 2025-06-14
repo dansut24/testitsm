@@ -1,59 +1,75 @@
-// src/main/pages/TenantSignup.js
-import React, { useState } from "react";
-import { Button, TextField, Typography, Box, Alert } from "@mui/material";
-import supabase from "../../common/utils/supabase";
+import React, { useState } from 'react';
+import {
+  Container, Typography, TextField, Button, Box, Alert,
+} from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../common/utils/supabaseClient';
 
 export default function TenantSignup() {
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState("idle");
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSendMagicLink = async () => {
-    setStatus("sending");
-    const { error } = await supabase.auth.signInWithOtp({
+  const navigate = useNavigate();
+
+  const handleSignup = async () => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    const { error: signUpError } = await supabase.auth.signInWithOtp({
       email,
       options: {
         emailRedirectTo: `${window.location.origin}/verify`,
       },
     });
 
-    if (error) {
-      setError(error.message);
-      setStatus("error");
+    if (signUpError) {
+      setError(signUpError.message);
     } else {
-      setStatus("sent");
+      setSuccess('Check your inbox for a verification link.');
     }
+
+    setLoading(false);
   };
 
   return (
-    <Box maxWidth={400} mx="auto" mt={8}>
-      <Typography variant="h5" gutterBottom>
-        Start Your Tenant Setup
+    <Container maxWidth="sm" sx={{ mt: 8 }}>
+      <Typography variant="h4" gutterBottom>
+        Start Your Free Trial
       </Typography>
-      {status === "sent" ? (
-        <Alert severity="success">
-          A verification link has been sent to your email. Please check your inbox.
-        </Alert>
-      ) : (
-        <>
-          <TextField
-            fullWidth
-            label="Work Email"
-            margin="normal"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <Button
-            fullWidth
-            variant="contained"
-            onClick={handleSendMagicLink}
-            disabled={status === "sending"}
-          >
-            {status === "sending" ? "Sending..." : "Send Magic Link"}
-          </Button>
-          {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-        </>
-      )}
-    </Box>
+      <Typography variant="body1" gutterBottom>
+        Enter your company name and email to begin.
+      </Typography>
+
+      <Box sx={{ mt: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <TextField
+          label="Company Name"
+          value={companyName}
+          onChange={(e) => setCompanyName(e.target.value)}
+          fullWidth
+        />
+        <TextField
+          label="Work Email Address"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          fullWidth
+        />
+
+        {error && <Alert severity="error">{error}</Alert>}
+        {success && <Alert severity="success">{success}</Alert>}
+
+        <Button
+          variant="contained"
+          onClick={handleSignup}
+          disabled={!email || !companyName || loading}
+        >
+          {loading ? 'Sending...' : 'Send Verification Link'}
+        </Button>
+      </Box>
+    </Container>
   );
 }
