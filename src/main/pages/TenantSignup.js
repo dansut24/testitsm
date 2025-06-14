@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import {
-  Box, Button, TextField, Typography, Alert, CircularProgress,
+  Box, Button, TextField, Typography, Alert, CircularProgress
 } from "@mui/material";
 import { supabase } from "../../common/utils/supabaseClient";
 
@@ -11,19 +11,18 @@ function TenantSignup() {
     email: "",
     subdomain: "",
   });
-  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const updatedForm = {
-      ...form,
-      [name]: value,
-    };
+    const updated = { ...form, [name]: value };
+
     if (name === "company") {
-      updatedForm.subdomain = value.replace(/\s+/g, "").toLowerCase();
+      updated.subdomain = value.toLowerCase().replace(/\s+/g, "");
     }
-    setForm(updatedForm);
+
+    setForm(updated);
   };
 
   const handleSubmit = async (e) => {
@@ -31,50 +30,95 @@ function TenantSignup() {
     setLoading(true);
     setMessage("");
 
-    try {
-      const fullDomain = `${form.subdomain}-itsm.hi5tech.co.uk`;
+    const domain = `${form.subdomain}-itsm.hi5tech.co.uk`;
 
-      // Create tenant
+    try {
+      // 1. Insert tenant
       const { error: tenantError } = await supabase.from("tenants").insert({
         name: form.company,
-        domain: fullDomain,
         subdomain: form.subdomain,
+        domain: domain,
       });
       if (tenantError) throw tenantError;
 
-      // Send magic link
+      // 2. Send magic link
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email: form.email,
         options: {
           emailRedirectTo: `https://${form.subdomain}-itsm.hi5tech.co.uk/verify`,
-          data: {
-            name: form.name,
-            subdomain: form.subdomain,
-          },
+          data: { name: form.name, company: form.company },
         },
       });
       if (otpError) throw otpError;
 
-      setMessage("✅ Tenant created! Please check your email for a login link.");
-    } catch (error) {
-      setMessage(`❌ ${error.message}`);
+      setMessage("✅ Tenant created. Check your email to verify and access your ITSM portal.");
+    } catch (err) {
+      setMessage(`❌ ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Box sx={{ maxWidth: 500, mx: "auto", mt: 8, p: 3, boxShadow: 2, borderRadius: 2 }}>
-      <Typography variant="h5" gutterBottom>Create Your Tenant</Typography>
+    <Box sx={{ maxWidth: 480, mx: "auto", mt: 8, p: 3, borderRadius: 2, boxShadow: 2 }}>
+      <Typography variant="h5" gutterBottom>Create Your ITSM Portal</Typography>
+
       <form onSubmit={handleSubmit}>
-        <TextField fullWidth name="name" label="Your Name" value={form.name} onChange={handleChange} required sx={{ mb: 2 }} />
-        <TextField fullWidth name="company" label="Company Name" value={form.company} onChange={handleChange} required sx={{ mb: 2 }} />
-        <TextField fullWidth name="email" label="Email Address" value={form.email} onChange={handleChange} type="email" required sx={{ mb: 2 }} />
-        <TextField fullWidth name="subdomain" label="Subdomain" value={form.subdomain} onChange={handleChange} required sx={{ mb: 1 }} />
-        <Typography variant="body2" sx={{ mb: 2 }}>Your site will be: <strong>{form.subdomain || "yourcompany"}-itsm.hi5tech.co.uk</strong></Typography>
-        {message && <Alert severity={message.startsWith("✅") ? "success" : "error"}>{message}</Alert>}
-        <Button type="submit" fullWidth variant="contained" disabled={loading}>
-          {loading ? <CircularProgress size={22} /> : "Create Tenant"}
+        <TextField
+          label="Your Name"
+          name="name"
+          fullWidth
+          value={form.name}
+          onChange={handleChange}
+          sx={{ mb: 2 }}
+          required
+        />
+        <TextField
+          label="Company Name"
+          name="company"
+          fullWidth
+          value={form.company}
+          onChange={handleChange}
+          sx={{ mb: 2 }}
+          required
+        />
+        <TextField
+          label="Email Address"
+          name="email"
+          type="email"
+          fullWidth
+          value={form.email}
+          onChange={handleChange}
+          sx={{ mb: 2 }}
+          required
+        />
+        <TextField
+          label="Subdomain"
+          name="subdomain"
+          fullWidth
+          value={form.subdomain}
+          onChange={handleChange}
+          sx={{ mb: 1 }}
+          required
+        />
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Your portal will be at: <strong>{form.subdomain || "yourcompany"}-itsm.hi5tech.co.uk</strong>
+        </Typography>
+
+        {message && (
+          <Alert severity={message.startsWith("✅") ? "success" : "error"} sx={{ mb: 2 }}>
+            {message}
+          </Alert>
+        )}
+
+        <Button
+          type="submit"
+          variant="contained"
+          color="primary"
+          fullWidth
+          disabled={loading}
+        >
+          {loading ? <CircularProgress size={20} /> : "Create Portal"}
         </Button>
       </form>
     </Box>
