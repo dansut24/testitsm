@@ -22,13 +22,13 @@ function TenantSignup() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const updatedForm = { ...form, [name]: value };
+    const updated = { ...form, [name]: value };
 
     if (name === "company") {
-      updatedForm.subdomain = value.replace(/\s+/g, "").toLowerCase();
+      updated.subdomain = value.replace(/\s+/g, "").toLowerCase();
     }
 
-    setForm(updatedForm);
+    setForm(updated);
   };
 
   const handleSubmit = async (e) => {
@@ -39,18 +39,18 @@ function TenantSignup() {
     const fullDomain = `${form.subdomain}-itsm.hi5tech.co.uk`;
 
     try {
-      // 1. Sign up the user with Supabase Auth
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      // Send OTP email magic link
+      const { error: otpError } = await supabase.auth.signInWithOtp({
         email: form.email,
         options: {
-          emailRedirectTo: `https://${form.subdomain}-itsm.hi5tech.co.uk/verify`,
           data: { name: form.name },
+          emailRedirectTo: `https://${form.subdomain}-itsm.hi5tech.co.uk/verify`,
         },
       });
 
-      if (signUpError) throw signUpError;
+      if (otpError) throw otpError;
 
-      // 2. Create the tenant record
+      // Create the tenant
       const { error: tenantError } = await supabase.from("tenants").insert({
         name: form.company,
         domain: fullDomain,
@@ -59,7 +59,7 @@ function TenantSignup() {
 
       if (tenantError) throw tenantError;
 
-      setMessage("✅ Tenant created! Check your inbox for a verification email.");
+      setMessage("✅ Tenant created! Check your inbox to verify your email.");
     } catch (error) {
       setMessage(`❌ ${error.message}`);
     } finally {
@@ -68,61 +68,19 @@ function TenantSignup() {
   };
 
   return (
-    <Box
-      sx={{ maxWidth: 500, mx: "auto", mt: 8, p: 3, boxShadow: 2, borderRadius: 2 }}
-    >
-      <Typography variant="h5" gutterBottom>
-        Create Your Tenant
-      </Typography>
+    <Box sx={{ maxWidth: 500, mx: "auto", mt: 8, p: 3, boxShadow: 2, borderRadius: 2 }}>
+      <Typography variant="h5" gutterBottom>Create Your Tenant</Typography>
 
       <form onSubmit={handleSubmit}>
-        <TextField
-          fullWidth
-          label="Your Name"
-          name="name"
-          value={form.name}
-          onChange={handleChange}
-          sx={{ mb: 2 }}
-          required
-        />
-        <TextField
-          fullWidth
-          label="Company Name"
-          name="company"
-          value={form.company}
-          onChange={handleChange}
-          sx={{ mb: 2 }}
-          required
-        />
-        <TextField
-          fullWidth
-          label="Email Address"
-          name="email"
-          type="email"
-          value={form.email}
-          onChange={handleChange}
-          sx={{ mb: 2 }}
-          required
-        />
-        <TextField
-          fullWidth
-          label="Subdomain"
-          name="subdomain"
-          value={form.subdomain}
-          onChange={handleChange}
-          sx={{ mb: 1 }}
-          required
-        />
+        <TextField fullWidth label="Your Name" name="name" value={form.name} onChange={handleChange} sx={{ mb: 2 }} required />
+        <TextField fullWidth label="Company Name" name="company" value={form.company} onChange={handleChange} sx={{ mb: 2 }} required />
+        <TextField fullWidth label="Email Address" name="email" type="email" value={form.email} onChange={handleChange} sx={{ mb: 2 }} required />
+        <TextField fullWidth label="Subdomain" name="subdomain" value={form.subdomain} onChange={handleChange} sx={{ mb: 1 }} required />
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Your portal will be accessible at:{" "}
-          <strong>{form.subdomain || "yourcompany"}-itsm.hi5tech.co.uk</strong>
+          Your portal will be: <strong>{form.subdomain || "yourcompany"}-itsm.hi5tech.co.uk</strong>
         </Typography>
 
-        {message && (
-          <Alert severity={message.startsWith("✅") ? "success" : "error"}>
-            {message}
-          </Alert>
-        )}
+        {message && <Alert severity={message.startsWith("✅") ? "success" : "error"}>{message}</Alert>}
 
         <Button fullWidth type="submit" variant="contained" disabled={loading}>
           {loading ? <CircularProgress size={22} /> : "Create Tenant"}
