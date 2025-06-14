@@ -4,99 +4,70 @@ import {
   Button,
   TextField,
   Typography,
-  CircularProgress,
   Alert,
+  CircularProgress,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 
-const Verify = () => {
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
+function Verify() {
   const navigate = useNavigate();
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
 
   useEffect(() => {
-    const handleSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (!data?.session || error) {
-        setError("Invalid or expired verification link.");
+    const checkUser = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data?.user?.email_confirmed_at) {
+        setMsg("Waiting for email confirmation...");
+        await supabase.auth.refreshSession();
       }
-      setLoading(false);
     };
-    handleSession();
+    checkUser();
   }, []);
 
   const handleSetPassword = async () => {
-    if (password !== confirm) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    setSubmitting(true);
-    setError("");
-
+    setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
+      const { data: sessionData, error: sessionError } = await supabase.auth.updateUser({
+        password,
+      });
+      if (sessionError) throw sessionError;
 
-      // Redirect to ITSM dashboard
       navigate("/dashboard");
     } catch (err) {
-      setError(err.message);
+      setMsg(err.message);
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <Box sx={{ textAlign: "center", mt: 10 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   return (
-    <Box
-      sx={{ maxWidth: 400, mx: "auto", mt: 8, p: 3, boxShadow: 2, borderRadius: 2 }}
-    >
+    <Box sx={{ maxWidth: 400, mx: "auto", mt: 8 }}>
       <Typography variant="h5" gutterBottom>
         Set Your Password
       </Typography>
-
-      {error && <Alert severity="error">{error}</Alert>}
-
       <TextField
-        fullWidth
         label="New Password"
         type="password"
+        fullWidth
+        sx={{ mt: 2 }}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        sx={{ mt: 2 }}
       />
-      <TextField
-        fullWidth
-        label="Confirm Password"
-        type="password"
-        value={confirm}
-        onChange={(e) => setConfirm(e.target.value)}
-        sx={{ mt: 2 }}
-      />
-
+      {msg && <Alert severity="info" sx={{ mt: 2 }}>{msg}</Alert>}
       <Button
-        fullWidth
         variant="contained"
+        sx={{ mt: 2 }}
+        fullWidth
         onClick={handleSetPassword}
-        disabled={submitting}
-        sx={{ mt: 3 }}
+        disabled={loading}
       >
-        {submitting ? <CircularProgress size={22} /> : "Confirm & Continue"}
+        {loading ? <CircularProgress size={22} /> : "Save & Continue"}
       </Button>
     </Box>
   );
-};
+}
 
 export default Verify;
