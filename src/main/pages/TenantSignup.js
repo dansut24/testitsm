@@ -1,6 +1,11 @@
 import React, { useState } from "react";
 import {
-  Box, Button, TextField, Typography, Alert, CircularProgress
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Alert,
+  CircularProgress,
 } from "@mui/material";
 import { supabase } from "../../common/utils/supabaseClient";
 
@@ -10,19 +15,25 @@ function TenantSignup() {
     company: "",
     email: "",
     subdomain: "",
+    logo: null,
   });
-  const [message, setMessage] = useState("");
+
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const updated = { ...form, [name]: value };
+    const updatedForm = { ...form, [name]: value };
 
     if (name === "company") {
-      updated.subdomain = value.toLowerCase().replace(/\s+/g, "");
+      updatedForm.subdomain = value.replace(/\s+/g, "").toLowerCase();
     }
 
-    setForm(updated);
+    setForm(updatedForm);
+  };
+
+  const handleFileChange = (e) => {
+    setForm({ ...form, logo: e.target.files[0] });
   };
 
   const handleSubmit = async (e) => {
@@ -33,25 +44,50 @@ function TenantSignup() {
     const domain = `${form.subdomain}-itsm.hi5tech.co.uk`;
 
     try {
-      // 1. Insert tenant
-      const { error: tenantError } = await supabase.from("tenants").insert({
-        name: form.company,
-        subdomain: form.subdomain,
-        domain: domain,
-      });
+      // Create tenant first
+      const { data: tenantData, error: tenantError } = await supabase
+        .from("tenants")
+        .insert({
+          name: form.company,
+          subdomain: form.subdomain,
+          domain: domain,
+        })
+        .select()
+        .single();
+
       if (tenantError) throw tenantError;
 
-      // 2. Send magic link
-      const { error: otpError } = await supabase.auth.signInWithOtp({
+      // Upload logo to Supabase Storage
+      if (form.logo) {
+        const filePath = `${form.subdomain}-itsm/logo.png`;
+        const { error: uploadError } = await supabase.storage
+          .from("tenant-logos")
+          .upload(filePath, form.logo, { upsert: true });
+
+        if (uploadError) throw uploadError;
+
+        // Save logo URL in tenant_settings
+        const { error: settingsError } = await supabase
+          .from("tenant_settings")
+          .insert({
+            tenant_id: tenantData.id,
+            logo_url: `https://ciilmjntkujdhxtsmsho.supabase.co/storage/v1/object/public/tenant-logos/${filePath}`,
+          });
+
+        if (settingsError) throw settingsError;
+      }
+
+      // Send magic link
+      const { error: magicError } = await supabase.auth.signInWithOtp({
         email: form.email,
         options: {
           emailRedirectTo: `https://${form.subdomain}-itsm.hi5tech.co.uk/verify`,
-          data: { name: form.name, company: form.company },
         },
       });
-      if (otpError) throw otpError;
 
-      setMessage("✅ Tenant created. Check your email to verify and access your ITSM portal.");
+      if (magicError) throw magicError;
+
+      setMessage("✅ Tenant created and magic link sent! Check your email.");
     } catch (err) {
       setMessage(`❌ ${err.message}`);
     } finally {
@@ -60,50 +96,59 @@ function TenantSignup() {
   };
 
   return (
-    <Box sx={{ maxWidth: 480, mx: "auto", mt: 8, p: 3, borderRadius: 2, boxShadow: 2 }}>
-      <Typography variant="h5" gutterBottom>Create Your ITSM Portal</Typography>
+    <Box
+      sx={{ maxWidth: 500, mx: "auto", mt: 8, p: 3, boxShadow: 2, borderRadius: 2 }}
+    >
+      <Typography variant="h5" gutterBottom>
+        Sign up to Hi5Tech ITSM
+      </Typography>
 
       <form onSubmit={handleSubmit}>
         <TextField
+          fullWidth
           label="Your Name"
           name="name"
-          fullWidth
           value={form.name}
           onChange={handleChange}
           sx={{ mb: 2 }}
           required
         />
         <TextField
+          fullWidth
           label="Company Name"
           name="company"
-          fullWidth
           value={form.company}
           onChange={handleChange}
           sx={{ mb: 2 }}
           required
         />
         <TextField
-          label="Email Address"
-          name="email"
-          type="email"
           fullWidth
+          label="Email"
+          name="email"
           value={form.email}
           onChange={handleChange}
+          type="email"
           sx={{ mb: 2 }}
           required
         />
         <TextField
+          fullWidth
           label="Subdomain"
           name="subdomain"
-          fullWidth
           value={form.subdomain}
           onChange={handleChange}
           sx={{ mb: 1 }}
           required
         />
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Your portal will be at: <strong>{form.subdomain || "yourcompany"}-itsm.hi5tech.co.uk</strong>
+        <Typography variant="body2" sx={{ mb: 2 }}>
+          Your portal will be:{" "}
+          <strong>{form.subdomain || "yourcompany"}-itsm.hi5tech.co.uk</strong>
         </Typography>
+        <Button component="label" variant="outlined" sx={{ mb: 2 }}>
+          Upload Logo
+          <input type="file" hidden accept="image/*" onChange={handleFileChange} />
+        </Button>
 
         {message && (
           <Alert severity={message.startsWith("✅") ? "success" : "error"} sx={{ mb: 2 }}>
@@ -112,13 +157,12 @@ function TenantSignup() {
         )}
 
         <Button
+          fullWidth
           type="submit"
           variant="contained"
-          color="primary"
-          fullWidth
           disabled={loading}
         >
-          {loading ? <CircularProgress size={20} /> : "Create Portal"}
+          {loading ? <CircularProgress size={24} /> : "Create Tenant"}
         </Button>
       </form>
     </Box>
