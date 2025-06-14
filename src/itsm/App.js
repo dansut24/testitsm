@@ -1,3 +1,5 @@
+// src/itsm/App.js
+
 import React from "react";
 import { CssBaseline, Box } from "@mui/material";
 import { Routes, Route } from "react-router-dom";
@@ -44,7 +46,7 @@ import WorkScheduler from "./pages/WorkScheduler";
 import NotFound from "./pages/NotFound";
 
 // Magic link verification & password setup
-import Verify from "./pages/Verify"; // ✅ Add this line
+import SetPassword from "./pages/SetPassword"; // ✅ Updated import
 
 function AppRoutes() {
   const { user, authLoading } = useAuth();
@@ -57,7 +59,7 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/loading" element={<Loading />} />
       <Route path="/not-authorised" element={<NotAuthorised />} />
-      <Route path="/verify" element={<Verify />} /> {/* ✅ Add this line */}
+      <Route path="/set-password" element={<SetPassword />} /> {/* ✅ Updated path */}
 
       {/* Protected Routes */}
       <Route path="/" element={isLoggedIn ? <Layout /> : <Login />}>
