@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -13,73 +13,86 @@ import { supabase } from "../../common/utils/supabaseClient";
 function Verify() {
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
   const [msg, setMsg] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  // Get current user session to retrieve email
   useEffect(() => {
-    const checkUser = async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (error || !data?.user?.email_confirmed_at) {
-        setMsg("Waiting for email confirmation...");
-        await supabase.auth.refreshSession();
+    const fetchUser = async () => {
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+      if (user && user.email) {
+        setEmail(user.email);
+      } else {
+        setMsg("❌ Unable to get user email from session.");
       }
     };
-    checkUser();
+    fetchUser();
   }, []);
 
   const handleSetPassword = async () => {
-  setLoading(true);
-  try {
-    // Get current user email from the session
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-    if (userError || !user) throw userError || new Error("User not found");
+    setLoading(true);
+    setMsg("");
 
-    // Update password
-    const { error: updateError } = await supabase.auth.updateUser({
-      password,
-    });
-    if (updateError) throw updateError;
+    try {
+      if (!password || password.length < 6) {
+        throw new Error("Password must be at least 6 characters.");
+      }
 
-    // Manual login after setting password
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password,
-    });
-    if (signInError) throw signInError;
+      // Set password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password,
+      });
+      if (updateError) throw updateError;
 
-    // Redirect to dashboard if successful
-    navigate("/dashboard");
-  } catch (err) {
-    setMsg(err.message);
-  } finally {
-    setLoading(false);
-  }
-};
+      // Sign in immediately after setting password
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (signInError) throw signInError;
+
+      // Redirect to dashboard
+      navigate("/dashboard");
+    } catch (err) {
+      setMsg(`❌ ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <Box sx={{ maxWidth: 400, mx: "auto", mt: 8 }}>
+    <Box sx={{ maxWidth: 400, mx: "auto", mt: 8, p: 3, boxShadow: 2, borderRadius: 2 }}>
       <Typography variant="h5" gutterBottom>
         Set Your Password
       </Typography>
+
+      <Typography variant="body1" sx={{ mb: 2 }}>
+        Email: <strong>{email || "Loading..."}</strong>
+      </Typography>
+
       <TextField
-        label="New Password"
-        type="password"
         fullWidth
-        sx={{ mt: 2 }}
+        type="password"
+        label="New Password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
+        sx={{ mb: 2 }}
+        required
       />
-      {msg && <Alert severity="info" sx={{ mt: 2 }}>{msg}</Alert>}
+
+      {msg && <Alert severity={msg.startsWith("❌") ? "error" : "success"}>{msg}</Alert>}
+
       <Button
         variant="contained"
-        sx={{ mt: 2 }}
         fullWidth
         onClick={handleSetPassword}
         disabled={loading}
       >
-        {loading ? <CircularProgress size={22} /> : "Save & Continue"}
+        {loading ? <CircularProgress size={22} /> : "Save Password and Continue"}
       </Button>
     </Box>
   );
