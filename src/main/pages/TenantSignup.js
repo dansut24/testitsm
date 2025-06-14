@@ -7,11 +7,9 @@ import {
   Alert,
   CircularProgress,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 
 function TenantSignup() {
-  const navigate = useNavigate();
   const [form, setForm] = useState({
     name: "",
     company: "",
@@ -29,7 +27,6 @@ function TenantSignup() {
       [name]: value,
     };
 
-    // Auto-fill subdomain based on company name
     if (name === "company") {
       updatedForm.subdomain = value.replace(/\s+/g, "").toLowerCase();
     }
@@ -45,19 +42,7 @@ function TenantSignup() {
     const fullDomain = `${form.subdomain}-itsm.hi5tech.co.uk`;
 
     try {
-      // Create the user with redirect to verify page
-      const { data: signUpData, error: signUpError } =
-        await supabase.auth.signUp({
-          email: form.email,
-          options: {
-            emailRedirectTo: `https://${form.subdomain}-itsm.hi5tech.co.uk/verify`,
-            data: { name: form.name },
-          },
-        });
-
-      if (signUpError) throw signUpError;
-
-      // Create tenant record
+      // Step 1: Create tenant
       const { error: tenantError } = await supabase.from("tenants").insert({
         name: form.company,
         domain: fullDomain,
@@ -66,8 +51,19 @@ function TenantSignup() {
 
       if (tenantError) throw tenantError;
 
+      // Step 2: Send OTP (magic link)
+      const { data: otpData, error: otpError } = await supabase.auth.signInWithOtp({
+        email: form.email,
+        options: {
+          emailRedirectTo: `https://${form.subdomain}-itsm.hi5tech.co.uk/verify`,
+          data: { name: form.name },
+        },
+      });
+
+      if (otpError) throw otpError;
+
       setMessage(
-        "✅ Tenant created! Check your inbox for a verification email."
+        "✅ Tenant created! A verification email has been sent. Please check your inbox to continue."
       );
     } catch (error) {
       setMessage(`❌ ${error.message}`);
@@ -78,7 +74,14 @@ function TenantSignup() {
 
   return (
     <Box
-      sx={{ maxWidth: 500, mx: "auto", mt: 8, p: 3, boxShadow: 2, borderRadius: 2 }}
+      sx={{
+        maxWidth: 500,
+        mx: "auto",
+        mt: 8,
+        p: 3,
+        boxShadow: 2,
+        borderRadius: 2,
+      }}
     >
       <Typography variant="h5" gutterBottom>
         Create Your Tenant
@@ -127,7 +130,11 @@ function TenantSignup() {
           <strong> {form.subdomain || "yourcompany"}-itsm.hi5tech.co.uk</strong>
         </Typography>
 
-        {message && <Alert severity={message.startsWith("✅") ? "success" : "error"}>{message}</Alert>}
+        {message && (
+          <Alert severity={message.startsWith("✅") ? "success" : "error"}>
+            {message}
+          </Alert>
+        )}
 
         <Button
           fullWidth
