@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { supabase } from "../../common/utils/supabase";
+import { supabase } from "../../common/utils/supabaseClient";
 import {
   Box,
   Button,
