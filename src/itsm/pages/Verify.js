@@ -7,30 +7,38 @@ import {
   Alert,
   CircularProgress,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 
 function Verify() {
   const navigate = useNavigate();
-  const [password, setPassword] = useState("");
+  const location = useLocation();
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [msg, setMsg] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // start loading while we exchange token
 
-  // Get current user session to retrieve email
   useEffect(() => {
-    const fetchUser = async () => {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
-      if (user && user.email) {
+    const handleSessionExchange = async () => {
+      try {
+        // Required for Supabase to complete magic link login
+        const { error } = await supabase.auth.exchangeCodeForSession();
+        if (error) throw error;
+
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user || !user.email) throw new Error("User session not found.");
         setEmail(user.email);
-      } else {
-        setMsg("❌ Unable to get user email from session.");
+      } catch (err) {
+        setMsg(`❌ ${err.message}`);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchUser();
+
+    handleSessionExchange();
   }, []);
 
   const handleSetPassword = async () => {
@@ -42,20 +50,18 @@ function Verify() {
         throw new Error("Password must be at least 6 characters.");
       }
 
-      // Set password
       const { error: updateError } = await supabase.auth.updateUser({
         password,
       });
       if (updateError) throw updateError;
 
-      // Sign in immediately after setting password
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      // Optional: try sign-in again to ensure token works
+      const { error: loginError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      if (signInError) throw signInError;
+      if (loginError) throw loginError;
 
-      // Redirect to dashboard
       navigate("/dashboard");
     } catch (err) {
       setMsg(`❌ ${err.message}`);
@@ -64,14 +70,23 @@ function Verify() {
     }
   };
 
+  if (loading) {
+    return (
+      <Box sx={{ mt: 8, textAlign: "center" }}>
+        <CircularProgress />
+        <Typography mt={2}>Setting up your session...</Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ maxWidth: 400, mx: "auto", mt: 8, p: 3, boxShadow: 2, borderRadius: 2 }}>
       <Typography variant="h5" gutterBottom>
         Set Your Password
       </Typography>
 
-      <Typography variant="body1" sx={{ mb: 2 }}>
-        Email: <strong>{email || "Loading..."}</strong>
+      <Typography variant="body2" sx={{ mb: 2 }}>
+        Email: <strong>{email || "Not available"}</strong>
       </Typography>
 
       <TextField
@@ -81,10 +96,11 @@ function Verify() {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         sx={{ mb: 2 }}
-        required
       />
 
-      {msg && <Alert severity={msg.startsWith("❌") ? "error" : "success"}>{msg}</Alert>}
+      {msg && (
+        <Alert severity={msg.startsWith("❌") ? "error" : "success"}>{msg}</Alert>
+      )}
 
       <Button
         variant="contained"
@@ -92,7 +108,7 @@ function Verify() {
         onClick={handleSetPassword}
         disabled={loading}
       >
-        {loading ? <CircularProgress size={22} /> : "Save Password and Continue"}
+        Save Password and Continue
       </Button>
     </Box>
   );
