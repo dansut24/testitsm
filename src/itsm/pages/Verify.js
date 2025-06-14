@@ -28,21 +28,36 @@ function Verify() {
   }, []);
 
   const handleSetPassword = async () => {
-    setLoading(true);
-    try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.updateUser({
-        password,
-      });
-      if (sessionError) throw sessionError;
+  setLoading(true);
+  try {
+    // Get current user email from the session
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) throw userError || new Error("User not found");
 
-      navigate("/dashboard");
-    } catch (err) {
-      setMsg(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Update password
+    const { error: updateError } = await supabase.auth.updateUser({
+      password,
+    });
+    if (updateError) throw updateError;
 
+    // Manual login after setting password
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password,
+    });
+    if (signInError) throw signInError;
+
+    // Redirect to dashboard if successful
+    navigate("/dashboard");
+  } catch (err) {
+    setMsg(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
   return (
     <Box sx={{ maxWidth: 400, mx: "auto", mt: 8 }}>
       <Typography variant="h5" gutterBottom>
