@@ -2,15 +2,15 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 import MarketingLayout from "./layouts/MarketingLayout";
 
-// Pages
+// Pages from main/pages
 import Home from "./pages/Home";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Products from "./pages/Products";
 import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
-import TenantSignup from "./pages/TenantSignup"; // ✅ Magic link signup
-import VerifyPage from "./pages/VerifyPage";     // ✅ Set password after email verified
+import TenantSignup from "./pages/TenantSignup";
+import VerifyPage from "./pages/VerifyPage";
 
 function App() {
   return (
