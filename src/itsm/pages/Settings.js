@@ -15,6 +15,7 @@ import {
   DialogContent,
   DialogActions,
   Stack,
+  TextField,
 } from "@mui/material";
 import { supabase } from "../../common/utils/supabaseClient";
 import { useAuth } from "../../common/context/AuthContext";
@@ -32,6 +33,10 @@ const Settings = () => {
   const [linkedProviders, setLinkedProviders] = useState([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [providerToUnlink, setProviderToUnlink] = useState(null);
+
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteStatus, setInviteStatus] = useState(null);
 
   const availableProviders = ["google", "github", "azure"];
 
@@ -112,7 +117,7 @@ const Settings = () => {
 
   const handleLink = async (provider) => {
     try {
-      const { data, error } = await supabase.auth.linkIdentity({ provider });
+      const { error } = await supabase.auth.linkIdentity({ provider });
       if (error) {
         alert(`❌ Failed to link ${provider}: ${error.message}`);
       } else {
@@ -124,18 +129,37 @@ const Settings = () => {
     }
   };
 
+  const handleInviteUser = async () => {
+    setInviteLoading(true);
+    setInviteStatus(null);
+
+    try {
+      const { error } = await supabase.auth.admin.inviteUserByEmail(newUserEmail, {
+        redirectTo: `${window.location.origin}/verify`,
+      });
+
+      if (error) {
+        console.error("Invite error:", error);
+        setInviteStatus({ type: "error", message: `❌ Failed: ${error.message}` });
+      } else {
+        setInviteStatus({ type: "success", message: `✅ Invite sent to ${newUserEmail}` });
+        setNewUserEmail("");
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      setInviteStatus({ type: "error", message: "❌ Unexpected error occurred." });
+    }
+
+    setInviteLoading(false);
+  };
+
   const getProviderIcon = (provider) => {
     switch (provider) {
-      case "google":
-        return <GoogleIcon sx={{ mr: 1 }} />;
-      case "github":
-        return <GitHubIcon sx={{ mr: 1 }} />;
-      case "azure":
-        return <BusinessIcon sx={{ mr: 1 }} />;
-      case "email":
-        return <EmailIcon sx={{ mr: 1 }} />;
-      default:
-        return null;
+      case "google": return <GoogleIcon sx={{ mr: 1 }} />;
+      case "github": return <GitHubIcon sx={{ mr: 1 }} />;
+      case "azure": return <BusinessIcon sx={{ mr: 1 }} />;
+      case "email": return <EmailIcon sx={{ mr: 1 }} />;
+      default: return null;
     }
   };
 
@@ -143,44 +167,30 @@ const Settings = () => {
   const unlinkedProviders = availableProviders.filter((p) => !linkedProviderKeys.includes(p));
 
   if (authLoading) {
-    return (
-      <Box sx={{ p: 4 }}>
-        <Typography>Loading session...</Typography>
-      </Box>
-    );
+    return <Box sx={{ p: 4 }}><Typography>Loading session...</Typography></Box>;
   }
 
   return (
     <Box sx={{ p: 4 }}>
-      <Typography variant="h5" gutterBottom>
-        Dashboard Settings
-      </Typography>
+      <Typography variant="h5" gutterBottom>Dashboard Settings</Typography>
 
       {!user?.id ? (
-        <Alert severity="warning" sx={{ mt: 2 }}>
-          User is not authenticated. Please log in to configure your dashboard.
-        </Alert>
+        <Alert severity="warning" sx={{ mt: 2 }}>User is not authenticated.</Alert>
       ) : (
         <>
           <Typography variant="body1" sx={{ mb: 2 }}>
-            Use the button below to create your personal dashboard layout with default widgets.
+            Use the button below to create your personal dashboard layout.
           </Typography>
-
           <Button variant="contained" onClick={handleCreateDashboard} disabled={loading}>
             {loading ? "Creating..." : "Create Dashboard Layout"}
           </Button>
-
-          {status && (
-            <Alert severity={status.type} sx={{ mt: 2 }}>
-              {status.message}
-            </Alert>
-          )}
+          {status && <Alert severity={status.type} sx={{ mt: 2 }}>{status.message}</Alert>}
 
           <Divider sx={{ my: 4 }} />
 
           <Typography variant="h6">Linked Accounts</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            These identity providers are currently linked to your account.
+            Identity providers linked to your account.
           </Typography>
 
           {linkedProviders.length === 0 ? (
@@ -206,10 +216,8 @@ const Settings = () => {
           {unlinkedProviders.length > 0 && (
             <>
               <Divider sx={{ my: 4 }} />
-              <Typography variant="h6" gutterBottom>
-                Link New Accounts
-              </Typography>
-              <Stack direction="column" spacing={1}>
+              <Typography variant="h6">Link New Accounts</Typography>
+              <Stack direction="column" spacing={1} sx={{ mt: 2 }}>
                 {unlinkedProviders.map((provider) => (
                   <Button
                     key={provider}
@@ -223,19 +231,37 @@ const Settings = () => {
               </Stack>
             </>
           )}
+
+          <Divider sx={{ my: 4 }} />
+          <Typography variant="h6">Invite New User</Typography>
+          <Stack spacing={2} sx={{ maxWidth: 400, mt: 2 }}>
+            <TextField
+              label="Email Address"
+              variant="outlined"
+              value={newUserEmail}
+              onChange={(e) => setNewUserEmail(e.target.value)}
+              fullWidth
+            />
+            <Button
+              variant="contained"
+              onClick={handleInviteUser}
+              disabled={!newUserEmail || inviteLoading}
+            >
+              {inviteLoading ? "Sending Invite..." : "Send Invite"}
+            </Button>
+            {inviteStatus && <Alert severity={inviteStatus.type}>{inviteStatus.message}</Alert>}
+          </Stack>
         </>
       )}
 
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
         <DialogTitle>Confirm Unlink</DialogTitle>
         <DialogContent>
-          Are you sure you want to unlink <strong>{providerToUnlink}</strong> from your account?
+          Are you sure you want to unlink <strong>{providerToUnlink}</strong>?
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
-          <Button onClick={handleUnlinkConfirmed} color="error" variant="contained">
-            Unlink
-          </Button>
+          <Button onClick={handleUnlinkConfirmed} color="error" variant="contained">Unlink</Button>
         </DialogActions>
       </Dialog>
     </Box>
