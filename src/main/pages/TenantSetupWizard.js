@@ -1,252 +1,311 @@
+// src/main/pages/TenantSetupWizard.js
 import React, { useState, useEffect } from "react";
 import {
-  Box, Button, TextField, Typography, Stepper, Step, StepLabel,
-  CircularProgress, Alert
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Stepper,
+  Step,
+  StepLabel,
+  Container,
+  Alert,
 } from "@mui/material";
 import { supabase } from "../../common/utils/supabaseClient";
-import { uploadTenantLogo } from "../../common/utils/storageHelpers";
-
-const steps = ["Company Info", "Admin Setup", "Verify OTP", "Logo", "Complete"];
 
 const TenantSetupWizard = () => {
   const [step, setStep] = useState(0);
-
-  // Company & Domain
-  const [companyName, setCompanyName] = useState("");
-  const [domain, setDomain] = useState("");
-  const [logoFile, setLogoFile] = useState(null);
-
-  // Admin
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [otpCode, setOtpCode] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
+  const [formData, setFormData] = useState({
+    companyName: "",
+    subdomain: "",
+    adminEmail: "",
+    adminPassword: "",
+    confirmPassword: "",
+    otp: "",
+    logoFile: null,
+  });
+  const [status, setStatus] = useState(null);
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [user, setUser] = useState(null);
-
   useEffect(() => {
-    if (companyName) {
-      const clean = companyName.toLowerCase().replace(/[^a-z0-9]/g, "");
-      setDomain(clean);
-    }
-  }, [companyName]);
-
-  useEffect(() => {
-    if (resendCooldown > 0) {
-      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
+    const timer = setInterval(() => {
+      if (resendCooldown > 0) setResendCooldown((c) => c - 1);
+    }, 1000);
+    return () => clearInterval(timer);
   }, [resendCooldown]);
 
-  const handleSendOtp = async () => {
-    setLoading(true);
-    setError("");
+  const handleChange = (e) =>
+    setFormData({ ...formData, [e.target.name]: e.target.value });
 
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password
+  const handleFileChange = (e) =>
+    setFormData({ ...formData, logoFile: e.target.files[0] });
+
+  const sendOtp = async () => {
+    setStatus(null);
+    const { adminEmail } = formData;
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email: adminEmail,
+      options: {
+        data: { role: "admin" },
+        shouldCreateUser: true,
+      },
     });
 
-    if (signUpError) {
-      setError(signUpError.message);
-      setLoading(false);
-      return;
+    if (error) {
+      setStatus({ type: "error", message: error.message });
+    } else {
+      setResendCooldown(60);
+      setStatus({ type: "success", message: "OTP sent to email." });
+      setStep(2);
+    }
+  };
+
+  const verifyOtp = async () => {
+    setStatus(null);
+    const { adminEmail, otp, adminPassword } = formData;
+
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: adminEmail,
+      token: otp,
+      type: "email",
+    });
+
+    if (error) {
+      setStatus({ type: "error", message: error.message });
+    } else {
+      setStatus({ type: "success", message: "Email verified!" });
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session?.user) {
+        const { error: pwError } = await supabase.auth.updateUser({
+          password: adminPassword,
+        });
+        if (pwError) {
+          console.error("Password update failed:", pwError.message);
+          setStatus({
+            type: "error",
+            message: "Email verified, but password not set.",
+          });
+          return;
+        }
+      }
+
+      setStep(3);
+    }
+  };
+
+  const handleSubmit = async () => {
+    setStatus(null);
+    const { companyName, subdomain, logoFile } = formData;
+    const domain = `${subdomain}-itsm.hi5tech.co.uk`;
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData.session || !sessionData.session.user) {
+      return setStatus({ type: "error", message: "User session not found. Please log in again." });
     }
 
-    setUser(data.user);
-    setOtpSent(true);
-    setResendCooldown(60);
-    setStep(2);
-    setLoading(false);
-  };
+    const user = sessionData.session.user;
 
-  const handleVerifyOtp = async () => {
-    setLoading(true);
-    setError("");
-
-    const { data, error: verifyError } = await supabase.auth.verifyOtp({
-      email,
-      token: otpCode,
-      type: "email"
-    });
-
-    if (verifyError) {
-      setError(verifyError.message);
-      setLoading(false);
-      return;
-    }
-
-    setUser(data.user);
-    setStep(3);
-    setLoading(false);
-  };
-
-  const handleLogoUpload = async () => {
-    if (!logoFile) return null;
-    const path = `${domain}-itsm/logo.png`;
-    return await uploadTenantLogo(logoFile, path);
-  };
-
-  const handleCompleteSetup = async () => {
-    setLoading(true);
-    setError("");
-
-    const logoUrl = await handleLogoUpload();
-
-    const { data, error: tenantError } = await supabase.from("tenants").insert({
-      name: companyName,
-      domain,
-      subdomain: `${domain}-itsm`,
-      logo_url: logoUrl,
-      created_by: user?.id,
-    });
+    const { data: tenant, error: tenantError } = await supabase
+      .from("tenants")
+      .insert([
+        {
+          name: companyName,
+          subdomain,
+          domain,
+          created_by: user.id,
+        },
+      ])
+      .select()
+      .single();
 
     if (tenantError) {
-      setError(tenantError.message);
-      setLoading(false);
-      return;
+      console.error("❌ Tenant insert failed:", tenantError);
+      return setStatus({ type: "error", message: tenantError.message });
     }
 
-    // Set tenant_settings, teams, etc here if needed
+    await supabase
+      .from("profiles")
+      .update({ tenant_id: tenant.id })
+      .eq("id", user.id);
 
-    window.location.href = `https://${domain}-itsm.hi5tech.co.uk`;
+    let logo_url = "";
+    if (logoFile) {
+      const { error: uploadError } = await supabase.storage
+        .from("tenant-logos")
+        .upload(`${subdomain}/logo.png`, logoFile, { upsert: true });
+
+      if (!uploadError) {
+        logo_url = `${subdomain}/logo.png`;
+      }
+    }
+
+    await supabase
+      .from("tenant_settings")
+      .insert({ tenant_id: tenant.id, logo_url });
+
+    window.location.href = `https://${domain}/dashboard`;
   };
 
-  const handleContinue = () => setStep((prev) => prev + 1);
-
   return (
-    <Box sx={{ maxWidth: 600, mx: "auto", mt: 6 }}>
+    <Container maxWidth="sm" sx={{ mt: 4 }}>
       <Typography variant="h4" gutterBottom>
-        Tenant Setup Wizard
+        Tenant Setup
       </Typography>
-
-      <Stepper activeStep={step} sx={{ my: 4 }}>
-        {steps.map((label) => (
-          <Step key={label}>
-            <StepLabel>{label}</StepLabel>
-          </Step>
-        ))}
+      <Stepper activeStep={step} alternativeLabel>
+        {["Company Info", "Admin", "Verify Email", "Logo", "Finish"].map(
+          (label) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          )
+        )}
       </Stepper>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      <Box sx={{ mt: 4 }}>
+        {step === 0 && (
+          <>
+            <TextField
+              label="Company Name"
+              name="companyName"
+              fullWidth
+              margin="normal"
+              value={formData.companyName}
+              onChange={(e) => {
+                const name = e.target.value;
+                setFormData({
+                  ...formData,
+                  companyName: name,
+                  subdomain: name.toLowerCase().replace(/\s+/g, ""),
+                });
+              }}
+            />
+            <TextField
+              label="Subdomain"
+              name="subdomain"
+              fullWidth
+              margin="normal"
+              value={formData.subdomain}
+              onChange={handleChange}
+              InputProps={{
+                endAdornment: (
+                  <Typography color="text.secondary">
+                    .hi5tech.co.uk
+                  </Typography>
+                ),
+              }}
+            />
+            <Button
+              fullWidth
+              variant="contained"
+              sx={{ mt: 2 }}
+              onClick={() => setStep(1)}
+            >
+              Next
+            </Button>
+          </>
+        )}
 
-      {step === 0 && (
-        <Box>
-          <TextField
-            label="Company Name"
-            fullWidth
-            margin="normal"
-            value={companyName}
-            onChange={(e) => setCompanyName(e.target.value)}
-          />
-          <TextField
-            label="Subdomain"
-            fullWidth
-            margin="normal"
-            value={domain}
-            InputProps={{
-              endAdornment: <Typography>.itsm.hi5tech.co.uk</Typography>,
-              readOnly: true
-            }}
-          />
-          <Button variant="contained" fullWidth onClick={handleContinue} disabled={!companyName}>
-            Continue
-          </Button>
-        </Box>
-      )}
+        {step === 1 && (
+          <>
+            <TextField
+              label="Admin Email"
+              name="adminEmail"
+              fullWidth
+              margin="normal"
+              value={formData.adminEmail}
+              onChange={handleChange}
+            />
+            <TextField
+              label="Password"
+              name="adminPassword"
+              type="password"
+              fullWidth
+              margin="normal"
+              value={formData.adminPassword}
+              onChange={handleChange}
+            />
+            <TextField
+              label="Confirm Password"
+              name="confirmPassword"
+              type="password"
+              fullWidth
+              margin="normal"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+            />
+            <Button
+              fullWidth
+              variant="contained"
+              sx={{ mt: 2 }}
+              onClick={sendOtp}
+              disabled={resendCooldown > 0}
+            >
+              {resendCooldown > 0
+                ? `Resend in ${resendCooldown}s`
+                : "Send Verification Code"}
+            </Button>
+          </>
+        )}
 
-      {step === 1 && (
-        <Box>
-          <TextField
-            label="Admin Email"
-            fullWidth
-            margin="normal"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <TextField
-            label="Password"
-            type="password"
-            fullWidth
-            margin="normal"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <Button
-            variant="contained"
-            fullWidth
-            onClick={handleSendOtp}
-            disabled={!email || !password || loading}
-          >
-            {loading ? <CircularProgress size={20} /> : "Send Verification Code"}
-          </Button>
-        </Box>
-      )}
+        {step === 2 && (
+          <>
+            <TextField
+              label="Enter OTP Code"
+              name="otp"
+              fullWidth
+              margin="normal"
+              value={formData.otp}
+              onChange={handleChange}
+            />
+            <Button
+              variant="contained"
+              fullWidth
+              sx={{ mt: 2 }}
+              onClick={verifyOtp}
+            >
+              Verify Code
+            </Button>
+          </>
+        )}
 
-      {step === 2 && (
-        <Box>
-          <TextField
-            label="Enter OTP"
-            fullWidth
-            margin="normal"
-            value={otpCode}
-            onChange={(e) => setOtpCode(e.target.value)}
-          />
-          <Button
-            variant="contained"
-            fullWidth
-            onClick={handleVerifyOtp}
-            disabled={!otpCode || loading}
-            sx={{ mt: 2 }}
-          >
-            {loading ? <CircularProgress size={20} /> : "Verify"}
-          </Button>
+        {step === 3 && (
+          <>
+            <Typography gutterBottom>Upload Company Logo</Typography>
+            <input type="file" accept="image/*" onChange={handleFileChange} />
+            <Button
+              variant="contained"
+              fullWidth
+              sx={{ mt: 2 }}
+              onClick={() => setStep(4)}
+            >
+              Next
+            </Button>
+          </>
+        )}
 
-          <Button
-            variant="text"
-            fullWidth
-            onClick={handleSendOtp}
-            disabled={resendCooldown > 0}
-            sx={{ mt: 1 }}
-          >
-            {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend Code"}
-          </Button>
-        </Box>
-      )}
+        {step === 4 && (
+          <>
+            <Typography gutterBottom>Ready to create your tenant!</Typography>
+            <Button
+              variant="contained"
+              fullWidth
+              sx={{ mt: 2 }}
+              onClick={handleSubmit}
+            >
+              Create Tenant
+            </Button>
+          </>
+        )}
 
-      {step === 3 && (
-        <Box>
-          <Button variant="outlined" component="label" fullWidth>
-            Upload Company Logo
-            <input type="file" hidden onChange={(e) => setLogoFile(e.target.files[0])} />
-          </Button>
-          {logoFile && <Typography sx={{ mt: 1 }}>{logoFile.name}</Typography>}
-
-          <Button variant="contained" fullWidth onClick={handleContinue} sx={{ mt: 2 }}>
-            Continue
-          </Button>
-        </Box>
-      )}
-
-      {step === 4 && (
-        <Box>
-          <Typography sx={{ mb: 2 }}>
-            All ready to go! This will complete the setup and redirect you to your ITSM.
-          </Typography>
-          <Button
-            variant="contained"
-            fullWidth
-            onClick={handleCompleteSetup}
-            disabled={loading}
-          >
-            {loading ? <CircularProgress size={20} /> : "Finish and Launch ITSM"}
-          </Button>
-        </Box>
-      )}
-    </Box>
+        {status && (
+          <Alert severity={status.type} sx={{ mt: 2 }}>
+            {status.message}
+          </Alert>
+        )}
+      </Box>
+    </Container>
   );
 };
 
