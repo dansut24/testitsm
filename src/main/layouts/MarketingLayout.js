@@ -1,19 +1,7 @@
 // src/main/layouts/MarketingLayout.js
 import React, { useState } from "react";
 import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Box,
-  Button,
-  Container,
-  IconButton,
-  Drawer,
-  List,
-  ListItem,
-  ListItemText,
-  useTheme,
-  useMediaQuery,
+  AppBar, Toolbar, Typography, Box, Button, Container, IconButton, Drawer, List, ListItem, ListItemText, useTheme, useMediaQuery
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import { Link, useLocation, Outlet } from "react-router-dom";
@@ -30,17 +18,20 @@ const MarketingLayout = () => {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const toggleDrawer = (open) => () => setDrawerOpen(open);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <AppBar
         position="sticky"
         color="default"
-        elevation={1}
+        elevation={2}
         sx={{
           backdropFilter: "blur(10px)",
-          backgroundColor: "rgba(255, 255, 255, 0.9)",
+          backgroundColor: "rgba(255, 255, 255, 0.95)",
         }}
       >
         <Toolbar sx={{ justifyContent: "space-between" }}>
@@ -55,15 +46,16 @@ const MarketingLayout = () => {
 
           {isMobile ? (
             <>
-              <IconButton onClick={() => setDrawerOpen(true)} edge="end">
+              <IconButton edge="end" color="inherit" onClick={toggleDrawer(true)}>
                 <MenuIcon />
               </IconButton>
-              <Drawer
-                anchor="right"
-                open={drawerOpen}
-                onClose={() => setDrawerOpen(false)}
-              >
-                <Box sx={{ width: 250 }} role="presentation">
+              <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer(false)}>
+                <Box
+                  sx={{ width: 250 }}
+                  role="presentation"
+                  onClick={toggleDrawer(false)}
+                  onKeyDown={toggleDrawer(false)}
+                >
                   <List>
                     {navLinks.map((link) => (
                       <ListItem
@@ -71,7 +63,6 @@ const MarketingLayout = () => {
                         key={link.path}
                         component={Link}
                         to={link.path}
-                        onClick={() => setDrawerOpen(false)}
                         selected={location.pathname === link.path}
                       >
                         <ListItemText primary={link.label} />
@@ -102,10 +93,12 @@ const MarketingLayout = () => {
         </Toolbar>
       </AppBar>
 
+      {/* Page content */}
       <Container sx={{ flexGrow: 1, py: 4 }}>
         <Outlet />
       </Container>
 
+      {/* Footer */}
       <Box
         component="footer"
         sx={{
