@@ -1,22 +1,23 @@
+// src/main/App.js
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import MarketingLayout from "./layouts/MarketingLayout";
 
-// Pages from main/pages
+// Pages
 import Home from "./pages/Home";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Products from "./pages/Products";
 import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
-import TenantSignup from "./pages/TenantSignup";
+import TenantSetupWizard from "./pages/TenantSetupWizard"; // ✅ Replaces TenantSignup
 import VerifyPage from "./pages/VerifyPage";
 
 function App() {
   return (
     <Routes>
       {/* Full-screen standalone routes */}
-      <Route path="/setup" element={<TenantSignup />} />
+      <Route path="/setup" element={<TenantSetupWizard />} />
       <Route path="/verify" element={<VerifyPage />} />
 
       {/* Marketing pages under layout */}
