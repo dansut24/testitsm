@@ -1,9 +1,9 @@
 // src/itsm/App.js
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { CssBaseline, Box } from "@mui/material";
 import { Routes, Route } from "react-router-dom";
-import { useAuth } from "../common/context/AuthContext";
+import { supabase } from "../common/utils/supabaseClient";
 
 // Layout & Auth
 import Layout from "./components/Layout";
@@ -46,22 +46,38 @@ import WorkScheduler from "./pages/WorkScheduler";
 import NotFound from "./pages/NotFound";
 
 // Magic link verification & password setup
-import SetPassword from "./pages/SetPassword"; // ✅ Updated import
+import SetPassword from "./pages/SetPassword";
 
 function AppRoutes() {
-  const { user, authLoading } = useAuth();
-  if (authLoading) return <div>Loading...</div>;
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const isLoggedIn = !!user;
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  if (loading) return <div>Loading...</div>;
+
+  const isLoggedIn = !!session;
 
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/loading" element={<Loading />} />
       <Route path="/not-authorised" element={<NotAuthorised />} />
-      <Route path="/set-password" element={<SetPassword />} /> {/* ✅ Updated path */}
+      <Route path="/set-password" element={<SetPassword />} />
 
-      {/* Protected Routes */}
       <Route path="/" element={isLoggedIn ? <Layout /> : <Login />}>
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="incidents" element={<Incidents />} />
