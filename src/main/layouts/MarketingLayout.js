@@ -88,7 +88,7 @@ const MarketingLayout = () => {
                       variant="contained"
                       fullWidth
                       component={Link}
-                      to="/start-trial"
+                      to="/setup"
                       color="primary"
                     >
                       Start Free Trial
@@ -116,7 +116,7 @@ const MarketingLayout = () => {
               <Button
                 variant="contained"
                 component={Link}
-                to="/start-trial"
+                to="/setup"
                 sx={{ ml: 2 }}
               >
                 Start Trial
