@@ -1,5 +1,5 @@
-// src/pages/Pricing.js
 
+// src/pages/Pricing.js
 import React, { useState } from "react";
 import {
   Box,
@@ -86,8 +86,8 @@ const Pricing = () => {
   const plans = pricingData[billing];
 
   return (
-    <Box sx={{ p: 4 }}>
-      <Typography variant="h4" align="center" gutterBottom>
+    <Box sx={{ py: 8 }}>
+      <Typography variant="h3" align="center" fontWeight="bold" gutterBottom>
         Choose Your Plan
       </Typography>
 
@@ -106,12 +106,12 @@ const Pricing = () => {
       <Grid container spacing={4} justifyContent="center">
         {plans.map((plan, index) => (
           <Grid item xs={12} sm={6} md={4} key={plan.name}>
-            <Card elevation={3}>
+            <Card elevation={4} sx={{ p: 2 }}>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
+                <Typography variant="h6" gutterBottom fontWeight="bold">
                   {plan.name}
                 </Typography>
-                <Typography variant="h4" gutterBottom>
+                <Typography variant="h4" color="primary" gutterBottom>
                   {plan.price}
                   <Typography variant="caption"> /{billing}</Typography>
                 </Typography>
@@ -125,11 +125,7 @@ const Pricing = () => {
                   What’s included
                 </Button>
 
-                <Button
-                  variant="contained"
-                  fullWidth
-                  sx={{ mt: 2 }}
-                >
+                <Button variant="contained" fullWidth sx={{ mt: 2 }}>
                   Get Started
                 </Button>
               </CardContent>
