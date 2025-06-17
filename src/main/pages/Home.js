@@ -1,12 +1,11 @@
-// src/pages/Marketing/Home.js
+// src/main/pages/Home.js
 import React from "react";
 import { Box, Typography, Button, Grid, Container } from "@mui/material";
 import { Link } from "react-router-dom";
-import MarketingLayout from "../layouts/MarketingLayout";
 
 const Home = () => {
   return (
-    <MarketingLayout>
+    <>
       <Box sx={{ textAlign: "center", py: 10, backgroundColor: "#f5f5f5" }}>
         <Container maxWidth="md">
           <Typography variant="h2" gutterBottom fontWeight="bold">
@@ -80,7 +79,7 @@ const Home = () => {
           </Button>
         </Container>
       </Box>
-    </MarketingLayout>
+    </>
   );
 };
 
