@@ -1,4 +1,4 @@
-// AuthContext.js
+// src/common/context/AuthContext.js
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../../supabaseClient";
 import { useNavigate } from "react-router-dom";
@@ -27,35 +27,41 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const init = async () => {
-      if (!isRootDomain()) {
-        const subdomain = getSubdomain();
+      try {
+        if (!isRootDomain()) {
+          const subdomain = getSubdomain();
 
-        if (subdomain && subdomain !== "local") {
-          const { data, error } = await supabase
-            .from("tenants")
-            .select("*")
-            .eq("subdomain", subdomain)
-            .maybeSingle();
+          if (subdomain && subdomain !== "local") {
+            const { data, error } = await supabase
+              .from("tenants")
+              .select("*")
+              .eq("subdomain", subdomain)
+              .maybeSingle();
 
-          if (error || !data) {
-            setTenant(null);
-            setTenantError("🚫 Tenant not found for this subdomain.");
-            setAuthLoading(false);
-            return;
+            if (error || !data) {
+              setTenant(null);
+              setTenantError("🚫 Tenant not found for this subdomain.");
+              return;
+            }
+
+            setTenant(data);
           }
-
-          setTenant(data);
         }
-      }
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      if (session?.user) {
-        await fetchUserProfile(session.user);
-      } else {
-        setUser(null);
+        console.log("[Auth] Initial session:", session);
+
+        if (session?.user) {
+          await fetchUserProfile(session.user);
+        } else {
+          setUser(null);
+        }
+      } catch (err) {
+        console.error("Auth init error:", err);
+      } finally {
         setAuthLoading(false);
       }
     };
@@ -65,6 +71,7 @@ export const AuthProvider = ({ children }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("[Auth] Auth state changed:", session);
       if (session?.user) {
         fetchUserProfile(session.user);
       } else {
@@ -76,16 +83,21 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const fetchUserProfile = async (supabaseUser) => {
-    const { data: profile, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", supabaseUser.id)
-      .maybeSingle();
+    try {
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", supabaseUser.id)
+        .maybeSingle();
 
-    if (error || !profile) {
-      console.error("Failed to fetch user profile:", error?.message);
-      setUser(null);
-    } else {
+      if (error || !profile) {
+        console.error("Failed to fetch user profile:", error?.message);
+        setUser(null);
+        return;
+      }
+
+      console.log("[Auth] User profile loaded:", profile);
+
       const role = profile.role || "user";
       setUser({
         id: supabaseUser.id,
@@ -95,9 +107,10 @@ export const AuthProvider = ({ children }) => {
         full_name: profile.full_name,
         tenant_id: profile.tenant_id,
       });
+    } catch (err) {
+      console.error("Error loading profile:", err);
+      setUser(null);
     }
-
-    setAuthLoading(false);
   };
 
   const logout = async () => {
