@@ -1,6 +1,21 @@
 // src/main/layouts/MarketingLayout.js
-import React from "react";
-import { AppBar, Toolbar, Typography, Box, Button, Container } from "@mui/material";
+import React, { useState } from "react";
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Box,
+  Button,
+  Container,
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+  ListItemText,
+  useTheme,
+  useMediaQuery,
+} from "@mui/material";
+import MenuIcon from "@mui/icons-material/Menu";
 import { Link, useLocation, Outlet } from "react-router-dom";
 
 const navLinks = [
@@ -13,6 +28,9 @@ const navLinks = [
 
 const MarketingLayout = () => {
   const location = useLocation();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
@@ -35,31 +53,59 @@ const MarketingLayout = () => {
             Hi5Tech
           </Typography>
 
-          <Box>
-            {navLinks.map((link) => (
-              <Button
-                key={link.path}
-                component={Link}
-                to={link.path}
-                sx={{
-                  mx: 1,
-                  fontWeight: location.pathname === link.path ? "bold" : "normal",
-                  color: location.pathname === link.path ? "primary.main" : "inherit",
-                }}
+          {isMobile ? (
+            <>
+              <IconButton onClick={() => setDrawerOpen(true)} edge="end">
+                <MenuIcon />
+              </IconButton>
+              <Drawer
+                anchor="right"
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
               >
-                {link.label}
-              </Button>
-            ))}
-          </Box>
+                <Box sx={{ width: 250 }} role="presentation">
+                  <List>
+                    {navLinks.map((link) => (
+                      <ListItem
+                        button
+                        key={link.path}
+                        component={Link}
+                        to={link.path}
+                        onClick={() => setDrawerOpen(false)}
+                        selected={location.pathname === link.path}
+                      >
+                        <ListItemText primary={link.label} />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
+              </Drawer>
+            </>
+          ) : (
+            <Box>
+              {navLinks.map((link) => (
+                <Button
+                  key={link.path}
+                  component={Link}
+                  to={link.path}
+                  sx={{
+                    mx: 1,
+                    fontWeight: location.pathname === link.path ? "bold" : "normal",
+                    color: location.pathname === link.path ? "primary.main" : "inherit",
+                  }}
+                >
+                  {link.label}
+                </Button>
+              ))}
+            </Box>
+          )}
         </Toolbar>
       </AppBar>
 
-      {/* Page Content */}
       <Container sx={{ flexGrow: 1, py: 4 }}>
         <Outlet />
       </Container>
 
-      {/* Footer */}
       <Box
         component="footer"
         sx={{
