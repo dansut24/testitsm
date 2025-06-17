@@ -1,3 +1,5 @@
+// src/pages/Login.js
+
 import React, { useEffect, useState } from "react";
 import {
   Container,
@@ -15,7 +17,6 @@ import GoogleIcon from "@mui/icons-material/Google";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import BusinessIcon from "@mui/icons-material/Business";
 import { useThemeMode } from "../../common/context/ThemeContext";
-import AuthService from "../../common/services/AuthService";
 import { supabase } from "../../common/utils/supabaseClient";
 import defaultLogo from "../../common/assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
 
@@ -39,10 +40,7 @@ const Login = () => {
           .eq("subdomain", baseSubdomain)
           .maybeSingle();
 
-        if (!tenantData) {
-          console.warn("Tenant not found for subdomain:", baseSubdomain);
-          return;
-        }
+        if (!tenantData) return;
 
         const { data: settings } = await supabase
           .from("tenant_settings")
@@ -50,10 +48,7 @@ const Login = () => {
           .eq("tenant_id", tenantData.id)
           .maybeSingle();
 
-        if (!settings?.logo_url) {
-          console.warn("No logo found for tenant.");
-          return;
-        }
+        if (!settings?.logo_url) return;
 
         const { data: publicData } = supabase.storage
           .from("tenant-logos")
@@ -82,7 +77,10 @@ const Login = () => {
       return;
     }
 
-    const { error: loginError } = await AuthService.signIn(email, password);
+    const { error: loginError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
     if (loginError) {
       console.error("Login error:", loginError.message);
@@ -90,90 +88,76 @@ const Login = () => {
       return;
     }
 
-    navigate("/loading");
+    navigate("/dashboard");
   };
 
   const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-    });
-
-    if (error) {
-      console.error("Google sign-in error:", error.message);
-      setError("Google sign-in failed.");
-    }
+    const { error } = await supabase.auth.signInWithOAuth({ provider: "google" });
+    if (error) setError("Google sign-in failed.");
   };
 
- const handleTestLogo = async () => {
-  try {
-    const { data: tenantData, error: tenantError } = await supabase
-      .from("tenants")
-      .select("id, subdomain")
-      .eq("subdomain", baseSubdomain)
-      .maybeSingle();
+  const handleTestLogo = async () => {
+    try {
+      const { data: tenantData } = await supabase
+        .from("tenants")
+        .select("id, subdomain")
+        .eq("subdomain", baseSubdomain)
+        .maybeSingle();
 
-    console.log("🔍 Tenant Data:", tenantData);
+      if (!tenantData) {
+        setDebugInfo({
+          subdomain: baseSubdomain,
+          tenantId: "Not found",
+          logoUrl: "Not found",
+          error: "❌ Tenant not found",
+        });
+        return;
+      }
 
-    if (!tenantData) {
+      const { data: settings } = await supabase
+        .from("tenant_settings")
+        .select("logo_url")
+        .eq("tenant_id", tenantData.id)
+        .maybeSingle();
+
+      if (!settings || !settings.logo_url) {
+        setDebugInfo({
+          subdomain: tenantData.subdomain,
+          tenantId: tenantData.id,
+          logoUrl: "Not found",
+          error: "⚠️ No logo_url set in tenant_settings",
+        });
+        return;
+      }
+
+      const logoPath = settings.logo_url;
+      const { data: publicData } = supabase.storage
+        .from("tenant-logos")
+        .getPublicUrl(logoPath);
+
+      if (!publicData?.publicUrl) {
+        setDebugInfo({
+          subdomain: tenantData.subdomain,
+          tenantId: tenantData.id,
+          logoUrl: "Not found",
+          error: "⚠️ Could not resolve public URL",
+        });
+      } else {
+        setDebugInfo({
+          subdomain: tenantData.subdomain,
+          tenantId: tenantData.id,
+          logoUrl: publicData.publicUrl,
+        });
+      }
+    } catch (error) {
       setDebugInfo({
         subdomain: baseSubdomain,
-        tenantId: "Not found",
-        logoUrl: "Not found",
-        error: "❌ Tenant not found",
-      });
-      return;
-    }
-
-    const { data: settings, error: settingsError } = await supabase
-      .from("tenant_settings")
-      .select("logo_url")
-      .eq("tenant_id", tenantData.id)
-      .maybeSingle();
-
-    console.log("⚙️ Settings:", settings);
-
-    if (!settings || !settings.logo_url) {
-      setDebugInfo({
-        subdomain: tenantData.subdomain,
-        tenantId: tenantData.id,
-        logoUrl: "Not found",
-        error: "⚠️ No logo_url set in tenant_settings",
-      });
-      return;
-    }
-
-    const logoPath = settings.logo_url;
-
-    const { data: publicData } = supabase.storage
-      .from("tenant-logos")
-      .getPublicUrl(logoPath);
-
-    console.log("🌐 Public URL Data:", publicData);
-
-    if (!publicData?.publicUrl) {
-      setDebugInfo({
-        subdomain: tenantData.subdomain,
-        tenantId: tenantData.id,
-        logoUrl: "Not found",
-        error: "⚠️ Could not resolve public URL",
-      });
-    } else {
-      setDebugInfo({
-        subdomain: tenantData.subdomain,
-        tenantId: tenantData.id,
-        logoUrl: publicData.publicUrl,
+        tenantId: "Unknown",
+        logoUrl: "Unknown",
+        error: "Unexpected error occurred.",
       });
     }
-  } catch (error) {
-    console.error("❌ Test logo fetch failed:", error);
-    setDebugInfo({
-      subdomain: baseSubdomain,
-      tenantId: "Unknown",
-      logoUrl: "Unknown",
-      error: "Unexpected error occurred.",
-    });
-  }
-};
+  };
 
   return (
     <Container maxWidth="sm" sx={{ mt: 10 }}>
