@@ -1,22 +1,26 @@
 // src/main/pages/Home.js
 import React from "react";
-import { Box, Typography, Button, Grid, Container } from "@mui/material";
+import { Box, Typography, Button, Grid, Container, Card, CardContent } from "@mui/material";
 import { Link } from "react-router-dom";
+import SupportAgentIcon from '@mui/icons-material/SupportAgent';
+import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows';
+import PublicIcon from '@mui/icons-material/Public';
 
 const Home = () => {
   return (
     <>
-      <Box sx={{ textAlign: "center", py: 10, backgroundColor: "#f5f5f5" }}>
+      {/* Hero Section */}
+      <Box sx={{ textAlign: "center", py: 10, background: "linear-gradient(135deg, #0d47a1, #1976d2)", color: "white" }}>
         <Container maxWidth="md">
           <Typography variant="h2" gutterBottom fontWeight="bold">
             Empower Your IT Team
           </Typography>
-          <Typography variant="h5" color="text.secondary" gutterBottom>
-            Hi5Tech is the all-in-one ITSM & Remote Management platform built for modern IT support.
+          <Typography variant="h5" sx={{ opacity: 0.9 }} gutterBottom>
+            All-in-one ITSM & Remote Management designed for modern support teams.
           </Typography>
           <Button
             variant="contained"
-            color="primary"
+            color="secondary"
             size="large"
             component={Link}
             to="/start-trial"
@@ -27,45 +31,62 @@ const Home = () => {
         </Container>
       </Box>
 
+      {/* Features Section */}
       <Container maxWidth="lg" sx={{ py: 10 }}>
         <Typography variant="h4" textAlign="center" fontWeight="bold" gutterBottom>
           Why Teams Choose Hi5Tech
         </Typography>
-        <Grid container spacing={6} sx={{ mt: 4 }}>
+        <Grid container spacing={4} sx={{ mt: 4 }}>
           <Grid item xs={12} md={4}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Ticketing & Workflows
-            </Typography>
-            <Typography color="text.secondary">
-              Manage incidents, service requests, and changes with powerful automations and SLAs.
-            </Typography>
+            <Card elevation={2} sx={{ p: 2, transition: '0.3s', '&:hover': { boxShadow: 6 } }}>
+              <CardContent>
+                <SupportAgentIcon fontSize="large" color="primary" />
+                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                  Ticketing & Workflows
+                </Typography>
+                <Typography color="text.secondary">
+                  Manage incidents, service requests, and changes with automations and SLAs.
+                </Typography>
+              </CardContent>
+            </Card>
           </Grid>
           <Grid item xs={12} md={4}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Remote Access
-            </Typography>
-            <Typography color="text.secondary">
-              Connect to endpoints in seconds—no user interaction needed, powered by your own relay.
-            </Typography>
+            <Card elevation={2} sx={{ p: 2, transition: '0.3s', '&:hover': { boxShadow: 6 } }}>
+              <CardContent>
+                <DesktopWindowsIcon fontSize="large" color="primary" />
+                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                  Remote Access
+                </Typography>
+                <Typography color="text.secondary">
+                  Instantly connect to endpoints—no user interaction needed. Built-in relay support.
+                </Typography>
+              </CardContent>
+            </Card>
           </Grid>
           <Grid item xs={12} md={4}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Self-Service Portal
-            </Typography>
-            <Typography color="text.secondary">
-              Let users raise tickets, browse your knowledge base, and request services with ease.
-            </Typography>
+            <Card elevation={2} sx={{ p: 2, transition: '0.3s', '&:hover': { boxShadow: 6 } }}>
+              <CardContent>
+                <PublicIcon fontSize="large" color="primary" />
+                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                  Self-Service Portal
+                </Typography>
+                <Typography color="text.secondary">
+                  Users can raise tickets, request services, and browse help articles easily.
+                </Typography>
+              </CardContent>
+            </Card>
           </Grid>
         </Grid>
       </Container>
 
+      {/* Call to Action */}
       <Box sx={{ textAlign: "center", py: 8, backgroundColor: "#0d47a1", color: "white" }}>
         <Container maxWidth="md">
           <Typography variant="h4" fontWeight="bold" gutterBottom>
             Try Hi5Tech Today
           </Typography>
           <Typography variant="h6" color="#bbdefb" gutterBottom>
-            Simple setup, powerful results. Start your 14-day free trial now.
+            Get started in minutes. No credit card required.
           </Typography>
           <Button
             variant="outlined"
