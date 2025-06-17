@@ -1,10 +1,24 @@
 // src/main/layouts/MarketingLayout.js
 import React, { useState } from "react";
 import {
-  AppBar, Toolbar, Typography, Box, Button, Container, IconButton, Drawer, List, ListItem, ListItemText, useTheme, useMediaQuery
+  AppBar,
+  Toolbar,
+  Typography,
+  Box,
+  Button,
+  Container,
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+  ListItemText,
+  useTheme,
+  useMediaQuery,
+  Divider
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import { Link, useLocation, Outlet } from "react-router-dom";
+import SupportAgentIcon from "@mui/icons-material/SupportAgent";
 
 const navLinks = [
   { label: "Home", path: "/" },
@@ -18,7 +32,6 @@ const MarketingLayout = () => {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const toggleDrawer = (open) => () => setDrawerOpen(open);
@@ -35,14 +48,10 @@ const MarketingLayout = () => {
         }}
       >
         <Toolbar sx={{ justifyContent: "space-between" }}>
-          <Typography
-            variant="h6"
-            component={Link}
-            to="/"
-            sx={{ textDecoration: "none", color: "inherit", fontWeight: "bold" }}
-          >
-            Hi5Tech
-          </Typography>
+          <Box component={Link} to="/" sx={{ display: "flex", alignItems: "center", textDecoration: "none", color: "inherit" }}>
+            <SupportAgentIcon sx={{ mr: 1 }} />
+            <Typography variant="h6" fontWeight="bold">Hi5Tech</Typography>
+          </Box>
 
           {isMobile ? (
             <>
@@ -56,6 +65,11 @@ const MarketingLayout = () => {
                   onClick={toggleDrawer(false)}
                   onKeyDown={toggleDrawer(false)}
                 >
+                  <Box sx={{ p: 2, display: "flex", alignItems: "center" }}>
+                    <SupportAgentIcon sx={{ mr: 1 }} color="primary" />
+                    <Typography variant="h6" fontWeight="bold">Hi5Tech</Typography>
+                  </Box>
+                  <Divider />
                   <List>
                     {navLinks.map((link) => (
                       <ListItem
@@ -69,6 +83,17 @@ const MarketingLayout = () => {
                       </ListItem>
                     ))}
                   </List>
+                  <Box sx={{ px: 2, pt: 1 }}>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      component={Link}
+                      to="/start-trial"
+                      color="primary"
+                    >
+                      Start Free Trial
+                    </Button>
+                  </Box>
                 </Box>
               </Drawer>
             </>
@@ -88,12 +113,20 @@ const MarketingLayout = () => {
                   {link.label}
                 </Button>
               ))}
+              <Button
+                variant="contained"
+                component={Link}
+                to="/start-trial"
+                sx={{ ml: 2 }}
+              >
+                Start Trial
+              </Button>
             </Box>
           )}
         </Toolbar>
       </AppBar>
 
-      {/* Page content */}
+      {/* Page Content */}
       <Container sx={{ flexGrow: 1, py: 4 }}>
         <Outlet />
       </Container>
