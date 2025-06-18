@@ -1,30 +1,31 @@
+// src/control/pages/Settings.js
 import React from "react";
-import { Button, Typography, Box } from "@mui/material";
+import { Box, Typography, Button, Stack } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
+import { useAuth } from "../../common/context/AuthContext";
 
 const Settings = () => {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = "/control-login";
+    logout();
+    window.location.href = "/control-login"; // Full reload to reset session
   };
 
   return (
-    <Box sx={{ padding: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Settings
-      </Typography>
-      <Typography variant="body1" gutterBottom>
-        Configure your preferences and access controls.
+    <Box sx={{ p: 4 }}>
+      <Typography variant="h5" gutterBottom>
+        Control Panel Settings
       </Typography>
 
-      <Button
-        variant="outlined"
-        color="error"
-        sx={{ mt: 3 }}
-        onClick={handleLogout}
-      >
-        Logout
-      </Button>
+      <Stack spacing={2} mt={2}>
+        <Button variant="contained" color="error" onClick={handleLogout}>
+          Logout
+        </Button>
+      </Stack>
     </Box>
   );
 };
