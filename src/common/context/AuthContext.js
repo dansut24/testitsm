@@ -1,4 +1,4 @@
-// src/common/context/AuthContext.js
+/// src/common/context/AuthContext.js
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../../supabaseClient";
 import { useNavigate } from "react-router-dom";
@@ -27,41 +27,38 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const init = async () => {
-      try {
-        if (!isRootDomain()) {
-          const subdomain = getSubdomain();
+      if (!isRootDomain()) {
+        const subdomain = getSubdomain();
+        console.log("[Subdomain]", subdomain);
 
-          if (subdomain && subdomain !== "local") {
-            const { data, error } = await supabase
-              .from("tenants")
-              .select("*")
-              .eq("subdomain", subdomain)
-              .maybeSingle();
+        if (subdomain && subdomain !== "local") {
+          const { data, error } = await supabase
+            .from("tenants")
+            .select("*")
+            .eq("subdomain", subdomain)
+            .maybeSingle();
 
-            if (error || !data) {
-              setTenant(null);
-              setTenantError("🚫 Tenant not found for this subdomain.");
-              return;
-            }
-
-            setTenant(data);
+          if (error || !data) {
+            setTenant(null);
+            setTenantError("🚫 Tenant not found for this subdomain.");
+            setAuthLoading(false);
+            return;
           }
+
+          setTenant(data);
         }
+      }
 
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-        console.log("[Auth] Initial session:", session);
+      console.log("[Session]", session);
 
-        if (session?.user) {
-          await fetchUserProfile(session.user);
-        } else {
-          setUser(null);
-        }
-      } catch (err) {
-        console.error("Auth init error:", err);
-      } finally {
+      if (session?.user) {
+        await fetchUserProfile(session.user);
+      } else {
+        setUser(null);
         setAuthLoading(false);
       }
     };
@@ -71,7 +68,6 @@ export const AuthProvider = ({ children }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("[Auth] Auth state changed:", session);
       if (session?.user) {
         fetchUserProfile(session.user);
       } else {
@@ -83,21 +79,48 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const fetchUserProfile = async (supabaseUser) => {
-    try {
-      const { data: profile, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", supabaseUser.id)
-        .maybeSingle();
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", supabaseUser.id)
+      .maybeSingle();
 
-      if (error || !profile) {
-        console.error("Failed to fetch user profile:", error?.message);
+    console.log("[Profile]", profile);
+
+    // Auto-create profile if missing
+    if (!profile && tenant?.id) {
+      const { error: insertError } = await supabase
+        .from("profiles")
+        .insert({
+          id: supabaseUser.id,
+          email: supabaseUser.email,
+          tenant_id: tenant.id,
+          role: "user",
+          full_name: supabaseUser.email.split("@")[0],
+        });
+
+      if (insertError) {
+        console.error("❌ Failed to insert default profile:", insertError.message);
         setUser(null);
+        setAuthLoading(false);
         return;
       }
 
-      console.log("[Auth] User profile loaded:", profile);
+      // Try fetching again after insert
+      return await fetchUserProfile(supabaseUser);
+    }
 
+    if (error || !profile) {
+      console.warn("⚠️ No profile found, user will be limited.");
+      setUser({
+        id: supabaseUser.id,
+        email: supabaseUser.email,
+        role: "user",
+        roles: ["user"],
+        full_name: supabaseUser.email,
+        tenant_id: tenant?.id || null,
+      });
+    } else {
       const role = profile.role || "user";
       setUser({
         id: supabaseUser.id,
@@ -107,10 +130,9 @@ export const AuthProvider = ({ children }) => {
         full_name: profile.full_name,
         tenant_id: profile.tenant_id,
       });
-    } catch (err) {
-      console.error("Error loading profile:", err);
-      setUser(null);
     }
+
+    setAuthLoading(false);
   };
 
   const logout = async () => {
