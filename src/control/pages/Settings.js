@@ -12,7 +12,7 @@ const Settings = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     logout();
-    window.location.href = "/control-login"; // Full reload to reset session
+    window.location.href = "/login"; // Updated to point to /login for consistency
   };
 
   return (
