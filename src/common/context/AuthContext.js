@@ -1,4 +1,5 @@
-/// src/common/context/AuthContext.js
+// src/common/context/AuthContext.js
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../../supabaseClient";
 import { useNavigate } from "react-router-dom";
@@ -17,7 +18,7 @@ export const AuthProvider = ({ children }) => {
     if (host.includes("localhost")) return "local";
     const parts = host.split(".");
     if (parts.length < 3) return null;
-    return parts[0].replace("-itsm", "");
+    return parts[0].replace(/-(itsm|control)$/, ""); // ✅ supports both -itsm and -control
   };
 
   const isRootDomain = () => {
@@ -29,7 +30,6 @@ export const AuthProvider = ({ children }) => {
     const init = async () => {
       if (!isRootDomain()) {
         const subdomain = getSubdomain();
-        console.log("[Subdomain]", subdomain);
 
         if (subdomain && subdomain !== "local") {
           const { data, error } = await supabase
@@ -52,8 +52,6 @@ export const AuthProvider = ({ children }) => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-
-      console.log("[Session]", session);
 
       if (session?.user) {
         await fetchUserProfile(session.user);
@@ -85,41 +83,9 @@ export const AuthProvider = ({ children }) => {
       .eq("id", supabaseUser.id)
       .maybeSingle();
 
-    console.log("[Profile]", profile);
-
-    // Auto-create profile if missing
-    if (!profile && tenant?.id) {
-      const { error: insertError } = await supabase
-        .from("profiles")
-        .insert({
-          id: supabaseUser.id,
-          email: supabaseUser.email,
-          tenant_id: tenant.id,
-          role: "user",
-          full_name: supabaseUser.email.split("@")[0],
-        });
-
-      if (insertError) {
-        console.error("❌ Failed to insert default profile:", insertError.message);
-        setUser(null);
-        setAuthLoading(false);
-        return;
-      }
-
-      // Try fetching again after insert
-      return await fetchUserProfile(supabaseUser);
-    }
-
     if (error || !profile) {
-      console.warn("⚠️ No profile found, user will be limited.");
-      setUser({
-        id: supabaseUser.id,
-        email: supabaseUser.email,
-        role: "user",
-        roles: ["user"],
-        full_name: supabaseUser.email,
-        tenant_id: tenant?.id || null,
-      });
+      console.error("Failed to fetch user profile:", error?.message);
+      setUser(null);
     } else {
       const role = profile.role || "user";
       setUser({
