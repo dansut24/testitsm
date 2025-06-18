@@ -15,6 +15,7 @@ import {
   DialogContent,
   DialogActions,
   Stack,
+  TextField,
 } from "@mui/material";
 import { supabase } from "../../common/utils/supabaseClient";
 import { useAuth } from "../../common/context/AuthContext";
@@ -47,6 +48,7 @@ const Settings = () => {
         setLinkedProviders([]);
       }
     };
+
     fetchLinkedAccounts();
   }, []);
 
@@ -60,16 +62,21 @@ const Settings = () => {
     setStatus(null);
 
     const defaultLayout = Object.keys(widgetRegistry);
-    const { error } = await supabase.from("dashboard_layouts").upsert({
-      user_id: user.id,
-      layout: defaultLayout,
-      updated_at: new Date().toISOString(),
-    });
 
-    setStatus({
-      type: error ? "error" : "success",
-      message: error ? "❌ Failed to create dashboard layout." : "✅ Dashboard layout created successfully!",
-    });
+    const { error } = await supabase
+      .from("dashboard_layouts")
+      .upsert({
+        user_id: user.id,
+        layout: defaultLayout,
+        updated_at: new Date().toISOString(),
+      });
+
+    if (error) {
+      console.error("❌ Supabase insert error:", error);
+      setStatus({ type: "error", message: "❌ Failed to create dashboard layout." });
+    } else {
+      setStatus({ type: "success", message: "✅ Dashboard layout created successfully!" });
+    }
 
     setLoading(false);
   };
@@ -81,6 +88,7 @@ const Settings = () => {
 
   const handleUnlinkConfirmed = async () => {
     setConfirmOpen(false);
+
     const { data: identitiesData } = await supabase.auth.getUserIdentities();
     const allIdentities = identitiesData.identities;
 
@@ -90,11 +98,15 @@ const Settings = () => {
     }
 
     const identity = allIdentities.find((id) => id.provider === providerToUnlink);
-    if (!identity) return alert("Provider not linked.");
+    if (!identity) {
+      alert("Provider not linked.");
+      return;
+    }
 
     const { error } = await supabase.auth.unlinkIdentity(identity);
     if (error) {
-      alert(`❌ Failed to unlink ${providerToUnlink}: ${error.message}`);
+      console.error("Failed to unlink identity:", error);
+      alert(`Failed to unlink ${providerToUnlink}: ${error.message}`);
     } else {
       setLinkedProviders((prev) => prev.filter((id) => id.provider !== providerToUnlink));
       setStatus({ type: "success", message: `✅ Unlinked ${providerToUnlink} successfully.` });
@@ -104,9 +116,13 @@ const Settings = () => {
   const handleLink = async (provider) => {
     try {
       const { error } = await supabase.auth.linkIdentity({ provider });
-      if (error) alert(`❌ Failed to link ${provider}: ${error.message}`);
-      else alert(`✅ Linked ${provider} successfully.`);
+      if (error) {
+        alert(`❌ Failed to link ${provider}: ${error.message}`);
+      } else {
+        alert(`✅ Linked ${provider} successfully.`);
+      }
     } catch (err) {
+      console.error("Linking error:", err);
       alert("❌ Unexpected error occurred while linking.");
     }
   };
@@ -191,15 +207,21 @@ const Settings = () => {
           )}
 
           <Divider sx={{ my: 4 }} />
-          <Typography variant="h6">Add New User</Typography>
+          <Typography variant="h6">Manage Users</Typography>
           <Button
             variant="contained"
             sx={{ mt: 2 }}
-            onClick={() => setAddUserOpen(true)}
-            disabled={!user?.tenant_id}
+            onClick={() => {
+              if (!user?.tenant_id) {
+                alert("User tenant not detected. Cannot assign new user.");
+                return;
+              }
+              setAddUserOpen(true);
+            }}
           >
             Add User
           </Button>
+          <AddUserModal open={addUserOpen} onClose={() => setAddUserOpen(false)} tenantId={user?.tenant_id} />
         </>
       )}
 
@@ -213,12 +235,6 @@ const Settings = () => {
           <Button onClick={handleUnlinkConfirmed} color="error" variant="contained">Unlink</Button>
         </DialogActions>
       </Dialog>
-
-      <AddUserModal
-        open={addUserOpen}
-        onClose={() => setAddUserOpen(false)}
-        tenantId={user?.tenant_id}
-      />
     </Box>
   );
 };
