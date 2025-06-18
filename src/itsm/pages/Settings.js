@@ -15,7 +15,6 @@ import {
   DialogContent,
   DialogActions,
   Stack,
-  TextField,
 } from "@mui/material";
 import { supabase } from "../../common/utils/supabaseClient";
 import { useAuth } from "../../common/context/AuthContext";
@@ -25,6 +24,7 @@ import GoogleIcon from "@mui/icons-material/Google";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import BusinessIcon from "@mui/icons-material/Business";
 import EmailIcon from "@mui/icons-material/Email";
+import AddUserModal from "../components/AddUserModal";
 
 const Settings = () => {
   const { user, authLoading } = useAuth();
@@ -33,10 +33,7 @@ const Settings = () => {
   const [linkedProviders, setLinkedProviders] = useState([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [providerToUnlink, setProviderToUnlink] = useState(null);
-
-  const [newUserEmail, setNewUserEmail] = useState("");
-  const [inviteLoading, setInviteLoading] = useState(false);
-  const [inviteStatus, setInviteStatus] = useState(null);
+  const [addUserOpen, setAddUserOpen] = useState(false);
 
   const availableProviders = ["google", "github", "azure"];
 
@@ -50,7 +47,6 @@ const Settings = () => {
         setLinkedProviders([]);
       }
     };
-
     fetchLinkedAccounts();
   }, []);
 
@@ -64,21 +60,16 @@ const Settings = () => {
     setStatus(null);
 
     const defaultLayout = Object.keys(widgetRegistry);
+    const { error } = await supabase.from("dashboard_layouts").upsert({
+      user_id: user.id,
+      layout: defaultLayout,
+      updated_at: new Date().toISOString(),
+    });
 
-    const { error } = await supabase
-      .from("dashboard_layouts")
-      .upsert({
-        user_id: user.id,
-        layout: defaultLayout,
-        updated_at: new Date().toISOString(),
-      });
-
-    if (error) {
-      console.error("❌ Supabase insert error:", error);
-      setStatus({ type: "error", message: "❌ Failed to create dashboard layout." });
-    } else {
-      setStatus({ type: "success", message: "✅ Dashboard layout created successfully!" });
-    }
+    setStatus({
+      type: error ? "error" : "success",
+      message: error ? "❌ Failed to create dashboard layout." : "✅ Dashboard layout created successfully!",
+    });
 
     setLoading(false);
   };
@@ -90,7 +81,6 @@ const Settings = () => {
 
   const handleUnlinkConfirmed = async () => {
     setConfirmOpen(false);
-
     const { data: identitiesData } = await supabase.auth.getUserIdentities();
     const allIdentities = identitiesData.identities;
 
@@ -100,15 +90,11 @@ const Settings = () => {
     }
 
     const identity = allIdentities.find((id) => id.provider === providerToUnlink);
-    if (!identity) {
-      alert("Provider not linked.");
-      return;
-    }
+    if (!identity) return alert("Provider not linked.");
 
     const { error } = await supabase.auth.unlinkIdentity(identity);
     if (error) {
-      console.error("Failed to unlink identity:", error);
-      alert(`Failed to unlink ${providerToUnlink}: ${error.message}`);
+      alert(`❌ Failed to unlink ${providerToUnlink}: ${error.message}`);
     } else {
       setLinkedProviders((prev) => prev.filter((id) => id.provider !== providerToUnlink));
       setStatus({ type: "success", message: `✅ Unlinked ${providerToUnlink} successfully.` });
@@ -118,39 +104,11 @@ const Settings = () => {
   const handleLink = async (provider) => {
     try {
       const { error } = await supabase.auth.linkIdentity({ provider });
-      if (error) {
-        alert(`❌ Failed to link ${provider}: ${error.message}`);
-      } else {
-        alert(`✅ Linked ${provider} successfully.`);
-      }
+      if (error) alert(`❌ Failed to link ${provider}: ${error.message}`);
+      else alert(`✅ Linked ${provider} successfully.`);
     } catch (err) {
-      console.error("Linking error:", err);
       alert("❌ Unexpected error occurred while linking.");
     }
-  };
-
-  const handleInviteUser = async () => {
-    setInviteLoading(true);
-    setInviteStatus(null);
-
-    try {
-      const { error } = await supabase.auth.admin.inviteUserByEmail(newUserEmail, {
-        redirectTo: `${window.location.origin}/verify`,
-      });
-
-      if (error) {
-        console.error("Invite error:", error);
-        setInviteStatus({ type: "error", message: `❌ Failed: ${error.message}` });
-      } else {
-        setInviteStatus({ type: "success", message: `✅ Invite sent to ${newUserEmail}` });
-        setNewUserEmail("");
-      }
-    } catch (err) {
-      console.error("Unexpected error:", err);
-      setInviteStatus({ type: "error", message: "❌ Unexpected error occurred." });
-    }
-
-    setInviteLoading(false);
   };
 
   const getProviderIcon = (provider) => {
@@ -233,24 +191,15 @@ const Settings = () => {
           )}
 
           <Divider sx={{ my: 4 }} />
-          <Typography variant="h6">Invite New User</Typography>
-          <Stack spacing={2} sx={{ maxWidth: 400, mt: 2 }}>
-            <TextField
-              label="Email Address"
-              variant="outlined"
-              value={newUserEmail}
-              onChange={(e) => setNewUserEmail(e.target.value)}
-              fullWidth
-            />
-            <Button
-              variant="contained"
-              onClick={handleInviteUser}
-              disabled={!newUserEmail || inviteLoading}
-            >
-              {inviteLoading ? "Sending Invite..." : "Send Invite"}
-            </Button>
-            {inviteStatus && <Alert severity={inviteStatus.type}>{inviteStatus.message}</Alert>}
-          </Stack>
+          <Typography variant="h6">Add New User</Typography>
+          <Button
+            variant="contained"
+            sx={{ mt: 2 }}
+            onClick={() => setAddUserOpen(true)}
+            disabled={!user?.tenant_id}
+          >
+            Add User
+          </Button>
         </>
       )}
 
@@ -264,6 +213,12 @@ const Settings = () => {
           <Button onClick={handleUnlinkConfirmed} color="error" variant="contained">Unlink</Button>
         </DialogActions>
       </Dialog>
+
+      <AddUserModal
+        open={addUserOpen}
+        onClose={() => setAddUserOpen(false)}
+        tenantId={user?.tenant_id}
+      />
     </Box>
   );
 };
