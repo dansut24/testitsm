@@ -10,7 +10,7 @@ import {
   Box,
   Link as MuiLink,
 } from "@mui/material";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useThemeMode } from "../../common/context/ThemeContext";
 import { supabase } from "../../common/utils/supabaseClient";
 import defaultLogo from "../../assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
@@ -20,7 +20,6 @@ const ControlLogin = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [logoUrl, setLogoUrl] = useState(defaultLogo);
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { mode } = useThemeMode();
 
@@ -69,8 +68,10 @@ const ControlLogin = () => {
       return;
     }
 
+    // Ensure session is available and force re-evaluation of AuthContext
+    await supabase.auth.getSession();
     const redirect = searchParams.get("redirect");
-    navigate(redirect || "/"); // ✅ Redirect to Home instead of /dashboard
+    window.location.href = redirect || "/";
   };
 
   return (
