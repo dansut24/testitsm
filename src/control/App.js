@@ -1,6 +1,6 @@
 import React from "react";
 import { CssBaseline, Box } from "@mui/material";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import ControlLayout from "./layouts/ControlLayout";
 
 import Devices from "./pages/Devices";
@@ -23,8 +23,6 @@ function App() {
     );
   }
 
-  const isLoggedIn = !!user;
-
   return (
     <>
       <CssBaseline />
@@ -32,16 +30,17 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
 
-          {/* Protected routes */}
-          <Route
-            path="/"
-            element={isLoggedIn ? <ControlLayout /> : <Login />}
-          >
-            <Route index element={<Home />} />
-            <Route path="devices" element={<Devices />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="settings" element={<ControlSettings />} />
-          </Route>
+          {user ? (
+            <Route path="/" element={<ControlLayout />}>
+              <Route index element={<Home />} />
+              <Route path="devices" element={<Devices />} />
+              <Route path="reports" element={<Reports />} />
+              <Route path="settings" element={<ControlSettings />} />
+            </Route>
+          ) : (
+            // redirect if not logged in
+            <Route path="/*" element={<Navigate to="/login" replace />} />
+          )}
 
           <Route path="*" element={<NotFound />} />
         </Routes>
