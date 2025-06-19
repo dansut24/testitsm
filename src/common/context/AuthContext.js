@@ -1,4 +1,3 @@
-// src/common/context/AuthContext.js
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../../common/utils/supabaseClient";
 import { useNavigate } from "react-router-dom";
@@ -46,13 +45,20 @@ export const AuthProvider = ({ children }) => {
 
       const {
         data: { session },
+        error: sessionError,
       } = await supabase.auth.getSession();
 
       if (session?.user) {
         await fetchUserProfile(session.user);
       } else {
-        setUser(null);
-        setAuthLoading(false);
+        // Try to refresh the session in case it hasn't been initialized yet
+        const { data: refreshed } = await supabase.auth.refreshSession();
+        if (refreshed.session?.user) {
+          await fetchUserProfile(refreshed.session.user);
+        } else {
+          setUser(null);
+          setAuthLoading(false);
+        }
       }
     };
 
