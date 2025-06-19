@@ -1,157 +1,74 @@
 // src/control/components/Sidebar.js
-import React, { useState } from "react";
+import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import {
-  Drawer,
-  IconButton,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Toolbar,
-  useMediaQuery,
-  useTheme,
-  Box,
-  Divider,
-  Typography,
-  Tooltip,
-  Badge,
-  Avatar,
-  Stack
-} from "@mui/material";
-import MenuIcon from "@mui/icons-material/Menu";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import HomeIcon from "@mui/icons-material/Home";
-import DevicesIcon from "@mui/icons-material/Devices";
-import BarChartIcon from "@mui/icons-material/BarChart";
-import SettingsIcon from "@mui/icons-material/Settings";
-
-const menuItems = [
-  { label: "Home", path: "/", icon: <HomeIcon /> },
-  { label: "Devices", path: "/devices", icon: <DevicesIcon />, badge: 2 },
-  { label: "Reports", path: "/reports", icon: <BarChartIcon /> },
-  { label: "Settings", path: "/settings", icon: <SettingsIcon /> },
-];
+import { useMediaQuery, Box, Tooltip } from "@mui/material";
+import { Home, Devices, BarChart, Settings } from "@mui/icons-material";
 
 const Sidebar = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const location = useLocation();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(isMobile ? true : false);
+  const isMobile = useMediaQuery("(max-width:600px)");
 
-  const drawerWidth = collapsed ? 70 : 240;
-
-  const drawer = (
-    <Box
-      sx={{
-        width: drawerWidth,
-        backgroundColor: "#1f2937",
-        height: "100%",
-        color: "#fff",
-        transition: "width 0.3s",
-        boxShadow: "2px 0 8px rgba(0,0,0,0.2)",
-        borderRight: "1px solid #374151",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <Toolbar sx={{ justifyContent: collapsed ? "center" : "space-between", px: 2 }}>
-        {!collapsed && <Typography variant="h6">HI5Tech</Typography>}
-        {!isMobile && (
-          <IconButton
-            size="small"
-            onClick={() => setCollapsed(!collapsed)}
-            sx={{ color: "#fff" }}
-          >
-            {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-          </IconButton>
-        )}
-      </Toolbar>
-      <Divider sx={{ borderColor: "#374151" }} />
-      <List sx={{ flexGrow: 1 }}>
-        {menuItems.map(({ label, path, icon, badge }) => {
-          const selected = location.pathname === path;
-          const color = selected ? "#38bdf8" : "#fff";
-          return (
-            <Tooltip title={collapsed ? label : ""} placement="right" key={path}>
-              <ListItem
-                button
-                component={Link}
-                to={path}
-                selected={selected}
-                sx={{
-                  color,
-                  "&.Mui-selected": {
-                    backgroundColor: "#374151",
-                    color: "#38bdf8",
-                  },
-                }}
-                onClick={() => isMobile && setMobileOpen(false)}
-              >
-                <ListItemIcon sx={{ color }}>
-                  {badge ? (
-                    <Badge badgeContent={badge} color="secondary">
-                      {icon}
-                    </Badge>
-                  ) : (
-                    icon
-                  )}
-                </ListItemIcon>
-                {!collapsed && <ListItemText primary={label} />}
-              </ListItem>
-            </Tooltip>
-          );
-        })}
-      </List>
-      {!collapsed && (
-        <Box sx={{ p: 2, borderTop: "1px solid #374151" }}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Avatar sx={{ width: 32, height: 32 }}>H</Avatar>
-            <Typography variant="body2">Admin</Typography>
-          </Stack>
-        </Box>
-      )}
-    </Box>
-  );
+  const menuItems = [
+    { label: "Home", path: "/", icon: <Home /> },
+    { label: "Devices", path: "/devices", icon: <Devices /> },
+    { label: "Reports", path: "/reports", icon: <BarChart /> },
+    { label: "Settings", path: "/settings", icon: <Settings /> },
+  ];
 
   return (
-    <>
-      {isMobile && (
-        <IconButton
-          onClick={() => setMobileOpen(!mobileOpen)}
-          sx={{
-            position: "fixed",
-            top: 10,
-            left: 10,
-            zIndex: 1301,
-            backgroundColor: "#1f2937",
-            color: "#fff",
-          }}
+    <Box
+      sx={{
+        width: isMobile ? 64 : 220,
+        bgcolor: "#1f2937",
+        color: "#fff",
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: isMobile ? "center" : "flex-start",
+        py: 2,
+        px: isMobile ? 0 : 2,
+        boxShadow: 4,
+        borderRight: "1px solid #333",
+        position: "fixed",
+        top: 0,
+        left: 0,
+        zIndex: 1200,
+      }}
+    >
+      {!isMobile && (
+        <Box
+          component="h2"
+          sx={{ color: "#fff", fontSize: 18, fontWeight: 600, mb: 4 }}
         >
-          <MenuIcon />
-        </IconButton>
+          HI5Tech Control
+        </Box>
       )}
-      <Drawer
-        variant={isMobile ? "temporary" : "permanent"}
-        open={isMobile ? mobileOpen : true}
-        onClose={() => setMobileOpen(false)}
-        ModalProps={{ keepMounted: true }}
-        sx={{
-          width: drawerWidth,
-          flexShrink: 0,
-          "& .MuiDrawer-paper": {
-            width: drawerWidth,
-            boxSizing: "border-box",
-            backgroundColor: "#1f2937",
-            transition: "width 0.3s",
-          },
-        }}
-      >
-        {drawer}
-      </Drawer>
-    </>
+      {menuItems.map((item) => {
+        const isActive = location.pathname === item.path;
+        const color = isActive ? "#38bdf8" : "#fff";
+
+        return (
+          <Tooltip key={item.path} title={item.label} placement="right">
+            <Link
+              to={item.path}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                width: "100%",
+                color,
+                textDecoration: "none",
+                margin: isMobile ? "1rem 0" : "0.75rem 0",
+                justifyContent: isMobile ? "center" : "flex-start",
+                fontWeight: isActive ? 600 : 400,
+              }}
+            >
+              <Box sx={{ mr: isMobile ? 0 : 1.5 }}>{item.icon}</Box>
+              {!isMobile && item.label}
+            </Link>
+          </Tooltip>
+        );
+      })}
+    </Box>
   );
 };
 
