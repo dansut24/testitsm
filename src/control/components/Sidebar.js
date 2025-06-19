@@ -3,7 +3,7 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useMediaQuery, Box, Tooltip, Typography } from "@mui/material";
 import { Home, Devices, BarChart, Settings } from "@mui/icons-material";
-import logo from "../../assets/logo512.png"; // Replace with your tenant logo
+import logo from "../../common/assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png"; // ✅ Correct logo path
 
 const Sidebar = () => {
   const location = useLocation();
@@ -37,7 +37,16 @@ const Sidebar = () => {
     >
       {/* Logo */}
       <Box sx={{ mb: 4 }}>
-        <img src={logo} alt="Logo" style={{ width: 40, height: 40 }} />
+        <img
+          src={logo}
+          alt="Hi5Tech Logo"
+          style={{
+            width: isMobile ? 32 : 40,
+            height: isMobile ? 32 : 40,
+            borderRadius: 6,
+            objectFit: "contain",
+          }}
+        />
       </Box>
 
       {/* Menu items */}
