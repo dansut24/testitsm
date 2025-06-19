@@ -1,6 +1,6 @@
 import React from "react";
 import { CssBaseline, Box } from "@mui/material";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import ControlLayout from "./layouts/ControlLayout";
 
 import Devices from "./pages/Devices";
@@ -13,7 +13,7 @@ import Login from "./pages/ControlLogin";
 import { useAuth } from "../common/context/AuthContext";
 
 function App() {
-  const { user, authLoading } = useAuth();
+  const { authLoading } = useAuth();
 
   if (authLoading) {
     return (
@@ -29,19 +29,12 @@ function App() {
       <Box sx={{ minHeight: "100vh", overflow: "auto" }}>
         <Routes>
           <Route path="/login" element={<Login />} />
-
-          {user ? (
-            <Route path="/" element={<ControlLayout />}>
-              <Route index element={<Home />} />
-              <Route path="devices" element={<Devices />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="settings" element={<ControlSettings />} />
-            </Route>
-          ) : (
-            // redirect if not logged in
-            <Route path="/*" element={<Navigate to="/login" replace />} />
-          )}
-
+          <Route path="/" element={<ControlLayout />}>
+            <Route index element={<Home />} />
+            <Route path="devices" element={<Devices />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="settings" element={<ControlSettings />} />
+          </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Box>
