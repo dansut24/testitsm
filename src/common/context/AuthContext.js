@@ -1,7 +1,6 @@
 // src/common/context/AuthContext.js
-
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "../../supabaseClient";
+import { supabase } from "../../common/utils/supabaseClient";
 import { useNavigate } from "react-router-dom";
 
 const AuthContext = createContext();
@@ -18,7 +17,7 @@ export const AuthProvider = ({ children }) => {
     if (host.includes("localhost")) return "local";
     const parts = host.split(".");
     if (parts.length < 3) return null;
-    return parts[0].replace(/-(itsm|control)$/, ""); // ✅ supports both -itsm and -control
+    return parts[0].replace("-itsm", "").replace("-control", "");
   };
 
   const isRootDomain = () => {
@@ -28,25 +27,21 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const init = async () => {
-      if (!isRootDomain()) {
-        const subdomain = getSubdomain();
+      const subdomain = getSubdomain();
+      if (!isRootDomain() && subdomain && subdomain !== "local") {
+        const { data, error } = await supabase
+          .from("tenants")
+          .select("*")
+          .eq("subdomain", subdomain)
+          .maybeSingle();
 
-        if (subdomain && subdomain !== "local") {
-          const { data, error } = await supabase
-            .from("tenants")
-            .select("*")
-            .eq("subdomain", subdomain)
-            .maybeSingle();
-
-          if (error || !data) {
-            setTenant(null);
-            setTenantError("🚫 Tenant not found for this subdomain.");
-            setAuthLoading(false);
-            return;
-          }
-
-          setTenant(data);
+        if (error || !data) {
+          setTenant(null);
+          setTenantError("🚫 Tenant not found for this subdomain.");
+          setAuthLoading(false);
+          return;
         }
+        setTenant(data);
       }
 
       const {
