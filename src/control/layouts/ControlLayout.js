@@ -3,13 +3,14 @@ import React from "react";
 import Sidebar from "../components/Sidebar";
 import { Outlet } from "react-router-dom";
 import { Box, useMediaQuery } from "@mui/material";
+import logo from "../../common/assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
 
 const ControlLayout = () => {
   const isMobile = useMediaQuery("(max-width:600px)");
 
   return (
     <Box sx={{ display: "flex" }}>
-      <Sidebar />
+      <Sidebar logo={logo} />
       <Box
         component="main"
         sx={{
