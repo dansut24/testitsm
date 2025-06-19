@@ -1,32 +1,32 @@
 // src/control/components/Sidebar.js
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { useMediaQuery, Box, Tooltip } from "@mui/material";
+import { useMediaQuery, Box, Tooltip, Typography } from "@mui/material";
 import { Home, Devices, BarChart, Settings } from "@mui/icons-material";
+import logo from "../../assets/logo512.png"; // Replace with your tenant logo
 
 const Sidebar = () => {
   const location = useLocation();
   const isMobile = useMediaQuery("(max-width:600px)");
 
   const menuItems = [
-    { label: "Home", path: "/", icon: <Home /> },
-    { label: "Devices", path: "/devices", icon: <Devices /> },
-    { label: "Reports", path: "/reports", icon: <BarChart /> },
-    { label: "Settings", path: "/settings", icon: <Settings /> },
+    { label: "Home", path: "/", icon: <Home fontSize="large" /> },
+    { label: "Devices", path: "/devices", icon: <Devices fontSize="large" /> },
+    { label: "Reports", path: "/reports", icon: <BarChart fontSize="large" /> },
+    { label: "Settings", path: "/settings", icon: <Settings fontSize="large" /> },
   ];
 
   return (
     <Box
       sx={{
-        width: isMobile ? 64 : 220,
+        width: isMobile ? 80 : 100,
         bgcolor: "#1f2937",
         color: "#fff",
         height: "100vh",
         display: "flex",
         flexDirection: "column",
-        alignItems: isMobile ? "center" : "flex-start",
+        alignItems: "center",
         py: 2,
-        px: isMobile ? 0 : 2,
         boxShadow: 4,
         borderRight: "1px solid #333",
         position: "fixed",
@@ -35,14 +35,12 @@ const Sidebar = () => {
         zIndex: 1200,
       }}
     >
-      {!isMobile && (
-        <Box
-          component="h2"
-          sx={{ color: "#fff", fontSize: 18, fontWeight: 600, mb: 4 }}
-        >
-          HI5Tech Control
-        </Box>
-      )}
+      {/* Logo */}
+      <Box sx={{ mb: 4 }}>
+        <img src={logo} alt="Logo" style={{ width: 40, height: 40 }} />
+      </Box>
+
+      {/* Menu items */}
       {menuItems.map((item) => {
         const isActive = location.pathname === item.path;
         const color = isActive ? "#38bdf8" : "#fff";
@@ -53,17 +51,25 @@ const Sidebar = () => {
               to={item.path}
               style={{
                 display: "flex",
+                flexDirection: "column",
                 alignItems: "center",
-                width: "100%",
                 color,
                 textDecoration: "none",
-                margin: isMobile ? "1rem 0" : "0.75rem 0",
-                justifyContent: isMobile ? "center" : "flex-start",
-                fontWeight: isActive ? 600 : 400,
+                marginBottom: "2rem",
               }}
             >
-              <Box sx={{ mr: isMobile ? 0 : 1.5 }}>{item.icon}</Box>
-              {!isMobile && item.label}
+              {item.icon}
+              <Typography
+                variant="caption"
+                sx={{
+                  fontSize: "0.65rem",
+                  mt: 0.5,
+                  color,
+                  fontWeight: isActive ? 600 : 400,
+                }}
+              >
+                {item.label}
+              </Typography>
             </Link>
           </Tooltip>
         );
