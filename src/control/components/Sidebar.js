@@ -15,6 +15,9 @@ import {
   Divider,
   Typography,
   Tooltip,
+  Badge,
+  Avatar,
+  Stack
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
@@ -26,7 +29,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 
 const menuItems = [
   { label: "Home", path: "/", icon: <HomeIcon /> },
-  { label: "Devices", path: "/devices", icon: <DevicesIcon /> },
+  { label: "Devices", path: "/devices", icon: <DevicesIcon />, badge: 2 },
   { label: "Reports", path: "/reports", icon: <BarChartIcon /> },
   { label: "Settings", path: "/settings", icon: <SettingsIcon /> },
 ];
@@ -36,7 +39,7 @@ const Sidebar = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(isMobile ? true : false);
 
   const drawerWidth = collapsed ? 70 : 240;
 
@@ -56,17 +59,19 @@ const Sidebar = () => {
     >
       <Toolbar sx={{ justifyContent: collapsed ? "center" : "space-between", px: 2 }}>
         {!collapsed && <Typography variant="h6">HI5Tech</Typography>}
-        <IconButton
-          size="small"
-          onClick={() => setCollapsed(!collapsed)}
-          sx={{ color: "#fff" }}
-        >
-          {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-        </IconButton>
+        {!isMobile && (
+          <IconButton
+            size="small"
+            onClick={() => setCollapsed(!collapsed)}
+            sx={{ color: "#fff" }}
+          >
+            {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+          </IconButton>
+        )}
       </Toolbar>
       <Divider sx={{ borderColor: "#374151" }} />
       <List sx={{ flexGrow: 1 }}>
-        {menuItems.map(({ label, path, icon }) => {
+        {menuItems.map(({ label, path, icon, badge }) => {
           const selected = location.pathname === path;
           const color = selected ? "#38bdf8" : "#fff";
           return (
@@ -85,13 +90,29 @@ const Sidebar = () => {
                 }}
                 onClick={() => isMobile && setMobileOpen(false)}
               >
-                <ListItemIcon sx={{ color }}>{icon}</ListItemIcon>
+                <ListItemIcon sx={{ color }}>
+                  {badge ? (
+                    <Badge badgeContent={badge} color="secondary">
+                      {icon}
+                    </Badge>
+                  ) : (
+                    icon
+                  )}
+                </ListItemIcon>
                 {!collapsed && <ListItemText primary={label} />}
               </ListItem>
             </Tooltip>
           );
         })}
       </List>
+      {!collapsed && (
+        <Box sx={{ p: 2, borderTop: "1px solid #374151" }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Avatar sx={{ width: 32, height: 32 }}>H</Avatar>
+            <Typography variant="body2">Admin</Typography>
+          </Stack>
+        </Box>
+      )}
     </Box>
   );
 
