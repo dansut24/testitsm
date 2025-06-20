@@ -44,13 +44,13 @@ export const AuthProvider = ({ children }) => {
         setTenant(data);
       }
 
-      await supabase.auth.refreshSession();
-
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
       if (session?.user) {
+        // ✅ Temporarily set basic user info to prevent redirect loop
+        setUser({ id: session.user.id, email: session.user.email });
         await fetchUserProfile(session.user);
       } else {
         setUser(null);
@@ -64,10 +64,11 @@ export const AuthProvider = ({ children }) => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
+        // ✅ Set user early again on auth state change
+        setUser({ id: session.user.id, email: session.user.email });
         fetchUserProfile(session.user);
       } else {
         setUser(null);
-        setAuthLoading(false);
       }
     });
 
