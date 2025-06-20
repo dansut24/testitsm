@@ -1,4 +1,3 @@
-// src/common/context/AuthContext.js
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../../common/utils/supabaseClient";
 import { useNavigate } from "react-router-dom";
@@ -45,16 +44,16 @@ export const AuthProvider = ({ children }) => {
       }
 
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
+        data: { user: supabaseUser },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      if (session?.user) {
-        // ✅ Temporarily set basic user info to prevent redirect loop
-        setUser({ id: session.user.id, email: session.user.email });
-        await fetchUserProfile(session.user);
-      } else {
+      if (userError || !supabaseUser) {
         setUser(null);
         setAuthLoading(false);
+      } else {
+        setUser({ id: supabaseUser.id, email: supabaseUser.email });
+        await fetchUserProfile(supabaseUser);
       }
     };
 
@@ -64,7 +63,6 @@ export const AuthProvider = ({ children }) => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        // ✅ Set user early again on auth state change
         setUser({ id: session.user.id, email: session.user.email });
         fetchUserProfile(session.user);
       } else {
