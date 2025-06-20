@@ -28,9 +28,11 @@ function App() {
       <CssBaseline />
       <Box sx={{ minHeight: "100vh", overflow: "auto" }}>
         <Routes>
-          <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+          <Route
+            path="/login"
+            element={user ? <Navigate to="/" replace /> : <Login />}
+          />
 
-          {/* Protected Routes */}
           <Route
             path="/"
             element={user ? <ControlLayout /> : <Navigate to="/login" replace />}
