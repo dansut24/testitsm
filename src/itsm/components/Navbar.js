@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   AppBar, Toolbar, Typography, IconButton, InputBase, useMediaQuery,
   useTheme, Box, Tooltip, Select, MenuItem, Avatar, SwipeableDrawer
 } from "@mui/material";
-import { useThemeMode } from "../../common/context/ThemeContext";
+import { useThemeMode } from "../../common/context/ThemeContext"; // ✅ fixed
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../../common/utils/supabaseClient";
 
 import MenuIcon from "@mui/icons-material/Menu";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -16,10 +15,9 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import HistoryIcon from "@mui/icons-material/History";
 import CloseIcon from "@mui/icons-material/Close";
 
-import NotificationDrawer from "./NotificationDrawer";
-import UserActivityLogDrawer from "./UserActivityLogDrawer";
-import ProfileDrawer from "./ProfileDrawer";
-
+import NotificationDrawer from "./NotificationDrawer"; // ✅ assumes same dir
+import UserActivityLogDrawer from "./UserActivityLogDrawer"; // ✅ assumes same dir
+import ProfileDrawer from "./ProfileDrawer"; // ✅ assumes same dir
 const Navbar = ({
   sidebarWidth,
   collapsedWidth,
@@ -40,41 +38,6 @@ const Navbar = ({
     const user = localStorage.getItem("user");
     return user ? JSON.parse(user) : { username: "User", avatar_url: "" };
   });
-
-  const [tenantName, setTenantName] = useState("Hi5Tech");
-  const [tenantLogo, setTenantLogo] = useState("/logo192.png");
-  const rawSubdomain = window.location.hostname.split(".")[0];
-  const baseSubdomain = rawSubdomain.replace("-itsm", "");
-
-  useEffect(() => {
-    const fetchTenantInfo = async () => {
-      const { data: tenant } = await supabase
-        .from("tenants")
-        .select("id, name")
-        .eq("subdomain", baseSubdomain)
-        .maybeSingle();
-
-      if (tenant?.id) {
-        setTenantName(tenant.name);
-        const { data: settings } = await supabase
-          .from("tenant_settings")
-          .select("logo_url")
-          .eq("tenant_id", tenant.id)
-          .maybeSingle();
-
-        if (settings?.logo_url) {
-          const { data: publicData } = supabase.storage
-            .from("tenant-logos")
-            .getPublicUrl(settings.logo_url);
-          if (publicData?.publicUrl) {
-            setTenantLogo(publicData.publicUrl);
-          }
-        }
-      }
-    };
-
-    fetchTenantInfo();
-  }, [baseSubdomain]);
 
   const goBack = () => {
     if (tabHistory.length > 0) {
@@ -98,8 +61,8 @@ const Navbar = ({
 
   const renderDrawerContent = () => {
     const content = {
-      profile: <ProfileDrawer onLogout={handleLogout} />,
-      notifications: <NotificationDrawer />,
+      profile: <ProfileDrawer onLogout={handleLogout} />, // 🔹 updated
+      notifications: <NotificationDrawer />,     
       activity: <UserActivityLogDrawer />,
       help: (
         <>
@@ -136,10 +99,10 @@ const Navbar = ({
                 <MenuIcon fontSize="small" />
               </IconButton>
             )}
-            <img src={tenantLogo} alt="Logo" style={{ height: 24, borderRadius: 4 }} />
+            <img src="/logo192.png" alt="Logo" style={{ height: 24 }} />
             {!isMobile && (
               <Typography variant="h6" noWrap sx={{ fontSize: 16, color: "#fff" }}>
-                {tenantName}
+                Hi5Tech ITSM
               </Typography>
             )}
           </Box>
