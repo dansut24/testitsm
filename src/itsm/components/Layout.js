@@ -1,3 +1,5 @@
+// src/itsm/components/Layout.js
+
 import React, { useState, useEffect } from "react";
 import { Box, useMediaQuery, useTheme } from "@mui/material";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -127,76 +129,52 @@ const Layout = () => {
   const handleSidebarToggle = () => setSidebarOpen((prev) => !prev);
   const handleMobileSidebarToggle = () => setMobileOpen((prev) => !prev);
 
-const menuItems = [
-  {
-    text: "Dashboard",
-    icon: <DashboardIcon />,
-    path: "/dashboard",
-  },
-  {
-    text: "Incidents",
-    icon: <ReportProblemIcon />,
-    children: [
-      { text: "View Incidents", path: "/incidents" },
-      { text: "Raise Incident", path: "/new-incident" },
-    ],
-  },
-  {
-    text: "Service Requests",
-    icon: <AssignmentIcon />,
-    children: [
-      { text: "View Requests", path: "/service-requests" },
-      { text: "Raise Request", path: "/new-service-request" },
-    ],
-  },
-  {
-    text: "Changes",
-    icon: <AutoFixHighIcon />,
-    children: [
-      { text: "View Changes", path: "/changes" },
-      { text: "Raise Change", path: "/new-change" },
-    ],
-  },
-  {
-    text: "Problems",
-    icon: <BugReportIcon />,
-    children: [
-      { text: "View Problems", path: "/problems" },
-      { text: "Raise Problem", path: "/new-problem" },
-    ],
-  },
-  {
-    text: "Assets",
-    icon: <DevicesOtherIcon />,
-    path: "/assets",
-  },
-  {
-    text: "Knowledge Base",
-    icon: <MenuBookIcon />,
-    path: "/knowledge-base",
-  },
-  {
-    text: "Reports",
-    icon: <BarChartIcon />,
-    path: "/reports",
-  },
-  {
-    text: "Approvals",
-    icon: <HowToVoteIcon />,
-    path: "/approvals",
-  },
-  {
-    text: "Profile",
-    icon: <PersonIcon />,
-    path: "/profile",
-  },
-  ...(role === "admin"
-    ? [{ text: "Admin Settings", icon: <SettingsIcon />, path: "/admin-settings" }]
-    : [{ text: "Settings", icon: <SettingsIcon />, path: "/settings" }]),
-];
-  
+  const menuItems = [
+    { text: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
+    {
+      text: "Incidents",
+      icon: <ReportProblemIcon />,
+      children: [
+        { text: "View Incidents", path: "/incidents" },
+        { text: "Raise Incident", path: "/new-incident" },
+      ],
+    },
+    {
+      text: "Service Requests",
+      icon: <AssignmentIcon />,
+      children: [
+        { text: "View Requests", path: "/service-requests" },
+        { text: "Raise Request", path: "/new-service-request" },
+      ],
+    },
+    {
+      text: "Changes",
+      icon: <AutoFixHighIcon />,
+      children: [
+        { text: "View Changes", path: "/changes" },
+        { text: "Raise Change", path: "/new-change" },
+      ],
+    },
+    {
+      text: "Problems",
+      icon: <BugReportIcon />,
+      children: [
+        { text: "View Problems", path: "/problems" },
+        { text: "Raise Problem", path: "/new-problem" },
+      ],
+    },
+    { text: "Assets", icon: <DevicesOtherIcon />, path: "/assets" },
+    { text: "Knowledge Base", icon: <MenuBookIcon />, path: "/knowledge-base" },
+    { text: "Reports", icon: <BarChartIcon />, path: "/reports" },
+    { text: "Approvals", icon: <HowToVoteIcon />, path: "/approvals" },
+    { text: "Profile", icon: <PersonIcon />, path: "/profile" },
+    ...(role === "admin"
+      ? [{ text: "Admin Settings", icon: <SettingsIcon />, path: "/admin-settings" }]
+      : [{ text: "Settings", icon: <SettingsIcon />, path: "/settings" }]),
+  ];
+
   return (
-    <Box sx={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+    <Box sx={{ display: "flex", minHeight: "100vh", overflow: "hidden" }}>
       <Sidebar
         sidebarOpen={sidebarOpen}
         mobileOpen={mobileOpen}
@@ -206,9 +184,7 @@ const menuItems = [
         collapsedWidth={collapsedWidth}
         tabIndex={tabIndex}
         menuItems={menuItems}
-        handleSidebarTabClick={(item) => {
-          navigate(item.path);
-        }}
+        handleSidebarTabClick={(item) => navigate(item.path)}
         isMobile={isMobile}
       />
 
@@ -218,8 +194,7 @@ const menuItems = [
           display: "flex",
           flexDirection: "column",
           width: "100%",
-          height: "100vh",
-          overflow: "hidden",
+          minHeight: "100vh",
         }}
       >
         <Navbar
@@ -243,28 +218,7 @@ const menuItems = [
           collapsedWidth={collapsedWidth}
         />
 
-        <Box
-          sx={{
-            flexGrow: 1,
-            minHeight: 0,
-            overflowY: "auto",
-            px: 2,
-            pb: 2,
-            position: "relative",
-            zIndex: 0,
-          }}
-        >
-          <Box
-            sx={{
-              position: "fixed",
-              top: 0,
-              right: 0,
-              bottom: 0,
-              width: "17px",
-              zIndex: (theme) => theme.zIndex.drawer + 10,
-              pointerEvents: "none",
-            }}
-          />
+        <Box sx={{ flex: 1, overflowY: "auto", px: 2, py: 2 }}>
           <MainContent />
           <BreadcrumbsNav />
           <BackToTop />
