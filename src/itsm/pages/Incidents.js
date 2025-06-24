@@ -1,4 +1,5 @@
-""import React, { useState, useEffect } from "react";
+// src/itsm/pages/Incidents.js
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -31,7 +32,8 @@ const Incidents = () => {
   const [exportType, setExportType] = useState("file");
   const [exportTitle, setExportTitle] = useState("Incidents Export");
   const [incidents, setIncidents] = useState([]);
-  const [search, setSearch] = useState("");
+  const [filteredIncidents, setFilteredIncidents] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const navigate = useNavigate();
 
@@ -49,10 +51,27 @@ const Incidents = () => {
   };
 
   const handleExportConfirm = () => {
-    if (exportType === "csv") exportToCSV(incidents, exportTitle);
-    if (exportType === "xlsx") exportToXLSX(incidents, exportTitle);
-    if (exportType === "pdf") exportToPDF(incidents, exportTitle);
+    if (exportType === "csv") exportToCSV(filteredIncidents, exportTitle);
+    if (exportType === "xlsx") exportToXLSX(filteredIncidents, exportTitle);
+    if (exportType === "pdf") exportToPDF(filteredIncidents, exportTitle);
     setPreviewOpen(false);
+  };
+
+  const handleSearchChange = (e) => {
+    const term = e.target.value.toLowerCase();
+    setSearchTerm(term);
+    if (!term) {
+      setFilteredIncidents(incidents);
+      return;
+    }
+
+    const filtered = incidents.filter(
+      (incident) =>
+        incident.title.toLowerCase().includes(term) ||
+        incident.description.toLowerCase().includes(term) ||
+        incident.category?.toLowerCase().includes(term)
+    );
+    setFilteredIncidents(filtered);
   };
 
   useEffect(() => {
@@ -61,22 +80,14 @@ const Incidents = () => {
       if (data) {
         const enriched = data.map((incident) => ({
           ...incident,
-          slaDueDate: getSlaDueDate(
-            incident.created,
-            incident.priority || "Medium"
-          ),
+          slaDueDate: getSlaDueDate(incident.created, incident.priority || "Medium"),
         }));
         setIncidents(enriched);
+        setFilteredIncidents(enriched);
       }
     };
     fetchIncidents();
   }, []);
-
-  const filteredIncidents = incidents.filter((i) =>
-    `${i.title} ${i.description} ${i.status}`
-      .toLowerCase()
-      .includes(search.toLowerCase())
-  );
 
   return (
     <Box sx={{ width: "100%", p: 0 }}>
@@ -95,8 +106,8 @@ const Incidents = () => {
           placeholder="Search incidents..."
           size="small"
           variant="outlined"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchTerm}
+          onChange={handleSearchChange}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -133,9 +144,9 @@ const Incidents = () => {
             onClick={() => navigate(`/incidents/${incident.id}`)}
           >
             <Typography sx={{ fontSize: "0.95rem", color: "#456", mb: 1 }}>
-              <strong>#{incident.id}</strong> • {incident.category || "Uncategorised"}
+              <strong>#{incident.id}</strong> • {incident.category}
               <Chip
-                label={incident.status || "Open"}
+                label={incident.status}
                 sx={{
                   ml: 1,
                   bgcolor: "#e2e8f0",
@@ -183,7 +194,7 @@ const Incidents = () => {
         exportTitle={exportTitle}
         setExportTitle={setExportTitle}
         exportType={exportType || "file"}
-        recordCount={incidents.length}
+        recordCount={filteredIncidents.length}
       />
     </Box>
   );
