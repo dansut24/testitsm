@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+""import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -17,11 +17,11 @@ import {
   exportToCSV,
   exportToXLSX,
   exportToPDF,
-} from "../../common/utils/exportUtils"; // ✅ fixed path
+} from "../../common/utils/exportUtils";
 import ExportPreviewModal from "../components/ExportPreviewModal";
 import { useNavigate } from "react-router-dom";
-import { getSlaDueDate, getSlaStatus } from "../../common/utils/slaUtils"; // ✅ fixed path
-import { supabase } from "../../common/utils/supabaseClient"; // ✅ fixed path
+import { getSlaDueDate, getSlaStatus } from "../../common/utils/slaUtils";
+import { supabase } from "../../common/utils/supabaseClient";
 
 const Incidents = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -31,6 +31,7 @@ const Incidents = () => {
   const [exportType, setExportType] = useState("file");
   const [exportTitle, setExportTitle] = useState("Incidents Export");
   const [incidents, setIncidents] = useState([]);
+  const [search, setSearch] = useState("");
 
   const navigate = useNavigate();
 
@@ -60,13 +61,22 @@ const Incidents = () => {
       if (data) {
         const enriched = data.map((incident) => ({
           ...incident,
-          slaDueDate: getSlaDueDate(incident.created, incident.priority || "Medium"),
+          slaDueDate: getSlaDueDate(
+            incident.created,
+            incident.priority || "Medium"
+          ),
         }));
         setIncidents(enriched);
       }
     };
     fetchIncidents();
   }, []);
+
+  const filteredIncidents = incidents.filter((i) =>
+    `${i.title} ${i.description} ${i.status}`
+      .toLowerCase()
+      .includes(search.toLowerCase())
+  );
 
   return (
     <Box sx={{ width: "100%", p: 0 }}>
@@ -85,6 +95,8 @@ const Incidents = () => {
           placeholder="Search incidents..."
           size="small"
           variant="outlined"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -107,7 +119,7 @@ const Incidents = () => {
       </Box>
 
       <Box sx={{ display: "flex", flexDirection: "column", gap: 2, px: 2, py: 2 }}>
-        {incidents.map((incident) => (
+        {filteredIncidents.map((incident) => (
           <Paper
             key={incident.id}
             sx={{
@@ -121,9 +133,9 @@ const Incidents = () => {
             onClick={() => navigate(`/incidents/${incident.id}`)}
           >
             <Typography sx={{ fontSize: "0.95rem", color: "#456", mb: 1 }}>
-              <strong>#{incident.id}</strong> • {incident.category}
+              <strong>#{incident.id}</strong> • {incident.category || "Uncategorised"}
               <Chip
-                label={incident.status}
+                label={incident.status || "Open"}
                 sx={{
                   ml: 1,
                   bgcolor: "#e2e8f0",
