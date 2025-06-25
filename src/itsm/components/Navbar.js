@@ -1,10 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   AppBar, Toolbar, Typography, IconButton, InputBase, useMediaQuery,
-  useTheme, Box, Tooltip, Select, MenuItem, Avatar, SwipeableDrawer
+  useTheme, Box, Tooltip, Select, MenuItem, Avatar, SwipeableDrawer,
+  Popper, Paper, List, ListItemButton, ListItemText, CircularProgress
 } from "@mui/material";
-import { useThemeMode } from "../../common/context/ThemeContext"; // ✅ fixed
+import { useThemeMode } from "../../common/context/ThemeContext";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../../common/utils/supabaseClient";
 
 import MenuIcon from "@mui/icons-material/Menu";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -15,9 +17,10 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import HistoryIcon from "@mui/icons-material/History";
 import CloseIcon from "@mui/icons-material/Close";
 
-import NotificationDrawer from "./NotificationDrawer"; // ✅ assumes same dir
-import UserActivityLogDrawer from "./UserActivityLogDrawer"; // ✅ assumes same dir
-import ProfileDrawer from "./ProfileDrawer"; // ✅ assumes same dir
+import NotificationDrawer from "./NotificationDrawer";
+import UserActivityLogDrawer from "./UserActivityLogDrawer";
+import ProfileDrawer from "./ProfileDrawer";
+
 const Navbar = ({
   sidebarWidth,
   collapsedWidth,
@@ -30,6 +33,11 @@ const Navbar = ({
   const navigate = useNavigate();
   const { mode, setMode } = useThemeMode();
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+
   const [searchOpen, setSearchOpen] = useState(false);
   const [tabHistory, setTabHistory] = useState([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -38,6 +46,53 @@ const Navbar = ({
     const user = localStorage.getItem("user");
     return user ? JSON.parse(user) : { username: "User", avatar_url: "" };
   });
+
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    const fetchResults = async () => {
+      if (searchQuery.trim() === "") {
+        setSearchResults([]);
+        return;
+      }
+
+      setLoading(true);
+
+      const [incidents, kb, assets, users] = await Promise.all([
+        supabase.from("incidents")
+          .select("id, title")
+          .or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`),
+
+        supabase.from("knowledge_base")
+          .select("id, title")
+          .ilike("title", `%${searchQuery}%`),
+
+        supabase.from("assets")
+          .select("id, name")
+          .ilike("name", `%${searchQuery}%`),
+
+        supabase.from("profiles")
+          .select("id, full_name")
+          .ilike("full_name", `%${searchQuery}%`)
+      ]);
+
+      const results = [
+        ...(incidents.data?.map((r) => ({ label: `Incident: ${r.title}`, path: `/incidents/${r.id}` })) || []),
+        ...(kb.data?.map((r) => ({ label: `KB: ${r.title}`, path: `/knowledge-base/${r.id}` })) || []),
+        ...(assets.data?.map((r) => ({ label: `Asset: ${r.name}`, path: `/assets/${r.id}` })) || []),
+        ...(users.data?.map((r) => ({ label: `User: ${r.full_name}`, path: `/profile/${r.id}` })) || [])
+      ];
+
+      setSearchResults(results);
+      setLoading(false);
+    };
+
+    const delayDebounce = setTimeout(() => {
+      fetchResults();
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchQuery]);
 
   const goBack = () => {
     if (tabHistory.length > 0) {
@@ -61,7 +116,7 @@ const Navbar = ({
 
   const renderDrawerContent = () => {
     const content = {
-      profile: <ProfileDrawer onLogout={handleLogout} />, // 🔹 updated
+      profile: <ProfileDrawer onLogout={handleLogout} />, 
       notifications: <NotificationDrawer />,     
       activity: <UserActivityLogDrawer />,
       help: (
@@ -114,9 +169,13 @@ const Navbar = ({
               <SearchIcon fontSize="small" />
             </IconButton>
           ) : (
-            <>
+            <Box sx={{ position: "relative" }}>
               <InputBase
                 placeholder="Search…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={(e) => setAnchorEl(e.currentTarget)}
+                inputRef={inputRef}
                 sx={{
                   bgcolor: "#ffffff22",
                   color: "white",
@@ -127,32 +186,54 @@ const Navbar = ({
                   mr: 1,
                 }}
               />
-              {tabHistory.length > 0 && (
-                <Tooltip title="Go Back">
-                  <IconButton size="small" onClick={goBack} sx={{ color: "white" }}>
-                    <ArrowBackIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )}
-              <Tooltip title="Theme">
-                <Select
-                  value={mode}
-                  onChange={(e) => setMode(e.target.value)}
-                  size="small"
-                  variant="standard"
-                  disableUnderline
-                  sx={{ fontSize: "0.75rem", color: "white", mx: 1, ".MuiSelect-icon": { color: "white" } }}
-                >
-                  <MenuItem value="light">Light</MenuItem>
-                  <MenuItem value="dark">Dark</MenuItem>
-                  <MenuItem value="system">System</MenuItem>
-                  <MenuItem value="ocean">Ocean</MenuItem>
-                  <MenuItem value="sunset">Sunset</MenuItem>
-                  <MenuItem value="forest">Forest</MenuItem>
-                </Select>
-              </Tooltip>
-            </>
+              <Popper open={searchQuery.length > 1} anchorEl={anchorEl} placement="bottom-start" sx={{ zIndex: 1300 }}>
+                <Paper elevation={3} sx={{ width: 280 }}>
+                  {loading ? (
+                    <Box sx={{ textAlign: "center", py: 2 }}>
+                      <CircularProgress size={24} />
+                    </Box>
+                  ) : (
+                    <List dense>
+                      {searchResults.map((result, index) => (
+                        <ListItemButton
+                          key={index}
+                          onClick={() => navigate(result.path)}
+                        >
+                          <ListItemText primary={result.label} />
+                        </ListItemButton>
+                      ))}
+                    </List>
+                  )}
+                </Paper>
+              </Popper>
+            </Box>
           )}
+
+          {tabHistory.length > 0 && (
+            <Tooltip title="Go Back">
+              <IconButton size="small" onClick={goBack} sx={{ color: "white" }}>
+                <ArrowBackIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          <Tooltip title="Theme">
+            <Select
+              value={mode}
+              onChange={(e) => setMode(e.target.value)}
+              size="small"
+              variant="standard"
+              disableUnderline
+              sx={{ fontSize: "0.75rem", color: "white", mx: 1, ".MuiSelect-icon": { color: "white" } }}
+            >
+              <MenuItem value="light">Light</MenuItem>
+              <MenuItem value="dark">Dark</MenuItem>
+              <MenuItem value="system">System</MenuItem>
+              <MenuItem value="ocean">Ocean</MenuItem>
+              <MenuItem value="sunset">Sunset</MenuItem>
+              <MenuItem value="forest">Forest</MenuItem>
+            </Select>
+          </Tooltip>
 
           {["activity", "help", "settings", "notifications", "profile"].map((type) => (
             <Tooltip key={type} title={type[0].toUpperCase() + type.slice(1)}>
@@ -182,6 +263,8 @@ const Navbar = ({
               placeholder="Search..."
               fullWidth
               sx={{ bgcolor: "#ffffff", px: 1, py: 0.5, borderRadius: 1, fontSize: 14 }}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </Box>
         )}
