@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   AppBar, Toolbar, Typography, IconButton, InputBase, useMediaQuery,
   useTheme, Box, Tooltip, Select, MenuItem, Avatar, SwipeableDrawer,
-  Popper, Paper, List, ListItemButton, ListItemText, CircularProgress
+  Popper, Paper, List, ListItemButton, ListItemText, CircularProgress, InputAdornment
 } from "@mui/material";
 import { useThemeMode } from "../../common/context/ThemeContext";
 import { useNavigate } from "react-router-dom";
@@ -35,8 +35,8 @@ const Navbar = ({
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [tabHistory, setTabHistory] = useState([]);
@@ -47,8 +47,6 @@ const Navbar = ({
     return user ? JSON.parse(user) : { username: "User", avatar_url: "" };
   });
 
-  const inputRef = useRef(null);
-
   useEffect(() => {
     const fetchResults = async () => {
       if (searchQuery.trim() === "") {
@@ -58,40 +56,31 @@ const Navbar = ({
 
       setLoading(true);
 
-      const [incidents, kb, assets, users] = await Promise.all([
+      const [incidents, kb] = await Promise.all([
         supabase.from("incidents")
           .select("id, title")
           .or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`),
 
         supabase.from("knowledge_base")
           .select("id, title")
-          .ilike("title", `%${searchQuery}%`),
-
-        supabase.from("assets")
-          .select("id, name")
-          .ilike("name", `%${searchQuery}%`),
-
-        supabase.from("profiles")
-          .select("id, full_name")
-          .ilike("full_name", `%${searchQuery}%`)
+          .ilike("title", `%${searchQuery}%`)
       ]);
 
-      const results = [
-        ...(incidents.data?.map((r) => ({ label: `Incident: ${r.title}`, path: `/incidents/${r.id}` })) || []),
-        ...(kb.data?.map((r) => ({ label: `KB: ${r.title}`, path: `/knowledge-base/${r.id}` })) || []),
-        ...(assets.data?.map((r) => ({ label: `Asset: ${r.name}`, path: `/assets/${r.id}` })) || []),
-        ...(users.data?.map((r) => ({ label: `User: ${r.full_name}`, path: `/profile/${r.id}` })) || [])
-      ];
+      const incidentResults = incidents.data?.map((r) => ({
+        label: `Incident: ${r.title}`,
+        path: `/incidents/${r.id}`
+      })) || [];
 
-      setSearchResults(results);
+      const kbResults = kb.data?.map((r) => ({
+        label: `KB: ${r.title}`,
+        path: `/knowledge-base/${r.id}`
+      })) || [];
+
+      setSearchResults([...incidentResults, ...kbResults]);
       setLoading(false);
     };
 
-    const delayDebounce = setTimeout(() => {
-      fetchResults();
-    }, 300);
-
-    return () => clearTimeout(delayDebounce);
+    fetchResults();
   }, [searchQuery]);
 
   const goBack = () => {
@@ -112,6 +101,12 @@ const Navbar = ({
     localStorage.clear();
     sessionStorage.clear();
     navigate("/login");
+  };
+
+  const handleResultClick = (path) => {
+    setSearchQuery("");
+    setSearchResults([]);
+    navigate(path);
   };
 
   const renderDrawerContent = () => {
@@ -164,50 +159,44 @@ const Navbar = ({
 
           <Box flexGrow={1} />
 
-          {isMobile ? (
-            <IconButton size="small" sx={{ color: "white" }} onClick={() => setSearchOpen(!searchOpen)}>
-              <SearchIcon fontSize="small" />
-            </IconButton>
-          ) : (
-            <Box sx={{ position: "relative" }}>
-              <InputBase
-                placeholder="Search…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={(e) => setAnchorEl(e.currentTarget)}
-                inputRef={inputRef}
-                sx={{
-                  bgcolor: "#ffffff22",
-                  color: "white",
-                  px: 1,
-                  borderRadius: 1,
-                  fontSize: 14,
-                  width: 180,
-                  mr: 1,
-                }}
-              />
-              <Popper open={searchQuery.length > 1} anchorEl={anchorEl} placement="bottom-start" sx={{ zIndex: 1300 }}>
-                <Paper elevation={3} sx={{ width: 280 }}>
-                  {loading ? (
-                    <Box sx={{ textAlign: "center", py: 2 }}>
-                      <CircularProgress size={24} />
-                    </Box>
-                  ) : (
-                    <List dense>
-                      {searchResults.map((result, index) => (
-                        <ListItemButton
-                          key={index}
-                          onClick={() => navigate(result.path)}
-                        >
-                          <ListItemText primary={result.label} />
-                        </ListItemButton>
-                      ))}
-                    </List>
-                  )}
+          <Box sx={{ position: "relative" }}>
+            <InputBase
+              placeholder="Search…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={(e) => setAnchorEl(e.currentTarget)}
+              startAdornment={<InputAdornment position="start"><SearchIcon sx={{ color: "white", mr: 1 }} /></InputAdornment>}
+              sx={{
+                bgcolor: "rgba(255,255,255,0.15)",
+                color: "white",
+                pl: 1,
+                pr: 1,
+                borderRadius: 1,
+                fontSize: 14,
+                width: 220,
+                height: 32,
+                boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.3)",
+              }}
+            />
+
+            {loading && (
+              <CircularProgress size={16} sx={{ position: "absolute", top: "50%", right: 8, mt: "-8px", color: "white" }} />
+            )}
+
+            {!isMobile && searchResults.length > 0 && (
+              <Popper open anchorEl={anchorEl} placement="bottom-start" sx={{ zIndex: 1300 }}>
+                <Paper elevation={3} sx={{ width: 300, mt: 1 }}>
+                  <List dense>
+                    {searchResults.map((result, index) => (
+                      <ListItemButton key={index} onClick={() => handleResultClick(result.path)}>
+                        <ListItemText primary={result.label} />
+                      </ListItemButton>
+                    ))}
+                  </List>
                 </Paper>
               </Popper>
-            </Box>
-          )}
+            )}
+          </Box>
 
           {tabHistory.length > 0 && (
             <Tooltip title="Go Back">
@@ -266,6 +255,17 @@ const Navbar = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            {searchResults.length > 0 && (
+              <Paper sx={{ mt: 1 }}>
+                <List dense>
+                  {searchResults.map((result, index) => (
+                    <ListItemButton key={index} onClick={() => handleResultClick(result.path)}>
+                      <ListItemText primary={result.label} />
+                    </ListItemButton>
+                  ))}
+                </List>
+              </Paper>
+            )}
           </Box>
         )}
       </AppBar>
@@ -324,10 +324,7 @@ const Navbar = ({
             <Box display="flex" justifyContent="flex-end" sx={{ display: isMobile ? "none" : "flex" }}>
               <IconButton
                 onClick={closeDrawer}
-                sx={{
-                  position: "relative",
-                  zIndex: (theme) => theme.zIndex.appBar + 11,
-                }}
+                sx={{ position: "relative", zIndex: (theme) => theme.zIndex.appBar + 11 }}
               >
                 <CloseIcon />
               </IconButton>
