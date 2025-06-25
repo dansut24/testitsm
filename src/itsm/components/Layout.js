@@ -1,8 +1,7 @@
-// src/itsm/components/Layout.js
-
 import React, { useState, useEffect } from "react";
 import { Box, useMediaQuery, useTheme } from "@mui/material";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { supabase } from "../../common/utils/supabaseClient";
 
 import Navbar from "./Navbar";
 import AppsBar from "./AppsBar";
@@ -72,10 +71,26 @@ const Layout = () => {
     const tabExists = tabs.some((tab) => tab.path === currentPath);
 
     if (!tabExists) {
-      const label = routeLabels[currentPath] || "Unknown";
-      const newTabs = [...tabs, { label, path: currentPath }];
-      setTabs(newTabs);
-      setTabIndex(newTabs.length - 1);
+      const fetchLabel = async () => {
+        let label = routeLabels[currentPath] || "Unknown";
+
+        if (currentPath.startsWith("/incidents/")) {
+          const id = currentPath.split("/")[2];
+          const { data, error } = await supabase
+            .from("incidents")
+            .select("reference")
+            .eq("id", id)
+            .maybeSingle();
+
+          if (data?.reference) label = data.reference;
+        }
+
+        const newTabs = [...tabs, { label, path: currentPath }];
+        setTabs(newTabs);
+        setTabIndex(newTabs.length - 1);
+      };
+
+      fetchLabel();
     } else {
       const index = tabs.findIndex((tab) => tab.path === currentPath);
       setTabIndex(index);
