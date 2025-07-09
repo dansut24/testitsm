@@ -20,7 +20,6 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [logoUrl, setLogoUrl] = useState(defaultLogo);
-  const [debugInfo, setDebugInfo] = useState(null);
 
   const rawSubdomain = window.location.hostname.split(".")[0];
   const baseSubdomain = rawSubdomain.replace("-itsm", "");
@@ -71,7 +70,6 @@ const Login = () => {
     });
 
     if (loginError || !data.session) {
-      console.error("Login failed:", loginError?.message);
       setError("Invalid login credentials.");
       return;
     }
@@ -90,32 +88,37 @@ const Login = () => {
   return (
     <Box
       sx={{
-        height: "100vh",
         display: "flex",
-        flexDirection: "row",
-        width: "100%",
+        height: "100vh",
+        width: "100vw",
         overflow: "hidden",
+        boxSizing: "border-box",
       }}
     >
-      {/* Left Side - Login Form */}
+      {/* Left Side: Login Form */}
       <Box
         sx={{
           flex: 1,
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          alignItems: "center",
           px: 4,
+          minHeight: 0,
+          boxSizing: "border-box",
           backgroundColor: "#f8f8f8",
         }}
       >
-        <Box sx={{ maxWidth: 400, width: "100%" }}>
-          <img src={logoUrl} alt="Tenant Logo" style={{ height: 50, marginBottom: 24 }} />
+        <Box sx={{ maxWidth: 400, mx: "auto", width: "100%" }}>
+          <img
+            src={logoUrl}
+            alt="Tenant Logo"
+            style={{ maxHeight: 50, marginBottom: 16 }}
+          />
 
           <Typography variant="h5" fontWeight={600} mb={1}>
             Sign in to Hi5Tech
           </Typography>
-          <Typography variant="body2" color="text.secondary" mb={3}>
+          <Typography variant="body2" color="text.secondary" mb={2}>
             Use your credentials or a social provider
           </Typography>
 
@@ -136,7 +139,7 @@ const Login = () => {
             </Button>
           </Stack>
 
-          <Divider sx={{ my: 3 }}>or</Divider>
+          <Divider sx={{ my: 2 }}>or</Divider>
 
           <TextField
             fullWidth
@@ -185,17 +188,18 @@ const Login = () => {
         </Box>
       </Box>
 
-      {/* Right Side - Branding / Welcome */}
+      {/* Right Side: Welcome / Branding */}
       <Box
         sx={{
           flex: 1,
-          px: 4,
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          alignItems: "flex-start",
-          backgroundColor: "#ffffff",
+          px: 4,
+          minHeight: 0,
+          boxSizing: "border-box",
           position: "relative",
+          backgroundColor: "#ffffff",
         }}
       >
         <MuiLink
@@ -213,7 +217,7 @@ const Login = () => {
           Go to Self-Service
         </MuiLink>
 
-        <Box sx={{ maxWidth: 500, width: "100%" }}>
+        <Box sx={{ maxWidth: 500, mx: "auto", width: "100%" }}>
           <Typography
             variant="h3"
             fontWeight={700}
@@ -234,8 +238,8 @@ const Login = () => {
             src={logoUrl}
             alt="Welcome Visual"
             style={{
-              maxWidth: "100%",
-              height: "auto",
+              width: "100%",
+              maxHeight: "200px",
               objectFit: "contain",
               opacity: 0.85,
             }}
