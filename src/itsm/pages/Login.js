@@ -8,6 +8,7 @@ import {
   Divider,
   Stack,
   Box,
+  Grid,
   Link as MuiLink,
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
@@ -97,7 +98,12 @@ const Login = () => {
       .maybeSingle();
 
     if (!tenantData) {
-      setDebugInfo({ subdomain: baseSubdomain, tenantId: "Not found", logoUrl: "Not found", error: "❌ Tenant not found" });
+      setDebugInfo({
+        subdomain: baseSubdomain,
+        tenantId: "Not found",
+        logoUrl: "Not found",
+        error: "❌ Tenant not found",
+      });
       return;
     }
 
@@ -129,71 +135,170 @@ const Login = () => {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 10 }}>
-      <Paper elevation={4} sx={{ p: 4, textAlign: "center", borderRadius: 4 }}>
-        <img src={logoUrl} alt="Tenant Logo" style={{ height: 60, marginBottom: 16 }} />
-        <Typography variant="h5" fontWeight={600} gutterBottom>
-          Welcome to Hi5Tech
-        </Typography>
-        <Typography variant="body2" color="text.secondary" mb={3}>
-          Sign in to your workspace
-        </Typography>
-
-        <Stack spacing={1.5} mb={3}>
-          <Button variant="outlined" startIcon={<GoogleIcon />} fullWidth onClick={handleGoogleLogin}>
-            Sign in with Google
-          </Button>
-          <Button variant="outlined" startIcon={<BusinessIcon />} fullWidth disabled>
-            Sign in with Microsoft
-          </Button>
-          <Button variant="outlined" startIcon={<GitHubIcon />} fullWidth disabled>
-            Sign in with GitHub
-          </Button>
-        </Stack>
-
-        <Divider sx={{ my: 3 }}>or</Divider>
-
-        <TextField fullWidth label="Email" name="email" type="email" value={formData.email} onChange={handleChange} margin="dense" />
-        <TextField fullWidth label="Password" name="password" type="password" value={formData.password} onChange={handleChange} margin="dense" />
-
-        <Box sx={{ textAlign: "right", mt: 1 }}>
-          <MuiLink component={Link} to="/reset-password" underline="hover" fontSize="0.875rem">
-            Forgot password?
-          </MuiLink>
-        </Box>
-
-        {error && (
-          <Typography color="error" mt={1}>
-            {error}
-          </Typography>
-        )}
-
-        <Button variant="contained" fullWidth sx={{ mt: 3, py: 1.2, fontWeight: "bold" }} onClick={handleLogin}>
-          Login
-        </Button>
-
-        <Button variant="outlined" fullWidth sx={{ mt: 2 }} onClick={handleTestLogo}>
-          Test Logo & Subdomain
-        </Button>
-
-        {debugInfo && (
-          <Box sx={{ mt: 2, p: 2, backgroundColor: "#f5f5f5", borderRadius: 2, textAlign: "left" }}>
-            <Typography variant="body2">Subdomain: {debugInfo.subdomain}</Typography>
-            <Typography variant="body2">Tenant ID: {debugInfo.tenantId}</Typography>
-            <Typography variant="body2">Logo URL: {debugInfo.logoUrl}</Typography>
-            {debugInfo.error && <Typography variant="body2" color="error">{debugInfo.error}</Typography>}
+    <Container maxWidth="xl" sx={{ mt: 8 }}>
+      <Grid container spacing={4} alignItems="center">
+        {/* Left Branding Section */}
+        <Grid item xs={12} md={6}>
+          <Box sx={{ px: 4 }}>
+            <Typography variant="h3" fontWeight={700} mb={2}>
+              Welcome Back 👋
+            </Typography>
+            <Typography variant="h6" color="text.secondary" mb={3}>
+              Access your Hi5Tech workspace with ease.
+            </Typography>
+            <img
+              src={logoUrl}
+              alt="Tenant Logo"
+              style={{ maxWidth: "100%", height: "auto" }}
+            />
           </Box>
-        )}
-      </Paper>
+        </Grid>
 
-      <Typography
-        variant="caption"
-        display="block"
-        align="center"
-        sx={{ mt: 3, color: "text.secondary" }}
-      >
-        Powered by Hi5Tech
-      </Typography>
+        {/* Right Login Form */}
+        <Grid item xs={12} md={6}>
+          <Box display="flex" justifyContent="flex-end" mb={1}>
+            <MuiLink
+              component={Link}
+              to="/self-service"
+              underline="hover"
+              fontSize="0.9rem"
+              sx={{ fontWeight: 500 }}
+            >
+              Go to Self-Service
+            </MuiLink>
+          </Box>
+
+          <Paper elevation={4} sx={{ p: 4, borderRadius: 4 }}>
+            <Box textAlign="center">
+              <Typography variant="h5" fontWeight={600} gutterBottom>
+                Sign in to Hi5Tech
+              </Typography>
+              <Typography variant="body2" color="text.secondary" mb={3}>
+                Use your credentials or social account
+              </Typography>
+            </Box>
+
+            <Stack spacing={1.5} mb={3}>
+              <Button
+                variant="outlined"
+                startIcon={<GoogleIcon />}
+                fullWidth
+                onClick={handleGoogleLogin}
+              >
+                Sign in with Google
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<BusinessIcon />}
+                fullWidth
+                disabled
+              >
+                Sign in with Microsoft
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<GitHubIcon />}
+                fullWidth
+                disabled
+              >
+                Sign in with GitHub
+              </Button>
+            </Stack>
+
+            <Divider sx={{ my: 3 }}>or</Divider>
+
+            <TextField
+              fullWidth
+              label="Email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              margin="dense"
+            />
+            <TextField
+              fullWidth
+              label="Password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleChange}
+              margin="dense"
+            />
+
+            <Box sx={{ textAlign: "right", mt: 1 }}>
+              <MuiLink
+                component={Link}
+                to="/reset-password"
+                underline="hover"
+                fontSize="0.875rem"
+              >
+                Forgot password?
+              </MuiLink>
+            </Box>
+
+            {error && (
+              <Typography color="error" mt={1}>
+                {error}
+              </Typography>
+            )}
+
+            <Button
+              variant="contained"
+              fullWidth
+              sx={{ mt: 3, py: 1.2, fontWeight: "bold" }}
+              onClick={handleLogin}
+            >
+              Login
+            </Button>
+
+            <Button
+              variant="outlined"
+              fullWidth
+              sx={{ mt: 2 }}
+              onClick={handleTestLogo}
+            >
+              Test Logo & Subdomain
+            </Button>
+
+            {debugInfo && (
+              <Box
+                sx={{
+                  mt: 2,
+                  p: 2,
+                  backgroundColor: "#f5f5f5",
+                  borderRadius: 2,
+                  textAlign: "left",
+                }}
+              >
+                <Typography variant="body2">
+                  Subdomain: {debugInfo.subdomain}
+                </Typography>
+                <Typography variant="body2">
+                  Tenant ID: {debugInfo.tenantId}
+                </Typography>
+                <Typography variant="body2">
+                  Logo URL: {debugInfo.logoUrl}
+                </Typography>
+                {debugInfo.error && (
+                  <Typography variant="body2" color="error">
+                    {debugInfo.error}
+                  </Typography>
+                )}
+              </Box>
+            )}
+          </Paper>
+
+          <Typography
+            variant="caption"
+            display="block"
+            align="center"
+            sx={{ mt: 3, color: "text.secondary" }}
+          >
+            Powered by Hi5Tech
+          </Typography>
+        </Grid>
+      </Grid>
     </Container>
   );
 };
