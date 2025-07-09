@@ -6,7 +6,6 @@ import {
   Divider,
   Stack,
   Box,
-  Grid,
   Link as MuiLink,
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
@@ -133,12 +132,21 @@ const Login = () => {
   };
 
   return (
-    <Box sx={{ height: "100vh", display: "flex", overflow: "hidden" }}>
-      {/* Left Side - Login */}
+    <Box
+      sx={{
+        height: "100vh",
+        display: "flex",
+        flexDirection: ["column", "row"],
+        overflow: "hidden",
+      }}
+    >
+      {/* Left Side - Login Form */}
       <Box
         sx={{
-          width: "50%",
-          padding: 6,
+          flex: 1,
+          minWidth: 0,
+          overflow: "auto",
+          padding: [4, 6],
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
@@ -151,6 +159,7 @@ const Login = () => {
             alt="Tenant Logo"
             style={{ height: 50, marginBottom: 24 }}
           />
+
           <Typography variant="h5" fontWeight={600} mb={1}>
             Sign in to Hi5Tech
           </Typography>
@@ -270,11 +279,13 @@ const Login = () => {
         </Box>
       </Box>
 
-      {/* Right Side - Branding / Info */}
+      {/* Right Side - Welcome Content */}
       <Box
         sx={{
-          width: "50%",
-          padding: 6,
+          flex: 1,
+          minWidth: 0,
+          overflow: "auto",
+          padding: [4, 6],
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
@@ -296,16 +307,31 @@ const Login = () => {
         </Box>
 
         <Box sx={{ maxWidth: 500 }}>
-          <Typography variant="h3" fontWeight={700} mb={2}>
+          <Typography
+            variant="h3"
+            fontWeight={700}
+            mb={2}
+            sx={{ fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" } }}
+          >
             Welcome Back 👋
           </Typography>
-          <Typography variant="h6" color="text.secondary" mb={3}>
+          <Typography
+            variant="h6"
+            color="text.secondary"
+            mb={3}
+            sx={{ fontSize: { xs: "1rem", sm: "1.2rem" } }}
+          >
             Manage your services, assets, and requests all in one place.
           </Typography>
           <img
             src={logoUrl}
             alt="Welcome Visual"
-            style={{ maxWidth: "100%", height: "auto", opacity: 0.85 }}
+            style={{
+              maxWidth: "100%",
+              height: "auto",
+              objectFit: "contain",
+              opacity: 0.85,
+            }}
           />
         </Box>
       </Box>
