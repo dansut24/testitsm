@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  Container,
-  Paper,
   TextField,
   Button,
   Typography,
@@ -135,38 +133,30 @@ const Login = () => {
   };
 
   return (
-    <Box
-      sx={{
-        height: "100vh",
-        display: "flex",
-        flexDirection: "row",
-      }}
-    >
-      {/* Left Login Section */}
+    <Box sx={{ height: "100vh", display: "flex", overflow: "hidden" }}>
+      {/* Left Side - Login */}
       <Box
         sx={{
-          flex: 1,
+          width: "50%",
+          padding: 6,
           display: "flex",
-          alignItems: "center",
+          flexDirection: "column",
           justifyContent: "center",
           backgroundColor: "#f8f8f8",
-          p: 4,
         }}
       >
-        <Paper elevation={4} sx={{ p: 4, borderRadius: 4, width: "100%", maxWidth: 400 }}>
-          <Box textAlign="center" mb={2}>
-            <img
-              src={logoUrl}
-              alt="Tenant Logo"
-              style={{ height: 60, marginBottom: 16 }}
-            />
-            <Typography variant="h5" fontWeight={600}>
-              Sign in to Hi5Tech
-            </Typography>
-            <Typography variant="body2" color="text.secondary" mb={3}>
-              Use your credentials or social account
-            </Typography>
-          </Box>
+        <Box maxWidth={400} width="100%">
+          <img
+            src={logoUrl}
+            alt="Tenant Logo"
+            style={{ height: 50, marginBottom: 24 }}
+          />
+          <Typography variant="h5" fontWeight={600} mb={1}>
+            Sign in to Hi5Tech
+          </Typography>
+          <Typography variant="body2" color="text.secondary" mb={3}>
+            Use your credentials or a social provider
+          </Typography>
 
           <Stack spacing={1.5} mb={3}>
             <Button
@@ -277,23 +267,23 @@ const Login = () => {
               )}
             </Box>
           )}
-        </Paper>
+        </Box>
       </Box>
 
-      {/* Right Side Info / Visual */}
+      {/* Right Side - Branding / Info */}
       <Box
         sx={{
-          flex: 1,
-          position: "relative",
-          backgroundColor: "#ffffff",
-          p: 4,
+          width: "50%",
+          padding: 6,
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
           alignItems: "flex-start",
+          position: "relative",
+          backgroundColor: "#ffffff",
         }}
       >
-        <Box sx={{ position: "absolute", top: 20, right: 30 }}>
+        <Box sx={{ position: "absolute", top: 24, right: 32 }}>
           <MuiLink
             component={Link}
             to="/self-service"
@@ -310,12 +300,12 @@ const Login = () => {
             Welcome Back 👋
           </Typography>
           <Typography variant="h6" color="text.secondary" mb={3}>
-            Manage your IT services, assets, and tickets in one place.
+            Manage your services, assets, and requests all in one place.
           </Typography>
           <img
             src={logoUrl}
-            alt="Brand Visual"
-            style={{ maxWidth: "100%", height: "auto", marginTop: 16 }}
+            alt="Welcome Visual"
+            style={{ maxWidth: "100%", height: "auto", opacity: 0.85 }}
           />
         </Box>
       </Box>
