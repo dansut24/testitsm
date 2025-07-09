@@ -87,56 +87,13 @@ const Login = () => {
     if (error) setError("Google sign-in failed.");
   };
 
-  const handleTestLogo = async () => {
-    const { data: tenantData } = await supabase
-      .from("tenants")
-      .select("id, subdomain")
-      .eq("subdomain", baseSubdomain)
-      .maybeSingle();
-
-    if (!tenantData) {
-      setDebugInfo({
-        subdomain: baseSubdomain,
-        tenantId: "Not found",
-        logoUrl: "Not found",
-        error: "❌ Tenant not found",
-      });
-      return;
-    }
-
-    const { data: settings } = await supabase
-      .from("tenant_settings")
-      .select("logo_url")
-      .eq("tenant_id", tenantData.id)
-      .maybeSingle();
-
-    if (!settings || !settings.logo_url) {
-      setDebugInfo({
-        subdomain: tenantData.subdomain,
-        tenantId: tenantData.id,
-        logoUrl: "Not found",
-        error: "⚠️ No logo_url set in tenant_settings",
-      });
-      return;
-    }
-
-    const { data: publicData } = supabase.storage
-      .from("tenant-logos")
-      .getPublicUrl(settings.logo_url);
-
-    setDebugInfo({
-      subdomain: tenantData.subdomain,
-      tenantId: tenantData.id,
-      logoUrl: publicData?.publicUrl || "Not resolved",
-    });
-  };
-
   return (
     <Box
       sx={{
         height: "100vh",
         display: "flex",
-        flexDirection: ["column", "row"],
+        flexDirection: "row",
+        width: "100%",
         overflow: "hidden",
       }}
     >
@@ -144,21 +101,16 @@ const Login = () => {
       <Box
         sx={{
           flex: 1,
-          minWidth: 0,
-          overflow: "auto",
-          padding: [4, 6],
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
+          alignItems: "center",
+          px: 4,
           backgroundColor: "#f8f8f8",
         }}
       >
-        <Box maxWidth={400} width="100%">
-          <img
-            src={logoUrl}
-            alt="Tenant Logo"
-            style={{ height: 50, marginBottom: 24 }}
-          />
+        <Box sx={{ maxWidth: 400, width: "100%" }}>
+          <img src={logoUrl} alt="Tenant Logo" style={{ height: 50, marginBottom: 24 }} />
 
           <Typography variant="h5" fontWeight={600} mb={1}>
             Sign in to Hi5Tech
@@ -176,20 +128,10 @@ const Login = () => {
             >
               Sign in with Google
             </Button>
-            <Button
-              variant="outlined"
-              startIcon={<BusinessIcon />}
-              fullWidth
-              disabled
-            >
+            <Button variant="outlined" startIcon={<BusinessIcon />} fullWidth disabled>
               Sign in with Microsoft
             </Button>
-            <Button
-              variant="outlined"
-              startIcon={<GitHubIcon />}
-              fullWidth
-              disabled
-            >
+            <Button variant="outlined" startIcon={<GitHubIcon />} fullWidth disabled>
               Sign in with GitHub
             </Button>
           </Stack>
@@ -240,73 +182,38 @@ const Login = () => {
           >
             Login
           </Button>
-
-          <Button
-            variant="outlined"
-            fullWidth
-            sx={{ mt: 2 }}
-            onClick={handleTestLogo}
-          >
-            Test Logo & Subdomain
-          </Button>
-
-          {debugInfo && (
-            <Box
-              sx={{
-                mt: 2,
-                p: 2,
-                backgroundColor: "#f5f5f5",
-                borderRadius: 2,
-                textAlign: "left",
-              }}
-            >
-              <Typography variant="body2">
-                Subdomain: {debugInfo.subdomain}
-              </Typography>
-              <Typography variant="body2">
-                Tenant ID: {debugInfo.tenantId}
-              </Typography>
-              <Typography variant="body2">
-                Logo URL: {debugInfo.logoUrl}
-              </Typography>
-              {debugInfo.error && (
-                <Typography variant="body2" color="error">
-                  {debugInfo.error}
-                </Typography>
-              )}
-            </Box>
-          )}
         </Box>
       </Box>
 
-      {/* Right Side - Welcome Content */}
+      {/* Right Side - Branding / Welcome */}
       <Box
         sx={{
           flex: 1,
-          minWidth: 0,
-          overflow: "auto",
-          padding: [4, 6],
+          px: 4,
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
           alignItems: "flex-start",
-          position: "relative",
           backgroundColor: "#ffffff",
+          position: "relative",
         }}
       >
-        <Box sx={{ position: "absolute", top: 24, right: 32 }}>
-          <MuiLink
-            component={Link}
-            to="/self-service"
-            underline="hover"
-            fontSize="0.9rem"
-            sx={{ fontWeight: 500 }}
-          >
-            Go to Self-Service
-          </MuiLink>
-        </Box>
+        <MuiLink
+          component={Link}
+          to="/self-service"
+          underline="hover"
+          fontSize="0.9rem"
+          sx={{
+            position: "absolute",
+            top: 24,
+            right: 32,
+            fontWeight: 500,
+          }}
+        >
+          Go to Self-Service
+        </MuiLink>
 
-        <Box sx={{ maxWidth: 500 }}>
+        <Box sx={{ maxWidth: 500, width: "100%" }}>
           <Typography
             variant="h3"
             fontWeight={700}
