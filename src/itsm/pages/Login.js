@@ -7,6 +7,9 @@ import {
   Stack,
   Box,
   Link as MuiLink,
+  Paper,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
 import GoogleIcon from "@mui/icons-material/Google";
@@ -17,6 +20,9 @@ import defaultLogo from "../../common/assets/865F7924-3016-4B89-8DF4-F881C33D72E
 
 const Login = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [logoUrl, setLogoUrl] = useState(defaultLogo);
@@ -81,7 +87,6 @@ const Login = () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
     });
-
     if (error) setError("Google sign-in failed.");
   };
 
@@ -89,40 +94,48 @@ const Login = () => {
     <Box
       sx={{
         display: "flex",
+        flexDirection: isMobile ? "column" : "row",
         height: "100vh",
         width: "100vw",
         overflow: "hidden",
-        boxSizing: "border-box",
+        bgcolor: "#f0f2f5",
       }}
     >
-      {/* Left Side: Login Form */}
+      {/* Left Section: Login */}
       <Box
         sx={{
           flex: 1,
           display: "flex",
-          flexDirection: "column",
+          alignItems: "center",
           justifyContent: "center",
-          px: 4,
-          minHeight: 0,
-          boxSizing: "border-box",
-          backgroundColor: "#f8f8f8",
+          p: 3,
         }}
       >
-        <Box sx={{ maxWidth: 400, mx: "auto", width: "100%" }}>
-          <img
-            src={logoUrl}
-            alt="Tenant Logo"
-            style={{ maxHeight: 50, marginBottom: 16 }}
-          />
+        <Paper
+          elevation={3}
+          sx={{
+            p: 4,
+            width: "100%",
+            maxWidth: 420,
+            borderRadius: 3,
+            boxShadow: "0px 6px 12px rgba(0,0,0,0.1)",
+          }}
+        >
+          <Box sx={{ textAlign: "center", mb: 2 }}>
+            <img
+              src={logoUrl}
+              alt="Tenant Logo"
+              style={{ maxHeight: 50, marginBottom: 12 }}
+            />
+            <Typography variant="h5" fontWeight={600}>
+              Sign in to Hi5Tech
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Use your credentials or a social provider
+            </Typography>
+          </Box>
 
-          <Typography variant="h5" fontWeight={600} mb={1}>
-            Sign in to Hi5Tech
-          </Typography>
-          <Typography variant="body2" color="text.secondary" mb={2}>
-            Use your credentials or a social provider
-          </Typography>
-
-          <Stack spacing={1.5} mb={3}>
+          <Stack spacing={1.5} mt={2}>
             <Button
               variant="outlined"
               startIcon={<GoogleIcon />}
@@ -139,7 +152,7 @@ const Login = () => {
             </Button>
           </Stack>
 
-          <Divider sx={{ my: 2 }}>or</Divider>
+          <Divider sx={{ my: 3 }}>or</Divider>
 
           <TextField
             fullWidth
@@ -161,12 +174,7 @@ const Login = () => {
           />
 
           <Box sx={{ textAlign: "right", mt: 1 }}>
-            <MuiLink
-              component={Link}
-              to="/reset-password"
-              underline="hover"
-              fontSize="0.875rem"
-            >
+            <MuiLink component={Link} to="/reset-password" underline="hover" fontSize="0.875rem">
               Forgot password?
             </MuiLink>
           </Box>
@@ -180,26 +188,26 @@ const Login = () => {
           <Button
             variant="contained"
             fullWidth
-            sx={{ mt: 3, py: 1.2, fontWeight: "bold" }}
+            sx={{ mt: 3, py: 1.4, fontWeight: "bold" }}
             onClick={handleLogin}
           >
             Login
           </Button>
-        </Box>
+        </Paper>
       </Box>
 
-      {/* Right Side: Welcome / Branding */}
+      {/* Right Section: Welcome Message */}
       <Box
         sx={{
           flex: 1,
+          backgroundColor: "#ffffff",
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
+          alignItems: "center",
+          textAlign: "center",
           px: 4,
-          minHeight: 0,
-          boxSizing: "border-box",
-          position: "relative",
-          backgroundColor: "#ffffff",
+          py: isMobile ? 4 : 0,
         }}
       >
         <MuiLink
@@ -208,29 +216,34 @@ const Login = () => {
           underline="hover"
           fontSize="0.9rem"
           sx={{
-            position: "absolute",
+            position: isMobile ? "static" : "absolute",
             top: 24,
             right: 32,
             fontWeight: 500,
+            mb: isMobile ? 2 : 0,
           }}
         >
           Go to Self-Service
         </MuiLink>
 
-        <Box sx={{ maxWidth: 500, mx: "auto", width: "100%" }}>
+        <Box sx={{ maxWidth: 500 }}>
           <Typography
             variant="h3"
             fontWeight={700}
-            mb={2}
-            sx={{ fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" } }}
+            sx={{
+              fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
+              mb: 2,
+            }}
           >
             Welcome Back 👋
           </Typography>
           <Typography
             variant="h6"
             color="text.secondary"
-            mb={3}
-            sx={{ fontSize: { xs: "1rem", sm: "1.2rem" } }}
+            sx={{
+              fontSize: { xs: "1rem", sm: "1.2rem" },
+              mb: 3,
+            }}
           >
             Manage your services, assets, and requests all in one place.
           </Typography>
