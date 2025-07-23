@@ -93,24 +93,69 @@ const Login = () => {
   return (
     <Box
       sx={{
-        display: "flex",
-        flexDirection: isMobile ? "column" : "row",
-        height: "100vh",
+        minHeight: "100vh",
         width: "100vw",
-        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
         bgcolor: "#f0f2f5",
+        p: isMobile ? 2 : 4,
+        boxSizing: "border-box",
       }}
     >
-      {/* Left Section: Login */}
+      {/* Top Welcome Header */}
+      <Box
+        sx={{
+          maxWidth: 900,
+          mx: "auto",
+          width: "100%",
+          textAlign: "center",
+          mb: 4,
+        }}
+      >
+        <MuiLink
+          component={Link}
+          to="/self-service"
+          underline="hover"
+          fontSize="0.9rem"
+          sx={{ fontWeight: 500, display: "inline-block", mb: 1 }}
+        >
+          Go to Self-Service
+        </MuiLink>
+
+        <Typography
+          variant="h3"
+          fontWeight={700}
+          sx={{
+            fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
+            mb: 1,
+          }}
+        >
+          Welcome Back 👋
+        </Typography>
+        <Typography
+          variant="h6"
+          color="text.secondary"
+          sx={{
+            fontSize: { xs: "1rem", sm: "1.2rem" },
+          }}
+        >
+          Manage your services, assets, and requests all in one place.
+        </Typography>
+      </Box>
+
+      {/* Login Content */}
       <Box
         sx={{
           flex: 1,
           display: "flex",
-          alignItems: "center",
+          flexDirection: isMobile ? "column" : "row",
+          gap: 4,
           justifyContent: "center",
-          p: 3,
+          alignItems: "center",
+          flexWrap: "wrap",
         }}
       >
+        {/* Login Box */}
         <Paper
           elevation={3}
           sx={{
@@ -194,70 +239,22 @@ const Login = () => {
             Login
           </Button>
         </Paper>
-      </Box>
 
-      {/* Right Section: Welcome Message */}
-      <Box
-        sx={{
-          flex: 1,
-          backgroundColor: "#ffffff",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          textAlign: "center",
-          px: 4,
-          py: isMobile ? 4 : 0,
-        }}
-      >
-        <MuiLink
-          component={Link}
-          to="/self-service"
-          underline="hover"
-          fontSize="0.9rem"
-          sx={{
-            position: isMobile ? "static" : "absolute",
-            top: 24,
-            right: 32,
-            fontWeight: 500,
-            mb: isMobile ? 2 : 0,
-          }}
-        >
-          Go to Self-Service
-        </MuiLink>
-
-        <Box sx={{ maxWidth: 500 }}>
-          <Typography
-            variant="h3"
-            fontWeight={700}
-            sx={{
-              fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
-              mb: 2,
-            }}
-          >
-            Welcome Back 👋
-          </Typography>
-          <Typography
-            variant="h6"
-            color="text.secondary"
-            sx={{
-              fontSize: { xs: "1rem", sm: "1.2rem" },
-              mb: 3,
-            }}
-          >
-            Manage your services, assets, and requests all in one place.
-          </Typography>
-          <img
-            src={logoUrl}
-            alt="Welcome Visual"
-            style={{
-              width: "100%",
-              maxHeight: "200px",
-              objectFit: "contain",
-              opacity: 0.85,
-            }}
-          />
-        </Box>
+        {/* Visual Section */}
+        {!isMobile && (
+          <Box sx={{ maxWidth: 420, width: "100%", textAlign: "center" }}>
+            <img
+              src={logoUrl}
+              alt="Welcome Visual"
+              style={{
+                width: "100%",
+                maxHeight: "200px",
+                objectFit: "contain",
+                opacity: 0.85,
+              }}
+            />
+          </Box>
+        )}
       </Box>
     </Box>
   );
