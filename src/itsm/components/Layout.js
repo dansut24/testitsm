@@ -4,7 +4,7 @@ import { Box, useMediaQuery, useTheme } from "@mui/material";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 
-import Header from "./Header";   // ✅ new unified header
+import Header from "./Header"; // ✅ unified header (Navbar + Tabs)
 import MainContent from "./MainContent";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
@@ -26,6 +26,9 @@ import SettingsIcon from "@mui/icons-material/Settings";
 
 const drawerWidth = 240;
 const collapsedWidth = 60;
+
+// Combined navbar + tabs height
+const headerHeight = 84; // 48px navbar + 36px tabs
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -213,6 +216,7 @@ const Layout = () => {
           minHeight: "100vh",
         }}
       >
+        {/* Header stays fixed at the top */}
         <Header
           tabs={tabs}
           tabIndex={tabIndex}
@@ -224,8 +228,15 @@ const Layout = () => {
           collapsedWidth={collapsedWidth}
         />
 
-        {/* Offset: nav (48px) + tabs (36px) = 84px */}
-        <Box sx={{ flex: 1, overflowY: "auto", px: 2, pt: "84px" }}>
+        {/* Main content offset by header height */}
+        <Box
+          sx={{
+            flex: 1,
+            overflowY: "auto",
+            px: 2,
+            pt: `${headerHeight}px`, // ✅ use shared headerHeight
+          }}
+        >
           <MainContent />
           <BreadcrumbsNav />
           <BackToTop />
