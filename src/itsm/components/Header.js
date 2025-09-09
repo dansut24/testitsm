@@ -1,4 +1,4 @@
-// Header.js — Navbar + Chrome/Edge style Tabs combined (Desktop + Mobile sidebar toggle)
+// Header.js — unified Navbar + Tabs
 import React, { useState } from "react";
 import {
   AppBar,
@@ -10,9 +10,9 @@ import {
   Select,
   MenuItem,
   Avatar,
-  SwipeableDrawer,
   Tabs,
   Tab,
+  SwipeableDrawer,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { useMediaQuery } from "@mui/material";
@@ -25,10 +25,10 @@ import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import SettingsIcon from "@mui/icons-material/Settings";
 import HistoryIcon from "@mui/icons-material/History";
-import CloseIcon from "@mui/icons-material/Close";
 import CloseSmallIcon from "@mui/icons-material/Close";
 
 import { useThemeMode } from "../../common/context/ThemeContext";
+
 import NotificationDrawer from "./NotificationDrawer";
 import UserActivityLogDrawer from "./UserActivityLogDrawer";
 import ProfileDrawer from "./ProfileDrawer";
@@ -38,18 +38,17 @@ const Header = ({
   tabIndex,
   handleTabChange,
   handleTabClose,
-  sidebarWidth,
-  collapsedWidth,
   sidebarOpen,
+  collapsedWidth,
+  sidebarWidth,
+  isMobile,
   handleSidebarToggle,
   handleMobileSidebarToggle,
 }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
   const { mode, setMode } = useThemeMode();
 
-  const [tabHistory, setTabHistory] = useState([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerType, setDrawerType] = useState("profile");
 
@@ -57,13 +56,6 @@ const Header = ({
     const user = localStorage.getItem("user");
     return user ? JSON.parse(user) : { username: "User", avatar_url: "" };
   });
-
-  const goBack = () => {
-    if (tabHistory.length > 0) {
-      const previousTab = tabHistory.pop();
-      setTabHistory([...tabHistory]);
-    }
-  };
 
   const openDrawer = (type) => {
     setDrawerType(type);
@@ -118,7 +110,6 @@ const Header = ({
           zIndex: (theme) => theme.zIndex.appBar,
         }}
       >
-        {/* === Top Toolbar === */}
         <Toolbar variant="dense" sx={{ px: 1, minHeight: 48 }}>
           <Box display="flex" alignItems="center" gap={1}>
             <IconButton
@@ -142,14 +133,6 @@ const Header = ({
           <IconButton size="small">
             <SearchIcon fontSize="small" />
           </IconButton>
-
-          {tabHistory.length > 0 && (
-            <Tooltip title="Go Back">
-              <IconButton size="small" onClick={goBack}>
-                <ArrowBackIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
 
           <Tooltip title="Theme">
             <Select
@@ -201,7 +184,6 @@ const Header = ({
           )}
         </Toolbar>
 
-        {/* === Tabs Strip === */}
         <Tabs
           value={tabIndex}
           onChange={handleTabChange}
@@ -266,7 +248,6 @@ const Header = ({
         </Tabs>
       </AppBar>
 
-      {/* === Drawer === */}
       <SwipeableDrawer
         anchor={isMobile ? "bottom" : "right"}
         open={drawerOpen}
