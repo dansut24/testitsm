@@ -1,4 +1,4 @@
-// AppsBar.js — sticky tab bar styled like Chrome/Edge
+// AppsBar.js — Chrome/Edge style tabs blending into content
 
 import CloseIcon from "@mui/icons-material/Close";
 import { Tab, Tabs, Box, IconButton } from "@mui/material";
@@ -19,9 +19,7 @@ const AppsBar = ({
       sx={{
         top: 48, // Adjust if Navbar height changes
         zIndex: (theme) => theme.zIndex.appBar,
-        bgcolor: "background.paper",
-        borderBottom: 1,
-        borderColor: "divider",
+        bgcolor: "background.paper", // match main content
         width: isMobile
           ? "100%"
           : `calc(100% - ${sidebarOpen ? sidebarWidth : collapsedWidth}px)`,
@@ -36,7 +34,7 @@ const AppsBar = ({
           minHeight: 36,
           height: 36,
           "& .MuiTabs-indicator": {
-            display: "none", // Chrome-style tabs don’t use an underline
+            display: "none", // remove underline
           },
         }}
       >
@@ -82,15 +80,16 @@ const AppsBar = ({
               borderTopRightRadius: "8px",
               border: "1px solid",
               borderColor: "divider",
-              borderBottom: "none",
-              mr: -1, // overlap edges slightly, like Chrome
+              borderBottom: tabIndex === i ? "none" : "1px solid", // active merges with content
               bgcolor: tabIndex === i ? "background.paper" : "grey.100",
+              zIndex: tabIndex === i ? 1 : 0, // lift active tab
+              mr: -1, // overlap like Chrome
               "&:hover": {
                 bgcolor: tabIndex === i ? "background.paper" : "grey.200",
               },
               "& .MuiBox-root": {
                 "&:hover button": {
-                  opacity: 1, // show close button on hover
+                  opacity: 1,
                 },
               },
             }}
