@@ -1,10 +1,10 @@
 // Layout.js
 import React, { useState, useEffect } from "react";
 import { Box, useMediaQuery, useTheme } from "@mui/material";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 
-import Header from "./Header"; // ✅ unified header (Navbar + Tabs)
+import Header from "./Header"; // unified header
 import MainContent from "./MainContent";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
@@ -26,9 +26,6 @@ import SettingsIcon from "@mui/icons-material/Settings";
 
 const drawerWidth = 240;
 const collapsedWidth = 60;
-
-// Combined navbar + tabs height
-const headerHeight = 84; // 48px navbar + 36px tabs
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -52,8 +49,8 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // desktop
+  const [mobileOpen, setMobileOpen] = useState(false); // mobile
   const [tabs, setTabs] = useState(() => {
     const stored = sessionStorage.getItem("tabs");
     return stored
@@ -70,7 +67,7 @@ const Layout = () => {
 
   const sidebarWidth = sidebarOpen ? drawerWidth : collapsedWidth;
 
-  // Tab handling
+  // Update tabs on route change
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((tab) => tab.path === currentPath);
@@ -86,7 +83,6 @@ const Layout = () => {
             .select("reference")
             .eq("id", id)
             .maybeSingle();
-
           if (data?.reference) label = data.reference;
         }
 
@@ -94,7 +90,6 @@ const Layout = () => {
         setTabs(newTabs);
         setTabIndex(newTabs.length - 1);
       };
-
       fetchLabel();
     } else {
       const index = tabs.findIndex((tab) => tab.path === currentPath);
@@ -102,6 +97,7 @@ const Layout = () => {
     }
   }, [location.pathname]);
 
+  // Persist tabs
   useEffect(() => {
     sessionStorage.setItem("tabs", JSON.stringify(tabs));
   }, [tabs]);
@@ -110,6 +106,7 @@ const Layout = () => {
     sessionStorage.setItem("tabIndex", tabIndex.toString());
   }, [tabIndex]);
 
+  // Responsive sidebar
   useEffect(() => {
     if (isMobile) {
       setSidebarOpen(false);
@@ -216,7 +213,6 @@ const Layout = () => {
           minHeight: "100vh",
         }}
       >
-        {/* Header stays fixed at the top */}
         <Header
           tabs={tabs}
           tabIndex={tabIndex}
@@ -226,17 +222,12 @@ const Layout = () => {
           sidebarOpen={sidebarOpen}
           sidebarWidth={sidebarWidth}
           collapsedWidth={collapsedWidth}
+          handleSidebarToggle={handleSidebarToggle}
+          handleMobileSidebarToggle={handleMobileSidebarToggle}
         />
 
-        {/* Main content offset by header height */}
-        <Box
-          sx={{
-            flex: 1,
-            overflowY: "auto",
-            px: 2,
-            pt: `${headerHeight}px`, // ✅ use shared headerHeight
-          }}
-        >
+        {/* Offset: nav + tabs */}
+        <Box sx={{ flex: 1, overflowY: "auto", px: 2, pt: "84px" }}>
           <MainContent />
           <BreadcrumbsNav />
           <BackToTop />
