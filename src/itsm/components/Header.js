@@ -1,5 +1,4 @@
-// Header.js — Navbar + Chrome/Edge style Tabs combined
-
+// Header.js — Navbar + Chrome/Edge style Tabs combined (Desktop + Mobile sidebar toggle)
 import React, { useState } from "react";
 import {
   AppBar,
@@ -12,6 +11,8 @@ import {
   MenuItem,
   Avatar,
   SwipeableDrawer,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { useMediaQuery } from "@mui/material";
@@ -25,11 +26,9 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import SettingsIcon from "@mui/icons-material/Settings";
 import HistoryIcon from "@mui/icons-material/History";
 import CloseIcon from "@mui/icons-material/Close";
-import CloseSmallIcon from "@mui/icons-material/Close"; // for tab close
+import CloseSmallIcon from "@mui/icons-material/Close";
 
-import { Tabs, Tab } from "@mui/material";
 import { useThemeMode } from "../../common/context/ThemeContext";
-
 import NotificationDrawer from "./NotificationDrawer";
 import UserActivityLogDrawer from "./UserActivityLogDrawer";
 import ProfileDrawer from "./ProfileDrawer";
@@ -122,15 +121,14 @@ const Header = ({
         {/* === Top Toolbar === */}
         <Toolbar variant="dense" sx={{ px: 1, minHeight: 48 }}>
           <Box display="flex" alignItems="center" gap={1}>
-            {isMobile && (
-              <IconButton
-                size="small"
-                onClick={handleMobileSidebarToggle}
-                sx={{ color: "inherit" }}
-              >
-                <MenuIcon fontSize="small" />
-              </IconButton>
-            )}
+            <IconButton
+              size="small"
+              onClick={isMobile ? handleMobileSidebarToggle : handleSidebarToggle}
+              sx={{ color: "inherit" }}
+            >
+              <MenuIcon fontSize="small" />
+            </IconButton>
+
             <img src="/logo192.png" alt="Logo" style={{ height: 24 }} />
             {!isMobile && (
               <Typography variant="h6" noWrap sx={{ fontSize: 16 }}>
@@ -268,7 +266,7 @@ const Header = ({
         </Tabs>
       </AppBar>
 
-      {/* === Drawer (unchanged) === */}
+      {/* === Drawer === */}
       <SwipeableDrawer
         anchor={isMobile ? "bottom" : "right"}
         open={drawerOpen}
