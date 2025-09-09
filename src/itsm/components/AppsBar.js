@@ -1,4 +1,4 @@
-// AppsBar.js — sticky tab bar with closable tabs
+// AppsBar.js — sticky tab bar styled like Chrome/Edge
 
 import CloseIcon from "@mui/icons-material/Close";
 import { Tab, Tabs, Box, IconButton } from "@mui/material";
@@ -12,16 +12,19 @@ const AppsBar = ({
   sidebarOpen,
   sidebarWidth,
   collapsedWidth,
-}) => {  return (
+}) => {
+  return (
     <Box
-  position="fixed"
+      position="fixed"
       sx={{
         top: 48, // Adjust if Navbar height changes
         zIndex: (theme) => theme.zIndex.appBar,
         bgcolor: "background.paper",
         borderBottom: 1,
         borderColor: "divider",
-        width: isMobile ? "100%" : `calc(100% - ${sidebarOpen ? sidebarWidth : collapsedWidth}px)`,
+        width: isMobile
+          ? "100%"
+          : `calc(100% - ${sidebarOpen ? sidebarWidth : collapsedWidth}px)`,
       }}
     >
       <Tabs
@@ -29,22 +32,40 @@ const AppsBar = ({
         onChange={handleTabChange}
         variant="scrollable"
         scrollButtons="auto"
-        sx={{ minHeight: 32, height: 32 }}
+        sx={{
+          minHeight: 36,
+          height: 36,
+          "& .MuiTabs-indicator": {
+            display: "none", // Chrome-style tabs don’t use an underline
+          },
+        }}
       >
         {tabs.map((tab, i) => (
           <Tab
             key={tab.path}
+            disableRipple
             label={
-              <Box sx={{ display: "flex", alignItems: "center" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  pr: 1,
+                }}
+              >
                 {tab.label}
                 {tab.path !== "/dashboard" && (
                   <IconButton
                     onClick={(e) => {
-                      e.stopPropagation(); // Prevents switching tabs when clicking the close icon
+                      e.stopPropagation();
                       handleTabClose(tab.path);
                     }}
                     size="small"
-                    sx={{ ml: 0.5 }}
+                    sx={{
+                      ml: 0.5,
+                      opacity: 0,
+                      transition: "opacity 0.2s",
+                      "&:hover": { opacity: 1 },
+                    }}
                   >
                     <CloseIcon fontSize="small" />
                   </IconButton>
@@ -52,11 +73,26 @@ const AppsBar = ({
               </Box>
             }
             sx={{
-              minHeight: 32,
-              height: 32,
-              fontSize: 12,
-              px: 1,
+              minHeight: 36,
+              height: 36,
+              fontSize: 13,
+              px: 1.5,
               textTransform: "none",
+              borderTopLeftRadius: "8px",
+              borderTopRightRadius: "8px",
+              border: "1px solid",
+              borderColor: "divider",
+              borderBottom: "none",
+              mr: -1, // overlap edges slightly, like Chrome
+              bgcolor: tabIndex === i ? "background.paper" : "grey.100",
+              "&:hover": {
+                bgcolor: tabIndex === i ? "background.paper" : "grey.200",
+              },
+              "& .MuiBox-root": {
+                "&:hover button": {
+                  opacity: 1, // show close button on hover
+                },
+              },
             }}
           />
         ))}
