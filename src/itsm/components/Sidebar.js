@@ -1,3 +1,4 @@
+// Sidebar.js — Gradient Version
 import React, { useState } from "react";
 import ReactDOM from "react-dom";
 import {
@@ -12,17 +13,15 @@ import {
   Collapse,
   Grow,
 } from "@mui/material";
-import {
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
-  ExpandLess,
-  ExpandMore,
-} from "@mui/icons-material";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import ExpandLess from "@mui/icons-material/ExpandLess";
+import ExpandMore from "@mui/icons-material/ExpandMore";
 import { useTheme } from "@mui/material/styles";
 import { useNavigate, useLocation } from "react-router-dom";
 
-const collapsedWidth = 60;
 const drawerWidth = 240;
+const collapsedWidth = 60;
 
 const Sidebar = ({
   sidebarOpen,
@@ -45,128 +44,20 @@ const Sidebar = ({
     }));
   };
 
-  const closeAllDropdowns = () => setOpenDropdowns({});
-
-  const renderMenuItem = (item, index) => {
-    const isSelected = location.pathname === item.path;
-
-    return (
-      <Box key={item.text} sx={{ position: "relative" }}>
-        <ListItem
-          button
-          onClick={() => {
-            if (item.children) toggleDropdown(item.text);
-            else if (item.path) {
-              navigate(item.path);
-              if (isMobile) handleMobileSidebarToggle();
-              closeAllDropdowns();
-            }
-          }}
-          selected={isSelected}
-          sx={{
-            justifyContent: sidebarOpen || isMobile ? "initial" : "center",
-            "&.Mui-selected": {
-              backgroundColor: theme.palette.action.selected,
-              color: theme.palette.primary.main,
-            },
-            "&:hover": { backgroundColor: theme.palette.action.hover },
-          }}
-          onMouseEnter={() => {
-            if (!sidebarOpen && !isMobile && item.children) {
-              setOpenDropdowns({ [item.text]: true });
-            }
-          }}
-          onMouseLeave={() => {
-            if (!sidebarOpen && !isMobile && item.children) {
-              setOpenDropdowns({ [item.text]: false });
-            }
-          }}
-        >
-          <ListItemIcon
-            sx={{
-              minWidth: 0,
-              mr: sidebarOpen || isMobile ? 2 : "auto",
-              justifyContent: "center",
-              color: theme.palette.text.primary,
-            }}
-          >
-            {item.icon}
-          </ListItemIcon>
-          {(sidebarOpen || isMobile) && <ListItemText primary={item.text} />}
-          {(sidebarOpen || isMobile) &&
-            item.children &&
-            (openDropdowns[item.text] ? <ExpandLess /> : <ExpandMore />)}
-        </ListItem>
-
-        {/* Nested children */}
-        {item.children && (sidebarOpen || isMobile ? (
-          <Collapse in={openDropdowns[item.text]} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding>
-              {item.children.map((child) => (
-                <ListItem
-                  button
-                  key={child.text}
-                  sx={{ pl: 4 }}
-                  selected={location.pathname === child.path}
-                  onClick={() => {
-                    navigate(child.path);
-                    if (isMobile) handleMobileSidebarToggle();
-                    closeAllDropdowns();
-                  }}
-                >
-                  <ListItemText primary={child.text} />
-                </ListItem>
-              ))}
-            </List>
-          </Collapse>
-        ) : (
-          // Collapsed pop-out for desktop
-          ReactDOM.createPortal(
-            <Grow in={openDropdowns[item.text]}>
-              <Box
-                sx={{
-                  position: "fixed",
-                  top: `calc(64px + ${index * 48}px)`,
-                  left: `${collapsedWidth}px`,
-                  bgcolor: theme.palette.background.paper,
-                  boxShadow: 4,
-                  borderRadius: 1,
-                  zIndex: theme.zIndex.modal + 10,
-                  minWidth: 180,
-                  transformOrigin: "left top",
-                }}
-              >
-                <List dense>
-                  {item.children.map((child) => (
-                    <ListItem
-                      button
-                      key={child.text}
-                      onClick={() => {
-                        navigate(child.path);
-                        closeAllDropdowns();
-                      }}
-                    >
-                      <ListItemText primary={child.text} />
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            </Grow>,
-            document.body
-          )
-        ))}
-      </Box>
-    );
+  const closeAllDropdowns = () => {
+    setOpenDropdowns({});
   };
 
   const drawerContent = (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <>
       <Toolbar
-        sx={{ display: "flex", justifyContent: "flex-end", px: 1 }}
+        sx={{
+          display: "flex",
+          justifyContent: "flex-end",
+          px: 1,
+        }}
       >
-        <IconButton
-          onClick={isMobile ? handleMobileSidebarToggle : handleSidebarToggle}
-        >
+        <IconButton onClick={isMobile ? handleMobileSidebarToggle : handleSidebarToggle} sx={{ color: "#fff" }}>
           {sidebarOpen || isMobile ? <ChevronLeftIcon /> : <ChevronRightIcon />}
         </IconButton>
       </Toolbar>
@@ -178,16 +69,123 @@ const Sidebar = ({
           WebkitOverflowScrolling: "touch",
           pr: 1,
           pb: 4,
-          bgcolor: theme.palette.background.paper,
-          color: theme.palette.text.primary,
+          background: "linear-gradient(to bottom, #4e54c8, #8f94fb, #00c6ff)",
+          color: "#fff",
           "&::-webkit-scrollbar": { width: 0, height: 0 },
         }}
       >
         <List>
-          {menuItems.map((item, index) => renderMenuItem(item, index))}
+          {menuItems.map((item, index) => (
+            <React.Fragment key={item.text}>
+              <Box
+                onMouseEnter={() => {
+                  if (!sidebarOpen && !isMobile && item.children) {
+                    setOpenDropdowns({ [item.text]: true });
+                  }
+                }}
+                onMouseLeave={() => {
+                  if (!sidebarOpen && !isMobile && item.children) {
+                    setOpenDropdowns({ [item.text]: false });
+                  }
+                }}
+                sx={{ position: "relative" }}
+              >
+                <ListItem
+                  button
+                  onClick={() => {
+                    if (item.children) {
+                      toggleDropdown(item.text);
+                    } else if (item.path) {
+                      navigate(item.path);
+                      if (isMobile) handleMobileSidebarToggle();
+                      closeAllDropdowns();
+                    }
+                  }}
+                  selected={location.pathname === item.path}
+                  sx={{
+                    justifyContent: sidebarOpen || isMobile ? "initial" : "center",
+                    "&.Mui-selected": { backgroundColor: "rgba(255,255,255,0.15)", color: "#fff" },
+                    "&:hover": { backgroundColor: "rgba(255,255,255,0.08)" },
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 0,
+                      mr: sidebarOpen || isMobile ? 2 : "auto",
+                      justifyContent: "center",
+                      color: "#fff",
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  {(sidebarOpen || isMobile) && <ListItemText primary={item.text} />}
+                  {(sidebarOpen || isMobile) && item.children &&
+                    (openDropdowns[item.text] ? <ExpandLess /> : <ExpandMore />)}
+                </ListItem>
+
+                {item.children && (
+                  (sidebarOpen || isMobile) ? (
+                    <Collapse in={openDropdowns[item.text]} timeout="auto" unmountOnExit>
+                      <List component="div" disablePadding>
+                        {item.children.map((child) => (
+                          <ListItem
+                            button
+                            key={child.text}
+                            sx={{ pl: 4, color: "#fff", "&:hover": { backgroundColor: "rgba(255,255,255,0.08)" } }}
+                            selected={location.pathname === child.path}
+                            onClick={() => {
+                              navigate(child.path);
+                              if (isMobile) handleMobileSidebarToggle();
+                              closeAllDropdowns();
+                            }}
+                          >
+                            <ListItemText primary={child.text} />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Collapse>
+                  ) : (
+                    ReactDOM.createPortal(
+                      <Grow in={openDropdowns[item.text]}>
+                        <Box
+                          sx={{
+                            position: "fixed",
+                            top: `calc(64px + ${index * 48}px)`,
+                            left: `${collapsedWidth}px`,
+                            backgroundColor: "#4e54c8",
+                            boxShadow: 4,
+                            borderRadius: 1,
+                            zIndex: theme.zIndex.modal + 10,
+                            minWidth: 180,
+                          }}
+                        >
+                          <List dense>
+                            {item.children.map((child) => (
+                              <ListItem
+                                button
+                                key={child.text}
+                                onClick={() => {
+                                  navigate(child.path);
+                                  closeAllDropdowns();
+                                }}
+                                sx={{ color: "#fff", "&:hover": { backgroundColor: "rgba(255,255,255,0.08)" } }}
+                              >
+                                <ListItemText primary={child.text} />
+                              </ListItem>
+                            ))}
+                          </List>
+                        </Box>
+                      </Grow>,
+                      document.body
+                    )
+                  )
+                )}
+              </Box>
+            </React.Fragment>
+          ))}
         </List>
       </Box>
-    </Box>
+    </>
   );
 
   if (isMobile) {
@@ -199,13 +197,7 @@ const Sidebar = ({
         onOpen={() => {}}
         disableBackdropTransition={false}
         disableDiscovery={false}
-        sx={{
-          "& .MuiDrawer-paper": {
-            width: drawerWidth,
-            bgcolor: theme.palette.background.paper,
-            color: theme.palette.text.primary,
-          },
-        }}
+        sx={{ "& .MuiDrawer-paper": { width: drawerWidth, background: "linear-gradient(to bottom, #4e54c8, #8f94fb, #00c6ff)", color: "#fff" } }}
       >
         {drawerContent}
       </SwipeableDrawer>
@@ -217,16 +209,16 @@ const Sidebar = ({
       sx={{
         width: sidebarWidth,
         height: "100vh",
-        bgcolor: theme.palette.background.paper,
-        color: theme.palette.text.primary,
+        background: "linear-gradient(to bottom, #4e54c8, #8f94fb, #00c6ff)",
+        color: "#fff",
         borderRight: 1,
-        borderColor: "divider",
+        borderColor: "rgba(255,255,255,0.1)",
         position: "fixed",
         top: 0,
         left: 0,
         display: "flex",
         flexDirection: "column",
-        transition: "width 0.3s ease",
+        transition: "transform 0.3s ease",
         zIndex: theme.zIndex.drawer,
       }}
     >
