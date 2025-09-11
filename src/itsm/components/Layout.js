@@ -4,7 +4,7 @@ import { Box, useMediaQuery, useTheme } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 
-import Header from "./Header"; // unified header
+import Header, { HEADER_HEIGHT } from "./Header";
 import MainContent from "./MainContent";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
@@ -49,8 +49,8 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [sidebarOpen, setSidebarOpen] = useState(true); // desktop
-  const [mobileOpen, setMobileOpen] = useState(false); // mobile
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [tabs, setTabs] = useState(() => {
     const stored = sessionStorage.getItem("tabs");
     return stored
@@ -207,6 +207,7 @@ const Layout = () => {
       <Box
         sx={{
           marginLeft: isMobile ? 0 : `${sidebarWidth}px`,
+          transition: "margin-left 0.3s ease",
           display: "flex",
           flexDirection: "column",
           width: "100%",
@@ -226,15 +227,15 @@ const Layout = () => {
           handleMobileSidebarToggle={handleMobileSidebarToggle}
         />
 
-        {/* Offset: nav + tabs */}
-        <Box sx={{ flex: 1, overflowY: "auto", px: 2, pt: "84px" }}>
+        {/* Scrollable content area */}
+        <Box sx={{ flex: 1, overflowY: "auto", pt: `${HEADER_HEIGHT}px` }}>
+          <BreadcrumbsNav sx={{ px: 2, mb: 1 }} />
           <MainContent />
-          <BreadcrumbsNav />
           <BackToTop />
+          <Footer />
         </Box>
 
         <AIChat />
-        <Footer />
       </Box>
     </Box>
   );
