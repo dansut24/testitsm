@@ -1,4 +1,3 @@
-// Sidebar.js — Gradient Version
 import React, { useState } from "react";
 import ReactDOM from "react-dom";
 import {
@@ -57,7 +56,10 @@ const Sidebar = ({
           px: 1,
         }}
       >
-        <IconButton onClick={isMobile ? handleMobileSidebarToggle : handleSidebarToggle} sx={{ color: "#fff" }}>
+        <IconButton
+          onClick={isMobile ? handleMobileSidebarToggle : handleSidebarToggle}
+          sx={{ color: theme.palette.text.primary }}
+        >
           {sidebarOpen || isMobile ? <ChevronLeftIcon /> : <ChevronRightIcon />}
         </IconButton>
       </Toolbar>
@@ -69,8 +71,8 @@ const Sidebar = ({
           WebkitOverflowScrolling: "touch",
           pr: 1,
           pb: 4,
-          background: "linear-gradient(to bottom, #4e54c8, #8f94fb, #00c6ff)",
-          color: "#fff",
+          backgroundColor: "#1F2A40", // Professional dark sidebar
+          color: "#FFFFFF",
           "&::-webkit-scrollbar": { width: 0, height: 0 },
         }}
       >
@@ -104,8 +106,13 @@ const Sidebar = ({
                   selected={location.pathname === item.path}
                   sx={{
                     justifyContent: sidebarOpen || isMobile ? "initial" : "center",
-                    "&.Mui-selected": { backgroundColor: "rgba(255,255,255,0.15)", color: "#fff" },
-                    "&:hover": { backgroundColor: "rgba(255,255,255,0.08)" },
+                    "&.Mui-selected": {
+                      backgroundColor: "#2E3B55",
+                      color: "#FFFFFF",
+                    },
+                    "&:hover": {
+                      backgroundColor: "#2E3B55",
+                    },
                   }}
                 >
                   <ListItemIcon
@@ -113,14 +120,15 @@ const Sidebar = ({
                       minWidth: 0,
                       mr: sidebarOpen || isMobile ? 2 : "auto",
                       justifyContent: "center",
-                      color: "#fff",
+                      color: "#FFFFFF",
                     }}
                   >
                     {item.icon}
                   </ListItemIcon>
                   {(sidebarOpen || isMobile) && <ListItemText primary={item.text} />}
-                  {(sidebarOpen || isMobile) && item.children &&
-                    (openDropdowns[item.text] ? <ExpandLess /> : <ExpandMore />)}
+                  {(sidebarOpen || isMobile) && item.children && (
+                    openDropdowns[item.text] ? <ExpandLess /> : <ExpandMore />
+                  )}
                 </ListItem>
 
                 {item.children && (
@@ -131,7 +139,7 @@ const Sidebar = ({
                           <ListItem
                             button
                             key={child.text}
-                            sx={{ pl: 4, color: "#fff", "&:hover": { backgroundColor: "rgba(255,255,255,0.08)" } }}
+                            sx={{ pl: 4 }}
                             selected={location.pathname === child.path}
                             onClick={() => {
                               navigate(child.path);
@@ -152,11 +160,12 @@ const Sidebar = ({
                             position: "fixed",
                             top: `calc(64px + ${index * 48}px)`,
                             left: `${collapsedWidth}px`,
-                            backgroundColor: "#4e54c8",
+                            backgroundColor: "#1F2A40",
                             boxShadow: 4,
                             borderRadius: 1,
                             zIndex: theme.zIndex.modal + 10,
                             minWidth: 180,
+                            transformOrigin: "left top",
                           }}
                         >
                           <List dense>
@@ -168,7 +177,6 @@ const Sidebar = ({
                                   navigate(child.path);
                                   closeAllDropdowns();
                                 }}
-                                sx={{ color: "#fff", "&:hover": { backgroundColor: "rgba(255,255,255,0.08)" } }}
                               >
                                 <ListItemText primary={child.text} />
                               </ListItem>
@@ -195,9 +203,13 @@ const Sidebar = ({
         open={mobileOpen}
         onClose={handleMobileSidebarToggle}
         onOpen={() => {}}
-        disableBackdropTransition={false}
-        disableDiscovery={false}
-        sx={{ "& .MuiDrawer-paper": { width: drawerWidth, background: "linear-gradient(to bottom, #4e54c8, #8f94fb, #00c6ff)", color: "#fff" } }}
+        sx={{
+          "& .MuiDrawer-paper": {
+            width: drawerWidth,
+            backgroundColor: "#1F2A40",
+            color: "#FFFFFF",
+          },
+        }}
       >
         {drawerContent}
       </SwipeableDrawer>
@@ -209,10 +221,10 @@ const Sidebar = ({
       sx={{
         width: sidebarWidth,
         height: "100vh",
-        background: "linear-gradient(to bottom, #4e54c8, #8f94fb, #00c6ff)",
-        color: "#fff",
+        bgcolor: "#1F2A40",
+        color: "#FFFFFF",
         borderRight: 1,
-        borderColor: "rgba(255,255,255,0.1)",
+        borderColor: "divider",
         position: "fixed",
         top: 0,
         left: 0,
