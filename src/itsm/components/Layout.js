@@ -1,10 +1,9 @@
-// Layout.js
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { Box, useMediaQuery, useTheme } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 
-import Header, { HEADER_HEIGHT } from "./Header"; // unified header
+import Header from "./Header";
 import MainContent from "./MainContent";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
@@ -12,6 +11,7 @@ import BreadcrumbsNav from "./BreadcrumbsNav";
 import BackToTop from "./BackToTop";
 import AIChat from "./AIChat";
 
+// Icons
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import AssignmentIcon from "@mui/icons-material/Assignment";
@@ -49,8 +49,8 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [sidebarOpen, setSidebarOpen] = useState(!isMobile); 
-  const [mobileOpen, setMobileOpen] = useState(false); 
+  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const [tabs, setTabs] = useState(() => {
     const stored = sessionStorage.getItem("tabs");
@@ -58,13 +58,12 @@ const Layout = () => {
       ? JSON.parse(stored)
       : [{ label: "Dashboard", path: "/dashboard" }];
   });
-
   const [tabIndex, setTabIndex] = useState(() => {
     const storedIndex = sessionStorage.getItem("tabIndex");
     return storedIndex ? parseInt(storedIndex, 10) : 0;
   });
 
-  const user = useMemo(() => JSON.parse(localStorage.getItem("user") || "{}"), []);
+  const user = JSON.parse(localStorage.getItem("user"));
   const role = user?.role || "user";
 
   const sidebarWidth = sidebarOpen ? drawerWidth : collapsedWidth;
@@ -179,7 +178,9 @@ const Layout = () => {
     { text: "Approvals", icon: <HowToVoteIcon />, path: "/approvals" },
     { text: "Profile", icon: <PersonIcon />, path: "/profile" },
     ...(role === "admin"
-      ? [{ text: "Admin Settings", icon: <SettingsIcon />, path: "/admin-settings" }]
+      ? [
+          { text: "Admin Settings", icon: <SettingsIcon />, path: "/admin-settings" },
+        ]
       : [{ text: "Settings", icon: <SettingsIcon />, path: "/settings" }]),
   ];
 
@@ -192,22 +193,19 @@ const Layout = () => {
         handleSidebarToggle={handleSidebarToggle}
         handleMobileSidebarToggle={handleMobileSidebarToggle}
         sidebarWidth={sidebarWidth}
-        collapsedWidth={collapsedWidth}
-        tabIndex={tabIndex}
         menuItems={menuItems}
-        handleSidebarTabClick={(item) => navigate(item.path)}
         isMobile={isMobile}
       />
 
-      {/* Main Content */}
+      {/* Main Content Container */}
       <Box
         sx={{
+          flexGrow: 1,
           marginLeft: isMobile ? 0 : `${sidebarWidth}px`,
           display: "flex",
           flexDirection: "column",
-          width: "100%",
           minHeight: "100vh",
-          transition: "margin-left 0.3s ease",
+          position: "relative",
         }}
       >
         <Header
@@ -223,23 +221,25 @@ const Layout = () => {
           handleMobileSidebarToggle={handleMobileSidebarToggle}
         />
 
-        {/* Main content offset for header + tabs */}
-        <Box
-          sx={{
-            flex: 1,
-            overflowY: "auto",
-            px: 2,
-            pt: `${HEADER_HEIGHT}px`,
-            transition: "padding-left 0.3s ease",
-          }}
-        >
-          <BreadcrumbsNav />
+        {/* Scrollable Main Content */}
+        <Box sx={{ flex: 1, overflowY: "auto", position: "relative" }}>
           <MainContent />
+          <BreadcrumbsNav />
           <BackToTop />
         </Box>
 
-        <AIChat />
-        <Footer />
+        {/* Floating AI Chat */}
+        <AIChat
+          sx={{
+            position: "fixed",
+            bottom: 80,
+            right: 16,
+            zIndex: theme.zIndex.modal,
+          }}
+        />
+
+        {/* Sticky Footer */}
+        <Footer sx={{ mt: "auto" }} />
       </Box>
     </Box>
   );
