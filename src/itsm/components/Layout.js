@@ -26,6 +26,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 
 const drawerWidth = 240;
 const collapsedWidth = 60;
+const HEADER_HEIGHT = 64; // consistent header height
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -229,7 +230,7 @@ const Layout = () => {
             flex: 1,
             overflowY: "auto",
             px: 2,
-            pt: isMobile ? 80 : 84, // fixes top spacing for mobile & desktop
+            mt: `${HEADER_HEIGHT}px`, // ✅ replaces hardcoded pt
             pb: 4, // consistent bottom padding
           }}
         >
