@@ -1,10 +1,10 @@
 // Layout.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Box, useMediaQuery, useTheme } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 
-import Header, { HEADER_HEIGHT } from "./Header";
+import Header, { HEADER_HEIGHT } from "./Header"; // unified header
 import MainContent from "./MainContent";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
@@ -49,20 +49,22 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(!isMobile); 
+  const [mobileOpen, setMobileOpen] = useState(false); 
+
   const [tabs, setTabs] = useState(() => {
     const stored = sessionStorage.getItem("tabs");
     return stored
       ? JSON.parse(stored)
       : [{ label: "Dashboard", path: "/dashboard" }];
   });
+
   const [tabIndex, setTabIndex] = useState(() => {
     const storedIndex = sessionStorage.getItem("tabIndex");
     return storedIndex ? parseInt(storedIndex, 10) : 0;
   });
 
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = useMemo(() => JSON.parse(localStorage.getItem("user") || "{}"), []);
   const role = user?.role || "user";
 
   const sidebarWidth = sidebarOpen ? drawerWidth : collapsedWidth;
@@ -177,13 +179,7 @@ const Layout = () => {
     { text: "Approvals", icon: <HowToVoteIcon />, path: "/approvals" },
     { text: "Profile", icon: <PersonIcon />, path: "/profile" },
     ...(role === "admin"
-      ? [
-          {
-            text: "Admin Settings",
-            icon: <SettingsIcon />,
-            path: "/admin-settings",
-          },
-        ]
+      ? [{ text: "Admin Settings", icon: <SettingsIcon />, path: "/admin-settings" }]
       : [{ text: "Settings", icon: <SettingsIcon />, path: "/settings" }]),
   ];
 
@@ -207,11 +203,11 @@ const Layout = () => {
       <Box
         sx={{
           marginLeft: isMobile ? 0 : `${sidebarWidth}px`,
-          transition: "margin-left 0.3s ease",
           display: "flex",
           flexDirection: "column",
           width: "100%",
           minHeight: "100vh",
+          transition: "margin-left 0.3s ease",
         }}
       >
         <Header
@@ -227,15 +223,23 @@ const Layout = () => {
           handleMobileSidebarToggle={handleMobileSidebarToggle}
         />
 
-        {/* Scrollable content area */}
-        <Box sx={{ flex: 1, overflowY: "auto", pt: `${HEADER_HEIGHT}px` }}>
-          <BreadcrumbsNav sx={{ px: 2, mb: 1 }} />
+        {/* Main content offset for header + tabs */}
+        <Box
+          sx={{
+            flex: 1,
+            overflowY: "auto",
+            px: 2,
+            pt: `${HEADER_HEIGHT}px`,
+            transition: "padding-left 0.3s ease",
+          }}
+        >
+          <BreadcrumbsNav />
           <MainContent />
           <BackToTop />
-          <Footer />
         </Box>
 
         <AIChat />
+        <Footer />
       </Box>
     </Box>
   );
