@@ -1,4 +1,4 @@
-// Header.js — unified Navbar + Chrome/Edge-style Tabs
+// Header.js — unified Navbar + Tabs
 import React, { useState } from "react";
 import {
   AppBar,
@@ -18,18 +18,22 @@ import { useTheme } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
 
 import MenuIcon from "@mui/icons-material/Menu";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import SettingsIcon from "@mui/icons-material/Settings";
 import HistoryIcon from "@mui/icons-material/History";
-import CloseIcon from "@mui/icons-material/Close";
+import CloseSmallIcon from "@mui/icons-material/Close";
 
 import { useThemeMode } from "../../common/context/ThemeContext";
 
 import NotificationDrawer from "./NotificationDrawer";
 import UserActivityLogDrawer from "./UserActivityLogDrawer";
 import ProfileDrawer from "./ProfileDrawer";
+
+// === Export header height constant ===
+export const HEADER_HEIGHT = 84; // Toolbar + Tabs combined height
 
 const Header = ({
   tabs,
@@ -108,7 +112,6 @@ const Header = ({
           zIndex: (theme) => theme.zIndex.appBar,
         }}
       >
-        {/* === Top Bar === */}
         <Toolbar variant="dense" sx={{ px: 1, minHeight: 48 }}>
           <Box display="flex" alignItems="center" gap={1}>
             <IconButton
@@ -183,7 +186,6 @@ const Header = ({
           )}
         </Toolbar>
 
-        {/* === Chrome/Edge Style Tabs === */}
         <Tabs
           value={tabIndex}
           onChange={handleTabChange}
@@ -192,9 +194,7 @@ const Header = ({
           sx={{
             minHeight: 36,
             height: 36,
-            px: 1,
             "& .MuiTabs-indicator": { display: "none" },
-            "& .MuiTabs-scrollButtons.Mui-disabled": { opacity: 0.3 },
           }}
         >
           {tabs.map((tab, i) => (
@@ -202,14 +202,7 @@ const Header = ({
               key={tab.path}
               disableRipple
               label={
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 0.5,
-                    pr: 0.5,
-                  }}
-                >
+                <Box sx={{ display: "flex", alignItems: "center", pr: 1 }}>
                   {tab.label}
                   {tab.path !== "/dashboard" && (
                     <IconButton
@@ -218,9 +211,12 @@ const Header = ({
                         handleTabClose(tab.path);
                       }}
                       size="small"
-                      sx={{ p: 0.25 }}
+                      sx={{
+                        ml: 0.5,
+                        opacity: 1, // always visible
+                      }}
                     >
-                      <CloseIcon sx={{ fontSize: 14 }} />
+                      <CloseSmallIcon fontSize="small" />
                     </IconButton>
                   )}
                 </Box>
@@ -236,30 +232,19 @@ const Header = ({
                 border: "1px solid",
                 borderColor: "divider",
                 borderBottom:
-                  tabIndex === i ? "none" : `1px solid ${theme.palette.divider}`,
-                bgcolor:
-                  tabIndex === i
-                    ? "background.paper"
-                    : theme.palette.action.hover,
+                  tabIndex === i ? "none" : "1px solid " + theme.palette.divider,
+                bgcolor: tabIndex === i ? "background.paper" : "grey.100",
                 zIndex: tabIndex === i ? 1 : 0,
                 mr: -1,
-                transition: "all 0.15s ease-in-out",
                 "&:hover": {
-                  bgcolor:
-                    tabIndex === i
-                      ? "background.paper"
-                      : theme.palette.action.selected,
+                  bgcolor: tabIndex === i ? "background.paper" : "grey.200",
                 },
-                ...(tabIndex === i && {
-                  boxShadow: "0px -1px 3px rgba(0,0,0,0.1)",
-                }),
               }}
             />
           ))}
         </Tabs>
       </AppBar>
 
-      {/* === Drawer === */}
       <SwipeableDrawer
         anchor={isMobile ? "bottom" : "right"}
         open={drawerOpen}
