@@ -1,3 +1,4 @@
+// MainContent.js — Gradient background to blend with header/tabs
 import React from "react";
 import { Box } from "@mui/material";
 import { Outlet } from "react-router-dom";
@@ -6,18 +7,15 @@ const MainContent = () => {
   return (
     <Box
       sx={{
+        width: "100%",
         flexGrow: 1,
         display: "flex",
         flexDirection: "column",
-        width: "100%",
-        backgroundColor: "background.default",
-        overflowY: "auto",         // Enables independent scrolling
-        scrollBehavior: "smooth",   // Smooth scroll for links
-        pt: { xs: "92px", sm: "92px" }, // offset for header + tabs
-        px: { xs: 1, sm: 2 },       // responsive padding
+        background: "linear-gradient(to bottom, rgba(255,255,255,0.1), #f4f5f7)",
+        pt: { xs: "92px", sm: "92px" },
+        minHeight: "100vh",
       }}
     >
-      {/* Main page content rendered by React Router */}
       <Outlet />
     </Box>
   );
