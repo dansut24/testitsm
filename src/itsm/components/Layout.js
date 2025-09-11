@@ -1,3 +1,4 @@
+// Layout.js
 import React, { useState, useEffect } from "react";
 import { Box, useMediaQuery, useTheme } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -11,7 +12,6 @@ import BreadcrumbsNav from "./BreadcrumbsNav";
 import BackToTop from "./BackToTop";
 import AIChat from "./AIChat";
 
-// Icons
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import AssignmentIcon from "@mui/icons-material/Assignment";
@@ -49,9 +49,8 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
-
   const [tabs, setTabs] = useState(() => {
     const stored = sessionStorage.getItem("tabs");
     return stored
@@ -65,7 +64,6 @@ const Layout = () => {
 
   const user = JSON.parse(localStorage.getItem("user"));
   const role = user?.role || "user";
-
   const sidebarWidth = sidebarOpen ? drawerWidth : collapsedWidth;
 
   // Update tabs on route change
@@ -76,7 +74,6 @@ const Layout = () => {
     if (!tabExists) {
       const fetchLabel = async () => {
         let label = routeLabels[currentPath] || "Unknown";
-
         if (currentPath.startsWith("/incidents/")) {
           const id = currentPath.split("/")[2];
           const { data } = await supabase
@@ -86,7 +83,6 @@ const Layout = () => {
             .maybeSingle();
           if (data?.reference) label = data.reference;
         }
-
         const newTabs = [...tabs, { label, path: currentPath }];
         setTabs(newTabs);
         setTabIndex(newTabs.length - 1);
@@ -98,16 +94,9 @@ const Layout = () => {
     }
   }, [location.pathname]);
 
-  // Persist tabs
-  useEffect(() => {
-    sessionStorage.setItem("tabs", JSON.stringify(tabs));
-  }, [tabs]);
+  useEffect(() => sessionStorage.setItem("tabs", JSON.stringify(tabs)), [tabs]);
+  useEffect(() => sessionStorage.setItem("tabIndex", tabIndex.toString()), [tabIndex]);
 
-  useEffect(() => {
-    sessionStorage.setItem("tabIndex", tabIndex.toString());
-  }, [tabIndex]);
-
-  // Responsive sidebar
   useEffect(() => {
     if (isMobile) {
       setSidebarOpen(false);
@@ -178,15 +167,12 @@ const Layout = () => {
     { text: "Approvals", icon: <HowToVoteIcon />, path: "/approvals" },
     { text: "Profile", icon: <PersonIcon />, path: "/profile" },
     ...(role === "admin"
-      ? [
-          { text: "Admin Settings", icon: <SettingsIcon />, path: "/admin-settings" },
-        ]
+      ? [{ text: "Admin Settings", icon: <SettingsIcon />, path: "/admin-settings" }]
       : [{ text: "Settings", icon: <SettingsIcon />, path: "/settings" }]),
   ];
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh", overflow: "hidden" }}>
-      {/* Sidebar */}
       <Sidebar
         sidebarOpen={sidebarOpen}
         mobileOpen={mobileOpen}
@@ -197,15 +183,13 @@ const Layout = () => {
         isMobile={isMobile}
       />
 
-      {/* Main Content Container */}
       <Box
         sx={{
-          flexGrow: 1,
           marginLeft: isMobile ? 0 : `${sidebarWidth}px`,
           display: "flex",
           flexDirection: "column",
+          width: "100%",
           minHeight: "100vh",
-          position: "relative",
         }}
       >
         <Header
@@ -221,25 +205,33 @@ const Layout = () => {
           handleMobileSidebarToggle={handleMobileSidebarToggle}
         />
 
-        {/* Scrollable Main Content */}
-        <Box sx={{ flex: 1, overflowY: "auto", position: "relative" }}>
+        <Box
+          sx={{
+            flex: 1,
+            overflowY: "auto",
+            px: 2,
+            pt: "84px",
+            pb: { xs: "160px", sm: 2 }, // mobile: reserve space for AI Chat + footer
+          }}
+        >
           <MainContent />
           <BreadcrumbsNav />
           <BackToTop />
         </Box>
 
-        {/* Floating AI Chat */}
-        <AIChat
+        {/* AI Chat floating bottom right */}
+        <Box
           sx={{
             position: "fixed",
-            bottom: 80,
+            bottom: { xs: 80, sm: 16 },
             right: 16,
-            zIndex: theme.zIndex.modal,
+            zIndex: theme.zIndex.tooltip,
           }}
-        />
+        >
+          <AIChat />
+        </Box>
 
-        {/* Sticky Footer */}
-        <Footer sx={{ mt: "auto" }} />
+        <Footer />
       </Box>
     </Box>
   );
