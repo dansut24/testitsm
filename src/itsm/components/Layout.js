@@ -4,7 +4,7 @@ import { Box, useMediaQuery, useTheme } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 
-import Header from "./Header";
+import Header from "./Header"; // unified header
 import MainContent from "./MainContent";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
@@ -49,8 +49,8 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // desktop
+  const [mobileOpen, setMobileOpen] = useState(false); // mobile
   const [tabs, setTabs] = useState(() => {
     const stored = sessionStorage.getItem("tabs");
     return stored
@@ -64,6 +64,7 @@ const Layout = () => {
 
   const user = JSON.parse(localStorage.getItem("user"));
   const role = user?.role || "user";
+
   const sidebarWidth = sidebarOpen ? drawerWidth : collapsedWidth;
 
   // Update tabs on route change
@@ -74,6 +75,7 @@ const Layout = () => {
     if (!tabExists) {
       const fetchLabel = async () => {
         let label = routeLabels[currentPath] || "Unknown";
+
         if (currentPath.startsWith("/incidents/")) {
           const id = currentPath.split("/")[2];
           const { data } = await supabase
@@ -83,6 +85,7 @@ const Layout = () => {
             .maybeSingle();
           if (data?.reference) label = data.reference;
         }
+
         const newTabs = [...tabs, { label, path: currentPath }];
         setTabs(newTabs);
         setTabIndex(newTabs.length - 1);
@@ -94,9 +97,16 @@ const Layout = () => {
     }
   }, [location.pathname]);
 
-  useEffect(() => sessionStorage.setItem("tabs", JSON.stringify(tabs)), [tabs]);
-  useEffect(() => sessionStorage.setItem("tabIndex", tabIndex.toString()), [tabIndex]);
+  // Persist tabs
+  useEffect(() => {
+    sessionStorage.setItem("tabs", JSON.stringify(tabs));
+  }, [tabs]);
 
+  useEffect(() => {
+    sessionStorage.setItem("tabIndex", tabIndex.toString());
+  }, [tabIndex]);
+
+  // Responsive sidebar
   useEffect(() => {
     if (isMobile) {
       setSidebarOpen(false);
@@ -167,71 +177,56 @@ const Layout = () => {
     { text: "Approvals", icon: <HowToVoteIcon />, path: "/approvals" },
     { text: "Profile", icon: <PersonIcon />, path: "/profile" },
     ...(role === "admin"
-      ? [{ text: "Admin Settings", icon: <SettingsIcon />, path: "/admin-settings" }]
+      ? [
+          {
+            text: "Admin Settings",
+            icon: <SettingsIcon />,
+            path: "/admin-settings",
+          },
+        ]
       : [{ text: "Settings", icon: <SettingsIcon />, path: "/settings" }]),
   ];
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", overflow: "hidden" }}>
-      <Sidebar
-        sidebarOpen={sidebarOpen}
-        mobileOpen={mobileOpen}
-        handleSidebarToggle={handleSidebarToggle}
-        handleMobileSidebarToggle={handleMobileSidebarToggle}
-        sidebarWidth={sidebarWidth}
-        menuItems={menuItems}
-        isMobile={isMobile}
-      />
-
-      <Box
-        sx={{
-          marginLeft: isMobile ? 0 : `${sidebarWidth}px`,
-          display: "flex",
-          flexDirection: "column",
-          width: "100%",
-          minHeight: "100vh",
-        }}
-      >
-        <Header
-          tabs={tabs}
-          tabIndex={tabIndex}
-          handleTabChange={handleTabChange}
-          handleTabClose={handleTabClose}
-          isMobile={isMobile}
+    <Box sx={{ display: "flex", minHeight: "100vh", flexDirection: "column" }}>
+      {/* Sidebar + Main content container */}
+      <Box sx={{ display: "flex", flex: 1 }}>
+        <Sidebar
           sidebarOpen={sidebarOpen}
-          sidebarWidth={sidebarWidth}
-          collapsedWidth={collapsedWidth}
+          mobileOpen={mobileOpen}
           handleSidebarToggle={handleSidebarToggle}
           handleMobileSidebarToggle={handleMobileSidebarToggle}
+          sidebarWidth={sidebarWidth}
+          collapsedWidth={collapsedWidth}
+          menuItems={menuItems}
+          isMobile={isMobile}
         />
 
         <Box
           sx={{
-            flex: 1,
-            overflowY: "auto",
-            px: 2,
-            pt: "84px",
-            pb: { xs: "160px", sm: 2 }, // mobile: reserve space for AI Chat + footer
+            flexGrow: 1,
+            display: "flex",
+            flexDirection: "column",
+            width: "100%",
           }}
         >
+          <Header
+            tabs={tabs}
+            tabIndex={tabIndex}
+            handleTabChange={handleTabChange}
+            handleTabClose={handleTabClose}
+            isMobile={isMobile}
+            sidebarOpen={sidebarOpen}
+            sidebarWidth={sidebarWidth}
+            collapsedWidth={collapsedWidth}
+            handleSidebarToggle={handleSidebarToggle}
+            handleMobileSidebarToggle={handleMobileSidebarToggle}
+          />
+
           <MainContent />
-          <BreadcrumbsNav />
-          <BackToTop />
-        </Box>
-
-        {/* AI Chat floating bottom right */}
-        <Box
-          sx={{
-            position: "fixed",
-            bottom: { xs: 80, sm: 16 },
-            right: 16,
-            zIndex: theme.zIndex.tooltip,
-          }}
-        >
           <AIChat />
+          <Footer />
         </Box>
-
-        <Footer />
       </Box>
     </Box>
   );
