@@ -1,5 +1,5 @@
-// Header.js — unified Navbar + Tabs
-import React, { useState } from "react";
+// Header.js — unified Navbar + Tabs (polished)
+import React, { useState, useMemo, lazy, Suspense } from "react";
 import {
   AppBar,
   Toolbar,
@@ -18,7 +18,6 @@ import { useTheme } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
 
 import MenuIcon from "@mui/icons-material/Menu";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
@@ -28,12 +27,12 @@ import CloseSmallIcon from "@mui/icons-material/Close";
 
 import { useThemeMode } from "../../common/context/ThemeContext";
 
-import NotificationDrawer from "./NotificationDrawer";
-import UserActivityLogDrawer from "./UserActivityLogDrawer";
-import ProfileDrawer from "./ProfileDrawer";
+// Lazy load drawers
+const NotificationDrawer = lazy(() => import("./NotificationDrawer"));
+const UserActivityLogDrawer = lazy(() => import("./UserActivityLogDrawer"));
+const ProfileDrawer = lazy(() => import("./ProfileDrawer"));
 
-// === Export header height constant ===
-export const HEADER_HEIGHT = 84; // Toolbar + Tabs combined height
+const HEADER_HEIGHT = 84; // nav + tabs combined
 
 const Header = ({
   tabs,
@@ -54,10 +53,10 @@ const Header = ({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerType, setDrawerType] = useState("profile");
 
-  const [storedUser] = useState(() => {
+  const storedUser = useMemo(() => {
     const user = localStorage.getItem("user");
     return user ? JSON.parse(user) : { username: "User", avatar_url: "" };
-  });
+  }, []);
 
   const openDrawer = (type) => {
     setDrawerType(type);
@@ -109,7 +108,8 @@ const Header = ({
           bgcolor: "background.paper",
           color: "text.primary",
           boxShadow: "0px 2px 4px rgba(0,0,0,0.05)",
-          zIndex: (theme) => theme.zIndex.appBar,
+          zIndex: theme.zIndex.appBar,
+          transition: "width 0.3s ease",
         }}
       >
         <Toolbar variant="dense" sx={{ px: 1, minHeight: 48 }}>
@@ -149,12 +149,11 @@ const Header = ({
                 ".MuiSelect-icon": { color: "inherit" },
               }}
             >
-              <MenuItem value="light">Light</MenuItem>
-              <MenuItem value="dark">Dark</MenuItem>
-              <MenuItem value="system">System</MenuItem>
-              <MenuItem value="ocean">Ocean</MenuItem>
-              <MenuItem value="sunset">Sunset</MenuItem>
-              <MenuItem value="forest">Forest</MenuItem>
+              {["light", "dark", "system", "ocean", "sunset", "forest"].map((m) => (
+                <MenuItem key={m} value={m}>
+                  {m.charAt(0).toUpperCase() + m.slice(1)}
+                </MenuItem>
+              ))}
             </Select>
           </Tooltip>
 
@@ -186,65 +185,86 @@ const Header = ({
           )}
         </Toolbar>
 
-        <Tabs
-          value={tabIndex}
-          onChange={handleTabChange}
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{
-            minHeight: 36,
-            height: 36,
-            "& .MuiTabs-indicator": { display: "none" },
-          }}
-        >
-          {tabs.map((tab, i) => (
-            <Tab
-              key={tab.path}
-              disableRipple
-              label={
-                <Box sx={{ display: "flex", alignItems: "center", pr: 1 }}>
+        {/* Tabs or Mobile Dropdown */}
+        {isMobile ? (
+          <Box sx={{ px: 1, pb: 1 }}>
+            <Select
+              fullWidth
+              value={tabIndex}
+              onChange={(e) => handleTabChange(null, e.target.value)}
+              size="small"
+            >
+              {tabs.map((tab, i) => (
+                <MenuItem key={tab.path} value={i}>
                   {tab.label}
-                  {tab.path !== "/dashboard" && (
-                    <IconButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleTabClose(tab.path);
-                      }}
-                      size="small"
-                      sx={{
-                        ml: 0.5,
-                        opacity: 1, // always visible
-                      }}
-                    >
-                      <CloseSmallIcon fontSize="small" />
-                    </IconButton>
-                  )}
-                </Box>
-              }
-              sx={{
-                minHeight: 36,
-                height: 36,
-                fontSize: 13,
-                px: 1.5,
-                textTransform: "none",
-                borderTopLeftRadius: "8px",
-                borderTopRightRadius: "8px",
-                border: "1px solid",
-                borderColor: "divider",
-                borderBottom:
-                  tabIndex === i ? "none" : "1px solid " + theme.palette.divider,
-                bgcolor: tabIndex === i ? "background.paper" : "grey.100",
-                zIndex: tabIndex === i ? 1 : 0,
-                mr: -1,
-                "&:hover": {
-                  bgcolor: tabIndex === i ? "background.paper" : "grey.200",
-                },
-              }}
-            />
-          ))}
-        </Tabs>
+                </MenuItem>
+              ))}
+            </Select>
+          </Box>
+        ) : (
+          <Tabs
+            value={tabIndex}
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              minHeight: 36,
+              height: 36,
+              "& .MuiTabs-indicator": { display: "none" },
+            }}
+          >
+            {tabs.map((tab, i) => (
+              <Tab
+                key={tab.path}
+                disableRipple
+                label={
+                  <Box sx={{ display: "flex", alignItems: "center", pr: 1 }}>
+                    {tab.label}
+                    {tab.path !== "/dashboard" && (
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTabClose(tab.path);
+                        }}
+                        size="small"
+                        sx={{
+                          ml: 0.5,
+                          opacity: 1, // always visible
+                          minWidth: 24,
+                          height: 24,
+                        }}
+                      >
+                        <CloseSmallIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                  </Box>
+                }
+                sx={{
+                  minHeight: 36,
+                  height: 36,
+                  fontSize: 13,
+                  px: 1.5,
+                  textTransform: "none",
+                  borderTopLeftRadius: "8px",
+                  borderTopRightRadius: "8px",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderBottom:
+                    tabIndex === i ? "none" : "1px solid " + theme.palette.divider,
+                  bgcolor: tabIndex === i ? "background.paper" : "grey.100",
+                  zIndex: tabIndex === i ? 1 : 0,
+                  mr: -1,
+                  "&:hover": {
+                    bgcolor: tabIndex === i ? "background.paper" : "grey.200",
+                  },
+                }}
+              />
+            ))}
+          </Tabs>
+        )}
       </AppBar>
 
+      {/* Lazy-loaded Drawer */}
       <SwipeableDrawer
         anchor={isMobile ? "bottom" : "right"}
         open={drawerOpen}
@@ -255,7 +275,7 @@ const Header = ({
         PaperProps={{
           sx: {
             position: "fixed",
-            zIndex: (theme) => theme.zIndex.appBar + 10,
+            zIndex: theme.zIndex.appBar + 10,
             width: isMobile ? "100%" : 320,
             height: isMobile ? "50%" : "100%",
             bottom: isMobile ? 0 : "auto",
@@ -271,10 +291,13 @@ const Header = ({
           },
         }}
       >
-        {renderDrawerContent()}
+        <Suspense fallback={<Typography>Loading...</Typography>}>
+          {renderDrawerContent()}
+        </Suspense>
       </SwipeableDrawer>
     </>
   );
 };
 
+export { HEADER_HEIGHT };
 export default Header;
