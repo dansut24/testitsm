@@ -4,7 +4,7 @@ import { Box, useMediaQuery, useTheme } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 
-import Header from "./Header"; // unified header
+import Header from "./Header";
 import MainContent from "./MainContent";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
@@ -49,8 +49,8 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [sidebarOpen, setSidebarOpen] = useState(true); // desktop
-  const [mobileOpen, setMobileOpen] = useState(false); // mobile
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [tabs, setTabs] = useState(() => {
     const stored = sessionStorage.getItem("tabs");
     return stored
@@ -188,45 +188,58 @@ const Layout = () => {
   ];
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", flexDirection: "column" }}>
-      {/* Sidebar + Main content container */}
-      <Box sx={{ display: "flex", flex: 1 }}>
-        <Sidebar
+    <Box sx={{ display: "flex", minHeight: "100vh", overflow: "hidden" }}>
+      {/* Sidebar */}
+      <Sidebar
+        sidebarOpen={sidebarOpen}
+        mobileOpen={mobileOpen}
+        handleSidebarToggle={handleSidebarToggle}
+        handleMobileSidebarToggle={handleMobileSidebarToggle}
+        sidebarWidth={sidebarWidth}
+        collapsedWidth={collapsedWidth}
+        menuItems={menuItems}
+        isMobile={isMobile}
+      />
+
+      {/* Main Content */}
+      <Box
+        sx={{
+          flexGrow: 1,
+          display: "flex",
+          flexDirection: "column",
+          width: "100%",
+          marginLeft: !isMobile ? `${sidebarWidth}px` : 0, // desktop shifts, mobile overlays
+        }}
+      >
+        <Header
+          tabs={tabs}
+          tabIndex={tabIndex}
+          handleTabChange={handleTabChange}
+          handleTabClose={handleTabClose}
+          isMobile={isMobile}
           sidebarOpen={sidebarOpen}
-          mobileOpen={mobileOpen}
-          handleSidebarToggle={handleSidebarToggle}
-          handleMobileSidebarToggle={handleMobileSidebarToggle}
           sidebarWidth={sidebarWidth}
           collapsedWidth={collapsedWidth}
-          menuItems={menuItems}
-          isMobile={isMobile}
+          handleSidebarToggle={handleSidebarToggle}
+          handleMobileSidebarToggle={handleMobileSidebarToggle}
         />
 
         <Box
           sx={{
-            flexGrow: 1,
-            display: "flex",
-            flexDirection: "column",
-            width: "100%",
+            flex: 1,
+            overflowY: "auto",
+            px: 2,
+            pt: isMobile ? 80 : 84, // fixes top spacing for mobile & desktop
+            pb: 4, // consistent bottom padding
           }}
         >
-          <Header
-            tabs={tabs}
-            tabIndex={tabIndex}
-            handleTabChange={handleTabChange}
-            handleTabClose={handleTabClose}
-            isMobile={isMobile}
-            sidebarOpen={sidebarOpen}
-            sidebarWidth={sidebarWidth}
-            collapsedWidth={collapsedWidth}
-            handleSidebarToggle={handleSidebarToggle}
-            handleMobileSidebarToggle={handleMobileSidebarToggle}
-          />
-
           <MainContent />
-          <AIChat />
-          <Footer />
+          <BreadcrumbsNav />
+          <BackToTop />
         </Box>
+
+        <AIChat />
+        <Footer />
       </Box>
     </Box>
   );
