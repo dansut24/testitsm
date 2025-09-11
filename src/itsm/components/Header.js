@@ -1,4 +1,4 @@
-// Header.js — unified Navbar + Tabs
+// Header.js — Gradient + Tabs + Drawer
 import React, { useState } from "react";
 import {
   AppBar,
@@ -59,7 +59,6 @@ const Header = ({
     setDrawerType(type);
     setDrawerOpen(true);
   };
-
   const closeDrawer = () => setDrawerOpen(false);
 
   const handleLogout = () => {
@@ -95,6 +94,7 @@ const Header = ({
 
   return (
     <>
+      {/* Header */}
       <AppBar
         position="fixed"
         sx={{
@@ -102,9 +102,10 @@ const Header = ({
           width: isMobile
             ? "100%"
             : `calc(100% - ${sidebarOpen ? sidebarWidth : collapsedWidth}px)`,
-          bgcolor: "background.paper",
-          color: "text.primary",
-          boxShadow: "0px 2px 4px rgba(0,0,0,0.05)",
+          bgcolor: "transparent",
+          background: "linear-gradient(90deg, #4e54c8, #8f94fb, #00c6ff)",
+          color: "#fff",
+          boxShadow: "0px 2px 6px rgba(0,0,0,0.1)",
           zIndex: (theme) => theme.zIndex.appBar,
         }}
       >
@@ -113,7 +114,7 @@ const Header = ({
             <IconButton
               size="small"
               onClick={isMobile ? handleMobileSidebarToggle : handleSidebarToggle}
-              sx={{ color: "inherit" }}
+              sx={{ color: "#fff" }}
             >
               <MenuIcon fontSize="small" />
             </IconButton>
@@ -128,7 +129,7 @@ const Header = ({
 
           <Box flexGrow={1} />
 
-          <IconButton size="small">
+          <IconButton size="small" sx={{ color: "#fff" }}>
             <SearchIcon fontSize="small" />
           </IconButton>
 
@@ -142,7 +143,8 @@ const Header = ({
               sx={{
                 fontSize: "0.75rem",
                 mx: 1,
-                ".MuiSelect-icon": { color: "inherit" },
+                color: "#fff",
+                ".MuiSelect-icon": { color: "#fff" },
               }}
             >
               <MenuItem value="light">Light</MenuItem>
@@ -157,7 +159,7 @@ const Header = ({
           {["activity", "help", "settings", "notifications", "profile"].map(
             (type) => (
               <Tooltip key={type} title={type[0].toUpperCase() + type.slice(1)}>
-                <IconButton size="small" onClick={() => openDrawer(type)}>
+                <IconButton size="small" onClick={() => openDrawer(type)} sx={{ color: "#fff" }}>
                   {{
                     activity: <HistoryIcon fontSize="small" />,
                     help: <HelpOutlineIcon fontSize="small" />,
@@ -191,6 +193,7 @@ const Header = ({
           sx={{
             minHeight: 36,
             height: 36,
+            background: "linear-gradient(to bottom, rgba(255,255,255,0.1), rgba(255,255,255,0))",
             "& .MuiTabs-indicator": { display: "none" },
           }}
         >
@@ -208,12 +211,7 @@ const Header = ({
                         handleTabClose(tab.path);
                       }}
                       size="small"
-                      sx={{
-                        ml: 0.5,
-                        opacity: 1, // always visible
-                        minWidth: 32,
-                        minHeight: 32,
-                      }}
+                      sx={{ ml: 0.5, opacity: 1, color: "#fff" }}
                     >
                       <CloseSmallIcon fontSize="small" />
                     </IconButton>
@@ -226,25 +224,20 @@ const Header = ({
                 fontSize: 13,
                 px: 1.5,
                 textTransform: "none",
-                borderTopLeftRadius: "8px",
-                borderTopRightRadius: "8px",
-                border: "1px solid",
-                borderColor: "divider",
-                borderBottom:
-                  tabIndex === i ? "none" : "1px solid " + theme.palette.divider,
-                bgcolor: tabIndex === i ? "background.paper" : "grey.100",
-                zIndex: tabIndex === i ? 1 : 0,
+                borderRadius: "8px 8px 0 0",
+                border: "1px solid rgba(255,255,255,0.3)",
+                borderBottom: tabIndex === i ? "none" : "1px solid rgba(255,255,255,0.3)",
+                bgcolor: tabIndex === i ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)",
+                color: "#fff",
                 mr: -1,
-                "&:hover": {
-                  bgcolor: tabIndex === i ? "background.paper" : "grey.200",
-                },
+                "&:hover": { bgcolor: "rgba(255,255,255,0.25)" },
               }}
             />
           ))}
         </Tabs>
       </AppBar>
 
-      {/* Drawer for profile/notifications/etc */}
+      {/* Drawer for Profile/Notifications/Activity */}
       <SwipeableDrawer
         anchor={isMobile ? "bottom" : "right"}
         open={drawerOpen}
