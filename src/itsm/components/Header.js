@@ -1,4 +1,4 @@
-// Header.js — Gradient + Tabs + Drawer
+// Header.js — Professional version with fixed tabs and mobile spacing
 import React, { useState } from "react";
 import {
   AppBar,
@@ -59,6 +59,7 @@ const Header = ({
     setDrawerType(type);
     setDrawerOpen(true);
   };
+
   const closeDrawer = () => setDrawerOpen(false);
 
   const handleLogout = () => {
@@ -94,7 +95,6 @@ const Header = ({
 
   return (
     <>
-      {/* Header */}
       <AppBar
         position="fixed"
         sx={{
@@ -102,10 +102,9 @@ const Header = ({
           width: isMobile
             ? "100%"
             : `calc(100% - ${sidebarOpen ? sidebarWidth : collapsedWidth}px)`,
-          bgcolor: "transparent",
-          background: "linear-gradient(90deg, #4e54c8, #8f94fb, #00c6ff)",
-          color: "#fff",
-          boxShadow: "0px 2px 6px rgba(0,0,0,0.1)",
+          bgcolor: "#2E3B55", // Professional dark header
+          color: "#FFFFFF",
+          boxShadow: "0px 2px 4px rgba(0,0,0,0.1)",
           zIndex: (theme) => theme.zIndex.appBar,
         }}
       >
@@ -114,14 +113,14 @@ const Header = ({
             <IconButton
               size="small"
               onClick={isMobile ? handleMobileSidebarToggle : handleSidebarToggle}
-              sx={{ color: "#fff" }}
+              sx={{ color: "inherit" }}
             >
               <MenuIcon fontSize="small" />
             </IconButton>
 
             <img src="/logo192.png" alt="Logo" style={{ height: 24 }} />
             {!isMobile && (
-              <Typography variant="h6" noWrap sx={{ fontSize: 16 }}>
+              <Typography variant="h6" noWrap sx={{ fontSize: 16, color: "#FFFFFF" }}>
                 Hi5Tech ITSM
               </Typography>
             )}
@@ -129,7 +128,7 @@ const Header = ({
 
           <Box flexGrow={1} />
 
-          <IconButton size="small" sx={{ color: "#fff" }}>
+          <IconButton size="small" sx={{ color: "#FFFFFF" }}>
             <SearchIcon fontSize="small" />
           </IconButton>
 
@@ -143,8 +142,8 @@ const Header = ({
               sx={{
                 fontSize: "0.75rem",
                 mx: 1,
-                color: "#fff",
-                ".MuiSelect-icon": { color: "#fff" },
+                color: "#FFFFFF",
+                ".MuiSelect-icon": { color: "inherit" },
               }}
             >
               <MenuItem value="light">Light</MenuItem>
@@ -159,12 +158,14 @@ const Header = ({
           {["activity", "help", "settings", "notifications", "profile"].map(
             (type) => (
               <Tooltip key={type} title={type[0].toUpperCase() + type.slice(1)}>
-                <IconButton size="small" onClick={() => openDrawer(type)} sx={{ color: "#fff" }}>
+                <IconButton size="small" onClick={() => openDrawer(type)}>
                   {{
-                    activity: <HistoryIcon fontSize="small" />,
-                    help: <HelpOutlineIcon fontSize="small" />,
-                    settings: <SettingsIcon fontSize="small" />,
-                    notifications: <NotificationsNoneIcon fontSize="small" />,
+                    activity: <HistoryIcon fontSize="small" sx={{ color: "#FFFFFF" }} />,
+                    help: <HelpOutlineIcon fontSize="small" sx={{ color: "#FFFFFF" }} />,
+                    settings: <SettingsIcon fontSize="small" sx={{ color: "#FFFFFF" }} />,
+                    notifications: (
+                      <NotificationsNoneIcon fontSize="small" sx={{ color: "#FFFFFF" }} />
+                    ),
                     profile: (
                       <Avatar
                         src={
@@ -184,7 +185,6 @@ const Header = ({
           )}
         </Toolbar>
 
-        {/* Tabs */}
         <Tabs
           value={tabIndex}
           onChange={handleTabChange}
@@ -193,8 +193,11 @@ const Header = ({
           sx={{
             minHeight: 36,
             height: 36,
-            background: "linear-gradient(to bottom, rgba(255,255,255,0.1), rgba(255,255,255,0))",
-            "& .MuiTabs-indicator": { display: "none" },
+            backgroundColor: "#F5F6FA", // light tabs for professional look
+            "& .MuiTabs-indicator": {
+              backgroundColor: theme.palette.primary.main,
+              height: 3,
+            },
           }}
         >
           {tabs.map((tab, i) => (
@@ -211,7 +214,10 @@ const Header = ({
                         handleTabClose(tab.path);
                       }}
                       size="small"
-                      sx={{ ml: 0.5, opacity: 1, color: "#fff" }}
+                      sx={{
+                        ml: 0.5,
+                        opacity: 1, // always visible
+                      }}
                     >
                       <CloseSmallIcon fontSize="small" />
                     </IconButton>
@@ -224,20 +230,24 @@ const Header = ({
                 fontSize: 13,
                 px: 1.5,
                 textTransform: "none",
-                borderRadius: "8px 8px 0 0",
-                border: "1px solid rgba(255,255,255,0.3)",
-                borderBottom: tabIndex === i ? "none" : "1px solid rgba(255,255,255,0.3)",
-                bgcolor: tabIndex === i ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)",
-                color: "#fff",
+                borderTopLeftRadius: "8px",
+                borderTopRightRadius: "8px",
+                border: "1px solid",
+                borderColor: "divider",
+                borderBottom:
+                  tabIndex === i ? "none" : "1px solid " + theme.palette.divider,
+                bgcolor: tabIndex === i ? "#FFFFFF" : "#F5F6FA",
+                zIndex: tabIndex === i ? 1 : 0,
                 mr: -1,
-                "&:hover": { bgcolor: "rgba(255,255,255,0.25)" },
+                "&:hover": {
+                  bgcolor: tabIndex === i ? "#FFFFFF" : "#E8EAF6",
+                },
               }}
             />
           ))}
         </Tabs>
       </AppBar>
 
-      {/* Drawer for Profile/Notifications/Activity */}
       <SwipeableDrawer
         anchor={isMobile ? "bottom" : "right"}
         open={drawerOpen}
