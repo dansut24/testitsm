@@ -1,6 +1,10 @@
+// MainContent.js
 import React from "react";
 import { Box } from "@mui/material";
 import { Outlet } from "react-router-dom";
+
+const HEADER_HEIGHT = 92; // header + tabs combined
+const FOOTER_HEIGHT = 80; // footer + AIChat safe space
 
 const MainContent = () => {
   return (
@@ -11,9 +15,10 @@ const MainContent = () => {
         display: "flex",
         flexDirection: "column",
         backgroundColor: "background.default",
-        pt: { xs: '80px', sm: '92px' }, // adjusts for mobile portrait header + tabs
-        pb: { xs: '80px', sm: '24px' }, // adds bottom padding for AI chat box
-        minHeight: { xs: 'calc(100vh - 80px)', sm: 'auto' }, // prevent blank space
+        pt: `${HEADER_HEIGHT}px`,  // padding to account for fixed header
+        pb: { xs: `${FOOTER_HEIGHT}px`, sm: '24px' }, // padding for AIChat/footer
+        minHeight: { xs: `calc(100vh - ${HEADER_HEIGHT + FOOTER_HEIGHT}px)`, sm: 'auto' },
+        overflowY: "auto",
       }}
     >
       <Outlet />
