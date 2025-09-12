@@ -1,5 +1,4 @@
-// Navbar.js (Refactored)
-
+// Navbar.js
 import React, { useState, useMemo } from "react";
 import {
   AppBar,
@@ -18,7 +17,6 @@ import {
 import { useThemeMode } from "../../common/context/ThemeContext";
 import { useNavigate } from "react-router-dom";
 
-import MenuIcon from "@mui/icons-material/Menu";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
@@ -31,13 +29,7 @@ import NotificationDrawer from "./NotificationDrawer";
 import UserActivityLogDrawer from "./UserActivityLogDrawer";
 import ProfileDrawer from "./ProfileDrawer";
 
-const Navbar = ({
-  sidebarWidth,
-  collapsedWidth,
-  sidebarOpen,
-  handleSidebarToggle,
-  handleMobileSidebarToggle,
-}) => {
+const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
@@ -121,16 +113,6 @@ const Navbar = ({
         <Toolbar variant="dense" sx={{ px: 1, minHeight: 48 }}>
           {/* Left Section */}
           <Box display="flex" alignItems="center" gap={1}>
-            {isMobile && (
-              <IconButton
-                size="small"
-                sx={{ color: "white" }}
-                onClick={handleMobileSidebarToggle}
-                aria-label="Open sidebar"
-              >
-                <MenuIcon fontSize="small" />
-              </IconButton>
-            )}
             <img src="/logo192.png" alt="Logo" style={{ height: 24 }} />
             {!isMobile && (
               <Typography
