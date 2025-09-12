@@ -1,3 +1,4 @@
+// Sidebar.js
 import React, { useState } from "react";
 import ReactDOM from "react-dom";
 import {
@@ -11,6 +12,7 @@ import {
   ListItemText,
   Collapse,
   Grow,
+  Typography,
 } from "@mui/material";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -20,7 +22,7 @@ import { useTheme } from "@mui/material/styles";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const drawerWidth = 240;
-const collapsedWidth = 60;
+const collapsedWidth = 80; // wider than before to fit icon + text underneath
 
 const Sidebar = ({
   sidebarOpen,
@@ -49,21 +51,23 @@ const Sidebar = ({
 
   const drawerContent = (
     <>
+      {/* Header / Toggle */}
       <Toolbar
         sx={{
           display: "flex",
-          justifyContent: "flex-end",
+          justifyContent: sidebarOpen || isMobile ? "flex-end" : "center",
           px: 1,
         }}
       >
         <IconButton
           onClick={isMobile ? handleMobileSidebarToggle : handleSidebarToggle}
-          sx={{ color: theme.palette.text.primary }}
+          sx={{ color: theme.palette.common.white }}
         >
           {sidebarOpen || isMobile ? <ChevronLeftIcon /> : <ChevronRightIcon />}
         </IconButton>
       </Toolbar>
 
+      {/* Menu Items */}
       <Box
         sx={{
           overflowY: "auto",
@@ -71,7 +75,7 @@ const Sidebar = ({
           WebkitOverflowScrolling: "touch",
           pr: 1,
           pb: 4,
-          backgroundColor: "#1F2A40", // Professional dark sidebar
+          backgroundColor: "#1F2A40", // dark professional sidebar
           color: "#FFFFFF",
           "&::-webkit-scrollbar": { width: 0, height: 0 },
         }}
@@ -105,7 +109,11 @@ const Sidebar = ({
                   }}
                   selected={location.pathname === item.path}
                   sx={{
-                    justifyContent: sidebarOpen || isMobile ? "initial" : "center",
+                    flexDirection:
+                      sidebarOpen || isMobile ? "row" : "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    py: sidebarOpen || isMobile ? 1 : 2,
                     "&.Mui-selected": {
                       backgroundColor: "#2E3B55",
                       color: "#FFFFFF",
@@ -118,22 +126,48 @@ const Sidebar = ({
                   <ListItemIcon
                     sx={{
                       minWidth: 0,
-                      mr: sidebarOpen || isMobile ? 2 : "auto",
+                      mr: sidebarOpen || isMobile ? 2 : 0,
                       justifyContent: "center",
                       color: "#FFFFFF",
+                      mb: sidebarOpen || isMobile ? 0 : 0.5,
                     }}
                   >
                     {item.icon}
                   </ListItemIcon>
-                  {(sidebarOpen || isMobile) && <ListItemText primary={item.text} />}
-                  {(sidebarOpen || isMobile) && item.children && (
-                    openDropdowns[item.text] ? <ExpandLess /> : <ExpandMore />
+
+                  {sidebarOpen || isMobile ? (
+                    <>
+                      <ListItemText primary={item.text} />
+                      {item.children &&
+                        (openDropdowns[item.text] ? (
+                          <ExpandLess />
+                        ) : (
+                          <ExpandMore />
+                        ))}
+                    </>
+                  ) : (
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontSize: "0.7rem",
+                        lineHeight: 1.2,
+                        textAlign: "center",
+                        color: "#FFFFFF",
+                      }}
+                    >
+                      {item.text}
+                    </Typography>
                   )}
                 </ListItem>
 
-                {item.children && (
-                  (sidebarOpen || isMobile) ? (
-                    <Collapse in={openDropdowns[item.text]} timeout="auto" unmountOnExit>
+                {/* Dropdowns */}
+                {item.children &&
+                  (sidebarOpen || isMobile ? (
+                    <Collapse
+                      in={openDropdowns[item.text]}
+                      timeout="auto"
+                      unmountOnExit
+                    >
                       <List component="div" disablePadding>
                         {item.children.map((child) => (
                           <ListItem
@@ -158,7 +192,7 @@ const Sidebar = ({
                         <Box
                           sx={{
                             position: "fixed",
-                            top: `calc(64px + ${index * 48}px)`,
+                            top: `calc(64px + ${index * 72}px)`,
                             left: `${collapsedWidth}px`,
                             backgroundColor: "#1F2A40",
                             boxShadow: 4,
@@ -186,8 +220,7 @@ const Sidebar = ({
                       </Grow>,
                       document.body
                     )
-                  )
-                )}
+                  ))}
               </Box>
             </React.Fragment>
           ))}
@@ -196,6 +229,7 @@ const Sidebar = ({
     </>
   );
 
+  // Mobile drawer
   if (isMobile) {
     return (
       <SwipeableDrawer
@@ -216,10 +250,11 @@ const Sidebar = ({
     );
   }
 
+  // Desktop drawer
   return (
     <Box
       sx={{
-        width: sidebarWidth,
+        width: sidebarOpen ? drawerWidth : collapsedWidth,
         height: "100vh",
         bgcolor: "#1F2A40",
         color: "#FFFFFF",
@@ -230,7 +265,7 @@ const Sidebar = ({
         left: 0,
         display: "flex",
         flexDirection: "column",
-        transition: "transform 0.3s ease",
+        transition: "width 0.3s ease",
         zIndex: theme.zIndex.drawer,
       }}
     >
