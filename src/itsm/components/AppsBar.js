@@ -1,4 +1,4 @@
-// AppsBar.js — Chrome/Edge style tabs blending into content
+// AppsBar.js — Refined Chrome/Edge style tabs with always-visible close buttons
 
 import CloseIcon from "@mui/icons-material/Close";
 import { Tab, Tabs, Box, IconButton } from "@mui/material";
@@ -17,9 +17,11 @@ const AppsBar = ({
     <Box
       position="fixed"
       sx={{
-        top: 48, // Adjust if Navbar height changes
+        top: 48, // aligns with Navbar
         zIndex: (theme) => theme.zIndex.appBar,
-        bgcolor: "background.paper", // match main content
+        bgcolor: "background.paper",
+        borderBottom: "1px solid",
+        borderColor: "divider",
         width: isMobile
           ? "100%"
           : `calc(100% - ${sidebarOpen ? sidebarWidth : collapsedWidth}px)`,
@@ -29,12 +31,13 @@ const AppsBar = ({
         value={tabIndex}
         onChange={handleTabChange}
         variant="scrollable"
-        scrollButtons="auto"
+        scrollButtons={isMobile ? "auto" : false}
+        allowScrollButtonsMobile
         sx={{
           minHeight: 36,
           height: 36,
           "& .MuiTabs-indicator": {
-            display: "none", // remove underline
+            display: "none", // no underline
           },
         }}
       >
@@ -48,6 +51,7 @@ const AppsBar = ({
                   display: "flex",
                   alignItems: "center",
                   pr: 1,
+                  gap: 0.5,
                 }}
               >
                 {tab.label}
@@ -59,10 +63,7 @@ const AppsBar = ({
                     }}
                     size="small"
                     sx={{
-                      ml: 0.5,
-                      opacity: 0,
-                      transition: "opacity 0.2s",
-                      "&:hover": { opacity: 1 },
+                      p: 0.25,
                     }}
                   >
                     <CloseIcon fontSize="small" />
@@ -80,17 +81,13 @@ const AppsBar = ({
               borderTopRightRadius: "8px",
               border: "1px solid",
               borderColor: "divider",
-              borderBottom: tabIndex === i ? "none" : "1px solid", // active merges with content
+              borderBottom: tabIndex === i ? "none" : "1px solid",
               bgcolor: tabIndex === i ? "background.paper" : "grey.100",
-              zIndex: tabIndex === i ? 1 : 0, // lift active tab
-              mr: -1, // overlap like Chrome
+              zIndex: tabIndex === i ? 1 : 0,
+              mr: -1, // Chrome-style overlap
               "&:hover": {
-                bgcolor: tabIndex === i ? "background.paper" : "grey.200",
-              },
-              "& .MuiBox-root": {
-                "&:hover button": {
-                  opacity: 1,
-                },
+                bgcolor:
+                  tabIndex === i ? "background.paper" : "grey.200",
               },
             }}
           />
