@@ -26,7 +26,6 @@ import SettingsIcon from "@mui/icons-material/Settings";
 
 const drawerWidth = 240;
 const collapsedWidth = 60;
-const HEADER_HEIGHT = 64; // consistent header height
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -189,7 +188,14 @@ const Layout = () => {
   ];
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", width: "100%", overflowX: "hidden" }}>
+    <Box
+      sx={{
+        display: "flex",
+        minHeight: "100vh",
+        width: "100%",
+        overflowX: "hidden",
+      }}
+    >
       {/* Sidebar */}
       <Sidebar
         sidebarOpen={sidebarOpen}
@@ -208,10 +214,10 @@ const Layout = () => {
           flexGrow: 1,
           display: "flex",
           flexDirection: "column",
-          minWidth: 0, // prevent flex overflow
+          minWidth: 0,
           marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
           width: !isMobile ? `calc(100% - ${sidebarWidth}px)` : "100%",
-          overflowX: "hidden", // remove horizontal scroll
+          overflowX: "hidden",
         }}
       >
         <Header
@@ -227,12 +233,13 @@ const Layout = () => {
           handleMobileSidebarToggle={handleMobileSidebarToggle}
         />
 
+        {/* Remove mt to fix blank space */}
         <Box
           sx={{
             flex: 1,
             overflowY: "auto",
             px: 2,
-            mt: `${HEADER_HEIGHT}px`,
+            pt: 2,
             pb: 4,
             minWidth: 0,
             overflowX: "hidden",
