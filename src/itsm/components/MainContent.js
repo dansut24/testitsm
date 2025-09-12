@@ -1,24 +1,22 @@
 // MainContent.js
 import React from "react";
-import { Box, useTheme } from "@mui/material";
+import { Box } from "@mui/material";
 import { Outlet } from "react-router-dom";
 
 const MainContent = () => {
-  const theme = useTheme();
-
   return (
     <Box
       sx={{
+        flex: 1,
         width: "100%",
-        maxWidth: "100%",
-        boxSizing: "border-box",      // important to include padding inside width
+        height: "100%",
         display: "flex",
         flexDirection: "column",
-        backgroundColor: theme.palette.background.default,
-        overflowX: "hidden",           // prevents horizontal scroll
-        overflowY: "auto",
-        px: { xs: 2, md: 3 },          // 16px on mobile, 24px on desktop
-        py: 2,                         // consistent vertical padding
+        backgroundColor: "background.default",
+        overflowX: "hidden",   // 🚫 prevents horizontal scrollbars
+        overflowY: "auto",     // ✅ allows vertical scrolling when needed
+        boxSizing: "border-box",
+        p: { xs: 1, md: 2 },   // responsive padding
       }}
     >
       <Outlet />
