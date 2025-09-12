@@ -189,7 +189,7 @@ const Layout = () => {
   ];
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", overflow: "hidden" }}>
+    <Box sx={{ display: "flex", minHeight: "100vh", overflowX: "hidden" }}>
       {/* Sidebar */}
       <Sidebar
         sidebarOpen={sidebarOpen}
@@ -208,7 +208,7 @@ const Layout = () => {
           flexGrow: 1,
           display: "flex",
           flexDirection: "column",
-          width: "100%",
+          minWidth: 0, // ✅ prevents overflow from flex children
           marginLeft: !isMobile ? `${sidebarWidth}px` : 0, // desktop shifts, mobile overlays
         }}
       >
@@ -230,8 +230,8 @@ const Layout = () => {
             flex: 1,
             overflowY: "auto",
             px: 2,
-            mt: `${HEADER_HEIGHT}px`, // ✅ replaces hardcoded pt
-            pb: 4, // consistent bottom padding
+            pt: 2, // ✅ small padding instead of full HEADER_HEIGHT
+            pb: 4,
           }}
         >
           <MainContent />
