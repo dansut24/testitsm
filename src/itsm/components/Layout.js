@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 
 import Header from "./Header";
+import AppsBar from "./AppsBar";
 import MainContent from "./MainContent";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
@@ -26,6 +27,9 @@ import SettingsIcon from "@mui/icons-material/Settings";
 
 const drawerWidth = 240;
 const collapsedWidth = 60;
+const HEADER_HEIGHT = 48;   // header top bar height (px)
+const APPSBAR_HEIGHT = 36;  // tabs strip height (px)
+const TOP_OFFSET = HEADER_HEIGHT + APPSBAR_HEIGHT; // total fixed top offset (px)
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -53,29 +57,26 @@ const Layout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [tabs, setTabs] = useState(() => {
     const stored = sessionStorage.getItem("tabs");
-    return stored
-      ? JSON.parse(stored)
-      : [{ label: "Dashboard", path: "/dashboard" }];
+    return stored ? JSON.parse(stored) : [{ label: "Dashboard", path: "/dashboard" }];
   });
   const [tabIndex, setTabIndex] = useState(() => {
     const storedIndex = sessionStorage.getItem("tabIndex");
     return storedIndex ? parseInt(storedIndex, 10) : 0;
   });
 
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
   const role = user?.role || "user";
 
   const sidebarWidth = sidebarOpen ? drawerWidth : collapsedWidth;
 
-  // Update tabs on route change
+  // === Tabs update on route change ===
   useEffect(() => {
     const currentPath = location.pathname;
-    const tabExists = tabs.some((tab) => tab.path === currentPath);
+    const tabExists = tabs.some((t) => t.path === currentPath);
 
     if (!tabExists) {
       const fetchLabel = async () => {
         let label = routeLabels[currentPath] || "Unknown";
-
         if (currentPath.startsWith("/incidents/")) {
           const id = currentPath.split("/")[2];
           const { data } = await supabase
@@ -85,19 +86,18 @@ const Layout = () => {
             .maybeSingle();
           if (data?.reference) label = data.reference;
         }
-
         const newTabs = [...tabs, { label, path: currentPath }];
         setTabs(newTabs);
         setTabIndex(newTabs.length - 1);
       };
       fetchLabel();
     } else {
-      const index = tabs.findIndex((tab) => tab.path === currentPath);
+      const index = tabs.findIndex((t) => t.path === currentPath);
       setTabIndex(index);
     }
-  }, [location.pathname]);
+  }, [location.pathname]); // eslint-disable-line
 
-  // Persist tabs
+  // persist tabs
   useEffect(() => {
     sessionStorage.setItem("tabs", JSON.stringify(tabs));
   }, [tabs]);
@@ -106,7 +106,7 @@ const Layout = () => {
     sessionStorage.setItem("tabIndex", tabIndex.toString());
   }, [tabIndex]);
 
-  // Responsive sidebar
+  // responsive sidebar initial state
   useEffect(() => {
     if (isMobile) {
       setSidebarOpen(false);
@@ -117,14 +117,14 @@ const Layout = () => {
     }
   }, [isMobile]);
 
-  const handleTabChange = (event, newIndex) => {
+  const handleTabChange = (ev, newIndex) => {
     setTabIndex(newIndex);
     navigate(tabs[newIndex].path);
   };
 
   const handleTabClose = (pathToClose) => {
-    const closingIndex = tabs.findIndex((tab) => tab.path === pathToClose);
-    const newTabs = tabs.filter((tab) => tab.path !== pathToClose);
+    const closingIndex = tabs.findIndex((t) => t.path === pathToClose);
+    const newTabs = tabs.filter((t) => t.path !== pathToClose);
     setTabs(newTabs);
 
     if (location.pathname === pathToClose) {
@@ -177,13 +177,7 @@ const Layout = () => {
     { text: "Approvals", icon: <HowToVoteIcon />, path: "/approvals" },
     { text: "Profile", icon: <PersonIcon />, path: "/profile" },
     ...(role === "admin"
-      ? [
-          {
-            text: "Admin Settings",
-            icon: <SettingsIcon />,
-            path: "/admin-settings",
-          },
-        ]
+      ? [{ text: "Admin Settings", icon: <SettingsIcon />, path: "/admin-settings" }]
       : [{ text: "Settings", icon: <SettingsIcon />, path: "/settings" }]),
   ];
 
@@ -191,12 +185,13 @@ const Layout = () => {
     <Box
       sx={{
         display: "flex",
-        minHeight: "100vh",
+        height: "100vh",
         width: "100%",
-        overflowX: "hidden",
+        overflowX: "hidden", // prevent page horizontal scroll
+        backgroundColor: "background.default",
       }}
     >
-      {/* Sidebar */}
+      {/* Sidebar (fixed at left) */}
       <Sidebar
         sidebarOpen={sidebarOpen}
         mobileOpen={mobileOpen}
@@ -208,18 +203,19 @@ const Layout = () => {
         isMobile={isMobile}
       />
 
-      {/* Main Content */}
+      {/* Main column (to the right of sidebar) */}
       <Box
         sx={{
-          flexGrow: 1,
+          flex: 1,
           display: "flex",
           flexDirection: "column",
-          minWidth: 0,
+          minWidth: 0, // important to avoid overflow on children
           marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
-          width: !isMobile ? `calc(100% - ${sidebarWidth}px)` : "100%",
-          overflowX: "hidden",
+          height: "100vh",
+          position: "relative",
         }}
       >
+        {/* Fixed Header and Tabs (Header and AppsBar are fixed internally) */}
         <Header
           tabs={tabs}
           tabIndex={tabIndex}
@@ -233,16 +229,29 @@ const Layout = () => {
           handleMobileSidebarToggle={handleMobileSidebarToggle}
         />
 
-        {/* Remove mt to fix blank space */}
+        <AppsBar
+          tabs={tabs}
+          tabIndex={tabIndex}
+          handleTabChange={handleTabChange}
+          handleTabClose={handleTabClose}
+          isMobile={isMobile}
+          sidebarOpen={sidebarOpen}
+          sidebarWidth={sidebarWidth}
+          collapsedWidth={collapsedWidth}
+        />
+
+        {/* SCROLLABLE CONTENT AREA: offset by top fixed bars */}
         <Box
+          component="main"
           sx={{
             flex: 1,
+            minHeight: 0, // allow the inner scroll container to size correctly
             overflowY: "auto",
-            px: 2,
-            pt: 2,
-            pb: 4,
-            minWidth: 0,
             overflowX: "hidden",
+            px: { xs: 1, md: 2 },
+            // ensure content starts below the fixed header + appsbar
+            pt: `${TOP_OFFSET}px`,
+            boxSizing: "border-box",
           }}
         >
           <MainContent />
@@ -250,6 +259,7 @@ const Layout = () => {
           <BackToTop />
         </Box>
 
+        {/* Footers / chat live below the scroll container */}
         <AIChat />
         <Footer />
       </Box>
