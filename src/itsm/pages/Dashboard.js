@@ -117,7 +117,7 @@ const Dashboard = () => {
               }}
             >
               <Typography sx={{ fontSize: "0.95rem", color: "#456", mb: 1 }}>
-                <strong>#{i + 1}</strong> â¢ Incident #{i + 1}
+                <strong>#{i + 1}</strong> • Incident #{i + 1}
                 <Chip
                   label={i % 3 === 0 ? "Open" : i % 3 === 1 ? "Closed" : "Pending"}
                   sx={{
@@ -211,14 +211,40 @@ const Dashboard = () => {
       <DragDropContext onDragEnd={onDragEnd}>
         <Droppable droppableId="dashboard" direction="horizontal">
           {(provided) => (
-            <Box ref={provided.innerRef} {...provided.droppableProps} sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+            <Box
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 2,
+                width: '100%',
+                boxSizing: 'border-box',
+              }}
+            >
               {widgets.map((widget, index) => (
                 <Draggable key={widget.id} draggableId={widget.id} index={index} isDragDisabled={isPreview}>
                   {(provided) => (
-                    <Box ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} sx={{ flex: '1 1 calc(33.333% - 16px)', minWidth: '300px', display: 'flex' }}>
-                      <Paper elevation={4} sx={{ flexGrow: 1, borderRadius: 3, p: 2, position: 'relative' }}>
+                    <Box
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      {...provided.dragHandleProps}
+                      sx={{
+                        flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(33.333% - 16px)' },
+                        display: 'flex',
+                        minWidth: 0,
+                      }}
+                    >
+                      <Paper
+                        elevation={4}
+                        sx={{ flexGrow: 1, borderRadius: 3, p: 2, position: 'relative', minWidth: 0 }}
+                      >
                         {!isPreview && (
-                          <IconButton size="small" onClick={() => deleteWidget(widget.id)} sx={{ position: 'absolute', top: 8, right: 8 }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => deleteWidget(widget.id)}
+                            sx={{ position: 'absolute', top: 8, right: 8 }}
+                          >
                             <DeleteIcon fontSize="small" />
                           </IconButton>
                         )}
