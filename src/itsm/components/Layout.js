@@ -189,7 +189,7 @@ const Layout = () => {
   ];
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", overflowX: "hidden" }}>
+    <Box sx={{ display: "flex", minHeight: "100vh", width: "100%", overflowX: "hidden" }}>
       {/* Sidebar */}
       <Sidebar
         sidebarOpen={sidebarOpen}
@@ -208,8 +208,10 @@ const Layout = () => {
           flexGrow: 1,
           display: "flex",
           flexDirection: "column",
-          minWidth: 0, // ✅ prevents overflow from flex children
-          marginLeft: !isMobile ? `${sidebarWidth}px` : 0, // desktop shifts, mobile overlays
+          minWidth: 0, // prevent flex overflow
+          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
+          width: !isMobile ? `calc(100% - ${sidebarWidth}px)` : "100%",
+          overflowX: "hidden", // remove horizontal scroll
         }}
       >
         <Header
@@ -230,8 +232,10 @@ const Layout = () => {
             flex: 1,
             overflowY: "auto",
             px: 2,
-            pt: 2, // ✅ small padding instead of full HEADER_HEIGHT
+            mt: `${HEADER_HEIGHT}px`,
             pb: 4,
+            minWidth: 0,
+            overflowX: "hidden",
           }}
         >
           <MainContent />
