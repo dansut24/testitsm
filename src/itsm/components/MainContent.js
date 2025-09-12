@@ -10,7 +10,7 @@ const MainContent = () => {
   return (
     <Box
       sx={{
-        width: "100%",
+        width: "80%",
         flexGrow: 1,
         display: "flex",
         flexDirection: "column",
