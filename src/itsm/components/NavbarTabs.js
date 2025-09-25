@@ -19,7 +19,7 @@ const NavbarTabs = ({
 }) => {
   if (!tabs || tabs.length === 0) return null;
 
-  // Convert your tabs array into ChromeTabs format
+  // Convert tabs to ChromeTabs format
   const chromeTabs = tabs.map((tab, index) => ({
     id: tab.path || `tab-${index}`,
     title: tab.label || "Untitled",
@@ -39,10 +39,6 @@ const NavbarTabs = ({
     handleTabClose(tabId);
   };
 
-  const onTabReorder = (tabId, fromIndex, toIndex) => {
-    // Optional: implement reorder logic if needed
-  };
-
   const leftOffset = isMobile ? 0 : sidebarOpen ? sidebarWidth : collapsedWidth;
   const widthCalc = isMobile ? "100%" : `calc(100% - ${leftOffset}px)`;
 
@@ -54,21 +50,28 @@ const NavbarTabs = ({
         left: leftOffset,
         width: widthCalc,
         zIndex: 1500,
-        height: 41.6,
-        background: "transparent",
+        height: 48,
         display: "flex",
         alignItems: "center",
-        borderBottom: "1px solid #ccc",
-        paddingLeft: 8,
-        paddingRight: 8,
+        justifyContent: "space-between",
+        backgroundColor: "rgba(200, 200, 200, 0.15)", // semi-transparent grey for theme support
+        borderRadius: 8,
+        padding: "0 12px",
+        backdropFilter: "blur(8px)", // subtle blur for floating effect
+        boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
       }}
     >
-      {/* Logo */}
+      {/* Left: Logo */}
       <div style={{ display: "flex", alignItems: "center", marginRight: 12 }}>
         <img
           src="/logo192.png"
           alt="Logo"
-          style={{ height: 28, objectFit: "contain" }}
+          style={{
+            height: 28,
+            objectFit: "contain",
+            borderRadius: 4,
+            backgroundColor: "rgba(255,255,255,0.3)", // floating highlight
+          }}
         />
       </div>
 
@@ -78,7 +81,6 @@ const NavbarTabs = ({
           tabs={chromeTabs}
           onTabActive={onTabActive}
           onTabClose={onTabClose}
-          onTabReorder={onTabReorder}
           draggable
           className="chrome-tabs"
           tabContentStyle={{ textAlign: "left" }}
@@ -89,8 +91,9 @@ const NavbarTabs = ({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "flex-start",
-                width: `${100 / chromeTabs.length}%`, // equal width for all tabs
+                width: `${100 / chromeTabs.length}%`,
                 overflow: "hidden",
+                padding: "0 8px",
               }}
             >
               {tab.favicon && (
@@ -120,7 +123,7 @@ const NavbarTabs = ({
           display: "flex",
           alignItems: "center",
           gap: 16,
-          paddingRight: 16,
+          paddingLeft: 12,
         }}
       >
         <SearchIcon style={{ cursor: "pointer" }} />
