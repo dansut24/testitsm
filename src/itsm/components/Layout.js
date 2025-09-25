@@ -1,6 +1,6 @@
 // Layout.js
 import React, { useState, useEffect } from "react";
-import { Box, useTheme, useMediaQuery } from "@mui/material";
+import { Box, useTheme, useMediaQuery, IconButton, Typography } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 
@@ -9,6 +9,7 @@ import NavbarTabs from "./NavbarTabs";
 import BackToTop from "./BackToTop";
 import BreadcrumbsNav from "./BreadcrumbsNav";
 
+import MenuIcon from "@mui/icons-material/Menu";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import AssignmentIcon from "@mui/icons-material/Assignment";
@@ -21,7 +22,8 @@ import HowToVoteIcon from "@mui/icons-material/HowToVote";
 import PersonIcon from "@mui/icons-material/Person";
 import SettingsIcon from "@mui/icons-material/Settings";
 
-const collapsedWidth = 48; // matches Sidebar collapsed
+const expandedWidth = 256;
+const collapsedWidth = 48;
 const NAVBAR_HEIGHT = 34.6;
 const NAVBAR_MARGIN_TOP = 7;
 
@@ -44,10 +46,6 @@ const routeLabels = {
 const Layout = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const smUp = useMediaQuery(theme.breakpoints.up("sm")); // >=600px
-  const mdUp = useMediaQuery(theme.breakpoints.up("md")); // >=900px
-  const lgUp = useMediaQuery(theme.breakpoints.up("lg")); // >=1200px
-
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -66,12 +64,6 @@ const Layout = () => {
   const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || "{}") : {};
   const role = user?.role || "user";
 
-  // Responsive expanded width
-  let expandedWidth = 240; // default fallback
-  if (lgUp) expandedWidth = 320;
-  else if (mdUp) expandedWidth = 288;
-  else if (smUp) expandedWidth = 256;
-
   const sidebarWidth = sidebarOpen ? expandedWidth : collapsedWidth;
 
   // Update tabs on route change
@@ -83,7 +75,6 @@ const Layout = () => {
       const fetchLabel = async () => {
         try {
           let label = routeLabels[currentPath] || "Unknown";
-
           if (currentPath.startsWith("/incidents/")) {
             const id = currentPath.split("/")[2];
             const { data } = await supabase
@@ -93,7 +84,6 @@ const Layout = () => {
               .maybeSingle();
             if (data?.reference) label = data.reference;
           }
-
           const newTabs = [...tabs, { label, path: currentPath }];
           setTabs(newTabs);
           setTabIndex(newTabs.length - 1);
@@ -213,7 +203,6 @@ const Layout = () => {
           marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
           height: "100vh",
           position: "relative",
-          transition: "margin-left 0.3s ease-in-out", // smooth shift
         }}
       >
         {/* Navbar */}
@@ -226,11 +215,24 @@ const Layout = () => {
             height: `${NAVBAR_HEIGHT}px`,
             display: "flex",
             alignItems: "center",
-            backgroundColor: "background.paper",
+            bgcolor: "background.paper",
+            px: 1,
             zIndex: theme.zIndex.appBar,
-            transition: "left 0.3s ease-in-out", // matches sidebar toggle
+            borderBottom: 1,
+            borderColor: "divider",
           }}
         >
+          {/* Logo / Mobile menu button */}
+          {isMobile && (
+            <IconButton onClick={handleMobileSidebarToggle} sx={{ mr: 1 }}>
+              <MenuIcon />
+            </IconButton>
+          )}
+          <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
+            Hi5Tech
+          </Typography>
+
+          {/* Tabs */}
           <NavbarTabs
             tabs={tabs}
             tabIndex={tabIndex}
@@ -243,7 +245,7 @@ const Layout = () => {
           />
         </Box>
 
-        {/* Main content area */}
+        {/* Main content */}
         <Box
           component="main"
           sx={{
@@ -252,6 +254,7 @@ const Layout = () => {
             overflowY: "auto",
             overflowX: "hidden",
             px: 1,
+            bgcolor: "background.default",
           }}
         >
           {tabs.length > 0 && <Outlet />}
