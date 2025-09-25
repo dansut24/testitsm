@@ -23,7 +23,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 
 const drawerWidth = 240;
 const collapsedWidth = 60;
-const NAVBAR_HEIGHT = 41.6; // matches NavbarTabs height
+const NAVBAR_HEIGHT = 41.6;
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -49,6 +49,7 @@ const Layout = () => {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+
   const [tabs, setTabs] = useState(() => {
     const stored = sessionStorage.getItem("tabs");
     return stored ? JSON.parse(stored) : [{ label: "Dashboard", path: "/dashboard" }];
@@ -58,7 +59,7 @@ const Layout = () => {
     return storedIndex ? parseInt(storedIndex, 10) : 0;
   });
 
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || "{}") : {};
   const role = user?.role || "user";
 
   const sidebarWidth = sidebarOpen ? drawerWidth : collapsedWidth;
@@ -70,19 +71,25 @@ const Layout = () => {
 
     if (!tabExists) {
       const fetchLabel = async () => {
-        let label = routeLabels[currentPath] || "Unknown";
-        if (currentPath.startsWith("/incidents/")) {
-          const id = currentPath.split("/")[2];
-          const { data } = await supabase
-            .from("incidents")
-            .select("reference")
-            .eq("id", id)
-            .maybeSingle();
-          if (data?.reference) label = data.reference;
+        try {
+          let label = routeLabels[currentPath] || "Unknown";
+
+          if (currentPath.startsWith("/incidents/")) {
+            const id = currentPath.split("/")[2];
+            const { data } = await supabase
+              .from("incidents")
+              .select("reference")
+              .eq("id", id)
+              .maybeSingle();
+            if (data?.reference) label = data.reference;
+          }
+
+          const newTabs = [...tabs, { label, path: currentPath }];
+          setTabs(newTabs);
+          setTabIndex(newTabs.length - 1);
+        } catch (err) {
+          console.error("Failed to fetch tab label:", err);
         }
-        const newTabs = [...tabs, { label, path: currentPath }];
-        setTabs(newTabs);
-        setTabIndex(newTabs.length - 1);
       };
       fetchLabel();
     } else {
@@ -93,13 +100,13 @@ const Layout = () => {
 
   // Persist tabs
   useEffect(() => {
-    sessionStorage.setItem("tabs", JSON.stringify(tabs));
+    if (tabs.length > 0) sessionStorage.setItem("tabs", JSON.stringify(tabs));
   }, [tabs]);
   useEffect(() => {
     sessionStorage.setItem("tabIndex", tabIndex.toString());
   }, [tabIndex]);
 
-  // Responsive sidebar initial state
+  // Responsive sidebar
   useEffect(() => {
     if (isMobile) {
       setSidebarOpen(false);
@@ -200,7 +207,7 @@ const Layout = () => {
           position: "relative",
         }}
       >
-        {/* Navbar with Chrome Tabs integrated */}
+        {/* Navbar with Chrome Tabs */}
         <NavbarTabs
           tabs={tabs}
           tabIndex={tabIndex}
@@ -223,7 +230,7 @@ const Layout = () => {
             px: 1,
           }}
         >
-          <Outlet />
+          {tabs.length > 0 && <Outlet />}
           <BreadcrumbsNav />
           <BackToTop />
         </Box>
