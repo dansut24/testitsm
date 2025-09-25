@@ -3,9 +3,6 @@ import React from "react";
 import { Tabs } from "@sinm/react-chrome-tabs";
 import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
 import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
-import SearchIcon from "@mui/icons-material/Search";
-import NotificationsIcon from "@mui/icons-material/Notifications";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import AddIcon from "@mui/icons-material/Add";
 
 const NavbarTabs = ({
@@ -18,7 +15,7 @@ const NavbarTabs = ({
   sidebarWidth = 240,
   collapsedWidth = 60,
   isMobile = false,
-  onLogoClick = () => {},
+  handleMobileSidebarToggle = () => {},
 }) => {
   if (!tabs || tabs.length === 0) return null;
 
@@ -61,58 +58,54 @@ const NavbarTabs = ({
         backgroundColor: "transparent",
       }}
     >
-      {/* Logo (clickable on mobile) */}
+      {/* Logo (acts as sidebar toggle on mobile) */}
       <div
         style={{ display: "flex", alignItems: "center", marginRight: 12, cursor: "pointer" }}
-        onClick={isMobile ? onLogoClick : undefined}
+        onClick={isMobile ? handleMobileSidebarToggle : undefined}
       >
         <img src="/logo192.png" alt="Logo" style={{ height: 28, objectFit: "contain" }} />
       </div>
 
-      {/* Tabs - only desktop/tablet */}
-      {!isMobile && (
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <Tabs
-            tabs={chromeTabs}
-            onTabActive={onTabActive}
-            onTabClose={onTabClose}
-            onTabReorder={onTabReorder}
-            draggable
-            className="chrome-tabs"
-            tabContentStyle={{ textAlign: "left" }}
-            style={{ width: "100%" }}
-            tabRenderer={(tab) => (
-              <div
+      {/* Tabs */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <Tabs
+          tabs={chromeTabs}
+          onTabActive={onTabActive}
+          onTabClose={onTabClose}
+          onTabReorder={onTabReorder}
+          draggable
+          className="chrome-tabs"
+          tabContentStyle={{ textAlign: "left" }}
+          style={{ width: "100%" }}
+          tabRenderer={(tab) => (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                minWidth: isMobile ? 60 : 120,
+                maxWidth: isMobile ? 120 : 300,
+                padding: isMobile ? "0 6px" : "0 12px",
+                overflow: "hidden",
+                borderRadius: tab.active ? 6 : 4,
+                backgroundColor: tab.active ? "rgba(255,255,255,0.2)" : "transparent",
+              }}
+            >
+              <span
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-start",
-                  minWidth: 120,
-                  maxWidth: 300,
+                  whiteSpace: "nowrap",
+                  textOverflow: "ellipsis",
                   overflow: "hidden",
-                  padding: "0 12px",
-                  borderRadius: tab.active ? 6 : 4,
-                  boxShadow: tab.active ? "0 2px 6px rgba(0,0,0,0.15)" : "none",
-                  transition: "all 0.2s ease-in-out",
-                  backgroundColor: tab.active ? "rgba(255,255,255,0.2)" : "transparent",
+                  fontSize: isMobile ? "0.75rem" : "0.9rem",
                 }}
               >
-                <span
-                  style={{
-                    whiteSpace: "nowrap",
-                    textOverflow: "ellipsis",
-                    overflow: "hidden",
-                  }}
-                >
-                  {tab.title}
-                </span>
-              </div>
-            )}
-          />
-        </div>
-      )}
+                {tab.title}
+              </span>
+            </div>
+          )}
+        />
+      </div>
 
-      {/* New Tab Button (desktop only) */}
+      {/* New Tab Button */}
       {!isMobile && (
         <AddIcon
           style={{ cursor: "pointer", marginRight: 12 }}
@@ -120,15 +113,6 @@ const NavbarTabs = ({
             handleTabChange(null, tabs.length, `/new-tab-${Date.now()}`)
           }
         />
-      )}
-
-      {/* Right-hand icons (desktop only) */}
-      {!isMobile && (
-        <div style={{ display: "flex", alignItems: "center", gap: 16, paddingRight: 12 }}>
-          <SearchIcon style={{ cursor: "pointer" }} />
-          <NotificationsIcon style={{ cursor: "pointer" }} />
-          <AccountCircleIcon style={{ cursor: "pointer" }} />
-        </div>
       )}
     </div>
   );
