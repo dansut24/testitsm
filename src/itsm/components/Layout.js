@@ -1,31 +1,16 @@
 // Layout.js
 import React, { useState, useEffect } from "react";
-import { Box, useTheme, useMediaQuery, IconButton, Typography } from "@mui/material";
+import { Box, useTheme, useMediaQuery, IconButton, SwipeableDrawer, List, ListItem, ListItemText } from "@mui/material";
+import MenuIcon from "@mui/icons-material/Menu";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 
-import Sidebar from "./Sidebar";
 import NavbarTabs from "./NavbarTabs";
 import BackToTop from "./BackToTop";
 import BreadcrumbsNav from "./BreadcrumbsNav";
 
-import MenuIcon from "@mui/icons-material/Menu";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import ReportProblemIcon from "@mui/icons-material/ReportProblem";
-import AssignmentIcon from "@mui/icons-material/Assignment";
-import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
-import BugReportIcon from "@mui/icons-material/BugReport";
-import DevicesOtherIcon from "@mui/icons-material/DevicesOther";
-import MenuBookIcon from "@mui/icons-material/MenuBook";
-import BarChartIcon from "@mui/icons-material/BarChart";
-import HowToVoteIcon from "@mui/icons-material/HowToVote";
-import PersonIcon from "@mui/icons-material/Person";
-import SettingsIcon from "@mui/icons-material/Settings";
-
-const expandedWidth = 256;
-const collapsedWidth = 48;
-const NAVBAR_HEIGHT = 34.6;
-const NAVBAR_MARGIN_TOP = 7;
+const NAVBAR_HEIGHT = 34;
+const NAVBAR_PADDING = 7;
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -49,9 +34,6 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [mobileOpen, setMobileOpen] = useState(false);
-
   const [tabs, setTabs] = useState(() => {
     const stored = sessionStorage.getItem("tabs");
     return stored ? JSON.parse(stored) : [{ label: "Dashboard", path: "/dashboard" }];
@@ -60,11 +42,26 @@ const Layout = () => {
     const storedIndex = sessionStorage.getItem("tabIndex");
     return storedIndex ? parseInt(storedIndex, 10) : 0;
   });
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || "{}") : {};
   const role = user?.role || "user";
 
-  const sidebarWidth = sidebarOpen ? expandedWidth : collapsedWidth;
+  const handleTabChange = (ev, newIndex) => {
+    setTabIndex(newIndex);
+    navigate(tabs[newIndex].path);
+  };
+
+  const handleTabClose = (pathToClose) => {
+    const closingIndex = tabs.findIndex((t) => t.path === pathToClose);
+    const newTabs = tabs.filter((t) => t.path !== pathToClose);
+    setTabs(newTabs);
+    if (location.pathname === pathToClose) {
+      const fallbackIndex = closingIndex === 0 ? 0 : closingIndex - 1;
+      const fallbackTab = newTabs[fallbackIndex] || { path: "/dashboard" };
+      navigate(fallbackTab.path);
+    }
+  };
 
   // Update tabs on route change
   useEffect(() => {
@@ -106,161 +103,92 @@ const Layout = () => {
     sessionStorage.setItem("tabIndex", tabIndex.toString());
   }, [tabIndex]);
 
-  // Responsive sidebar
-  useEffect(() => {
-    if (isMobile) {
-      setSidebarOpen(false);
-      setMobileOpen(false);
-    } else {
-      setSidebarOpen(true);
-      setMobileOpen(false);
-    }
-  }, [isMobile]);
-
-  const handleTabChange = (ev, newIndex) => {
-    setTabIndex(newIndex);
-    navigate(tabs[newIndex].path);
-  };
-
-  const handleTabClose = (pathToClose) => {
-    const closingIndex = tabs.findIndex((t) => t.path === pathToClose);
-    const newTabs = tabs.filter((t) => t.path !== pathToClose);
-    setTabs(newTabs);
-
-    if (location.pathname === pathToClose) {
-      const fallbackIndex = closingIndex === 0 ? 0 : closingIndex - 1;
-      const fallbackTab = newTabs[fallbackIndex] || { path: "/dashboard" };
-      navigate(fallbackTab.path);
-    }
-  };
-
-  const handleSidebarToggle = () => setSidebarOpen((prev) => !prev);
-  const handleMobileSidebarToggle = () => setMobileOpen((prev) => !prev);
-
+  // Drawer menu items (optional sections for mobile)
   const menuItems = [
-    { text: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
-    {
-      text: "Incidents",
-      icon: <ReportProblemIcon />,
-      children: [
-        { text: "View Incidents", path: "/incidents" },
-        { text: "Raise Incident", path: "/new-incident" },
-      ],
-    },
-    {
-      text: "Service Requests",
-      icon: <AssignmentIcon />,
-      children: [
-        { text: "View Requests", path: "/service-requests" },
-        { text: "Raise Request", path: "/new-service-request" },
-      ],
-    },
-    {
-      text: "Changes",
-      icon: <AutoFixHighIcon />,
-      children: [
-        { text: "View Changes", path: "/changes" },
-        { text: "Raise Change", path: "/new-change" },
-      ],
-    },
-    {
-      text: "Problems",
-      icon: <BugReportIcon />,
-      children: [
-        { text: "View Problems", path: "/problems" },
-        { text: "Raise Problem", path: "/new-problem" },
-      ],
-    },
-    { text: "Assets", icon: <DevicesOtherIcon />, path: "/assets" },
-    { text: "Knowledge Base", icon: <MenuBookIcon />, path: "/knowledge-base" },
-    { text: "Reports", icon: <BarChartIcon />, path: "/reports" },
-    { text: "Approvals", icon: <HowToVoteIcon />, path: "/approvals" },
-    { text: "Profile", icon: <PersonIcon />, path: "/profile" },
-    ...(role === "admin"
-      ? [{ text: "Admin Settings", icon: <SettingsIcon />, path: "/admin-settings" }]
-      : [{ text: "Settings", icon: <SettingsIcon />, path: "/settings" }]),
+    { text: "Dashboard", path: "/dashboard" },
+    { text: "Incidents", path: "/incidents" },
+    { text: "Service Requests", path: "/service-requests" },
+    { text: "Changes", path: "/changes" },
+    { text: "Problems", path: "/problems" },
+    { text: "Assets", path: "/assets" },
+    { text: "Knowledge Base", path: "/knowledge-base" },
+    { text: "Reports", path: "/reports" },
+    { text: "Approvals", path: "/approvals" },
+    { text: "Profile", path: "/profile" },
+    ...(role === "admin" ? [{ text: "Admin Settings", path: "/admin-settings" }] : [{ text: "Settings", path: "/settings" }]),
   ];
 
   return (
-    <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
-      {/* Sidebar */}
-      <Sidebar
-        sidebarOpen={sidebarOpen}
-        mobileOpen={mobileOpen}
-        handleSidebarToggle={handleSidebarToggle}
-        handleMobileSidebarToggle={handleMobileSidebarToggle}
-        menuItems={menuItems}
-        isMobile={isMobile}
-      />
-
-      {/* Main column */}
+    <Box sx={{ display: "flex", flexDirection: "column", height: "100vh", width: "100%", overflow: "hidden" }}>
+      {/* Top Navbar */}
       <Box
         sx={{
-          flex: 1,
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: NAVBAR_HEIGHT,
           display: "flex",
-          flexDirection: "column",
-          minWidth: 0,
-          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
-          height: "100vh",
-          position: "relative",
+          alignItems: "center",
+          justifyContent: "space-between",
+          backgroundColor: "background.paper",
+          zIndex: theme.zIndex.appBar,
+          px: NAVBAR_PADDING,
+          boxShadow: 1,
         }}
       >
-        {/* Navbar */}
-        <Box
-          sx={{
-            position: "fixed",
-            top: `${NAVBAR_MARGIN_TOP}px`,
-            left: !isMobile ? `${sidebarWidth}px` : 0,
-            right: 0,
-            height: `${NAVBAR_HEIGHT}px`,
-            display: "flex",
-            alignItems: "center",
-            bgcolor: "background.paper",
-            px: 1,
-            zIndex: theme.zIndex.appBar,
-            borderBottom: 1,
-            borderColor: "divider",
-          }}
+        {/* Hamburger / Logo */}
+        <IconButton
+          onClick={() => setDrawerOpen(true)}
+          sx={{ display: { xs: "block", sm: "none" } }}
         >
-          {/* Logo / Mobile menu button */}
-          {isMobile && (
-            <IconButton onClick={handleMobileSidebarToggle} sx={{ mr: 1 }}>
-              <MenuIcon />
-            </IconButton>
-          )}
-          <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
-            Hi5Tech
-          </Typography>
+          <MenuIcon />
+        </IconButton>
 
-          {/* Tabs */}
-          <NavbarTabs
-            tabs={tabs}
-            tabIndex={tabIndex}
-            handleTabChange={handleTabChange}
-            handleTabClose={handleTabClose}
-            sidebarOpen={sidebarOpen}
-            sidebarWidth={sidebarWidth}
-            collapsedWidth={collapsedWidth}
-            isMobile={isMobile}
-          />
-        </Box>
+        {/* Navbar Tabs */}
+        <NavbarTabs
+          tabs={tabs}
+          tabIndex={tabIndex}
+          handleTabChange={handleTabChange}
+          handleTabClose={handleTabClose}
+          sidebarOpen={false} // no sidebar
+          isMobile={isMobile}
+        />
 
-        {/* Main content */}
-        <Box
-          component="main"
-          sx={{
-            flex: 1,
-            mt: `${NAVBAR_HEIGHT + NAVBAR_MARGIN_TOP}px`,
-            overflowY: "auto",
-            overflowX: "hidden",
-            px: 1,
-            bgcolor: "background.default",
-          }}
-        >
-          {tabs.length > 0 && <Outlet />}
-          <BreadcrumbsNav />
-          <BackToTop />
+        {/* Right Icons */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 16 }}>
+          {/* Keep your Search, Notifications, Account icons here */}
         </Box>
+      </Box>
+
+      {/* Mobile Drawer */}
+      <SwipeableDrawer
+        anchor="left"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onOpen={() => setDrawerOpen(true)}
+      >
+        <List sx={{ width: 240 }}>
+          {menuItems.map((item) => (
+            <ListItem
+              button
+              key={item.text}
+              onClick={() => {
+                navigate(item.path);
+                setDrawerOpen(false);
+              }}
+            >
+              <ListItemText primary={item.text} />
+            </ListItem>
+          ))}
+        </List>
+      </SwipeableDrawer>
+
+      {/* Main Content */}
+      <Box sx={{ flex: 1, mt: NAVBAR_HEIGHT, overflow: "auto", px: 1 }}>
+        <Outlet />
+        <BreadcrumbsNav />
+        <BackToTop />
       </Box>
     </Box>
   );
