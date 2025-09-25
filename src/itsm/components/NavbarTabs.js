@@ -92,48 +92,29 @@ const NavbarTabs = ({
           className="chrome-tabs"
           tabContentStyle={{ textAlign: "left" }}
           style={{ width: "100%" }}
-          tabRenderer={(tab, index) => (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                width: "auto",
-                minWidth: 120,
-                maxWidth: 300,
-                padding: "0 12px",
-                borderRadius: 6,
-                marginRight: 4,
-                boxShadow: tab.active
-                  ? "0 2px 6px rgba(0,0,0,0.15)"
-                  : "none",
-                backgroundColor: tab.active
-                  ? "rgba(255,255,255,0.3)"
-                  : "transparent",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {tab.favicon && (
-                <img
-                  src={tab.favicon}
-                  alt="favicon"
-                  style={{ width: 16, height: 16, marginRight: 6 }}
-                />
-              )}
-              <span
-                style={{
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {tab.title}
-              </span>
-            </div>
-          )}
-        />
+tabRenderer={(tab, tabIndex) => (
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "flex-start",
+      width: `${100 / chromeTabs.length}%`,
+      overflow: "hidden",
+      padding: "0 8px",
+    }}
+  >
+    <span
+      style={{
+        whiteSpace: "nowrap",
+        textOverflow: "ellipsis",
+        overflow: "hidden",
+      }}
+    >
+      {tab.title}
+    </span>
+  </div>
+)}
+/>
       </div>
 
       {/* Right: Add + Button and Icons */}
