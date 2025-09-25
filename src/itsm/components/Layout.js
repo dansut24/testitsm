@@ -21,9 +21,10 @@ import HowToVoteIcon from "@mui/icons-material/HowToVote";
 import PersonIcon from "@mui/icons-material/Person";
 import SettingsIcon from "@mui/icons-material/Settings";
 
-const drawerWidth = 240;
-const collapsedWidth = 60;
-const NAVBAR_HEIGHT = 41.6;
+const expandedWidth = 180;
+const collapsedWidth = 40;
+const NAVBAR_HEIGHT = 34.6;
+const NAVBAR_MARGIN_TOP = 7;
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -62,7 +63,7 @@ const Layout = () => {
   const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || "{}") : {};
   const role = user?.role || "user";
 
-  const sidebarWidth = sidebarOpen ? drawerWidth : collapsedWidth;
+  const sidebarWidth = sidebarOpen ? expandedWidth : collapsedWidth;
 
   // Update tabs on route change
   useEffect(() => {
@@ -202,29 +203,43 @@ const Layout = () => {
           display: "flex",
           flexDirection: "column",
           minWidth: 0,
-          marginLeft: 0,
+          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
           height: "100vh",
           position: "relative",
         }}
       >
-        {/* Navbar with Chrome Tabs */}
-        <NavbarTabs
-          tabs={tabs}
-          tabIndex={tabIndex}
-          handleTabChange={handleTabChange}
-          handleTabClose={handleTabClose}
-          sidebarOpen={sidebarOpen}
-          sidebarWidth={sidebarWidth}
-          collapsedWidth={collapsedWidth}
-          isMobile={isMobile}
-        />
+        {/* Navbar */}
+        <Box
+          sx={{
+            position: "fixed",
+            top: `${NAVBAR_MARGIN_TOP}px`,
+            left: `${sidebarWidth}px`,
+            right: 0,
+            height: `${NAVBAR_HEIGHT}px`,
+            display: "flex",
+            alignItems: "center",
+            backgroundColor: "background.paper",
+            zIndex: theme.zIndex.appBar,
+          }}
+        >
+          <NavbarTabs
+            tabs={tabs}
+            tabIndex={tabIndex}
+            handleTabChange={handleTabChange}
+            handleTabClose={handleTabClose}
+            sidebarOpen={sidebarOpen}
+            sidebarWidth={sidebarWidth}
+            collapsedWidth={collapsedWidth}
+            isMobile={isMobile}
+          />
+        </Box>
 
         {/* Main content area */}
         <Box
           component="main"
           sx={{
             flex: 1,
-            mt: `${NAVBAR_HEIGHT}px`,
+            mt: `${NAVBAR_HEIGHT + NAVBAR_MARGIN_TOP}px`,
             overflowY: "auto",
             overflowX: "hidden",
             px: 1,
