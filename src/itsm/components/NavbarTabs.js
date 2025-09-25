@@ -3,6 +3,10 @@ import React from "react";
 import { Tabs } from "@sinm/react-chrome-tabs";
 import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
 import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
+import SearchIcon from "@mui/icons-material/Search";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import logo from "../../assets/logo192.png"; // update path if needed
 
 const NavbarTabs = ({
   tabs = [],
@@ -22,7 +26,7 @@ const NavbarTabs = ({
     title: tab.label || "Untitled",
     favicon: tab.favicon || undefined,
     active: index === tabIndex,
-    isCloseIconVisible: tab.path === "/dashboard" ? false : true, // Dashboard cannot be closed
+    isCloseIconVisible: tab.path === "/dashboard" ? false : true,
   }));
 
   const onTabActive = (tabId) => {
@@ -32,7 +36,7 @@ const NavbarTabs = ({
 
   const onTabClose = (tabId) => {
     const tab = chromeTabs.find((t) => t.id === tabId);
-    if (tab && tab.path === "/dashboard") return; // Prevent closing Dashboard
+    if (tab && tab.path === "/dashboard") return;
     handleTabClose(tabId);
   };
 
@@ -40,7 +44,7 @@ const NavbarTabs = ({
     // Optional: implement reorder logic if needed
   };
 
-  // Adjust width to account for sidebar
+  // Sidebar offset
   const leftOffset = isMobile ? 0 : sidebarOpen ? sidebarWidth : collapsedWidth;
   const widthCalc = isMobile ? "100%" : `calc(100% - ${leftOffset}px)`;
 
@@ -52,21 +56,50 @@ const NavbarTabs = ({
         left: leftOffset,
         width: widthCalc,
         zIndex: 1500,
-        height: 34.6, // Remove extra top padding
-        background: "transparent", // Remove grey background
+        height: 41.6, // match Navbar height
+        background: "transparent",
         display: "flex",
         alignItems: "center",
+        borderBottom: "1px solid #ccc",
+        paddingLeft: 8,
+        paddingRight: 8,
       }}
     >
-      <Tabs
-        tabs={chromeTabs}
-        onTabActive={onTabActive}
-        onTabClose={onTabClose}
-        onTabReorder={onTabReorder}
-        draggable
-        className="chrome-tabs"
-        tabContentStyle={{ textAlign: "left" }} // Align text left
-      />
+      {/* Logo */}
+      <div style={{ display: "flex", alignItems: "center", marginRight: 12 }}>
+        <img
+          src={logo}
+          alt="Logo"
+          style={{ height: 28, objectFit: "contain" }}
+        />
+      </div>
+
+      {/* Tabs flex container */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <Tabs
+          tabs={chromeTabs}
+          onTabActive={onTabActive}
+          onTabClose={onTabClose}
+          onTabReorder={onTabReorder}
+          draggable
+          className="chrome-tabs"
+          tabContentStyle={{ textAlign: "left" }}
+        />
+      </div>
+
+      {/* Right-hand icons */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          paddingRight: 16,
+        }}
+      >
+        <SearchIcon style={{ cursor: "pointer" }} />
+        <NotificationsIcon style={{ cursor: "pointer" }} />
+        <AccountCircleIcon style={{ cursor: "pointer" }} />
+      </div>
     </div>
   );
 };
