@@ -103,7 +103,7 @@ const NavbarTabs = ({
         </div>
 
         {/* Tabs */}
-        <div style={{ flex: 1, minWidth: 0, height: "100%", display: "flex", alignItems: "center" }}>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", height: "100%" }}>
           <Tabs
             tabs={chromeTabs}
             onTabActive={onTabActive}
@@ -111,14 +111,13 @@ const NavbarTabs = ({
             draggable
             className="chrome-tabs"
             tabContentStyle={{ textAlign: "left", height: "100%" }}
-            style={{ width: "100%", height: "100%" }}
-            tabRenderer={(tab, tabIndex) => (
+            style={{ flex: 1, height: "100%" }}
+            tabRenderer={(tab) => (
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "flex-start",
-                  width: `${100 / (chromeTabs.length + 1)}%`,
                   overflow: "hidden",
                   padding: "0 8px",
                   height: "100%",
