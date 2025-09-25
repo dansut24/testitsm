@@ -8,8 +8,6 @@ import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
-import Logo from "/logo192.png"; // adjust your logo path
-
 const NavbarTabs = ({
   tabs = [],
   tabIndex = 0,
@@ -60,7 +58,7 @@ const NavbarTabs = ({
     >
       {/* Left: Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <img src={Logo} alt="Logo" style={{ height: 32 }} />
+        <img src="/logo192.png" alt="Logo" style={{ height: 32 }} />
       </div>
 
       {/* Middle: Chrome-style tabs */}
