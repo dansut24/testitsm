@@ -8,9 +8,9 @@ import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import AddIcon from "@mui/icons-material/Add";
 
-const NAVBAR_HEIGHT = 34;       // container height
-const NAVBAR_PADDING_TOP = 6;   // top offset from layout
-const TAB_HEIGHT = 28;          // actual tab height (smaller than navbar)
+const NAVBAR_HEIGHT = 34;       // total navbar height
+const NAVBAR_PADDING_TOP = 6;   // top offset used by Layout
+const TAB_INNER_HEIGHT = 30;    // actual tab height drawn inside navbar
 
 const NavbarTabs = ({
   tabs = [],
@@ -26,6 +26,7 @@ const NavbarTabs = ({
 }) => {
   if (!tabs || tabs.length === 0) return null;
 
+  // Map to chrome-tabs format
   const chromeTabs = tabs.map((tab, index) => ({
     id: tab.path || `tab-${index}`,
     title: tab.label || "Untitled",
@@ -38,57 +39,63 @@ const NavbarTabs = ({
     if (index >= 0) handleTabChange(null, index, tabs[index].path);
   };
 
-  const onTabClose = (tabId) => handleTabClose(tabId);
+  const onClose = (tabId) => handleTabClose(tabId);
 
-  const onTabReorder = (tabsReordered) => {
-    // tabsReordered is an array of { id } in the new order
-    handleTabReorder(
-      tabsReordered.map((t) => tabs.find((tab) => tab.path === t.id))
-    );
+  const onReorder = (order) => {
+    if (isMobile) return; // safety
+    // "order" is an array of { id } in the new order
+    handleTabReorder(order.map((o) => tabs.find((t) => t.path === o.id)));
   };
 
   const leftOffset = isMobile ? 0 : sidebarOpen ? sidebarWidth : collapsedWidth;
   const widthCalc = isMobile ? "100%" : `calc(100% - ${leftOffset}px)`;
 
-  // mobile-friendly widths to fit ~6 tabs in portrait
+  // Mobile-friendly widths to fit ~6 tabs
   const tabMinWidth = isMobile ? 76 : 120;
   const tabPaddingX = isMobile ? 6 : 12;
 
-  // vertical centering of the tabs inside the 34px navbar
-  const tabsTopOffset = (NAVBAR_HEIGHT - TAB_HEIGHT) / 2; // = 3px
-
   return (
     <>
-      {/* Inline overrides: shorter tabs than navbar + remove underline */}
+      {/* Hard overrides to align tab row inside the 34px navbar */}
       <style>{`
+        /* Make the tab strip transparent, remove underline, and match navbar height */
         .chrome-tabs {
           background-color: transparent !important;
           border-bottom: none !important;
-          height: ${TAB_HEIGHT}px !important;
-          margin-top: ${tabsTopOffset}px !important;    /* center vertically */
+          height: ${NAVBAR_HEIGHT}px !important;
+          /* Remove the library's vertical offset that was pushing the tabs down */
+          --tab-content-margin: 0px !important;
+        }
+        .chrome-tabs-content {
+          height: ${NAVBAR_HEIGHT}px !important;
         }
         .chrome-tabs-bottom-bar {
           display: none !important;
           height: 0 !important;
         }
+
+        /* Force each tab to render within our 34px navbar (a bit shorter to give breathing room) */
         .chrome-tab,
         .chrome-tab .chrome-tab-content,
         .chrome-tab .chrome-tab-background {
-          height: ${TAB_HEIGHT}px !important;
+          height: ${TAB_INNER_HEIGHT}px !important;
         }
         .chrome-tab-title {
-          line-height: ${TAB_HEIGHT}px !important;
+          line-height: ${TAB_INNER_HEIGHT}px !important;
           text-align: left !important;
         }
-        /* Remove favicon placeholder completely */
+
+        /* Remove favicon placeholder entirely */
         .chrome-tab-favicon {
           display: none !important;
           width: 0 !important;
           margin: 0 !important;
         }
-        /* Subtle emphasis on active tab */
+
+        /* Slight emphasis on the active tab */
         .chrome-tab[active=""], .chrome-tab[active="true"] {
           filter: drop-shadow(0 1px 3px rgba(0,0,0,0.12));
+          border-radius: 6px;
         }
       `}</style>
 
@@ -106,7 +113,7 @@ const NavbarTabs = ({
           backgroundColor: "transparent",
         }}
       >
-        {/* Logo (toggles sidebar on mobile) */}
+        {/* Logo (also opens sidebar on mobile if you wire onLogoClick) */}
         <div
           style={{
             display: "flex",
@@ -129,8 +136,8 @@ const NavbarTabs = ({
           <Tabs
             tabs={chromeTabs}
             onTabActive={onTabActive}
-            onTabClose={onTabClose}
-            onTabReorder={isMobile ? undefined : onTabReorder}
+            onTabClose={onClose}
+            onTabReorder={isMobile ? undefined : onReorder}
             draggable={!isMobile}
             className="chrome-tabs"
             tabContentStyle={{ textAlign: "left" }}
@@ -169,12 +176,10 @@ const NavbarTabs = ({
         {/* New Tab Button */}
         <AddIcon
           style={{ cursor: "pointer", marginRight: 12 }}
-          onClick={() =>
-            handleTabChange(null, tabs.length, `/new-tab-${Date.now()}`)
-          }
+          onClick={() => handleTabChange(null, tabs.length, `/new-tab-${Date.now()}`)}
         />
 
-        {/* Right-hand icons (desktop only) */}
+        {/* Right-side icons (desktop) */}
         {!isMobile && (
           <div
             style={{
