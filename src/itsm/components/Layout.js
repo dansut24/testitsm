@@ -1,3 +1,4 @@
+// Layout.js
 import React, { useState, useEffect } from "react";
 import { Box, useTheme, useMediaQuery } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
@@ -22,7 +23,8 @@ import SettingsIcon from "@mui/icons-material/Settings";
 
 const expandedWidth = 256;
 const collapsedWidth = 48;
-const NAVBAR_HEIGHT = 48;
+const NAVBAR_HEIGHT = 34;
+const NAVBAR_PADDING_TOP = 6;
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -46,7 +48,7 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [sidebarOpen, setSidebarOpen] = useState(false); // start hidden
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const [tabs, setTabs] = useState(() => {
@@ -105,9 +107,13 @@ const Layout = () => {
     sessionStorage.setItem("tabIndex", tabIndex.toString());
   }, [tabIndex]);
 
-  // Sidebar toggle handlers
-  const handleSidebarToggle = () => setSidebarOpen((prev) => !prev);
-  const handleMobileSidebarToggle = () => setMobileOpen((prev) => !prev);
+  // Responsive sidebar for mobile
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarOpen(false);
+      setMobileOpen(false);
+    }
+  }, [isMobile]);
 
   const handleTabChange = (ev, newIndex) => {
     setTabIndex(newIndex);
@@ -125,6 +131,9 @@ const Layout = () => {
       navigate(fallbackTab.path);
     }
   };
+
+  const handleSidebarToggle = () => setSidebarOpen((prev) => !prev);
+  const handleMobileSidebarToggle = () => setMobileOpen((prev) => !prev);
 
   const menuItems = [
     { text: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
@@ -191,30 +200,43 @@ const Layout = () => {
           display: "flex",
           flexDirection: "column",
           minWidth: 0,
-          marginLeft: !isMobile && sidebarOpen ? `${sidebarWidth}px` : 0,
+          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
           height: "100vh",
           position: "relative",
         }}
       >
         {/* Navbar */}
-        <NavbarTabs
-          tabs={tabs}
-          tabIndex={tabIndex}
-          handleTabChange={handleTabChange}
-          handleTabClose={handleTabClose}
-          sidebarOpen={sidebarOpen}
-          sidebarWidth={sidebarWidth}
-          collapsedWidth={collapsedWidth}
-          isMobile={isMobile}
-          onLogoClick={handleSidebarToggle} // pass logo click handler
-        />
+        <Box
+          sx={{
+            position: "fixed",
+            top: `${NAVBAR_PADDING_TOP}px`,
+            left: !isMobile ? `${sidebarWidth}px` : 0,
+            right: 0,
+            height: `${NAVBAR_HEIGHT}px`,
+            display: "flex",
+            alignItems: "center",
+            backgroundColor: "background.paper",
+            zIndex: theme.zIndex.appBar,
+          }}
+        >
+          <NavbarTabs
+            tabs={tabs}
+            tabIndex={tabIndex}
+            handleTabChange={handleTabChange}
+            handleTabClose={handleTabClose}
+            sidebarOpen={sidebarOpen}
+            sidebarWidth={sidebarWidth}
+            collapsedWidth={collapsedWidth}
+            isMobile={isMobile}
+          />
+        </Box>
 
-        {/* Main content area */}
+        {/* Main content */}
         <Box
           component="main"
           sx={{
             flex: 1,
-            mt: `${NAVBAR_HEIGHT}px`,
+            mt: `${NAVBAR_HEIGHT + NAVBAR_PADDING_TOP}px`,
             overflowY: "auto",
             overflowX: "hidden",
             px: 1,
