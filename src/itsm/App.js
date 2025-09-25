@@ -73,47 +73,52 @@ function AppRoutes() {
 
   return (
     <Routes>
+      {/* Public Pages */}
       <Route path="/login" element={<Login />} />
       <Route path="/loading" element={<Loading />} />
       <Route path="/not-authorised" element={<NotAuthorised />} />
       <Route path="/set-password" element={<SetPassword />} />
 
-      <Route path="/" element={isLoggedIn ? <Layout /> : <Login />}>
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="incidents" element={<Incidents />} />
-        <Route path="service-requests" element={<ServiceRequests />} />
-        <Route path="changes" element={<Changes />} />
-        <Route path="problems" element={<Problems />} />
-        <Route path="assets" element={<Assets />} />
-        <Route path="knowledge-base" element={<KnowledgeBase />} />
-        <Route path="reports" element={<Reports />} />
-        <Route path="approvals" element={<Approvals />} />
-        <Route path="profile" element={<UserProfile />} />
-        <Route path="settings" element={<Settings />} />
-        <Route
-          path="admin-settings"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminSettings />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="new-incident" element={<NewIncident />} />
-        <Route path="new-service-request" element={<NewServiceRequest />} />
-        <Route path="new-change" element={<NewChange />} />
-        <Route path="new-problem" element={<NewProblem />} />
-        <Route path="new-asset" element={<NewAsset />} />
-        <Route path="incidents/:id" element={<IncidentDetail />} />
-        <Route path="service-requests/:id" element={<ServiceRequestDetail />} />
-        <Route path="changes/:id" element={<ChangeDetail />} />
-        <Route path="problems/:id" element={<ProblemDetail />} />
-        <Route path="assets/:id" element={<AssetDetail />} />
-        <Route path="knowledge-base/:id" element={<ArticleDetail />} />
-        <Route path="announcements" element={<Announcements />} />
-        <Route path="work-scheduler" element={<WorkScheduler />} />
-      </Route>
+      {/* Authenticated Pages */}
+      {isLoggedIn && (
+        <Route path="/" element={<Layout />}>
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="incidents" element={<Incidents />} />
+          <Route path="service-requests" element={<ServiceRequests />} />
+          <Route path="changes" element={<Changes />} />
+          <Route path="problems" element={<Problems />} />
+          <Route path="assets" element={<Assets />} />
+          <Route path="knowledge-base" element={<KnowledgeBase />} />
+          <Route path="reports" element={<Reports />} />
+          <Route path="approvals" element={<Approvals />} />
+          <Route path="profile" element={<UserProfile />} />
+          <Route path="settings" element={<Settings />} />
+          <Route
+            path="admin-settings"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AdminSettings />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="new-incident" element={<NewIncident />} />
+          <Route path="new-service-request" element={<NewServiceRequest />} />
+          <Route path="new-change" element={<NewChange />} />
+          <Route path="new-problem" element={<NewProblem />} />
+          <Route path="new-asset" element={<NewAsset />} />
+          <Route path="incidents/:id" element={<IncidentDetail />} />
+          <Route path="service-requests/:id" element={<ServiceRequestDetail />} />
+          <Route path="changes/:id" element={<ChangeDetail />} />
+          <Route path="problems/:id" element={<ProblemDetail />} />
+          <Route path="assets/:id" element={<AssetDetail />} />
+          <Route path="knowledge-base/:id" element={<ArticleDetail />} />
+          <Route path="announcements" element={<Announcements />} />
+          <Route path="work-scheduler" element={<WorkScheduler />} />
+        </Route>
+      )}
 
-      <Route path="*" element={<NotFound />} />
+      {/* Catch All */}
+      <Route path="*" element={isLoggedIn ? <NotFound /> : <Login />} />
     </Routes>
   );
 }
