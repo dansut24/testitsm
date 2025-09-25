@@ -161,70 +161,69 @@ const Layout = () => {
       : [{ text: "Settings", icon: <SettingsIcon />, path: "/settings" }]),
   ];
 
-  return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-      {/* Fixed Top Header + Tabs */}
-      <Box sx={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 1200 }}>
-        <Header
-          tabs={tabs}
-          tabIndex={tabIndex}
-          handleTabChange={handleTabChange}
-          handleTabClose={handleTabClose}
-          isMobile={isMobile}
-          sidebarOpen={sidebarOpen}
-          sidebarWidth={sidebarWidth}
-          collapsedWidth={collapsedWidth}
-        />
-        <AppsBar
-          tabs={tabs}
-          tabIndex={tabIndex}
-          handleTabChange={handleTabChange}
-          handleTabClose={handleTabClose}
-          isMobile={isMobile}
-          sidebarOpen={sidebarOpen}
-          sidebarWidth={sidebarWidth}
-          collapsedWidth={collapsedWidth}
-        />
-      </Box>
-
-      <Box sx={{ display: "flex", flex: 1, mt: `${TOP_OFFSET}px`, overflow: "hidden" }}>
-        {/* Sidebar */}
-        <Sidebar
-          sidebarOpen={sidebarOpen}
-          mobileOpen={mobileOpen}
-          handleSidebarToggle={() => setSidebarOpen((prev) => !prev)}
-          handleMobileSidebarToggle={() => setMobileOpen((prev) => !prev)}
-          sidebarWidth={sidebarWidth}
-          collapsedWidth={collapsedWidth}
-          menuItems={menuItems}
-          isMobile={isMobile}
-        />
-
-        {/* Main Content */}
-        <Box
-          component="main"
-          sx={{
-            flex: 1,
-            height: `calc(100vh - ${FOOTER_HEIGHT}px - ${TOP_OFFSET}px)`,
-            overflowY: "auto",
-            overflowX: "hidden",
-            px: 2,
-            py: 1,
-          }}
-        >
-          <MainContent />
-          <BreadcrumbsNav />
-          <BackToTop />
-        </Box>
-      </Box>
-
-      {/* Footer fixed */}
-      <Footer sx={{ height: `${FOOTER_HEIGHT}px`, flexShrink: 0 }} />
-
-      {/* Optional floating chat */}
-      <AIChat />
+// Layout.js
+...
+return (
+  <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+    {/* Fixed Top Header + Tabs */}
+    <Box sx={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 1200 }}>
+      <Header
+        tabs={tabs}
+        tabIndex={tabIndex}
+        handleTabChange={handleTabChange}
+        handleTabClose={handleTabClose}
+        isMobile={isMobile}
+        sidebarOpen={sidebarOpen}
+        sidebarWidth={sidebarWidth}
+        collapsedWidth={collapsedWidth}
+      />
+      <AppsBar
+        tabs={tabs}
+        tabIndex={tabIndex}
+        handleTabChange={handleTabChange}
+        handleTabClose={handleTabClose}
+        isMobile={isMobile}
+        sidebarOpen={sidebarOpen}
+        sidebarWidth={sidebarWidth}
+        collapsedWidth={collapsedWidth}
+      />
     </Box>
-  );
+
+    <Box sx={{ display: "flex", flex: 1, mt: `${TOP_OFFSET}px`, overflow: "hidden" }}>
+      {/* Sidebar */}
+      <Sidebar
+        sidebarOpen={sidebarOpen}
+        mobileOpen={mobileOpen}
+        handleSidebarToggle={() => setSidebarOpen((prev) => !prev)}
+        handleMobileSidebarToggle={() => setMobileOpen((prev) => !prev)}
+        sidebarWidth={sidebarWidth}
+        collapsedWidth={collapsedWidth}
+        menuItems={menuItems}
+        isMobile={isMobile}
+      />
+
+      {/* Main Content */}
+      <Box
+        component="main"
+        sx={{
+          flex: 1,
+          height: `calc(100vh - ${TOP_OFFSET}px)`, // full remaining height
+          overflowY: "auto",
+          overflowX: "hidden",
+          px: 2,
+          py: 1,
+        }}
+      >
+        <MainContent />
+        <BreadcrumbsNav />
+        <BackToTop />
+      </Box>
+    </Box>
+
+    {/* Optional floating chat */}
+    <AIChat />
+  </Box>
+);
 };
 
 export default Layout;
