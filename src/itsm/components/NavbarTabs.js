@@ -1,8 +1,8 @@
 // NavbarTabs.js
 import React from "react";
-import { ChromeTabs } from "react-chrome-tabs"; // ✅ Named import
-import "react-chrome-tabs/dist/chrome-tabs.css";
-import "react-chrome-tabs/dist/chrome-tabs-dark-theme.css";
+import { Tabs } from "@sinm/react-chrome-tabs"; // Tabs, not ChromeTabs
+import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
+import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
 
 const NavbarTabs = ({
   tabs = [],
@@ -57,12 +57,12 @@ const NavbarTabs = ({
         alignItems: "center",
       }}
     >
-      <ChromeTabs
+     <Tabs
+        draggable
         tabs={chromeTabs}
         onTabActive={onTabActive}
         onTabClose={onTabClose}
         onTabReorder={onTabReorder}
-        draggable
       />
     </div>
   );
