@@ -1,7 +1,7 @@
 // NavbarTabs.js
 import React from "react";
 import ChromeTabs from "react-chrome-tabs";
-import "react-chrome-tabs/dist/chrome-tabs.css";
+import "./chrome-tabs.css"; // local CSS
 
 const NavbarTabs = ({
   tabs = [],
@@ -49,7 +49,7 @@ const NavbarTabs = ({
         width: widthCalc,
         zIndex: 1500,
         paddingTop: 7,
-        height: 41.6, // 34.6 + 7 padding
+        height: 34.6 + 7,
         background: "#fff",
         borderBottom: "1px solid #ccc",
         display: "flex",
