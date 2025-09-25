@@ -15,18 +15,18 @@ const NavbarTabs = ({
   handleTabClose = () => {},
   handleNewTab = () => {},
   sidebarOpen = true,
-  sidebarWidth = 240,
-  collapsedWidth = 60,
+  sidebarWidth = 256,
+  collapsedWidth = 48,
   isMobile = false,
 }) => {
   if (!tabs || tabs.length === 0) return null;
 
+  // ChromeTabs array
   const chromeTabs = tabs.map((tab, index) => ({
     id: tab.path || `tab-${index}`,
     title: tab.label || "Untitled",
-    favicon: tab.favicon || undefined,
     active: index === tabIndex,
-    isCloseIconVisible: tab.path === "/dashboard" ? false : true,
+    isCloseIconVisible: tab.path !== "/dashboard",
   }));
 
   const onTabActive = (tabId) => {
@@ -54,12 +54,13 @@ const NavbarTabs = ({
         display: "flex",
         alignItems: "center",
         padding: "0 12px",
-        backdropFilter: "blur(10px)",
-        backgroundColor: "rgba(240,240,240,0.3)",
+        backdropFilter: "blur(12px)",
+        backgroundColor: "rgba(255,255,255,0.15)",
         borderRadius: 8,
         boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
         zIndex: 1500,
         justifyContent: "space-between",
+        transition: "left 0.2s ease",
       }}
     >
       {/* Left: Logo */}
@@ -77,33 +78,40 @@ const NavbarTabs = ({
       </div>
 
       {/* Tabs + New Tab button */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center", minWidth: 0 }}>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          minWidth: 0,
+          overflow: "hidden",
+        }}
+      >
         <Tabs
           tabs={chromeTabs}
           onTabActive={onTabActive}
           onTabClose={onTabClose}
           draggable
           className="chrome-tabs"
-          tabContentStyle={{ textAlign: "left" }}
-          style={{ flex: 1, display: "flex", alignItems: "center" }}
+          style={{ flex: 1 }}
+          tabContentStyle={{ textAlign: "left", whiteSpace: "nowrap" }}
           tabRenderer={(tab) => (
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "flex-start",
-                width: `${100 / chromeTabs.length}%`,
                 padding: "0 12px",
-                overflow: "hidden",
                 borderRadius: 6,
+                marginRight: 4,
                 backgroundColor: tab.active ? "rgba(255,255,255,0.25)" : "transparent",
                 boxShadow: tab.active ? "0 2px 6px rgba(0,0,0,0.15)" : "none",
-                marginRight: 2,
+                flexShrink: 0,
+                transition: "all 0.2s ease",
               }}
             >
               <span
                 style={{
-                  whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                 }}
@@ -127,10 +135,15 @@ const NavbarTabs = ({
             backgroundColor: "rgba(255,255,255,0.2)",
             cursor: "pointer",
             transition: "background-color 0.2s",
+            flexShrink: 0,
           }}
           onClick={handleNewTab}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.3)")}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.2)")}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.3)")
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.2)")
+          }
         >
           <AddIcon fontSize="small" />
         </div>
@@ -143,11 +156,11 @@ const NavbarTabs = ({
         <AccountCircleIcon style={{ cursor: "pointer" }} />
       </div>
 
-      {/* Override ChromeTabs styles */}
+      {/* ChromeTabs overrides */}
       <style>
         {`
           .chrome-tab-favicon { display: none !important; }
-          .chrome-tabs-bottom-bar { width: 100% !important; }
+          .chrome-tabs-bottom-bar { width: 100% !important; left: 0 !important; }
         `}
       </style>
     </div>
