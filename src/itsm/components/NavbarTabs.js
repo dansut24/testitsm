@@ -6,7 +6,6 @@ import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import logo from "../../assets/logo192.png"; // update path if needed
 
 const NavbarTabs = ({
   tabs = [],
@@ -68,7 +67,7 @@ const NavbarTabs = ({
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", marginRight: 12 }}>
         <img
-          src={logo}
+          src="/logo192.png"
           alt="Logo"
           style={{ height: 28, objectFit: "contain" }}
         />
