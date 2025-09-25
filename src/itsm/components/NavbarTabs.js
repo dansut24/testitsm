@@ -19,10 +19,20 @@ const NavbarTabs = ({
 }) => {
   if (!tabs || tabs.length === 0) return null;
 
-  // Inject inline CSS to override ChromeTabs background
+  // Inject inline CSS to override ChromeTabs styles
   const chromeTabsStyle = `
     .chrome-tabs {
       background-color: transparent !important;
+      border-bottom: none !important;
+      height: 100%;
+    }
+    .chrome-tab {
+      border-bottom: none !important;
+      background-color: transparent !important;
+      transition: background-color 0.2s ease;
+    }
+    .chrome-tab.chrome-tab--active {
+      background-color: rgba(255, 255, 255, 0.2) !important;
       border-bottom: none !important;
     }
   `;
@@ -65,10 +75,10 @@ const NavbarTabs = ({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          backgroundColor: "rgba(200, 200, 200, 0.15)", // semi-transparent grey for theme support
+          backgroundColor: "rgba(200, 200, 200, 0.15)", // semi-transparent grey
           borderRadius: 8,
           padding: "0 12px",
-          backdropFilter: "blur(8px)", // subtle blur for floating effect
+          backdropFilter: "blur(8px)",
           boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
         }}
       >
@@ -81,7 +91,7 @@ const NavbarTabs = ({
               height: 28,
               objectFit: "contain",
               borderRadius: 4,
-              backgroundColor: "rgba(255,255,255,0.3)", // floating highlight
+              backgroundColor: "rgba(255,255,255,0.3)",
             }}
           />
         </div>
@@ -95,7 +105,7 @@ const NavbarTabs = ({
             draggable
             className="chrome-tabs"
             tabContentStyle={{ textAlign: "left" }}
-            style={{ width: "100%" }}
+            style={{ width: "100%", height: "100%" }}
             tabRenderer={(tab, tabIndex) => (
               <div
                 style={{
@@ -105,6 +115,7 @@ const NavbarTabs = ({
                   width: `${100 / chromeTabs.length}%`,
                   overflow: "hidden",
                   padding: "0 8px",
+                  height: "100%",
                 }}
               >
                 {tab.favicon && (
