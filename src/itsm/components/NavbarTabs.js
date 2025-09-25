@@ -87,7 +87,14 @@ const NavbarTabs = ({
       </div>
 
       {/* Tabs */}
-      <div style={{ flex: 1, display: "flex", minWidth: 0, overflow: "hidden" }}>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          minWidth: 0,
+          overflowX: "auto",
+        }}
+      >
         <Tabs
           tabs={chromeTabs}
           onTabActive={onTabActive}
@@ -95,23 +102,21 @@ const NavbarTabs = ({
           draggable
           className="chrome-tabs"
           tabContentStyle={{ textAlign: "left" }}
-          style={{ flex: 1 }}
+          style={{ flex: 1, minWidth: 0 }}
           tabRenderer={(tab, index) => (
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "flex-start",
-                padding: "0 8px",
+                minWidth: 120, // minimum tab width
+                maxWidth: 300, // optional max width
+                padding: "0 12px",
                 overflow: "hidden",
                 borderRadius: tab.active ? 6 : 4,
-                boxShadow: tab.active
-                  ? "0 2px 6px rgba(0,0,0,0.15)"
-                  : "none",
+                boxShadow: tab.active ? "0 2px 6px rgba(0,0,0,0.15)" : "none",
                 transition: "all 0.2s ease-in-out",
-                backgroundColor: tab.active
-                  ? "rgba(255,255,255,0.2)"
-                  : "transparent",
+                backgroundColor: tab.active ? "rgba(255,255,255,0.2)" : "transparent",
               }}
             >
               <span
@@ -136,6 +141,7 @@ const NavbarTabs = ({
             cursor: "pointer",
             marginLeft: 4,
             marginRight: 8,
+            flexShrink: 0,
           }}
           onClick={handleAddTab}
         >
@@ -150,7 +156,7 @@ const NavbarTabs = ({
         <AccountCircleIcon style={{ cursor: "pointer" }} />
       </div>
 
-      {/* Override chrome-tabs bottom bar */}
+      {/* CSS Overrides */}
       <style>{`
         .chrome-tabs-bottom-bar {
           width: 100% !important;
