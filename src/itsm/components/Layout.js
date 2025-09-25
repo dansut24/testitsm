@@ -2,24 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { Box, useTheme, useMediaQuery } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
-import { supabase } from "../../common/utils/supabaseClient";
-
 import Sidebar from "./Sidebar";
 import NavbarTabs from "./NavbarTabs";
-import BackToTop from "./BackToTop";
-import BreadcrumbsNav from "./BreadcrumbsNav";
-
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import ReportProblemIcon from "@mui/icons-material/ReportProblem";
-import AssignmentIcon from "@mui/icons-material/Assignment";
-import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
-import BugReportIcon from "@mui/icons-material/BugReport";
-import DevicesOtherIcon from "@mui/icons-material/DevicesOther";
-import MenuBookIcon from "@mui/icons-material/MenuBook";
-import BarChartIcon from "@mui/icons-material/BarChart";
-import HowToVoteIcon from "@mui/icons-material/HowToVote";
-import PersonIcon from "@mui/icons-material/Person";
-import SettingsIcon from "@mui/icons-material/Settings";
 
 const expandedWidth = 256;
 const collapsedWidth = 48;
@@ -38,8 +22,6 @@ const routeLabels = {
   "/approvals": "Approvals",
   "/profile": "Profile",
   "/settings": "Settings",
-  "/admin-settings": "Admin Settings",
-  "/new-incident": "New Incident",
 };
 
 const Layout = () => {
@@ -53,15 +35,15 @@ const Layout = () => {
 
   const [tabs, setTabs] = useState(() => {
     const stored = sessionStorage.getItem("tabs");
-    return stored ? JSON.parse(stored) : [{ label: "Dashboard", path: "/dashboard" }];
+    return stored
+      ? JSON.parse(stored)
+      : [{ label: "Dashboard", path: "/dashboard" }];
   });
+
   const [tabIndex, setTabIndex] = useState(() => {
     const storedIndex = sessionStorage.getItem("tabIndex");
     return storedIndex ? parseInt(storedIndex, 10) : 0;
   });
-
-  const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || "{}") : {};
-  const role = user?.role || "user";
 
   const sidebarWidth = sidebarOpen ? expandedWidth : collapsedWidth;
 
@@ -71,117 +53,48 @@ const Layout = () => {
     const tabExists = tabs.some((t) => t.path === currentPath);
 
     if (!tabExists) {
-      const fetchLabel = async () => {
-        try {
-          let label = routeLabels[currentPath] || "Unknown";
-
-          if (currentPath.startsWith("/incidents/")) {
-            const id = currentPath.split("/")[2];
-            const { data } = await supabase
-              .from("incidents")
-              .select("reference")
-              .eq("id", id)
-              .maybeSingle();
-            if (data?.reference) label = data.reference;
-          }
-
-          const newTabs = [...tabs, { label, path: currentPath }];
-          setTabs(newTabs);
-          setTabIndex(newTabs.length - 1);
-        } catch (err) {
-          console.error("Failed to fetch tab label:", err);
-        }
-      };
-      fetchLabel();
+      const label = routeLabels[currentPath] || "Unknown";
+      const newTabs = [...tabs, { label, path: currentPath }];
+      setTabs(newTabs);
+      setTabIndex(newTabs.length - 1);
     } else {
       const index = tabs.findIndex((t) => t.path === currentPath);
       setTabIndex(index);
     }
-  }, [location.pathname]);
+  }, [location.pathname]); // eslint-disable-line
 
   // Persist tabs
   useEffect(() => {
-    if (tabs.length > 0) sessionStorage.setItem("tabs", JSON.stringify(tabs));
-  }, [tabs]);
-  useEffect(() => {
+    sessionStorage.setItem("tabs", JSON.stringify(tabs));
     sessionStorage.setItem("tabIndex", tabIndex.toString());
-  }, [tabIndex]);
+  }, [tabs, tabIndex]);
 
-  // Responsive sidebar for mobile
-  useEffect(() => {
-    if (isMobile) {
-      setSidebarOpen(false);
-      setMobileOpen(false);
-    }
-  }, [isMobile]);
-
-  const handleTabChange = (ev, newIndex) => {
+  const handleTabChange = (ev, newIndex, path) => {
     setTabIndex(newIndex);
-    navigate(tabs[newIndex].path);
+    if (path) navigate(path);
   };
 
-  const handleTabClose = (pathToClose) => {
-    const closingIndex = tabs.findIndex((t) => t.path === pathToClose);
-    const newTabs = tabs.filter((t) => t.path !== pathToClose);
+  const handleTabClose = (tabId) => {
+    const closingIndex = tabs.findIndex((t) => t.path === tabId);
+    const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
 
-    if (location.pathname === pathToClose) {
+    if (location.pathname === tabId) {
       const fallbackIndex = closingIndex === 0 ? 0 : closingIndex - 1;
       const fallbackTab = newTabs[fallbackIndex] || { path: "/dashboard" };
       navigate(fallbackTab.path);
     }
   };
 
+  const handleTabReorder = (tabsReordered) => {
+    setTabs(tabsReordered);
+  };
+
   const handleSidebarToggle = () => setSidebarOpen((prev) => !prev);
   const handleMobileSidebarToggle = () => setMobileOpen((prev) => !prev);
 
-  const menuItems = [
-    { text: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
-    {
-      text: "Incidents",
-      icon: <ReportProblemIcon />,
-      children: [
-        { text: "View Incidents", path: "/incidents" },
-        { text: "Raise Incident", path: "/new-incident" },
-      ],
-    },
-    {
-      text: "Service Requests",
-      icon: <AssignmentIcon />,
-      children: [
-        { text: "View Requests", path: "/service-requests" },
-        { text: "Raise Request", path: "/new-service-request" },
-      ],
-    },
-    {
-      text: "Changes",
-      icon: <AutoFixHighIcon />,
-      children: [
-        { text: "View Changes", path: "/changes" },
-        { text: "Raise Change", path: "/new-change" },
-      ],
-    },
-    {
-      text: "Problems",
-      icon: <BugReportIcon />,
-      children: [
-        { text: "View Problems", path: "/problems" },
-        { text: "Raise Problem", path: "/new-problem" },
-      ],
-    },
-    { text: "Assets", icon: <DevicesOtherIcon />, path: "/assets" },
-    { text: "Knowledge Base", icon: <MenuBookIcon />, path: "/knowledge-base" },
-    { text: "Reports", icon: <BarChartIcon />, path: "/reports" },
-    { text: "Approvals", icon: <HowToVoteIcon />, path: "/approvals" },
-    { text: "Profile", icon: <PersonIcon />, path: "/profile" },
-    ...(role === "admin"
-      ? [{ text: "Admin Settings", icon: <SettingsIcon />, path: "/admin-settings" }]
-      : [{ text: "Settings", icon: <SettingsIcon />, path: "/settings" }]),
-  ];
-
   return (
     <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
-      {/* Sidebar */}
       <Sidebar
         sidebarOpen={sidebarOpen}
         mobileOpen={mobileOpen}
@@ -189,11 +102,9 @@ const Layout = () => {
         handleMobileSidebarToggle={handleMobileSidebarToggle}
         sidebarWidth={sidebarWidth}
         collapsedWidth={collapsedWidth}
-        menuItems={menuItems}
         isMobile={isMobile}
       />
 
-      {/* Main column */}
       <Box
         sx={{
           flex: 1,
@@ -205,33 +116,18 @@ const Layout = () => {
           position: "relative",
         }}
       >
-        {/* Navbar */}
-        <Box
-          sx={{
-            position: "fixed",
-            top: `${NAVBAR_PADDING_TOP}px`,
-            left: !isMobile ? `${sidebarWidth}px` : 0,
-            right: 0,
-            height: `${NAVBAR_HEIGHT}px`,
-            display: "flex",
-            alignItems: "center",
-            backgroundColor: "background.paper",
-            zIndex: theme.zIndex.appBar,
-          }}
-        >
-          <NavbarTabs
-            tabs={tabs}
-            tabIndex={tabIndex}
-            handleTabChange={handleTabChange}
-            handleTabClose={handleTabClose}
-            sidebarOpen={sidebarOpen}
-            sidebarWidth={sidebarWidth}
-            collapsedWidth={collapsedWidth}
-            isMobile={isMobile}
-          />
-        </Box>
+        <NavbarTabs
+          tabs={tabs}
+          tabIndex={tabIndex}
+          handleTabChange={handleTabChange}
+          handleTabClose={handleTabClose}
+          handleTabReorder={handleTabReorder}
+          sidebarOpen={sidebarOpen}
+          sidebarWidth={sidebarWidth}
+          collapsedWidth={collapsedWidth}
+          isMobile={isMobile}
+        />
 
-        {/* Main content */}
         <Box
           component="main"
           sx={{
@@ -242,9 +138,7 @@ const Layout = () => {
             px: 1,
           }}
         >
-          {tabs.length > 0 && <Outlet />}
-          <BreadcrumbsNav />
-          <BackToTop />
+          <Outlet />
         </Box>
       </Box>
     </Box>
