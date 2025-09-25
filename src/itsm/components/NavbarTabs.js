@@ -19,7 +19,7 @@ const NavbarTabs = ({
 }) => {
   if (!tabs || tabs.length === 0) return null;
 
-  // Inject inline CSS to override ChromeTabs styles
+  // Inline CSS overrides for ChromeTabs
   const chromeTabsStyle = `
     .chrome-tabs {
       background-color: transparent !important;
@@ -29,15 +29,16 @@ const NavbarTabs = ({
     .chrome-tab {
       border-bottom: none !important;
       background-color: transparent !important;
-      transition: background-color 0.2s ease;
+      border-radius: 8px 8px 0 0;
+      transition: background-color 0.2s, box-shadow 0.2s;
     }
     .chrome-tab.chrome-tab--active {
-      background-color: rgba(255, 255, 255, 0.2) !important;
+      background-color: rgba(255,255,255,0.25) !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
       border-bottom: none !important;
     }
   `;
 
-  // Convert tabs to ChromeTabs format
   const chromeTabs = tabs.map((tab, index) => ({
     id: tab.path || `tab-${index}`,
     title: tab.label || "Untitled",
@@ -75,7 +76,7 @@ const NavbarTabs = ({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          backgroundColor: "rgba(200, 200, 200, 0.15)", // semi-transparent grey
+          backgroundColor: "rgba(200, 200, 200, 0.15)",
           borderRadius: 8,
           padding: "0 12px",
           backdropFilter: "blur(8px)",
@@ -97,14 +98,14 @@ const NavbarTabs = ({
         </div>
 
         {/* Tabs */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, height: "100%" }}>
           <Tabs
             tabs={chromeTabs}
             onTabActive={onTabActive}
             onTabClose={onTabClose}
             draggable
             className="chrome-tabs"
-            tabContentStyle={{ textAlign: "left" }}
+            tabContentStyle={{ textAlign: "left", height: "100%" }}
             style={{ width: "100%", height: "100%" }}
             tabRenderer={(tab, tabIndex) => (
               <div
