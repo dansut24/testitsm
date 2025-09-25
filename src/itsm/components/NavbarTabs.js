@@ -1,8 +1,7 @@
 // NavbarTabs.js
 import React from "react";
-import ChromeTabs from "@sinm/react-chrome-tabs";
-import "@sinm/react-chrome-tabs/dist/chrome-tabs.css";
-import "@sinm/react-chrome-tabs/dist/chrome-tabs-dark-theme.css";
+import ChromeTabs from "react-chrome-tabs";
+import "react-chrome-tabs/dist/chrome-tabs.css";
 
 const NavbarTabs = ({
   tabs = [],
