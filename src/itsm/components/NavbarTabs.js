@@ -1,5 +1,5 @@
 import React from "react";
-import chromeTabs from "@sinm/react-chrome-tabs";
+import ChromeTabs from "@sinm/react-chrome-tabs";
 import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
 import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
 
