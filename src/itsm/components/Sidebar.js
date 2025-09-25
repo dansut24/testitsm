@@ -1,3 +1,4 @@
+// Sidebar.js
 import React, { useState } from "react";
 import ReactDOM from "react-dom";
 import {
@@ -12,7 +13,6 @@ import {
   Collapse,
   Grow,
   Typography,
-  useMediaQuery,
 } from "@mui/material";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -20,9 +20,6 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 import { useTheme } from "@mui/material/styles";
 import { useNavigate, useLocation } from "react-router-dom";
-
-// Collapsed width for icon-only mode
-const collapsedWidth = 48;
 
 const Sidebar = ({
   sidebarOpen,
@@ -37,19 +34,8 @@ const Sidebar = ({
   const location = useLocation();
   const [openDropdowns, setOpenDropdowns] = useState({});
 
-  // Responsive widths
-  const smUp = useMediaQuery(theme.breakpoints.up("sm")); // >=600px
-  const mdUp = useMediaQuery(theme.breakpoints.up("md")); // >=900px
-  const lgUp = useMediaQuery(theme.breakpoints.up("lg")); // >=1200px
-
-  let expandedWidth = 240; // default fallback
-  if (lgUp) {
-    expandedWidth = 320; // large desktop
-  } else if (mdUp) {
-    expandedWidth = 288; // desktop
-  } else if (smUp) {
-    expandedWidth = 256; // tablet
-  }
+  const expandedWidth = 256;
+  const collapsedWidth = 48;
 
   const toggleDropdown = (text) => {
     setOpenDropdowns((prev) => ({
@@ -58,9 +44,7 @@ const Sidebar = ({
     }));
   };
 
-  const closeAllDropdowns = () => {
-    setOpenDropdowns({});
-  };
+  const closeAllDropdowns = () => setOpenDropdowns({});
 
   const drawerContent = (
     <>
@@ -75,7 +59,7 @@ const Sidebar = ({
       >
         <IconButton
           onClick={isMobile ? handleMobileSidebarToggle : handleSidebarToggle}
-          sx={{ color: theme.palette.common.white }}
+          sx={{ color: theme.palette.text.primary }}
         >
           {sidebarOpen || isMobile ? <ChevronLeftIcon /> : <ChevronRightIcon />}
         </IconButton>
@@ -89,8 +73,8 @@ const Sidebar = ({
           WebkitOverflowScrolling: "touch",
           pr: 1,
           pb: 4,
-          backgroundColor: "#1F2A40",
-          color: "#FFFFFF",
+          bgcolor: "background.paper",
+          color: "text.primary",
           "&::-webkit-scrollbar": { width: 0, height: 0 },
         }}
       >
@@ -123,17 +107,16 @@ const Sidebar = ({
                   }}
                   selected={location.pathname === item.path}
                   sx={{
-                    flexDirection:
-                      sidebarOpen || isMobile ? "row" : "column",
+                    flexDirection: sidebarOpen || isMobile ? "row" : "column",
                     justifyContent: "center",
                     alignItems: "center",
                     py: sidebarOpen || isMobile ? 1 : 2,
                     "&.Mui-selected": {
-                      backgroundColor: "#2E3B55",
-                      color: "#FFFFFF",
+                      backgroundColor: theme.palette.action.selected,
+                      color: theme.palette.text.primary,
                     },
                     "&:hover": {
-                      backgroundColor: "#2E3B55",
+                      backgroundColor: theme.palette.action.hover,
                     },
                   }}
                 >
@@ -142,7 +125,7 @@ const Sidebar = ({
                       minWidth: 0,
                       mr: sidebarOpen || isMobile ? 2 : 0,
                       justifyContent: "center",
-                      color: "#FFFFFF",
+                      color: theme.palette.text.primary,
                       mb: sidebarOpen || isMobile ? 0 : 0.5,
                     }}
                   >
@@ -153,11 +136,7 @@ const Sidebar = ({
                     <>
                       <ListItemText primary={item.text} />
                       {item.children &&
-                        (openDropdowns[item.text] ? (
-                          <ExpandLess />
-                        ) : (
-                          <ExpandMore />
-                        ))}
+                        (openDropdowns[item.text] ? <ExpandLess /> : <ExpandMore />)}
                     </>
                   ) : (
                     <Typography
@@ -166,7 +145,7 @@ const Sidebar = ({
                         fontSize: "0.7rem",
                         lineHeight: 1.2,
                         textAlign: "center",
-                        color: "#FFFFFF",
+                        color: theme.palette.text.primary,
                       }}
                     >
                       {item.text}
@@ -177,11 +156,7 @@ const Sidebar = ({
                 {/* Dropdowns */}
                 {item.children &&
                   (sidebarOpen || isMobile ? (
-                    <Collapse
-                      in={openDropdowns[item.text]}
-                      timeout="auto"
-                      unmountOnExit
-                    >
+                    <Collapse in={openDropdowns[item.text]} timeout="auto" unmountOnExit>
                       <List component="div" disablePadding>
                         {item.children.map((child) => (
                           <ListItem
@@ -208,11 +183,11 @@ const Sidebar = ({
                             position: "fixed",
                             top: `calc(64px + ${index * 72}px)`,
                             left: `${collapsedWidth}px`,
-                            backgroundColor: "#1F2A40",
+                            bgcolor: "background.paper",
                             boxShadow: 4,
                             borderRadius: 1,
                             zIndex: theme.zIndex.modal + 10,
-                            minWidth: 180,
+                            minWidth: expandedWidth,
                             transformOrigin: "left top",
                           }}
                         >
@@ -243,7 +218,7 @@ const Sidebar = ({
     </>
   );
 
-  // Mobile drawer
+  // Mobile drawer (full-screen)
   if (isMobile) {
     return (
       <SwipeableDrawer
@@ -251,11 +226,11 @@ const Sidebar = ({
         open={mobileOpen}
         onClose={handleMobileSidebarToggle}
         onOpen={() => {}}
-        sx={{
-          "& .MuiDrawer-paper": {
-            width: expandedWidth,
-            backgroundColor: "#1F2A40",
-            color: "#FFFFFF",
+        PaperProps={{
+          sx: {
+            width: "100%",
+            bgcolor: "background.paper",
+            color: "text.primary",
           },
         }}
       >
@@ -264,14 +239,14 @@ const Sidebar = ({
     );
   }
 
-  // Desktop drawer
+  // Desktop/tablet sidebar
   return (
     <Box
       sx={{
         width: sidebarOpen ? expandedWidth : collapsedWidth,
         height: "100vh",
-        bgcolor: "#1F2A40",
-        color: "#FFFFFF",
+        bgcolor: "background.paper",
+        color: "text.primary",
         borderRight: 1,
         borderColor: "divider",
         position: "fixed",
@@ -279,7 +254,7 @@ const Sidebar = ({
         left: 0,
         display: "flex",
         flexDirection: "column",
-        transition: "width 0.3s ease-in-out",
+        transition: "width 0.2s ease-in-out",
         zIndex: theme.zIndex.drawer,
       }}
     >
