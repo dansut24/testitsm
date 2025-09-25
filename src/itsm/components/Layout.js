@@ -21,8 +21,7 @@ import HowToVoteIcon from "@mui/icons-material/HowToVote";
 import PersonIcon from "@mui/icons-material/Person";
 import SettingsIcon from "@mui/icons-material/Settings";
 
-const expandedWidth = 180;
-const collapsedWidth = 40;
+const collapsedWidth = 48; // matches Sidebar collapsed
 const NAVBAR_HEIGHT = 34.6;
 const NAVBAR_MARGIN_TOP = 7;
 
@@ -45,6 +44,10 @@ const routeLabels = {
 const Layout = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const smUp = useMediaQuery(theme.breakpoints.up("sm")); // >=600px
+  const mdUp = useMediaQuery(theme.breakpoints.up("md")); // >=900px
+  const lgUp = useMediaQuery(theme.breakpoints.up("lg")); // >=1200px
+
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -62,6 +65,12 @@ const Layout = () => {
 
   const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || "{}") : {};
   const role = user?.role || "user";
+
+  // Responsive expanded width
+  let expandedWidth = 240; // default fallback
+  if (lgUp) expandedWidth = 320;
+  else if (mdUp) expandedWidth = 288;
+  else if (smUp) expandedWidth = 256;
 
   const sidebarWidth = sidebarOpen ? expandedWidth : collapsedWidth;
 
@@ -190,8 +199,6 @@ const Layout = () => {
         mobileOpen={mobileOpen}
         handleSidebarToggle={handleSidebarToggle}
         handleMobileSidebarToggle={handleMobileSidebarToggle}
-        sidebarWidth={sidebarWidth}
-        collapsedWidth={collapsedWidth}
         menuItems={menuItems}
         isMobile={isMobile}
       />
@@ -206,6 +213,7 @@ const Layout = () => {
           marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
           height: "100vh",
           position: "relative",
+          transition: "margin-left 0.3s ease-in-out", // smooth shift
         }}
       >
         {/* Navbar */}
@@ -213,13 +221,14 @@ const Layout = () => {
           sx={{
             position: "fixed",
             top: `${NAVBAR_MARGIN_TOP}px`,
-            left: `${sidebarWidth}px`,
+            left: !isMobile ? `${sidebarWidth}px` : 0,
             right: 0,
             height: `${NAVBAR_HEIGHT}px`,
             display: "flex",
             alignItems: "center",
             backgroundColor: "background.paper",
             zIndex: theme.zIndex.appBar,
+            transition: "left 0.3s ease-in-out", // matches sidebar toggle
           }}
         >
           <NavbarTabs
