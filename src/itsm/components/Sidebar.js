@@ -1,12 +1,33 @@
 // Sidebar.js
 import React from "react";
-import { Drawer, List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
+import {
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  IconButton,
+  Box,
+} from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import AssignmentIcon from "@mui/icons-material/Assignment";
+import ChangeCircleIcon from "@mui/icons-material/ChangeCircle";
+import ReportIcon from "@mui/icons-material/Assessment";
 import SettingsIcon from "@mui/icons-material/Settings";
-import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
+import SearchIcon from "@mui/icons-material/Search";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+
+const menuItems = [
+  { label: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
+  { label: "Incidents", icon: <AssignmentIcon />, path: "/incidents" },
+  { label: "Service Requests", icon: <AssignmentIcon />, path: "/service-requests" },
+  { label: "Changes", icon: <ChangeCircleIcon />, path: "/changes" },
+  { label: "Reports", icon: <ReportIcon />, path: "/reports" },
+  { label: "Settings", icon: <SettingsIcon />, path: "/settings" },
+];
 
 const Sidebar = ({
   sidebarOpen,
@@ -17,68 +38,91 @@ const Sidebar = ({
   collapsedWidth,
   isMobile,
 }) => {
-  const drawerWidth = sidebarOpen ? sidebarWidth : collapsedWidth;
-
-  const menuItems = [
-    { text: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
-    { text: "Incidents", icon: <AssignmentIcon />, path: "/incidents" },
-    { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
-  ];
-
   const drawerContent = (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <List>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        width: sidebarOpen ? sidebarWidth : collapsedWidth,
+      }}
+    >
+      {/* Header / Close button for mobile */}
+      {isMobile && (
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            px: 1,
+            py: 1,
+          }}
+        >
+          <IconButton onClick={handleMobileSidebarToggle}>
+            <ChevronLeftIcon />
+          </IconButton>
+        </Box>
+      )}
+
+      {/* Menu items */}
+      <List sx={{ flex: 1 }}>
         {menuItems.map((item) => (
-          <ListItem button key={item.text}>
-            <ListItemIcon>{item.icon}</ListItemIcon>
-            {sidebarOpen && <ListItemText primary={item.text} />}
+          <ListItem
+            button
+            key={item.label}
+            sx={{ px: sidebarOpen ? 2 : 1 }}
+            onClick={() => (window.location.href = item.path)}
+          >
+            <ListItemIcon sx={{ minWidth: 32 }}>{item.icon}</ListItemIcon>
+            {sidebarOpen && <ListItemText primary={item.label} />}
           </ListItem>
         ))}
       </List>
 
-      {/* Mobile bottom icons */}
+      <Divider />
+
+      {/* Footer icons (mobile only) */}
       {isMobile && (
-        <div
-          style={{
-            marginTop: "auto",
-            display: "flex",
-            justifyContent: "space-around",
-            padding: "12px 0",
-            borderTop: "1px solid rgba(255,255,255,0.1)",
-          }}
-        >
-          <SearchIcon style={{ cursor: "pointer" }} />
-          <NotificationsIcon style={{ cursor: "pointer" }} />
-          <AccountCircleIcon style={{ cursor: "pointer" }} />
-        </div>
+        <Box sx={{ display: "flex", justifyContent: "space-around", py: 2 }}>
+          <SearchIcon />
+          <NotificationsIcon />
+          <AccountCircleIcon />
+        </Box>
       )}
-    </div>
+    </Box>
   );
 
   return isMobile ? (
     <Drawer
-      variant="temporary"
+      anchor="left"
       open={mobileOpen}
       onClose={handleMobileSidebarToggle}
       ModalProps={{ keepMounted: true }}
-    >
-      {drawerContent}
-    </Drawer>
-  ) : (
-    <Drawer
-      variant="permanent"
-      open
       sx={{
-        width: drawerWidth,
-        flexShrink: 0,
         "& .MuiDrawer-paper": {
-          width: drawerWidth,
+          width: sidebarWidth,
           boxSizing: "border-box",
         },
       }}
     >
       {drawerContent}
     </Drawer>
+  ) : (
+    <Box
+      sx={{
+        width: sidebarOpen ? sidebarWidth : collapsedWidth,
+        transition: "width 0.2s",
+        borderRight: "1px solid rgba(0,0,0,0.12)",
+        height: "100vh",
+        position: "fixed",
+        top: 0,
+        left: 0,
+        bgcolor: "background.paper",
+        zIndex: 1200,
+      }}
+    >
+      {drawerContent}
+    </Box>
   );
 };
 
