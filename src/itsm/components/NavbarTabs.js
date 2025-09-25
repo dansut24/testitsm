@@ -1,78 +1,70 @@
 // NavbarTabs.js
 import React from "react";
 import ChromeTabs from "@sinm/react-chrome-tabs";
-import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
-import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
-import { Box, Avatar, IconButton } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
+import "@sinm/react-chrome-tabs/dist/chrome-tabs.css";
+import "@sinm/react-chrome-tabs/dist/chrome-tabs-dark-theme.css";
 
 const NavbarTabs = ({
-  tabs,
-  tabIndex,
-  handleTabChange,
-  handleTabClose,
-  sidebarOpen,
-  sidebarWidth,
-  collapsedWidth,
-  storedUser,
-  isMobile,
-  height = 41.6,
+  tabs = [],
+  tabIndex = 0,
+  handleTabChange = () => {},
+  handleTabClose = () => {},
+  sidebarOpen = true,
+  sidebarWidth = 240,
+  collapsedWidth = 60,
+  isMobile = false,
 }) => {
-  const leftOffset = isMobile ? 0 : sidebarOpen ? sidebarWidth : collapsedWidth;
-  const widthCalc = isMobile
-    ? "100%"
-    : `calc(100% - ${sidebarOpen ? sidebarWidth : collapsedWidth}px)`;
+  if (!tabs || tabs.length === 0) return null;
 
-  // Map tabs to ChromeTabs format
-  const chromeTabsData = tabs.map((tab, index) => ({
-    id: tab.path, // must be unique
-    title: tab.label,
+  // Convert your tabs array into ChromeTabs format
+  const chromeTabs = tabs.map((tab, index) => ({
+    id: tab.path || `tab-${index}`,
+    title: tab.label || "Untitled",
+    favicon: tab.favicon || undefined,
     active: index === tabIndex,
-    favicon: "", // optional: add favicons here
   }));
 
-  const onTabActive = (id) => {
-    const index = tabs.findIndex((t) => t.path === id);
-    if (index !== -1) handleTabChange(null, index);
+  const onTabActive = (tabId) => {
+    const index = chromeTabs.findIndex((t) => t.id === tabId);
+    if (index >= 0) handleTabChange(null, index);
   };
 
-  const onTabClose = (id) => {
-    handleTabClose(id);
+  const onTabClose = (tabId) => {
+    handleTabClose(tabId);
   };
+
+  const onTabReorder = (tabId, fromIndex, toIndex) => {
+    // Optional: implement reorder logic if needed
+  };
+
+  // Adjust width to account for sidebar
+  const leftOffset = isMobile ? 0 : sidebarOpen ? sidebarWidth : collapsedWidth;
+  const widthCalc = isMobile ? "100%" : `calc(100% - ${leftOffset}px)`;
 
   return (
-    <Box
-      sx={{
+    <div
+      style={{
         position: "fixed",
         top: 0,
         left: leftOffset,
         width: widthCalc,
-        height: `${height}px`,
-        zIndex: (theme) => theme.zIndex.appBar + 1,
-        bgcolor: "background.paper",
-        borderBottom: "1px solid",
-        borderColor: "divider",
+        zIndex: 1500,
+        paddingTop: 7,
+        height: 34.6 + 7,
+        background: "#fff",
+        borderBottom: "1px solid #ccc",
         display: "flex",
         alignItems: "center",
-        px: 1,
       }}
     >
       <ChromeTabs
-        tabs={chromeTabsData}
+        tabs={chromeTabs}
         onTabActive={onTabActive}
         onTabClose={onTabClose}
+        onTabReorder={onTabReorder}
         draggable
-        pinnedRight={
-          <IconButton
-            size="small"
-            sx={{ height: "100%" }}
-            onClick={() => handleTabChange(null, tabs.length)}
-          >
-            +
-          </IconButton>
-        }
       />
-    </Box>
+    </div>
   );
 };
 
