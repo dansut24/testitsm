@@ -3,30 +3,11 @@ import React, { useState, useEffect } from "react";
 import { Box, useTheme, useMediaQuery, IconButton, SwipeableDrawer, List, ListItem, ListItemText } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
-import { supabase } from "../../common/utils/supabaseClient";
-
 import NavbarTabs from "./NavbarTabs";
 import BackToTop from "./BackToTop";
 import BreadcrumbsNav from "./BreadcrumbsNav";
 
-const NAVBAR_HEIGHT = 34;
-const NAVBAR_PADDING = 7;
-
-const routeLabels = {
-  "/dashboard": "Dashboard",
-  "/incidents": "Incidents",
-  "/service-requests": "Service Requests",
-  "/changes": "Changes",
-  "/problems": "Problems",
-  "/assets": "Assets",
-  "/knowledge-base": "Knowledge Base",
-  "/reports": "Reports",
-  "/approvals": "Approvals",
-  "/profile": "Profile",
-  "/settings": "Settings",
-  "/admin-settings": "Admin Settings",
-  "/new-incident": "New Incident",
-};
+const NAVBAR_HEIGHT = 48;
 
 const Layout = () => {
   const theme = useTheme();
@@ -34,18 +15,9 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [tabs, setTabs] = useState(() => {
-    const stored = sessionStorage.getItem("tabs");
-    return stored ? JSON.parse(stored) : [{ label: "Dashboard", path: "/dashboard" }];
-  });
-  const [tabIndex, setTabIndex] = useState(() => {
-    const storedIndex = sessionStorage.getItem("tabIndex");
-    return storedIndex ? parseInt(storedIndex, 10) : 0;
-  });
+  const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
+  const [tabIndex, setTabIndex] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || "{}") : {};
-  const role = user?.role || "user";
 
   const handleTabChange = (ev, newIndex) => {
     setTabIndex(newIndex);
@@ -63,47 +35,6 @@ const Layout = () => {
     }
   };
 
-  // Update tabs on route change
-  useEffect(() => {
-    const currentPath = location.pathname;
-    const tabExists = tabs.some((t) => t.path === currentPath);
-
-    if (!tabExists) {
-      const fetchLabel = async () => {
-        try {
-          let label = routeLabels[currentPath] || "Unknown";
-          if (currentPath.startsWith("/incidents/")) {
-            const id = currentPath.split("/")[2];
-            const { data } = await supabase
-              .from("incidents")
-              .select("reference")
-              .eq("id", id)
-              .maybeSingle();
-            if (data?.reference) label = data.reference;
-          }
-          const newTabs = [...tabs, { label, path: currentPath }];
-          setTabs(newTabs);
-          setTabIndex(newTabs.length - 1);
-        } catch (err) {
-          console.error("Failed to fetch tab label:", err);
-        }
-      };
-      fetchLabel();
-    } else {
-      const index = tabs.findIndex((t) => t.path === currentPath);
-      setTabIndex(index);
-    }
-  }, [location.pathname]); // eslint-disable-line
-
-  // Persist tabs
-  useEffect(() => {
-    if (tabs.length > 0) sessionStorage.setItem("tabs", JSON.stringify(tabs));
-  }, [tabs]);
-  useEffect(() => {
-    sessionStorage.setItem("tabIndex", tabIndex.toString());
-  }, [tabIndex]);
-
-  // Drawer menu items (optional sections for mobile)
   const menuItems = [
     { text: "Dashboard", path: "/dashboard" },
     { text: "Incidents", path: "/incidents" },
@@ -115,12 +46,11 @@ const Layout = () => {
     { text: "Reports", path: "/reports" },
     { text: "Approvals", path: "/approvals" },
     { text: "Profile", path: "/profile" },
-    ...(role === "admin" ? [{ text: "Admin Settings", path: "/admin-settings" }] : [{ text: "Settings", path: "/settings" }]),
   ];
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100vh", width: "100%", overflow: "hidden" }}>
-      {/* Top Navbar */}
+    <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      {/* Navbar */}
       <Box
         sx={{
           position: "fixed",
@@ -133,17 +63,16 @@ const Layout = () => {
           justifyContent: "space-between",
           backgroundColor: "background.paper",
           zIndex: theme.zIndex.appBar,
-          px: NAVBAR_PADDING,
+          px: 1,
           boxShadow: 1,
         }}
       >
-        {/* Hamburger / Logo */}
-        <IconButton
-          onClick={() => setDrawerOpen(true)}
-          sx={{ display: { xs: "block", sm: "none" } }}
-        >
-          <MenuIcon />
-        </IconButton>
+        {/* Hamburger only on mobile */}
+        {isMobile && (
+          <IconButton onClick={() => setDrawerOpen(true)}>
+            <MenuIcon />
+          </IconButton>
+        )}
 
         {/* Navbar Tabs */}
         <NavbarTabs
@@ -155,10 +84,8 @@ const Layout = () => {
           isMobile={isMobile}
         />
 
-        {/* Right Icons */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 16 }}>
-          {/* Keep your Search, Notifications, Account icons here */}
-        </Box>
+        {/* Right-hand icons (search/notifications/account) */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 16 }}></Box>
       </Box>
 
       {/* Mobile Drawer */}
@@ -184,7 +111,7 @@ const Layout = () => {
         </List>
       </SwipeableDrawer>
 
-      {/* Main Content */}
+      {/* Main content */}
       <Box sx={{ flex: 1, mt: NAVBAR_HEIGHT, overflow: "auto", px: 1 }}>
         <Outlet />
         <BreadcrumbsNav />
