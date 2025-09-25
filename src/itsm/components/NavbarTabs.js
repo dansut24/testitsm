@@ -13,7 +13,6 @@ const NavbarTabs = ({
   tabIndex = 0,
   handleTabChange = () => {},
   handleTabClose = () => {},
-  handleAddTab = () => {},
   sidebarOpen = true,
   sidebarWidth = 256,
   collapsedWidth = 48,
@@ -22,14 +21,10 @@ const NavbarTabs = ({
   const [localTabs, setLocalTabs] = useState(tabs);
   const [activeIndex, setActiveIndex] = useState(tabIndex);
 
-  useEffect(() => {
-    setLocalTabs(tabs);
-  }, [tabs]);
+  useEffect(() => setLocalTabs(tabs), [tabs]);
+  useEffect(() => setActiveIndex(tabIndex), [tabIndex]);
 
-  useEffect(() => {
-    setActiveIndex(tabIndex);
-  }, [tabIndex]);
-
+  // Activate a tab
   const onTabActive = (tabId) => {
     const index = localTabs.findIndex((t) => t.path === tabId);
     if (index >= 0) {
@@ -38,14 +33,57 @@ const NavbarTabs = ({
     }
   };
 
+  // Close a tab
   const onTabClose = (tabId) => {
+    const index = localTabs.findIndex((t) => t.path === tabId);
+    if (index === -1) return;
+
+    const newTabs = localTabs.filter((t) => t.path !== tabId);
+    setLocalTabs(newTabs);
     handleTabClose(tabId);
+
+    if (index === activeIndex) {
+      const fallbackIndex = index === 0 ? 0 : index - 1;
+      setActiveIndex(fallbackIndex);
+      handleTabChange(null, fallbackIndex);
+    } else if (index < activeIndex) {
+      setActiveIndex((prev) => prev - 1);
+    }
+  };
+
+  // Add a new tab
+  const handleAddTab = () => {
+    const newTab = {
+      path: `/new-tab-${Date.now()}`,
+      label: "New Tab",
+    };
+    const updatedTabs = [...localTabs, newTab];
+    setLocalTabs(updatedTabs);
+    const newIndex = updatedTabs.length - 1;
+    setActiveIndex(newIndex);
+    handleTabChange(null, newIndex);
+  };
+
+  // Handle reordering
+  const onTabReorder = (tabId, fromIndex, toIndex) => {
+    const newTabs = [...localTabs];
+    const [moved] = newTabs.splice(fromIndex, 1);
+    newTabs.splice(toIndex, 0, moved);
+    setLocalTabs(newTabs);
+
+    // Adjust active index if necessary
+    if (fromIndex === activeIndex) {
+      setActiveIndex(toIndex);
+    } else if (fromIndex < activeIndex && toIndex >= activeIndex) {
+      setActiveIndex((prev) => prev - 1);
+    } else if (fromIndex > activeIndex && toIndex <= activeIndex) {
+      setActiveIndex((prev) => prev + 1);
+    }
   };
 
   const leftOffset = isMobile ? 0 : sidebarOpen ? sidebarWidth : collapsedWidth;
   const widthCalc = isMobile ? "100%" : `calc(100% - ${leftOffset}px)`;
 
-  // Convert tabs to ChromeTabs format
   const chromeTabs = localTabs.map((tab, index) => ({
     id: tab.path || `tab-${index}`,
     title: tab.label || "Untitled",
@@ -99,18 +137,19 @@ const NavbarTabs = ({
           tabs={chromeTabs}
           onTabActive={onTabActive}
           onTabClose={onTabClose}
+          onTabReorder={onTabReorder}
           draggable
           className="chrome-tabs"
           tabContentStyle={{ textAlign: "left" }}
           style={{ flex: 1, minWidth: 0 }}
-          tabRenderer={(tab, index) => (
+          tabRenderer={(tab) => (
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "flex-start",
-                minWidth: 120, // minimum tab width
-                maxWidth: 300, // optional max width
+                minWidth: 120,
+                maxWidth: 300,
                 padding: "0 12px",
                 overflow: "hidden",
                 borderRadius: tab.active ? 6 : 4,
