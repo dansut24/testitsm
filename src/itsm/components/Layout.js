@@ -35,9 +35,7 @@ const Layout = () => {
 
   const [tabs, setTabs] = useState(() => {
     const stored = sessionStorage.getItem("tabs");
-    return stored
-      ? JSON.parse(stored)
-      : [{ label: "Dashboard", path: "/dashboard" }];
+    return stored ? JSON.parse(stored) : [{ label: "Dashboard", path: "/dashboard" }];
   });
 
   const [tabIndex, setTabIndex] = useState(() => {
