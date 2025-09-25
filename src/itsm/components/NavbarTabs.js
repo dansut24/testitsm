@@ -162,7 +162,11 @@ const NavbarTabs = ({
     .chrome-tabs {
       background-color: transparent !important;
       border-bottom: none !important;
-      text-align: left;
+    }
+
+
+    .chrome-tab-title {
+    text-align: left;
     }
 
     /* Make the bottom bar span full width */
