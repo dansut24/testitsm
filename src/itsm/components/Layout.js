@@ -118,7 +118,7 @@ const Layout = () => {
           top: 0,
           left: 0,
           right: 0,
-          height: 48,
+          height: 36,
           display: "flex",
           alignItems: "center",
           px: 1,
@@ -142,7 +142,7 @@ const Layout = () => {
         component="main"
         sx={{
           flex: 1,
-          mt: "48px", // height of navbar
+          mt: "36px", // height of navbar
           overflowY: "auto",
           overflowX: "hidden",
           px: 1,
