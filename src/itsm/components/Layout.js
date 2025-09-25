@@ -23,7 +23,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 
 const drawerWidth = 240;
 const collapsedWidth = 60;
-const NAVBAR_HEIGHT = 34.6 + 7; // tabs + padding top
+const NAVBAR_HEIGHT = 41.6; // 34.6 + 7px padding
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -49,10 +49,12 @@ const Layout = () => {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+
   const [tabs, setTabs] = useState(() => {
     const stored = sessionStorage.getItem("tabs");
     return stored ? JSON.parse(stored) : [{ label: "Dashboard", path: "/dashboard" }];
   });
+
   const [tabIndex, setTabIndex] = useState(() => {
     const storedIndex = sessionStorage.getItem("tabIndex");
     return storedIndex ? parseInt(storedIndex, 10) : 0;
@@ -60,7 +62,6 @@ const Layout = () => {
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const role = user?.role || "user";
-
   const sidebarWidth = sidebarOpen ? drawerWidth : collapsedWidth;
 
   // --- Update tabs on route change ---
@@ -95,6 +96,7 @@ const Layout = () => {
   useEffect(() => {
     sessionStorage.setItem("tabs", JSON.stringify(tabs));
   }, [tabs]);
+
   useEffect(() => {
     sessionStorage.setItem("tabIndex", tabIndex.toString());
   }, [tabIndex]);
@@ -200,7 +202,7 @@ const Layout = () => {
           position: "relative",
         }}
       >
-        {/* Navbar with Tabs */}
+        {/* Navbar with integrated tabs */}
         <NavbarTabs
           tabs={tabs}
           tabIndex={tabIndex}
@@ -211,15 +213,16 @@ const Layout = () => {
           collapsedWidth={collapsedWidth}
           storedUser={user}
           isMobile={isMobile}
+          height={NAVBAR_HEIGHT}
         />
 
-        {/* Main content area (scrollable) */}
+        {/* Main content area */}
         <Box
           component="main"
           sx={{
             flex: 1,
             ml: 0,
-            mt: `${NAVBAR_HEIGHT}px`, // offset for navbar-tabs
+            mt: `${NAVBAR_HEIGHT}px`,
             overflowY: "auto",
             overflowX: "hidden",
             px: 1,
