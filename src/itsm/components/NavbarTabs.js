@@ -1,3 +1,4 @@
+// NavbarTabs.js
 import React from "react";
 import { Tabs } from "@sinm/react-chrome-tabs";
 import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
@@ -17,6 +18,7 @@ const NavbarTabs = ({
   sidebarWidth = 240,
   collapsedWidth = 60,
   isMobile = false,
+  onLogoClick = () => {},
 }) => {
   if (!tabs || tabs.length === 0) return null;
 
@@ -47,26 +49,23 @@ const NavbarTabs = ({
     <div
       style={{
         position: "fixed",
-        top: 0,
+        top: 6,
         left: leftOffset,
         width: widthCalc,
         zIndex: 1500,
         height: 34,
-        paddingTop: 6,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
         backgroundColor: "transparent",
       }}
     >
-      {/* Logo */}
-      <div style={{ display: "flex", alignItems: "center", marginRight: 12 }}>
-        <img
-          src="/logo192.png"
-          alt="Logo"
-          style={{ height: 28, objectFit: "contain", cursor: "pointer" }}
-          onClick={() => handleTabChange(null, 0, "/dashboard")}
-        />
+      {/* Logo (toggles sidebar on mobile) */}
+      <div
+        style={{ display: "flex", alignItems: "center", marginRight: 12, cursor: "pointer" }}
+        onClick={isMobile ? onLogoClick : undefined}
+      >
+        <img src="/logo192.png" alt="Logo" style={{ height: 28, objectFit: "contain" }} />
       </div>
 
       {/* Tabs */}
@@ -75,7 +74,7 @@ const NavbarTabs = ({
           tabs={chromeTabs}
           onTabActive={onTabActive}
           onTabClose={onTabClose}
-          onTabReorder={!isMobile ? onTabReorder : undefined} // disable drag on mobile
+          onTabReorder={isMobile ? undefined : onTabReorder} // disable drag on mobile
           draggable={!isMobile}
           className="chrome-tabs"
           tabContentStyle={{ textAlign: "left" }}
@@ -87,12 +86,11 @@ const NavbarTabs = ({
                 alignItems: "center",
                 justifyContent: "flex-start",
                 minWidth: isMobile ? 80 : 120,
-                maxWidth: isMobile ? 120 : 300,
+                maxWidth: 300,
                 overflow: "hidden",
                 padding: isMobile ? "0 6px" : "0 12px",
                 borderRadius: tab.active ? 6 : 4,
                 boxShadow: tab.active ? "0 2px 6px rgba(0,0,0,0.15)" : "none",
-                transition: "all 0.2s ease-in-out",
                 backgroundColor: tab.active ? "rgba(255,255,255,0.2)" : "transparent",
               }}
             >
@@ -111,32 +109,21 @@ const NavbarTabs = ({
       </div>
 
       {/* New Tab Button */}
-      {!isMobile && (
-        <AddIcon
-          style={{ cursor: "pointer", marginRight: 12 }}
-          onClick={() =>
-            handleTabChange(
-              null,
-              tabs.length,
-              `/new-tab-${Date.now()}`
-            )
-          }
-        />
-      )}
+      <AddIcon
+        style={{ cursor: "pointer", marginRight: 12 }}
+        onClick={() =>
+          handleTabChange(null, tabs.length, `/new-tab-${Date.now()}`)
+        }
+      />
 
       {/* Right-hand icons */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-          paddingRight: 12,
-        }}
-      >
-        <SearchIcon style={{ cursor: "pointer" }} />
-        <NotificationsIcon style={{ cursor: "pointer" }} />
-        <AccountCircleIcon style={{ cursor: "pointer" }} />
-      </div>
+      {!isMobile && (
+        <div style={{ display: "flex", alignItems: "center", gap: 16, paddingRight: 12 }}>
+          <SearchIcon style={{ cursor: "pointer" }} />
+          <NotificationsIcon style={{ cursor: "pointer" }} />
+          <AccountCircleIcon style={{ cursor: "pointer" }} />
+        </div>
+      )}
     </div>
   );
 };
