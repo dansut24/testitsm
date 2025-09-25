@@ -19,6 +19,14 @@ const NavbarTabs = ({
 }) => {
   if (!tabs || tabs.length === 0) return null;
 
+  // Inject inline CSS to override ChromeTabs background
+  const chromeTabsStyle = `
+    .chrome-tabs {
+      background-color: transparent !important;
+      border-bottom: none !important;
+    }
+  `;
+
   // Convert tabs to ChromeTabs format
   const chromeTabs = tabs.map((tab, index) => ({
     id: tab.path || `tab-${index}`,
@@ -43,94 +51,98 @@ const NavbarTabs = ({
   const widthCalc = isMobile ? "100%" : `calc(100% - ${leftOffset}px)`;
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: leftOffset,
-        width: widthCalc,
-        zIndex: 1500,
-        height: 48,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        backgroundColor: "rgba(200, 200, 200, 0.15)", // semi-transparent grey for theme support
-        borderRadius: 8,
-        padding: "0 12px",
-        backdropFilter: "blur(8px)", // subtle blur for floating effect
-        boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-      }}
-    >
-      {/* Left: Logo */}
-      <div style={{ display: "flex", alignItems: "center", marginRight: 12 }}>
-        <img
-          src="/logo192.png"
-          alt="Logo"
-          style={{
-            height: 28,
-            objectFit: "contain",
-            borderRadius: 4,
-            backgroundColor: "rgba(255,255,255,0.3)", // floating highlight
-          }}
-        />
-      </div>
+    <>
+      <style>{chromeTabsStyle}</style>
 
-      {/* Tabs */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <Tabs
-          tabs={chromeTabs}
-          onTabActive={onTabActive}
-          onTabClose={onTabClose}
-          draggable
-          className="chrome-tabs"
-          tabContentStyle={{ textAlign: "left" }}
-          style={{ width: "100%" }}
-          tabRenderer={(tab, tabIndex) => (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                width: `${100 / chromeTabs.length}%`,
-                overflow: "hidden",
-                padding: "0 8px",
-              }}
-            >
-              {tab.favicon && (
-                <img
-                  src={tab.favicon}
-                  alt="favicon"
-                  style={{ width: 16, height: 16, marginRight: 6 }}
-                />
-              )}
-              <span
-                style={{
-                  whiteSpace: "nowrap",
-                  textOverflow: "ellipsis",
-                  overflow: "hidden",
-                }}
-              >
-                {tab.title}
-              </span>
-            </div>
-          )}
-        />
-      </div>
-
-      {/* Right-hand icons */}
       <div
         style={{
+          position: "fixed",
+          top: 0,
+          left: leftOffset,
+          width: widthCalc,
+          zIndex: 1500,
+          height: 48,
           display: "flex",
           alignItems: "center",
-          gap: 16,
-          paddingLeft: 12,
+          justifyContent: "space-between",
+          backgroundColor: "rgba(200, 200, 200, 0.15)", // semi-transparent grey for theme support
+          borderRadius: 8,
+          padding: "0 12px",
+          backdropFilter: "blur(8px)", // subtle blur for floating effect
+          boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
         }}
       >
-        <SearchIcon style={{ cursor: "pointer" }} />
-        <NotificationsIcon style={{ cursor: "pointer" }} />
-        <AccountCircleIcon style={{ cursor: "pointer" }} />
+        {/* Left: Logo */}
+        <div style={{ display: "flex", alignItems: "center", marginRight: 12 }}>
+          <img
+            src="/logo192.png"
+            alt="Logo"
+            style={{
+              height: 28,
+              objectFit: "contain",
+              borderRadius: 4,
+              backgroundColor: "rgba(255,255,255,0.3)", // floating highlight
+            }}
+          />
+        </div>
+
+        {/* Tabs */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Tabs
+            tabs={chromeTabs}
+            onTabActive={onTabActive}
+            onTabClose={onTabClose}
+            draggable
+            className="chrome-tabs"
+            tabContentStyle={{ textAlign: "left" }}
+            style={{ width: "100%" }}
+            tabRenderer={(tab, tabIndex) => (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-start",
+                  width: `${100 / chromeTabs.length}%`,
+                  overflow: "hidden",
+                  padding: "0 8px",
+                }}
+              >
+                {tab.favicon && (
+                  <img
+                    src={tab.favicon}
+                    alt="favicon"
+                    style={{ width: 16, height: 16, marginRight: 6 }}
+                  />
+                )}
+                <span
+                  style={{
+                    whiteSpace: "nowrap",
+                    textOverflow: "ellipsis",
+                    overflow: "hidden",
+                  }}
+                >
+                  {tab.title}
+                </span>
+              </div>
+            )}
+          />
+        </div>
+
+        {/* Right-hand icons */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            paddingLeft: 12,
+          }}
+        >
+          <SearchIcon style={{ cursor: "pointer" }} />
+          <NotificationsIcon style={{ cursor: "pointer" }} />
+          <AccountCircleIcon style={{ cursor: "pointer" }} />
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
