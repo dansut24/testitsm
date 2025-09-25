@@ -6,13 +6,14 @@ import { supabase } from "../../common/utils/supabaseClient";
 
 import Header from "./Header";
 import AppsBar from "./AppsBar";
-import MainContent from "./MainContent";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
+import MainContent from "./MainContent";
 import BreadcrumbsNav from "./BreadcrumbsNav";
 import BackToTop from "./BackToTop";
 import AIChat from "./AIChat";
 
+// Icons
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import AssignmentIcon from "@mui/icons-material/Assignment";
@@ -25,11 +26,12 @@ import HowToVoteIcon from "@mui/icons-material/HowToVote";
 import PersonIcon from "@mui/icons-material/Person";
 import SettingsIcon from "@mui/icons-material/Settings";
 
-const drawerWidth = 240;
-const collapsedWidth = 60;
-const HEADER_HEIGHT = 48;   // header top bar height (px)
-const APPSBAR_HEIGHT = 36;  // tabs strip height (px)
-const TOP_OFFSET = HEADER_HEIGHT + APPSBAR_HEIGHT; // total fixed top offset (px)
+const drawerWidth = 220;   // slightly smaller sidebar
+const collapsedWidth = 60; 
+const HEADER_HEIGHT = 44;  // compact header
+const APPSBAR_HEIGHT = 32; // compact tabs
+const FOOTER_HEIGHT = 28;  
+const TOP_OFFSET = HEADER_HEIGHT + APPSBAR_HEIGHT;
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -49,7 +51,7 @@ const routeLabels = {
 
 const Layout = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -69,7 +71,7 @@ const Layout = () => {
 
   const sidebarWidth = sidebarOpen ? drawerWidth : collapsedWidth;
 
-  // === Tabs update on route change ===
+  // Update tabs on route change
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -97,16 +99,13 @@ const Layout = () => {
     }
   }, [location.pathname]); // eslint-disable-line
 
-  // persist tabs
+  // Persist tabs
   useEffect(() => {
     sessionStorage.setItem("tabs", JSON.stringify(tabs));
-  }, [tabs]);
-
-  useEffect(() => {
     sessionStorage.setItem("tabIndex", tabIndex.toString());
-  }, [tabIndex]);
+  }, [tabs, tabIndex]);
 
-  // responsive sidebar initial state
+  // Sidebar responsive
   useEffect(() => {
     if (isMobile) {
       setSidebarOpen(false);
@@ -117,7 +116,7 @@ const Layout = () => {
     }
   }, [isMobile]);
 
-  const handleTabChange = (ev, newIndex) => {
+  const handleTabChange = (_ev, newIndex) => {
     setTabIndex(newIndex);
     navigate(tabs[newIndex].path);
   };
@@ -133,9 +132,6 @@ const Layout = () => {
       navigate(fallbackTab.path);
     }
   };
-
-  const handleSidebarToggle = () => setSidebarOpen((prev) => !prev);
-  const handleMobileSidebarToggle = () => setMobileOpen((prev) => !prev);
 
   const menuItems = [
     { text: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
@@ -155,22 +151,6 @@ const Layout = () => {
         { text: "Raise Request", path: "/new-service-request" },
       ],
     },
-    {
-      text: "Changes",
-      icon: <AutoFixHighIcon />,
-      children: [
-        { text: "View Changes", path: "/changes" },
-        { text: "Raise Change", path: "/new-change" },
-      ],
-    },
-    {
-      text: "Problems",
-      icon: <BugReportIcon />,
-      children: [
-        { text: "View Problems", path: "/problems" },
-        { text: "Raise Problem", path: "/new-problem" },
-      ],
-    },
     { text: "Assets", icon: <DevicesOtherIcon />, path: "/assets" },
     { text: "Knowledge Base", icon: <MenuBookIcon />, path: "/knowledge-base" },
     { text: "Reports", icon: <BarChartIcon />, path: "/reports" },
@@ -182,40 +162,9 @@ const Layout = () => {
   ];
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        height: "100vh",
-        width: "100%",
-        overflowX: "hidden", // prevent page horizontal scroll
-        backgroundColor: "background.default",
-      }}
-    >
-      {/* Sidebar (fixed at left) */}
-      <Sidebar
-        sidebarOpen={sidebarOpen}
-        mobileOpen={mobileOpen}
-        handleSidebarToggle={handleSidebarToggle}
-        handleMobileSidebarToggle={handleMobileSidebarToggle}
-        sidebarWidth={sidebarWidth}
-        collapsedWidth={collapsedWidth}
-        menuItems={menuItems}
-        isMobile={isMobile}
-      />
-
-      {/* Main column (to the right of sidebar) */}
-      <Box
-        sx={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          minWidth: 0, // important to avoid overflow on children
-          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
-          height: "100vh",
-          position: "relative",
-        }}
-      >
-        {/* Fixed Header and Tabs (Header and AppsBar are fixed internally) */}
+    <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      {/* Fixed Top Header + Tabs */}
+      <Box sx={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 1200 }}>
         <Header
           tabs={tabs}
           tabIndex={tabIndex}
@@ -225,10 +174,7 @@ const Layout = () => {
           sidebarOpen={sidebarOpen}
           sidebarWidth={sidebarWidth}
           collapsedWidth={collapsedWidth}
-          handleSidebarToggle={handleSidebarToggle}
-          handleMobileSidebarToggle={handleMobileSidebarToggle}
         />
-
         <AppsBar
           tabs={tabs}
           tabIndex={tabIndex}
@@ -239,30 +185,44 @@ const Layout = () => {
           sidebarWidth={sidebarWidth}
           collapsedWidth={collapsedWidth}
         />
+      </Box>
 
-        {/* SCROLLABLE CONTENT AREA: offset by top fixed bars */}
+      <Box sx={{ display: "flex", flex: 1, mt: `${TOP_OFFSET}px`, overflow: "hidden" }}>
+        {/* Sidebar */}
+        <Sidebar
+          sidebarOpen={sidebarOpen}
+          mobileOpen={mobileOpen}
+          handleSidebarToggle={() => setSidebarOpen((prev) => !prev)}
+          handleMobileSidebarToggle={() => setMobileOpen((prev) => !prev)}
+          sidebarWidth={sidebarWidth}
+          collapsedWidth={collapsedWidth}
+          menuItems={menuItems}
+          isMobile={isMobile}
+        />
+
+        {/* Main Content */}
         <Box
           component="main"
           sx={{
             flex: 1,
-            minHeight: 0, // allow the inner scroll container to size correctly
+            height: `calc(100vh - ${FOOTER_HEIGHT}px - ${TOP_OFFSET}px)`,
             overflowY: "auto",
             overflowX: "hidden",
-            px: { xs: 1, md: 2 },
-            // ensure content starts below the fixed header + appsbar
-            pt: `${TOP_OFFSET}px`,
-            boxSizing: "border-box",
+            px: 2,
+            py: 1,
           }}
         >
           <MainContent />
           <BreadcrumbsNav />
           <BackToTop />
         </Box>
-
-        {/* Footers / chat live below the scroll container */}
-        <AIChat />
-        <Footer />
       </Box>
+
+      {/* Footer fixed */}
+      <Footer sx={{ height: `${FOOTER_HEIGHT}px`, flexShrink: 0 }} />
+
+      {/* Optional floating chat */}
+      <AIChat />
     </Box>
   );
 };
