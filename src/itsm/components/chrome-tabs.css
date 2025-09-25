@@ -1,0 +1,40 @@
+/* copied from @sinm/react-chrome-tabs fork, basic styles */
+.chrome-tabs {
+  display: flex;
+  align-items: center;
+  height: 34.6px;
+  background: #f1f1f1;
+  border-bottom: 1px solid #ccc;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.chrome-tabs__tab {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  margin-right: 2px;
+  height: 100%;
+  background: #e5e5e5;
+  border: 1px solid #ccc;
+  border-bottom: none;
+  border-radius: 5px 5px 0 0;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.chrome-tabs__tab--active {
+  background: #fff;
+  border-bottom: 1px solid #fff;
+}
+
+.chrome-tabs__favicon {
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+}
+
+.chrome-tabs__close {
+  margin-left: 4px;
+  cursor: pointer;
+}
