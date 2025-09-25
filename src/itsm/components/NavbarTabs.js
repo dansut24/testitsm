@@ -8,8 +8,9 @@ import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import AddIcon from "@mui/icons-material/Add";
 
-const NAVBAR_HEIGHT = 34;
-const NAVBAR_PADDING_TOP = 6;
+const NAVBAR_HEIGHT = 34;       // container height
+const NAVBAR_PADDING_TOP = 6;   // top offset from layout
+const TAB_HEIGHT = 28;          // actual tab height (smaller than navbar)
 
 const NavbarTabs = ({
   tabs = [],
@@ -40,8 +41,7 @@ const NavbarTabs = ({
   const onTabClose = (tabId) => handleTabClose(tabId);
 
   const onTabReorder = (tabsReordered) => {
-    // tabsReordered is the array returned by the chrome-tabs library (ids only)
-    // Map back to your full tab objects (by path/id) in the same order
+    // tabsReordered is an array of { id } in the new order
     handleTabReorder(
       tabsReordered.map((t) => tabs.find((tab) => tab.path === t.id))
     );
@@ -50,51 +50,45 @@ const NavbarTabs = ({
   const leftOffset = isMobile ? 0 : sidebarOpen ? sidebarWidth : collapsedWidth;
   const widthCalc = isMobile ? "100%" : `calc(100% - ${leftOffset}px)`;
 
-  // Mobile-friendly min widths
-  const tabMinWidth = isMobile ? 80 : 120;
+  // mobile-friendly widths to fit ~6 tabs in portrait
+  const tabMinWidth = isMobile ? 76 : 120;
+  const tabPaddingX = isMobile ? 6 : 12;
+
+  // vertical centering of the tabs inside the 34px navbar
+  const tabsTopOffset = (NAVBAR_HEIGHT - TAB_HEIGHT) / 2; // = 3px
 
   return (
     <>
-      {/* Inline overrides to perfectly align with a 34px navbar and remove underline */}
+      {/* Inline overrides: shorter tabs than navbar + remove underline */}
       <style>{`
-        /* Make the bar transparent and remove any bottom line */
         .chrome-tabs {
           background-color: transparent !important;
           border-bottom: none !important;
-          height: ${NAVBAR_HEIGHT}px !important;
-          --tab-height: ${NAVBAR_HEIGHT}px; /* some themes read this var */
+          height: ${TAB_HEIGHT}px !important;
+          margin-top: ${tabsTopOffset}px !important;    /* center vertically */
         }
-
-        /* Kill the underline / bottom bar entirely */
         .chrome-tabs-bottom-bar {
           display: none !important;
           height: 0 !important;
         }
-
-        /* Ensure all tab pieces share the same height */
         .chrome-tab,
         .chrome-tab .chrome-tab-content,
         .chrome-tab .chrome-tab-background {
-          height: ${NAVBAR_HEIGHT}px !important;
+          height: ${TAB_HEIGHT}px !important;
         }
-
-        /* Keep the active tab looking a touch elevated */
-        .chrome-tab[active=""] .chrome-tab-background,
-        .chrome-tab[active="true"] .chrome-tab-background {
-          box-shadow: 0 2px 6px rgba(0,0,0,0.12) !important;
-        }
-
-        /* Title vertically centered and left-aligned */
         .chrome-tab-title {
-          line-height: ${NAVBAR_HEIGHT}px !important;
+          line-height: ${TAB_HEIGHT}px !important;
           text-align: left !important;
         }
-
-        /* Hide favicon placeholder completely */
+        /* Remove favicon placeholder completely */
         .chrome-tab-favicon {
           display: none !important;
           width: 0 !important;
           margin: 0 !important;
+        }
+        /* Subtle emphasis on active tab */
+        .chrome-tab[active=""], .chrome-tab[active="true"] {
+          filter: drop-shadow(0 1px 3px rgba(0,0,0,0.12));
         }
       `}</style>
 
@@ -110,7 +104,6 @@ const NavbarTabs = ({
           alignItems: "center",
           justifyContent: "space-between",
           backgroundColor: "transparent",
-          // no border-bottom so tabs visually blend into content
         }}
       >
         {/* Logo (toggles sidebar on mobile) */}
@@ -120,6 +113,7 @@ const NavbarTabs = ({
             alignItems: "center",
             marginRight: 12,
             cursor: isMobile ? "pointer" : "default",
+            height: "100%",
           }}
           onClick={isMobile ? onLogoClick : undefined}
         >
@@ -130,13 +124,13 @@ const NavbarTabs = ({
           />
         </div>
 
-        {/* Tabs (fill available space) */}
+        {/* Tabs */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <Tabs
             tabs={chromeTabs}
             onTabActive={onTabActive}
             onTabClose={onTabClose}
-            onTabReorder={isMobile ? undefined : onTabReorder} // disable drag on mobile
+            onTabReorder={isMobile ? undefined : onTabReorder}
             draggable={!isMobile}
             className="chrome-tabs"
             tabContentStyle={{ textAlign: "left" }}
@@ -150,7 +144,7 @@ const NavbarTabs = ({
                   minWidth: tabMinWidth,
                   maxWidth: 320,
                   overflow: "hidden",
-                  padding: isMobile ? "0 6px" : "0 12px",
+                  padding: `0 ${tabPaddingX}px`,
                   borderRadius: tab.active ? 6 : 4,
                   backgroundColor: tab.active
                     ? "rgba(0,0,0,0.06)"
