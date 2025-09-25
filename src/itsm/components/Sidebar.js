@@ -12,6 +12,7 @@ import {
   Collapse,
   Grow,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -20,8 +21,8 @@ import ExpandMore from "@mui/icons-material/ExpandMore";
 import { useTheme } from "@mui/material/styles";
 import { useNavigate, useLocation } from "react-router-dom";
 
-const expandedWidth = 180;
-const collapsedWidth = 40;
+// Collapsed width for icon-only mode
+const collapsedWidth = 48;
 
 const Sidebar = ({
   sidebarOpen,
@@ -35,6 +36,20 @@ const Sidebar = ({
   const navigate = useNavigate();
   const location = useLocation();
   const [openDropdowns, setOpenDropdowns] = useState({});
+
+  // Responsive widths
+  const smUp = useMediaQuery(theme.breakpoints.up("sm")); // >=600px
+  const mdUp = useMediaQuery(theme.breakpoints.up("md")); // >=900px
+  const lgUp = useMediaQuery(theme.breakpoints.up("lg")); // >=1200px
+
+  let expandedWidth = 240; // default fallback
+  if (lgUp) {
+    expandedWidth = 320; // large desktop
+  } else if (mdUp) {
+    expandedWidth = 288; // desktop
+  } else if (smUp) {
+    expandedWidth = 256; // tablet
+  }
 
   const toggleDropdown = (text) => {
     setOpenDropdowns((prev) => ({
@@ -264,7 +279,7 @@ const Sidebar = ({
         left: 0,
         display: "flex",
         flexDirection: "column",
-        transition: "width 0.2s ease-in-out",
+        transition: "width 0.3s ease-in-out",
         zIndex: theme.zIndex.drawer,
       }}
     >
