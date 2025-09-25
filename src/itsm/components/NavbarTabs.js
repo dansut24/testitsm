@@ -8,7 +8,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
-import Logo from "../../assets/logo.png"; // adjust your logo path
+import Logo from "/logo192.png"; // adjust your logo path
 
 const NavbarTabs = ({
   tabs = [],
