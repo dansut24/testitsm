@@ -1,3 +1,4 @@
+// Layout.js
 import React, { useState, useEffect } from "react";
 import { Box, useTheme, useMediaQuery } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
@@ -102,9 +103,6 @@ const Layout = () => {
         sidebarWidth={sidebarWidth}
         collapsedWidth={collapsedWidth}
         isMobile={isMobile}
-        tabs={tabs}
-        handleTabChange={handleTabChange}
-        tabIndex={tabIndex}
       />
 
       <Box
@@ -128,6 +126,7 @@ const Layout = () => {
           sidebarWidth={sidebarWidth}
           collapsedWidth={collapsedWidth}
           isMobile={isMobile}
+          onLogoClick={handleMobileSidebarToggle}
         />
 
         <Box
