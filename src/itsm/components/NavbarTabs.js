@@ -149,6 +149,11 @@ tabRenderer={(tab, tabIndex) => (
     text-align: left;
     }
 
+    .chrome-tab-favicon {
+  display: none !important;
+}
+
+
     /* Make the bottom bar span full width */
     .chrome-tabs-bottom-bar {
       left: 0 !important;
