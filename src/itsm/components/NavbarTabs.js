@@ -13,17 +13,18 @@ const NavbarTabs = ({
   tabIndex = 0,
   handleTabChange = () => {},
   handleTabClose = () => {},
-  handleAddTab = () => {},
+  handleTabAdd = () => {},
   sidebarOpen = true,
-  sidebarWidth = 256,
-  collapsedWidth = 48,
+  sidebarWidth = 240,
+  collapsedWidth = 60,
   isMobile = false,
 }) => {
   if (!tabs || tabs.length === 0) return null;
 
+  // Convert tabs to ChromeTabs format
   const chromeTabs = tabs.map((tab, index) => ({
     id: tab.path || `tab-${index}`,
-    title: tab.label || `Tab ${index + 1}`,
+    title: tab.label || "Untitled",
     favicon: tab.favicon || undefined,
     active: index === tabIndex,
     isCloseIconVisible: tab.path === "/dashboard" ? false : true,
@@ -40,12 +41,7 @@ const NavbarTabs = ({
     handleTabClose(tabId);
   };
 
-  const leftOffset = isMobile
-    ? 0
-    : sidebarOpen
-    ? sidebarWidth + 48 // sidebar + logo padding
-    : collapsedWidth + 48;
-
+  const leftOffset = isMobile ? 0 : sidebarOpen ? sidebarWidth : collapsedWidth;
   const widthCalc = isMobile ? "100%" : `calc(100% - ${leftOffset}px)`;
 
   return (
@@ -60,15 +56,21 @@ const NavbarTabs = ({
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        backgroundColor: "rgba(200, 200, 200, 0.15)",
+        backgroundColor: "rgba(200, 200, 200, 0.15)", // theme-ready semi-transparent
         borderRadius: 8,
         padding: "0 12px",
         backdropFilter: "blur(8px)",
         boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
       }}
     >
-      {/* Left: Logo */}
-      <div style={{ display: "flex", alignItems: "center", marginRight: 12 }}>
+      {/* Left: Floating Logo */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          marginRight: 12,
+        }}
+      >
         <img
           src="/logo192.png"
           alt="Logo"
@@ -82,27 +84,7 @@ const NavbarTabs = ({
       </div>
 
       {/* Tabs */}
-      <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
-        <style>
-          {`
-            .chrome-tabs {
-              background-color: transparent !important;
-              border-bottom: none !important;
-            }
-            .chrome-tabs__tab-indicator {
-              left: ${leftOffset}px !important;
-              width: calc(100% - ${leftOffset}px) !important;
-              transition: transform 0.3s ease, width 0.3s ease !important;
-            }
-            .chrome-tabs__tab {
-              border-radius: 6px 6px 0 0;
-            }
-            .chrome-tabs__tab--active {
-              box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-            }
-          `}
-        </style>
-
+      <div style={{ flex: 1, minWidth: 0 }}>
         <Tabs
           tabs={chromeTabs}
           onTabActive={onTabActive}
@@ -111,13 +93,24 @@ const NavbarTabs = ({
           className="chrome-tabs"
           tabContentStyle={{ textAlign: "left" }}
           style={{ width: "100%" }}
-          tabRenderer={(tab) => (
+          tabRenderer={(tab, index) => (
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "flex-start",
+                width: "auto",
+                minWidth: 120,
+                maxWidth: 300,
                 padding: "0 12px",
+                borderRadius: 6,
+                marginRight: 4,
+                boxShadow: tab.active
+                  ? "0 2px 6px rgba(0,0,0,0.15)"
+                  : "none",
+                backgroundColor: tab.active
+                  ? "rgba(255,255,255,0.3)"
+                  : "transparent",
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -130,13 +123,21 @@ const NavbarTabs = ({
                   style={{ width: 16, height: 16, marginRight: 6 }}
                 />
               )}
-              <span>{tab.title}</span>
+              <span
+                style={{
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {tab.title}
+              </span>
             </div>
           )}
         />
       </div>
 
-      {/* Right-hand icons + New Tab */}
+      {/* Right: Add + Button and Icons */}
       <div
         style={{
           display: "flex",
@@ -147,13 +148,23 @@ const NavbarTabs = ({
       >
         <AddIcon
           style={{ cursor: "pointer" }}
-          onClick={handleAddTab}
-          title="New Tab"
+          onClick={handleTabAdd}
+          titleAccess="Add New Tab"
         />
         <SearchIcon style={{ cursor: "pointer" }} />
         <NotificationsIcon style={{ cursor: "pointer" }} />
         <AccountCircleIcon style={{ cursor: "pointer" }} />
       </div>
+
+      {/* Inline CSS for chrome-tabs */}
+      <style>
+        {`
+          .chrome-tabs {
+            background-color: transparent !important;
+            border-bottom: none !important;
+          }
+        `}
+      </style>
     </div>
   );
 };
