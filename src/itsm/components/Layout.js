@@ -95,6 +95,7 @@ const Layout = () => {
 
   return (
     <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
+      {/* Sidebar */}
       <Sidebar
         sidebarOpen={sidebarOpen}
         mobileOpen={mobileOpen}
@@ -105,37 +106,55 @@ const Layout = () => {
         isMobile={isMobile}
       />
 
+      {/* Right side: Navbar + Content */}
       <Box
         sx={{
           flex: 1,
           display: "flex",
           flexDirection: "column",
           minWidth: 0,
-          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
+          ml: !isMobile ? `${sidebarWidth}px` : 0,
           height: "100vh",
           position: "relative",
+          transition: "margin-left 0.2s ease-in-out",
         }}
       >
-        <NavbarTabs
-          tabs={tabs}
-          tabIndex={tabIndex}
-          handleTabChange={handleTabChange}
-          handleTabClose={handleTabClose}
-          handleTabReorder={handleTabReorder}
-          sidebarOpen={sidebarOpen}
-          sidebarWidth={sidebarWidth}
-          collapsedWidth={collapsedWidth}
-          isMobile={isMobile}
-        />
+        {/* Navbar with tabs */}
+        <Box
+          sx={{
+            height: NAVBAR_HEIGHT,
+            pt: `${NAVBAR_PADDING_TOP}px`,
+            display: "flex",
+            alignItems: "center",
+            px: 1,
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            bgcolor: theme.palette.background.paper,
+            zIndex: theme.zIndex.appBar,
+          }}
+        >
+          <NavbarTabs
+            tabs={tabs}
+            tabIndex={tabIndex}
+            handleTabChange={handleTabChange}
+            handleTabClose={handleTabClose}
+            handleTabReorder={handleTabReorder}
+            sidebarOpen={sidebarOpen}
+            sidebarWidth={sidebarWidth}
+            collapsedWidth={collapsedWidth}
+            isMobile={isMobile}
+          />
+        </Box>
 
+        {/* Main content */}
         <Box
           component="main"
           sx={{
             flex: 1,
-            mt: `${NAVBAR_HEIGHT + NAVBAR_PADDING_TOP}px`,
             overflowY: "auto",
             overflowX: "hidden",
             px: 1,
+            bgcolor: theme.palette.background.default,
           }}
         >
           <Outlet />
