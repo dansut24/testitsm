@@ -18,6 +18,7 @@ const NavbarTabs = ({
   sidebarWidth = 240,
   collapsedWidth = 60,
   isMobile = false,
+  onLogoClick = () => {},
 }) => {
   if (!tabs || tabs.length === 0) return null;
 
@@ -60,83 +61,75 @@ const NavbarTabs = ({
         backgroundColor: "transparent",
       }}
     >
-      {/* Logo */}
-      <div style={{ display: "flex", alignItems: "center", marginRight: 12 }}>
-        <img
-          src="/logo192.png"
-          alt="Logo"
-          style={{ height: 28, objectFit: "contain" }}
-        />
+      {/* Logo (clickable on mobile) */}
+      <div
+        style={{ display: "flex", alignItems: "center", marginRight: 12, cursor: "pointer" }}
+        onClick={isMobile ? onLogoClick : undefined}
+      >
+        <img src="/logo192.png" alt="Logo" style={{ height: 28, objectFit: "contain" }} />
       </div>
 
-      {/* Tabs */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <Tabs
-          tabs={chromeTabs}
-          onTabActive={onTabActive}
-          onTabClose={onTabClose}
-          onTabReorder={onTabReorder}
-          draggable
-          className="chrome-tabs"
-          tabContentStyle={{ textAlign: "left" }}
-          style={{ width: "100%" }}
-          tabRenderer={(tab) => (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                minWidth: isMobile ? 70 : 120,
-                maxWidth: isMobile ? 140 : 300,
-                padding: isMobile ? "4px 6px" : "6px 12px",
-                fontSize: isMobile ? "12px" : "14px",
-                overflow: "hidden",
-                borderRadius: tab.active ? 6 : 4,
-                boxShadow: tab.active
-                  ? "0 2px 6px rgba(0,0,0,0.15)"
-                  : "none",
-                transition: "all 0.2s ease-in-out",
-                backgroundColor: tab.active
-                  ? "rgba(255,255,255,0.2)"
-                  : "transparent",
-              }}
-            >
-              <span
+      {/* Tabs - only desktop/tablet */}
+      {!isMobile && (
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Tabs
+            tabs={chromeTabs}
+            onTabActive={onTabActive}
+            onTabClose={onTabClose}
+            onTabReorder={onTabReorder}
+            draggable
+            className="chrome-tabs"
+            tabContentStyle={{ textAlign: "left" }}
+            style={{ width: "100%" }}
+            tabRenderer={(tab) => (
+              <div
                 style={{
-                  whiteSpace: "nowrap",
-                  textOverflow: "ellipsis",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-start",
+                  minWidth: 120,
+                  maxWidth: 300,
                   overflow: "hidden",
-                  flex: 1,
+                  padding: "0 12px",
+                  borderRadius: tab.active ? 6 : 4,
+                  boxShadow: tab.active ? "0 2px 6px rgba(0,0,0,0.15)" : "none",
+                  transition: "all 0.2s ease-in-out",
+                  backgroundColor: tab.active ? "rgba(255,255,255,0.2)" : "transparent",
                 }}
               >
-                {tab.title}
-              </span>
-            </div>
-          )}
+                <span
+                  style={{
+                    whiteSpace: "nowrap",
+                    textOverflow: "ellipsis",
+                    overflow: "hidden",
+                  }}
+                >
+                  {tab.title}
+                </span>
+              </div>
+            )}
+          />
+        </div>
+      )}
+
+      {/* New Tab Button (desktop only) */}
+      {!isMobile && (
+        <AddIcon
+          style={{ cursor: "pointer", marginRight: 12 }}
+          onClick={() =>
+            handleTabChange(null, tabs.length, `/new-tab-${Date.now()}`)
+          }
         />
-      </div>
+      )}
 
-      {/* New Tab Button */}
-      <AddIcon
-        style={{ cursor: "pointer", marginRight: 12 }}
-        onClick={() =>
-          handleTabChange(null, tabs.length, `/new-tab-${Date.now()}`)
-        }
-      />
-
-      {/* Right-hand icons */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-          paddingRight: 12,
-        }}
-      >
-        <SearchIcon style={{ cursor: "pointer" }} />
-        <NotificationsIcon style={{ cursor: "pointer" }} />
-        <AccountCircleIcon style={{ cursor: "pointer" }} />
-      </div>
+      {/* Right-hand icons (desktop only) */}
+      {!isMobile && (
+        <div style={{ display: "flex", alignItems: "center", gap: 16, paddingRight: 12 }}>
+          <SearchIcon style={{ cursor: "pointer" }} />
+          <NotificationsIcon style={{ cursor: "pointer" }} />
+          <AccountCircleIcon style={{ cursor: "pointer" }} />
+        </div>
+      )}
     </div>
   );
 };
