@@ -32,34 +32,42 @@ const Login = () => {
 
   useEffect(() => {
     const fetchLogo = async () => {
-      const { data: tenant } = await supabase
-        .from("tenants")
-        .select("id")
-        .eq("subdomain", baseSubdomain)
-        .maybeSingle();
+      try {
+        const { data: tenant } = await supabase
+          .from("tenants")
+          .select("id")
+          .eq("subdomain", baseSubdomain)
+          .maybeSingle();
 
-      if (!tenant) return;
+        if (!tenant) return;
 
-      const { data: settings } = await supabase
-        .from("tenant_settings")
-        .select("logo_url")
-        .eq("tenant_id", tenant.id)
-        .maybeSingle();
+        const { data: settings } = await supabase
+          .from("tenant_settings")
+          .select("logo_url")
+          .eq("tenant_id", tenant.id)
+          .maybeSingle();
 
-      if (settings?.logo_url) {
-        const { data: publicData } = supabase.storage
-          .from("tenant-logos")
-          .getPublicUrl(settings.logo_url);
+        if (settings?.logo_url) {
+          const { data: publicData } = supabase.storage
+            .from("tenant-logos")
+            .getPublicUrl(settings.logo_url);
 
-        if (publicData?.publicUrl) setLogoUrl(publicData.publicUrl);
+          if (publicData?.publicUrl) setLogoUrl(publicData.publicUrl);
+        }
+      } catch (err) {
+        console.error("Error fetching tenant logo:", err);
       }
     };
 
     fetchLogo();
   }, [baseSubdomain]);
 
-  const handleChange = (e) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e) => {
+    const target = e?.target;
+    if (!target) return;
+    const { name, value } = target;
+    if (name) setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleLogin = async () => {
     setError("");
@@ -70,123 +78,59 @@ const Login = () => {
       return;
     }
 
-    const { data, error: loginError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (loginError || !data.session) {
-      setError("Invalid login credentials.");
-      return;
+    try {
+      const { data, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+      if (loginError || !data.session) {
+        setError("Invalid login credentials.");
+        return;
+      }
+      navigate("/dashboard");
+    } catch (err) {
+      setError("An unexpected error occurred. Please try again.");
+      console.error(err);
     }
-
-    navigate("/dashboard");
   };
 
   const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-    });
-    if (error) setError("Google sign-in failed.");
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({ provider: "google" });
+      if (error) setError("Google sign-in failed.");
+    } catch (err) {
+      setError("An unexpected error occurred with Google sign-in.");
+      console.error(err);
+    }
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        width: "100vw",
-        display: "flex",
-        flexDirection: "column",
-        bgcolor: "#f0f2f5",
-        p: isMobile ? 2 : 4,
-        boxSizing: "border-box",
-      }}
-    >
-      {/* Top Welcome Header */}
-      <Box
-        sx={{
-          maxWidth: 900,
-          mx: "auto",
-          width: "100%",
-          textAlign: "center",
-          mb: 4,
-        }}
-      >
-        <MuiLink
-          component={Link}
-          to="/self-service"
-          underline="hover"
-          fontSize="0.9rem"
-          sx={{ fontWeight: 500, display: "inline-block", mb: 1 }}
-        >
+    <Box sx={{ minHeight: "100vh", width: "100vw", display: "flex", flexDirection: "column", bgcolor: "#f0f2f5", p: isMobile ? 2 : 6, boxSizing: "border-box", justifyContent: "center" }}>
+      {/* Header Section */}
+      <Box sx={{ maxWidth: 900, mx: "auto", textAlign: "center", mb: 5 }}>
+        <MuiLink component={Link} to="/self-service" underline="hover" fontSize="0.9rem" sx={{ fontWeight: 500, display: "inline-block", mb: 1, color: theme.palette.primary.main }}>
           Go to Self-Service
         </MuiLink>
-
-        <Typography
-          variant="h3"
-          fontWeight={700}
-          sx={{
-            fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
-            mb: 1,
-          }}
-        >
+        <Typography variant="h3" fontWeight={700} sx={{ fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" }, mb: 1 }}>
           Welcome Back 👋
         </Typography>
-        <Typography
-          variant="h6"
-          color="text.secondary"
-          sx={{
-            fontSize: { xs: "1rem", sm: "1.2rem" },
-          }}
-        >
+        <Typography variant="h6" color="text.secondary" sx={{ fontSize: { xs: "1rem", sm: "1.2rem" } }}>
           Manage your services, assets, and requests all in one place.
         </Typography>
       </Box>
 
-      {/* Login Content */}
-      <Box
-        sx={{
-          flex: 1,
-          display: "flex",
-          flexDirection: isMobile ? "column" : "row",
-          gap: 4,
-          justifyContent: "center",
-          alignItems: "center",
-          flexWrap: "wrap",
-        }}
-      >
-        {/* Login Box */}
-        <Paper
-          elevation={3}
-          sx={{
-            p: 4,
-            width: "100%",
-            maxWidth: 420,
-            borderRadius: 3,
-            boxShadow: "0px 6px 12px rgba(0,0,0,0.1)",
-          }}
-        >
-          <Box sx={{ textAlign: "center", mb: 2 }}>
-            <img
-              src={logoUrl}
-              alt="Tenant Logo"
-              style={{ maxHeight: 50, marginBottom: 12 }}
-            />
-            <Typography variant="h5" fontWeight={600}>
+      {/* Login Form Section */}
+      <Box sx={{ flex: 1, display: "flex", flexDirection: isMobile ? "column" : "row", gap: 4, justifyContent: "center", alignItems: "center", flexWrap: "wrap" }}>
+        <Paper elevation={3} sx={{ p: 5, width: "100%", maxWidth: 440, borderRadius: 4, boxShadow: theme.shadows[4] }}>
+          <Box sx={{ textAlign: "center", mb: 3 }}>
+            <img src={logoUrl} alt="Tenant Logo" style={{ maxHeight: 60, marginBottom: 16 }} />
+            <Typography variant="h5" fontWeight={600} gutterBottom>
               Sign in to Hi5Tech
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Use your credentials or a social provider
+              Enter your credentials or continue with a social provider
             </Typography>
           </Box>
 
-          <Stack spacing={1.5} mt={2}>
-            <Button
-              variant="outlined"
-              startIcon={<GoogleIcon />}
-              fullWidth
-              onClick={handleGoogleLogin}
-            >
+          <Stack spacing={2} mt={2}>
+            <Button variant="outlined" startIcon={<GoogleIcon />} fullWidth onClick={handleGoogleLogin}>
               Sign in with Google
             </Button>
             <Button variant="outlined" startIcon={<BusinessIcon />} fullWidth disabled>
@@ -197,26 +141,10 @@ const Login = () => {
             </Button>
           </Stack>
 
-          <Divider sx={{ my: 3 }}>or</Divider>
+          <Divider sx={{ my: 4 }}>or</Divider>
 
-          <TextField
-            fullWidth
-            label="Email"
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleChange}
-            margin="dense"
-          />
-          <TextField
-            fullWidth
-            label="Password"
-            name="password"
-            type="password"
-            value={formData.password}
-            onChange={handleChange}
-            margin="dense"
-          />
+          <TextField fullWidth label="Email" name="email" type="email" value={formData.email} onChange={handleChange} margin="dense" autoComplete="email" />
+          <TextField fullWidth label="Password" name="password" type="password" value={formData.password} onChange={handleChange} margin="dense" autoComplete="current-password" />
 
           <Box sx={{ textAlign: "right", mt: 1 }}>
             <MuiLink component={Link} to="/reset-password" underline="hover" fontSize="0.875rem">
@@ -224,35 +152,16 @@ const Login = () => {
             </MuiLink>
           </Box>
 
-          {error && (
-            <Typography color="error" mt={1}>
-              {error}
-            </Typography>
-          )}
+          {error && <Typography color="error" mt={1} sx={{ fontSize: "0.875rem" }}>{error}</Typography>}
 
-          <Button
-            variant="contained"
-            fullWidth
-            sx={{ mt: 3, py: 1.4, fontWeight: "bold" }}
-            onClick={handleLogin}
-          >
+          <Button variant="contained" fullWidth sx={{ mt: 4, py: 1.5, fontWeight: 600 }} onClick={handleLogin}>
             Login
           </Button>
         </Paper>
 
-        {/* Visual Section */}
         {!isMobile && (
-          <Box sx={{ maxWidth: 420, width: "100%", textAlign: "center" }}>
-            <img
-              src={logoUrl}
-              alt="Welcome Visual"
-              style={{
-                width: "100%",
-                maxHeight: "200px",
-                objectFit: "contain",
-                opacity: 0.85,
-              }}
-            />
+          <Box sx={{ maxWidth: 440, width: "100%", textAlign: "center" }}>
+            <img src={logoUrl} alt="Welcome Visual" style={{ width: "100%", maxHeight: 220, objectFit: "contain", opacity: 0.85 }} />
           </Box>
         )}
       </Box>
