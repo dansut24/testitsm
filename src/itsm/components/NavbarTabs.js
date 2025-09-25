@@ -21,18 +21,24 @@ const NavbarTabs = ({
 }) => {
   if (!tabs || tabs.length === 0) return null;
 
-  // Inline CSS overrides for ChromeTabs
   const chromeTabsStyle = `
     .chrome-tabs {
       background-color: transparent !important;
       border-bottom: none !important;
       height: 100%;
+      display: flex;
+      align-items: center;
     }
     .chrome-tab {
       border-bottom: none !important;
       background-color: transparent !important;
       border-radius: 8px 8px 0 0;
       transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
+      flex: 0 1 auto; /* Allow dynamic sizing */
+      display: flex;
+      align-items: center;
+      justify-content: flex-start; /* Left-align text */
+      padding: 0 12px;
     }
     .chrome-tab.chrome-tab--active {
       background-color: rgba(255,255,255,0.25) !important;
@@ -88,7 +94,7 @@ const NavbarTabs = ({
           boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
         }}
       >
-        {/* Left: Logo */}
+        {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", marginRight: 12 }}>
           <img
             src="/logo192.png"
@@ -102,43 +108,20 @@ const NavbarTabs = ({
           />
         </div>
 
-        {/* Tabs */}
-        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", height: "100%" }}>
+        {/* Tabs container */}
+        <div style={{ flex: 1, display: "flex", alignItems: "center", height: "100%", minWidth: 0 }}>
           <Tabs
             tabs={chromeTabs}
             onTabActive={onTabActive}
             onTabClose={onTabClose}
             draggable
             className="chrome-tabs"
-            tabContentStyle={{ textAlign: "left", height: "100%" }}
-            style={{ flex: 1, height: "100%" }}
+            tabContentStyle={{ textAlign: "left", height: "100%", display: "flex", alignItems: "center" }}
+            style={{ flex: 1, height: "100%", display: "flex" }}
             tabRenderer={(tab) => (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-start",
-                  overflow: "hidden",
-                  padding: "0 8px",
-                  height: "100%",
-                }}
-              >
-                {tab.favicon && (
-                  <img
-                    src={tab.favicon}
-                    alt="favicon"
-                    style={{ width: 16, height: 16, marginRight: 6 }}
-                  />
-                )}
-                <span
-                  style={{
-                    whiteSpace: "nowrap",
-                    textOverflow: "ellipsis",
-                    overflow: "hidden",
-                  }}
-                >
-                  {tab.title}
-                </span>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", overflow: "hidden" }}>
+                {tab.favicon && <img src={tab.favicon} alt="favicon" style={{ width: 16, height: 16, marginRight: 6 }} />}
+                <span style={{ whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{tab.title}</span>
               </div>
             )}
           />
@@ -166,14 +149,7 @@ const NavbarTabs = ({
         </div>
 
         {/* Right-hand icons */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 16,
-            paddingLeft: 12,
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "center", gap: 16, paddingLeft: 12 }}>
           <SearchIcon style={{ cursor: "pointer" }} />
           <NotificationsIcon style={{ cursor: "pointer" }} />
           <AccountCircleIcon style={{ cursor: "pointer" }} />
