@@ -1,133 +1,270 @@
 // Login.js
-import React, { useState } from "react";
-import { Box, Paper, Typography, TextField, Button, Divider, Stack } from "@mui/material";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "../../common/utils/supabaseClient";
+import React, { useEffect, useState } from "react";
+import {
+  TextField,
+  Button,
+  Typography,
+  Divider,
+  Stack,
+  Box,
+  Link as MuiLink,
+  Paper,
+  useTheme,
+  useMediaQuery,
+} from "@mui/material";
+import { Link, useNavigate } from "react-router-dom";
 import GoogleIcon from "@mui/icons-material/Google";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import BusinessIcon from "@mui/icons-material/Business";
+import { supabase } from "../../common/utils/supabaseClient";
+import defaultLogo from "../../common/assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
 
 const Login = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [logoUrl, setLogoUrl] = useState(defaultLogo);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  const rawSubdomain = window.location.hostname.split(".")[0];
+  const baseSubdomain = rawSubdomain.replace("-itsm", "");
+
+  useEffect(() => {
+    const fetchLogo = async () => {
+      const { data: tenant } = await supabase
+        .from("tenants")
+        .select("id")
+        .eq("subdomain", baseSubdomain)
+        .maybeSingle();
+
+      if (!tenant) return;
+
+      const { data: settings } = await supabase
+        .from("tenant_settings")
+        .select("logo_url")
+        .eq("tenant_id", tenant.id)
+        .maybeSingle();
+
+      if (settings?.logo_url) {
+        const { data: publicData } = supabase.storage
+          .from("tenant-logos")
+          .getPublicUrl(settings.logo_url);
+
+        if (publicData?.publicUrl) setLogoUrl(publicData.publicUrl);
+      }
+    };
+
+    fetchLogo();
+  }, [baseSubdomain]);
+
+  const handleChange = (e) =>
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const handleLogin = async () => {
     setError("");
+    const { email, password } = formData;
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-
-    if (error) {
-      setError(error.message);
-    } else {
-      navigate("/dashboard");
+    if (!email || !password) {
+      setError("Please enter both email and password.");
+      return;
     }
+
+    const { data, error: loginError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (loginError || !data.session) {
+      setError("Invalid login credentials.");
+      return;
+    }
+
+    navigate("/dashboard");
   };
 
   const handleSocialLogin = async (provider) => {
-    setLoading(true);
-    setError("");
     const { error } = await supabase.auth.signInWithOAuth({ provider });
-    setLoading(false);
-    if (error) setError(error.message);
-    // Note: redirect handled by Supabase OAuth callback
+    if (error) setError(`${provider.charAt(0).toUpperCase() + provider.slice(1)} sign-in failed.`);
   };
 
   return (
     <Box
       sx={{
+        minHeight: "100vh",
         width: "100vw",
-        height: "100vh",
         display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        background: "linear-gradient(to right, #4facfe, #00f2fe)",
-        px: 2,
+        flexDirection: "column",
+        bgcolor: "#f0f2f5",
+        p: isMobile ? 2 : 4,
+        boxSizing: "border-box",
       }}
     >
-      <Paper
-        elevation={6}
+      {/* Top Welcome Header */}
+      <Box
         sx={{
-          maxWidth: 400,
+          maxWidth: 900,
+          mx: "auto",
           width: "100%",
-          p: 4,
-          display: "flex",
-          flexDirection: "column",
-          gap: 2,
+          textAlign: "center",
+          mb: 4,
         }}
       >
-        <Typography variant="h4" textAlign="center" fontWeight="bold">
-          Welcome Back
-        </Typography>
-        <Typography variant="body2" textAlign="center" color="text.secondary">
-          Sign in to continue
-        </Typography>
-
-        {error && (
-          <Typography variant="body2" color="error" textAlign="center">
-            {error}
-          </Typography>
-        )}
-
-        <TextField
-          label="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          fullWidth
-        />
-        <TextField
-          label="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          fullWidth
-        />
-
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleLogin}
-          disabled={loading}
-          fullWidth
+        <MuiLink
+          component={Link}
+          to="/self-service"
+          underline="hover"
+          fontSize="0.9rem"
+          sx={{ fontWeight: 500, display: "inline-block", mb: 1 }}
         >
-          {loading ? "Signing in..." : "Sign in"}
-        </Button>
+          Go to Self-Service
+        </MuiLink>
 
-        <Divider sx={{ my: 1 }}>OR</Divider>
+        <Typography
+          variant="h3"
+          fontWeight={700}
+          sx={{ fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" }, mb: 1 }}
+        >
+          Welcome Back 👋
+        </Typography>
+        <Typography
+          variant="h6"
+          color="text.secondary"
+          sx={{ fontSize: { xs: "1rem", sm: "1.2rem" } }}
+        >
+          Manage your services, assets, and requests all in one place.
+        </Typography>
+      </Box>
 
-        <Stack spacing={1}>
-          <Button
-            variant="outlined"
-            startIcon={<GoogleIcon />}
-            onClick={() => handleSocialLogin("google")}
+      {/* Login Content */}
+      <Box
+        sx={{
+          flex: 1,
+          display: "flex",
+          flexDirection: isMobile ? "column" : "row",
+          gap: 4,
+          justifyContent: "center",
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        {/* Login Box */}
+        <Paper
+          elevation={3}
+          sx={{
+            p: 4,
+            width: "100%",
+            maxWidth: 420,
+            borderRadius: 3,
+            boxShadow: "0px 6px 12px rgba(0,0,0,0.1)",
+          }}
+        >
+          <Box sx={{ textAlign: "center", mb: 2 }}>
+            <img
+              src={logoUrl}
+              alt="Tenant Logo"
+              style={{ maxHeight: 50, marginBottom: 12 }}
+            />
+            <Typography variant="h5" fontWeight={600}>
+              Sign in to Hi5Tech
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Use your credentials or a social provider
+            </Typography>
+          </Box>
+
+          <Stack spacing={1.5} mt={2}>
+            <Button
+              variant="outlined"
+              startIcon={<GoogleIcon />}
+              fullWidth
+              onClick={() => handleSocialLogin("google")}
+            >
+              Sign in with Google
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<BusinessIcon />}
+              fullWidth
+              onClick={() => handleSocialLogin("azure")}
+            >
+              Sign in with Microsoft
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<GitHubIcon />}
+              fullWidth
+              onClick={() => handleSocialLogin("github")}
+            >
+              Sign in with GitHub
+            </Button>
+          </Stack>
+
+          <Divider sx={{ my: 3 }}>or</Divider>
+
+          <TextField
             fullWidth
-          >
-            Sign in with Google
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<GitHubIcon />}
-            onClick={() => handleSocialLogin("github")}
+            label="Email"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            margin="dense"
+          />
+          <TextField
             fullWidth
-          >
-            Sign in with GitHub
-          </Button>
+            label="Password"
+            name="password"
+            type="password"
+            value={formData.password}
+            onChange={handleChange}
+            margin="dense"
+          />
+
+          <Box sx={{ textAlign: "right", mt: 1 }}>
+            <MuiLink
+              component={Link}
+              to="/reset-password"
+              underline="hover"
+              fontSize="0.875rem"
+            >
+              Forgot password?
+            </MuiLink>
+          </Box>
+
+          {error && (
+            <Typography color="error" mt={1}>
+              {error}
+            </Typography>
+          )}
+
           <Button
-            variant="outlined"
-            startIcon={<BusinessIcon />}
-            onClick={() => handleSocialLogin("azure")}
+            variant="contained"
             fullWidth
+            sx={{ mt: 3, py: 1.4, fontWeight: "bold" }}
+            onClick={handleLogin}
           >
-            Sign in with Microsoft
+            Login
           </Button>
-        </Stack>
-      </Paper>
+        </Paper>
+
+        {/* Visual Section */}
+        {!isMobile && (
+          <Box sx={{ maxWidth: 420, width: "100%", textAlign: "center" }}>
+            <img
+              src={logoUrl}
+              alt="Welcome Visual"
+              style={{
+                width: "100%",
+                maxHeight: "200px",
+                objectFit: "contain",
+                opacity: 0.85,
+              }}
+            />
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 };
