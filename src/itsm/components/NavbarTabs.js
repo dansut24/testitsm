@@ -43,7 +43,6 @@ const NavbarTabs = ({
     // Optional: implement reorder logic if needed
   };
 
-  // Sidebar offset
   const leftOffset = isMobile ? 0 : sidebarOpen ? sidebarWidth : collapsedWidth;
   const widthCalc = isMobile ? "100%" : `calc(100% - ${leftOffset}px)`;
 
@@ -55,7 +54,7 @@ const NavbarTabs = ({
         left: leftOffset,
         width: widthCalc,
         zIndex: 1500,
-        height: 41.6, // match Navbar height
+        height: 41.6,
         background: "transparent",
         display: "flex",
         alignItems: "center",
@@ -73,7 +72,7 @@ const NavbarTabs = ({
         />
       </div>
 
-      {/* Tabs flex container */}
+      {/* Tabs */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <Tabs
           tabs={chromeTabs}
@@ -83,6 +82,35 @@ const NavbarTabs = ({
           draggable
           className="chrome-tabs"
           tabContentStyle={{ textAlign: "left" }}
+          style={{ width: "100%" }}
+          tabRenderer={(tab, tabIndex) => (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                width: `${100 / chromeTabs.length}%`, // equal width for all tabs
+                overflow: "hidden",
+              }}
+            >
+              {tab.favicon && (
+                <img
+                  src={tab.favicon}
+                  alt="favicon"
+                  style={{ width: 16, height: 16, marginRight: 6 }}
+                />
+              )}
+              <span
+                style={{
+                  whiteSpace: "nowrap",
+                  textOverflow: "ellipsis",
+                  overflow: "hidden",
+                }}
+              >
+                {tab.title}
+              </span>
+            </div>
+          )}
         />
       </div>
 
