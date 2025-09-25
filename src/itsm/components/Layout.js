@@ -1,12 +1,28 @@
-// Layout.js
 import React, { useState, useEffect } from "react";
 import { Box, useTheme, useMediaQuery } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 
+import Sidebar from "./Sidebar";
 import NavbarTabs from "./NavbarTabs";
 import BackToTop from "./BackToTop";
 import BreadcrumbsNav from "./BreadcrumbsNav";
+
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import ReportProblemIcon from "@mui/icons-material/ReportProblem";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
+import BugReportIcon from "@mui/icons-material/BugReport";
+import DevicesOtherIcon from "@mui/icons-material/DevicesOther";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import HowToVoteIcon from "@mui/icons-material/HowToVote";
+import PersonIcon from "@mui/icons-material/Person";
+import SettingsIcon from "@mui/icons-material/Settings";
+
+const expandedWidth = 256;
+const collapsedWidth = 48;
+const NAVBAR_HEIGHT = 48;
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -30,6 +46,9 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [sidebarOpen, setSidebarOpen] = useState(false); // start hidden
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   const [tabs, setTabs] = useState(() => {
     const stored = sessionStorage.getItem("tabs");
     return stored ? JSON.parse(stored) : [{ label: "Dashboard", path: "/dashboard" }];
@@ -38,6 +57,11 @@ const Layout = () => {
     const storedIndex = sessionStorage.getItem("tabIndex");
     return storedIndex ? parseInt(storedIndex, 10) : 0;
   });
+
+  const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || "{}") : {};
+  const role = user?.role || "user";
+
+  const sidebarWidth = sidebarOpen ? expandedWidth : collapsedWidth;
 
   // Update tabs on route change
   useEffect(() => {
@@ -71,7 +95,7 @@ const Layout = () => {
       const index = tabs.findIndex((t) => t.path === currentPath);
       setTabIndex(index);
     }
-  }, [location.pathname]); // eslint-disable-line
+  }, [location.pathname]);
 
   // Persist tabs
   useEffect(() => {
@@ -80,6 +104,10 @@ const Layout = () => {
   useEffect(() => {
     sessionStorage.setItem("tabIndex", tabIndex.toString());
   }, [tabIndex]);
+
+  // Sidebar toggle handlers
+  const handleSidebarToggle = () => setSidebarOpen((prev) => !prev);
+  const handleMobileSidebarToggle = () => setMobileOpen((prev) => !prev);
 
   const handleTabChange = (ev, newIndex) => {
     setTabIndex(newIndex);
@@ -98,59 +126,104 @@ const Layout = () => {
     }
   };
 
-  const handleNewTab = () => {
-    const newTab = {
-      label: "New Tab",
-      path: `/new-tab-${Date.now()}`,
-    };
-    setTabs([...tabs, newTab]);
-    const newIndex = tabs.length;
-    setTabIndex(newIndex);
-    navigate(newTab.path);
-  };
+  const menuItems = [
+    { text: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
+    {
+      text: "Incidents",
+      icon: <ReportProblemIcon />,
+      children: [
+        { text: "View Incidents", path: "/incidents" },
+        { text: "Raise Incident", path: "/new-incident" },
+      ],
+    },
+    {
+      text: "Service Requests",
+      icon: <AssignmentIcon />,
+      children: [
+        { text: "View Requests", path: "/service-requests" },
+        { text: "Raise Request", path: "/new-service-request" },
+      ],
+    },
+    {
+      text: "Changes",
+      icon: <AutoFixHighIcon />,
+      children: [
+        { text: "View Changes", path: "/changes" },
+        { text: "Raise Change", path: "/new-change" },
+      ],
+    },
+    {
+      text: "Problems",
+      icon: <BugReportIcon />,
+      children: [
+        { text: "View Problems", path: "/problems" },
+        { text: "Raise Problem", path: "/new-problem" },
+      ],
+    },
+    { text: "Assets", icon: <DevicesOtherIcon />, path: "/assets" },
+    { text: "Knowledge Base", icon: <MenuBookIcon />, path: "/knowledge-base" },
+    { text: "Reports", icon: <BarChartIcon />, path: "/reports" },
+    { text: "Approvals", icon: <HowToVoteIcon />, path: "/approvals" },
+    { text: "Profile", icon: <PersonIcon />, path: "/profile" },
+    ...(role === "admin"
+      ? [{ text: "Admin Settings", icon: <SettingsIcon />, path: "/admin-settings" }]
+      : [{ text: "Settings", icon: <SettingsIcon />, path: "/settings" }]),
+  ];
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100vh", width: "100%", overflow: "hidden" }}>
-      {/* Navbar with tabs */}
+    <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
+      {/* Sidebar */}
+      <Sidebar
+        sidebarOpen={sidebarOpen}
+        mobileOpen={mobileOpen}
+        handleSidebarToggle={handleSidebarToggle}
+        handleMobileSidebarToggle={handleMobileSidebarToggle}
+        sidebarWidth={sidebarWidth}
+        collapsedWidth={collapsedWidth}
+        menuItems={menuItems}
+        isMobile={isMobile}
+      />
+
+      {/* Main column */}
       <Box
         sx={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 36,
+          flex: 1,
           display: "flex",
-          alignItems: "center",
-          px: 1,
-          backgroundColor: "rgba(200,200,200,0.15)", // theme friendly
-          backdropFilter: "blur(8px)",
-          zIndex: theme.zIndex.appBar,
+          flexDirection: "column",
+          minWidth: 0,
+          marginLeft: !isMobile && sidebarOpen ? `${sidebarWidth}px` : 0,
+          height: "100vh",
+          position: "relative",
         }}
       >
+        {/* Navbar */}
         <NavbarTabs
           tabs={tabs}
           tabIndex={tabIndex}
           handleTabChange={handleTabChange}
           handleTabClose={handleTabClose}
+          sidebarOpen={sidebarOpen}
+          sidebarWidth={sidebarWidth}
+          collapsedWidth={collapsedWidth}
           isMobile={isMobile}
-          handleNewTab={handleNewTab}
+          onLogoClick={handleSidebarToggle} // pass logo click handler
         />
-      </Box>
 
-      {/* Main content area */}
-      <Box
-        component="main"
-        sx={{
-          flex: 1,
-          mt: "36px", // height of navbar
-          overflowY: "auto",
-          overflowX: "hidden",
-          px: 1,
-        }}
-      >
-        {tabs.length > 0 && <Outlet />}
-        <BreadcrumbsNav />
-        <BackToTop />
+        {/* Main content area */}
+        <Box
+          component="main"
+          sx={{
+            flex: 1,
+            mt: `${NAVBAR_HEIGHT}px`,
+            overflowY: "auto",
+            overflowX: "hidden",
+            px: 1,
+          }}
+        >
+          {tabs.length > 0 && <Outlet />}
+          <BreadcrumbsNav />
+          <BackToTop />
+        </Box>
       </Box>
     </Box>
   );
