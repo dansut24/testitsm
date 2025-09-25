@@ -1,4 +1,6 @@
+// Sidebar.js
 import React, { useState } from "react";
+import ReactDOM from "react-dom";
 import {
   Box,
   SwipeableDrawer,
@@ -9,14 +11,17 @@ import {
   ListItemIcon,
   ListItemText,
   Collapse,
+  Grow,
+  Typography,
+  useTheme,
 } from "@mui/material";
-import {
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
-  ExpandLess,
-  ExpandMore,
-} from "@mui/icons-material";
-import { useTheme } from "@mui/material/styles";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import ExpandLess from "@mui/icons-material/ExpandLess";
+import ExpandMore from "@mui/icons-material/ExpandMore";
+import SearchIcon from "@mui/icons-material/Search";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const expandedWidth = 256;
@@ -27,12 +32,8 @@ const Sidebar = ({
   mobileOpen,
   handleSidebarToggle,
   handleMobileSidebarToggle,
-  sidebarWidth,
-  collapsedWidth,
+  menuItems = [],
   isMobile,
-  tabs,
-  handleTabChange,
-  tabIndex,
 }) => {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -48,27 +49,9 @@ const Sidebar = ({
 
   const closeAllDropdowns = () => setOpenDropdowns({});
 
-  const menuItems = [
-    {
-      text: "Dashboard",
-      path: "/dashboard",
-    },
-    {
-      text: "Incidents",
-      path: "/incidents",
-      children: [
-        { text: "View Incidents", path: "/incidents/view" },
-        { text: "Raise Incident", path: "/incidents/raise" },
-      ],
-    },
-    {
-      text: "Profile",
-      path: "/profile",
-    },
-  ];
-
   const drawerContent = (
     <>
+      {/* Toggle button */}
       <Toolbar
         sx={{
           display: "flex",
@@ -79,12 +62,12 @@ const Sidebar = ({
       >
         <IconButton
           onClick={isMobile ? handleMobileSidebarToggle : handleSidebarToggle}
-          sx={{ color: theme.palette.common.white }}
         >
           {sidebarOpen || isMobile ? <ChevronLeftIcon /> : <ChevronRightIcon />}
         </IconButton>
       </Toolbar>
 
+      {/* Menu items */}
       <Box
         sx={{
           overflowY: "auto",
@@ -92,79 +75,146 @@ const Sidebar = ({
           WebkitOverflowScrolling: "touch",
           pr: 1,
           pb: 4,
-          backgroundColor: "transparent",
-          color: theme.palette.text.primary,
+          backgroundColor: "background.default",
+          color: "text.primary",
+          "&::-webkit-scrollbar": { width: 0, height: 0 },
         }}
       >
         <List>
           {menuItems.map((item, index) => (
             <React.Fragment key={item.text}>
-              <ListItem
-                button
-                onClick={() => {
-                  if (item.children) toggleDropdown(item.text);
-                  else if (item.path) {
-                    handleTabChange(null, tabs.findIndex(t => t.path === item.path), item.path);
-                    if (isMobile) handleMobileSidebarToggle();
-                    closeAllDropdowns();
+              <Box
+                onMouseEnter={() => {
+                  if (!sidebarOpen && !isMobile && item.children) {
+                    setOpenDropdowns({ [item.text]: true });
                   }
                 }}
-                selected={location.pathname === item.path}
-                sx={{
-                  flexDirection: sidebarOpen || isMobile ? "row" : "column",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  py: sidebarOpen || isMobile ? 1 : 2,
+                onMouseLeave={() => {
+                  if (!sidebarOpen && !isMobile && item.children) {
+                    setOpenDropdowns({ [item.text]: false });
+                  }
                 }}
+                sx={{ position: "relative" }}
               >
-                <ListItemText
-                  primary={item.text}
-                  sx={{
-                    ml: sidebarOpen || isMobile ? 1 : 0,
-                    fontSize: sidebarOpen || isMobile ? "1rem" : "0.7rem",
+                <ListItem
+                  button
+                  onClick={() => {
+                    if (item.children) toggleDropdown(item.text);
+                    else if (item.path) {
+                      navigate(item.path);
+                      if (isMobile) handleMobileSidebarToggle();
+                      closeAllDropdowns();
+                    }
                   }}
-                />
-                {item.children &&
-                  (openDropdowns[item.text] ? <ExpandLess /> : <ExpandMore />)}
-              </ListItem>
+                  selected={location.pathname === item.path}
+                  sx={{
+                    flexDirection: sidebarOpen || isMobile ? "row" : "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    py: sidebarOpen || isMobile ? 1 : 2,
+                    "&.Mui-selected": { backgroundColor: "action.selected" },
+                    "&:hover": { backgroundColor: "action.hover" },
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 0,
+                      mr: sidebarOpen || isMobile ? 2 : 0,
+                      justifyContent: "center",
+                      mb: sidebarOpen || isMobile ? 0 : 0.5,
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
 
-              {item.children && (
-                <Collapse in={openDropdowns[item.text]} timeout="auto" unmountOnExit>
-                  <List component="div" disablePadding>
-                    {item.children.map((child) => (
-                      <ListItem
-                        button
-                        key={child.text}
-                        sx={{ pl: 4 }}
-                        selected={location.pathname === child.path}
-                        onClick={() => {
-                          handleTabChange(
-                            null,
-                            tabs.findIndex(t => t.path === child.path),
-                            child.path
-                          );
-                          if (isMobile) handleMobileSidebarToggle();
-                          closeAllDropdowns();
-                        }}
-                      >
-                        <ListItemText primary={child.text} />
-                      </ListItem>
-                    ))}
-                  </List>
-                </Collapse>
-              )}
+                  {sidebarOpen || isMobile ? (
+                    <>
+                      <ListItemText primary={item.text} />
+                      {item.children &&
+                        (openDropdowns[item.text] ? <ExpandLess /> : <ExpandMore />)}
+                    </>
+                  ) : (
+                    <Typography variant="caption">{item.text}</Typography>
+                  )}
+                </ListItem>
+
+                {/* Dropdowns */}
+                {item.children &&
+                  (sidebarOpen || isMobile ? (
+                    <Collapse in={openDropdowns[item.text]} timeout="auto" unmountOnExit>
+                      <List component="div" disablePadding>
+                        {item.children.map((child) => (
+                          <ListItem
+                            button
+                            key={child.text}
+                            sx={{ pl: 4 }}
+                            selected={location.pathname === child.path}
+                            onClick={() => {
+                              navigate(child.path);
+                              if (isMobile) handleMobileSidebarToggle();
+                              closeAllDropdowns();
+                            }}
+                          >
+                            <ListItemText primary={child.text} />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Collapse>
+                  ) : (
+                    ReactDOM.createPortal(
+                      <Grow in={openDropdowns[item.text]}>
+                        <Box
+                          sx={{
+                            position: "fixed",
+                            top: `calc(64px + ${index * 72}px)`,
+                            left: `${collapsedWidth}px`,
+                            backgroundColor: "background.default",
+                            boxShadow: 4,
+                            borderRadius: 1,
+                            zIndex: theme.zIndex.modal + 10,
+                            minWidth: 180,
+                          }}
+                        >
+                          <List dense>
+                            {item.children.map((child) => (
+                              <ListItem
+                                button
+                                key={child.text}
+                                onClick={() => {
+                                  navigate(child.path);
+                                  closeAllDropdowns();
+                                }}
+                              >
+                                <ListItemText primary={child.text} />
+                              </ListItem>
+                            ))}
+                          </List>
+                        </Box>
+                      </Grow>,
+                      document.body
+                    )
+                  ))}
+              </Box>
             </React.Fragment>
           ))}
         </List>
       </Box>
 
-      {/* Mobile profile/search/notifications */}
+      {/* Mobile footer icons */}
       {isMobile && (
-        <Box sx={{ display: "flex", justifyContent: "space-around", p: 1 }}>
-          <ChevronLeftIcon sx={{ cursor: "pointer" }} onClick={handleMobileSidebarToggle} />
-          <SearchIcon sx={{ cursor: "pointer" }} />
-          <NotificationsIcon sx={{ cursor: "pointer" }} />
-          <AccountCircleIcon sx={{ cursor: "pointer" }} />
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-around",
+            alignItems: "center",
+            borderTop: 1,
+            borderColor: "divider",
+            p: 1,
+          }}
+        >
+          <SearchIcon />
+          <NotificationsIcon />
+          <AccountCircleIcon />
         </Box>
       )}
     </>
@@ -176,9 +226,16 @@ const Sidebar = ({
         anchor="left"
         open={mobileOpen}
         onClose={handleMobileSidebarToggle}
-        onOpen={handleMobileSidebarToggle}
+        onOpen={() => {}}
+        sx={{
+          "& .MuiDrawer-paper": {
+            width: expandedWidth,
+            backgroundColor: "background.default",
+            color: "text.primary",
+          },
+        }}
       >
-        <Box sx={{ width: expandedWidth }}>{drawerContent}</Box>
+        {drawerContent}
       </SwipeableDrawer>
     );
   }
@@ -186,14 +243,19 @@ const Sidebar = ({
   return (
     <Box
       sx={{
-        width: sidebarWidth,
-        flexShrink: 0,
-        whiteSpace: "nowrap",
-        overflowX: "hidden",
-        transition: theme.transitions.create("width", {
-          easing: theme.transitions.easing.sharp,
-          duration: theme.transitions.duration.enteringScreen,
-        }),
+        width: sidebarOpen ? expandedWidth : collapsedWidth,
+        height: "100vh",
+        bgcolor: "background.default",
+        color: "text.primary",
+        borderRight: 1,
+        borderColor: "divider",
+        position: "fixed",
+        top: 0,
+        left: 0,
+        display: "flex",
+        flexDirection: "column",
+        transition: "width 0.2s ease-in-out",
+        zIndex: theme.zIndex.drawer,
       }}
     >
       {drawerContent}
