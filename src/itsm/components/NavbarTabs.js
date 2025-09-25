@@ -25,7 +25,6 @@ const NavbarTabs = ({
   const chromeTabs = tabs.map((tab, index) => ({
     id: tab.path || `tab-${index}`,
     title: tab.label || "Untitled",
-    favicon: tab.favicon || undefined,
     active: index === tabIndex,
     isCloseIconVisible: tab.path === "/dashboard" ? false : true,
   }));
