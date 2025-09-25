@@ -62,7 +62,11 @@ const NavbarTabs = ({
     >
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", marginRight: 12 }}>
-        <img src="/logo192.png" alt="Logo" style={{ height: 28, objectFit: "contain" }} />
+        <img
+          src="/logo192.png"
+          alt="Logo"
+          style={{ height: 28, objectFit: "contain" }}
+        />
       </div>
 
       {/* Tabs */}
@@ -82,14 +86,19 @@ const NavbarTabs = ({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "flex-start",
-                minWidth: 120,
-                maxWidth: 300,
+                minWidth: isMobile ? 70 : 120,
+                maxWidth: isMobile ? 140 : 300,
+                padding: isMobile ? "4px 6px" : "6px 12px",
+                fontSize: isMobile ? "12px" : "14px",
                 overflow: "hidden",
-                padding: "0 12px",
                 borderRadius: tab.active ? 6 : 4,
-                boxShadow: tab.active ? "0 2px 6px rgba(0,0,0,0.15)" : "none",
+                boxShadow: tab.active
+                  ? "0 2px 6px rgba(0,0,0,0.15)"
+                  : "none",
                 transition: "all 0.2s ease-in-out",
-                backgroundColor: tab.active ? "rgba(255,255,255,0.2)" : "transparent",
+                backgroundColor: tab.active
+                  ? "rgba(255,255,255,0.2)"
+                  : "transparent",
               }}
             >
               <span
@@ -97,6 +106,7 @@ const NavbarTabs = ({
                   whiteSpace: "nowrap",
                   textOverflow: "ellipsis",
                   overflow: "hidden",
+                  flex: 1,
                 }}
               >
                 {tab.title}
@@ -110,16 +120,19 @@ const NavbarTabs = ({
       <AddIcon
         style={{ cursor: "pointer", marginRight: 12 }}
         onClick={() =>
-          handleTabChange(
-            null,
-            tabs.length,
-            `/new-tab-${Date.now()}`
-          )
+          handleTabChange(null, tabs.length, `/new-tab-${Date.now()}`)
         }
       />
 
       {/* Right-hand icons */}
-      <div style={{ display: "flex", alignItems: "center", gap: 16, paddingRight: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          paddingRight: 12,
+        }}
+      >
         <SearchIcon style={{ cursor: "pointer" }} />
         <NotificationsIcon style={{ cursor: "pointer" }} />
         <AccountCircleIcon style={{ cursor: "pointer" }} />
