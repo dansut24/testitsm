@@ -23,7 +23,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 
 const drawerWidth = 240;
 const collapsedWidth = 60;
-const NAVBAR_HEIGHT = 41.6; // 34.6 + 7px padding
+const NAVBAR_HEIGHT = 41.6; // matches NavbarTabs height
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -49,12 +49,10 @@ const Layout = () => {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
-
   const [tabs, setTabs] = useState(() => {
     const stored = sessionStorage.getItem("tabs");
     return stored ? JSON.parse(stored) : [{ label: "Dashboard", path: "/dashboard" }];
   });
-
   const [tabIndex, setTabIndex] = useState(() => {
     const storedIndex = sessionStorage.getItem("tabIndex");
     return storedIndex ? parseInt(storedIndex, 10) : 0;
@@ -62,9 +60,10 @@ const Layout = () => {
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const role = user?.role || "user";
+
   const sidebarWidth = sidebarOpen ? drawerWidth : collapsedWidth;
 
-  // --- Update tabs on route change ---
+  // Update tabs on route change
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -92,16 +91,15 @@ const Layout = () => {
     }
   }, [location.pathname]); // eslint-disable-line
 
-  // persist tabs
+  // Persist tabs
   useEffect(() => {
     sessionStorage.setItem("tabs", JSON.stringify(tabs));
   }, [tabs]);
-
   useEffect(() => {
     sessionStorage.setItem("tabIndex", tabIndex.toString());
   }, [tabIndex]);
 
-  // responsive sidebar initial state
+  // Responsive sidebar initial state
   useEffect(() => {
     if (isMobile) {
       setSidebarOpen(false);
@@ -202,7 +200,7 @@ const Layout = () => {
           position: "relative",
         }}
       >
-        {/* Navbar with integrated tabs */}
+        {/* Navbar with Chrome Tabs integrated */}
         <NavbarTabs
           tabs={tabs}
           tabIndex={tabIndex}
@@ -211,9 +209,7 @@ const Layout = () => {
           sidebarOpen={sidebarOpen}
           sidebarWidth={sidebarWidth}
           collapsedWidth={collapsedWidth}
-          storedUser={user}
           isMobile={isMobile}
-          height={NAVBAR_HEIGHT}
         />
 
         {/* Main content area */}
@@ -221,7 +217,6 @@ const Layout = () => {
           component="main"
           sx={{
             flex: 1,
-            ml: 0,
             mt: `${NAVBAR_HEIGHT}px`,
             overflowY: "auto",
             overflowX: "hidden",
