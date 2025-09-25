@@ -1,7 +1,8 @@
+// NavbarTabs.js
 import React from "react";
-import { ChromeTabs } from "react-chrome-tabs";
-import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
-import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
+import { ChromeTabs } from "react-chrome-tabs"; // ✅ Named import
+import "react-chrome-tabs/dist/chrome-tabs.css";
+import "react-chrome-tabs/dist/chrome-tabs-dark-theme.css";
 
 const NavbarTabs = ({
   tabs = [],
@@ -15,7 +16,7 @@ const NavbarTabs = ({
 }) => {
   if (!tabs || tabs.length === 0) return null;
 
-  // Convert your tabs array into ChromeTabs format
+  // Map your tabs to ChromeTabs format
   const chromeTabs = tabs.map((tab, index) => ({
     id: tab.path || `tab-${index}`,
     title: tab.label || "Untitled",
@@ -33,7 +34,7 @@ const NavbarTabs = ({
   };
 
   const onTabReorder = (tabId, fromIndex, toIndex) => {
-    // Optional: implement reorder logic if needed
+    // Optional: implement reordering if needed
   };
 
   // Adjust width to account for sidebar
@@ -49,7 +50,7 @@ const NavbarTabs = ({
         width: widthCalc,
         zIndex: 1500,
         paddingTop: 7,
-        height: 34.6 + 7,
+        height: 41.6 + 7, // same as Layout NAVBAR_HEIGHT
         background: "#fff",
         borderBottom: "1px solid #ccc",
         display: "flex",
