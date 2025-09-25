@@ -13,7 +13,7 @@ const NavbarTabs = ({
   tabIndex = 0,
   handleTabChange = () => {},
   handleTabClose = () => {},
-  handleTabAdd = () => {},
+  handleNewTab = () => {},
   sidebarOpen = true,
   sidebarWidth = 240,
   collapsedWidth = 60,
@@ -21,10 +21,10 @@ const NavbarTabs = ({
 }) => {
   if (!tabs || tabs.length === 0) return null;
 
-  // Convert tabs to ChromeTabs format
   const chromeTabs = tabs.map((tab, index) => ({
     id: tab.path || `tab-${index}`,
     title: tab.label || "Untitled",
+    favicon: tab.favicon || undefined,
     active: index === tabIndex,
     isCloseIconVisible: tab.path === "/dashboard" ? false : true,
   }));
@@ -50,26 +50,20 @@ const NavbarTabs = ({
         top: 0,
         left: leftOffset,
         width: widthCalc,
-        zIndex: 1500,
         height: 48,
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
-        backgroundColor: "rgba(200, 200, 200, 0.15)", // theme-ready semi-transparent
-        borderRadius: 8,
         padding: "0 12px",
-        backdropFilter: "blur(8px)",
+        backdropFilter: "blur(10px)",
+        backgroundColor: "rgba(240,240,240,0.3)",
+        borderRadius: 8,
         boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+        zIndex: 1500,
+        justifyContent: "space-between",
       }}
     >
-      {/* Left: Floating Logo */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          marginRight: 12,
-        }}
-      >
+      {/* Left: Logo */}
+      <div style={{ display: "flex", alignItems: "center", marginRight: 12 }}>
         <img
           src="/logo192.png"
           alt="Logo"
@@ -77,13 +71,13 @@ const NavbarTabs = ({
             height: 28,
             objectFit: "contain",
             borderRadius: 4,
-            backgroundColor: "rgba(255,255,255,0.3)",
+            backgroundColor: "rgba(255,255,255,0.25)",
           }}
         />
       </div>
 
-      {/* Tabs */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      {/* Tabs + New Tab button */}
+      <div style={{ flex: 1, display: "flex", alignItems: "center", minWidth: 0 }}>
         <Tabs
           tabs={chromeTabs}
           onTabActive={onTabActive}
@@ -91,79 +85,71 @@ const NavbarTabs = ({
           draggable
           className="chrome-tabs"
           tabContentStyle={{ textAlign: "left" }}
-          style={{ width: "100%" }}
-tabRenderer={(tab, tabIndex) => (
-  <div
-    style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "flex-start",
-      width: `${100 / chromeTabs.length}%`,
-      overflow: "hidden",
-      padding: "0 8px",
-    }}
-  >
-    <span
-      style={{
-        whiteSpace: "nowrap",
-        textOverflow: "ellipsis",
-        overflow: "hidden",
-      }}
-    >
-      {tab.title}
-    </span>
-  </div>
-)}
-/>
+          style={{ flex: 1, display: "flex", alignItems: "center" }}
+          tabRenderer={(tab) => (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                width: `${100 / chromeTabs.length}%`,
+                padding: "0 12px",
+                overflow: "hidden",
+                borderRadius: 6,
+                backgroundColor: tab.active ? "rgba(255,255,255,0.25)" : "transparent",
+                boxShadow: tab.active ? "0 2px 6px rgba(0,0,0,0.15)" : "none",
+                marginRight: 2,
+              }}
+            >
+              <span
+                style={{
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {tab.title}
+              </span>
+            </div>
+          )}
+        />
+
+        {/* New tab button */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 32,
+            height: 32,
+            marginLeft: 6,
+            borderRadius: 6,
+            backgroundColor: "rgba(255,255,255,0.2)",
+            cursor: "pointer",
+            transition: "background-color 0.2s",
+          }}
+          onClick={handleNewTab}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.3)")}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.2)")}
+        >
+          <AddIcon fontSize="small" />
+        </div>
       </div>
 
-      {/* Right: Add + Button and Icons */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          paddingLeft: 12,
-        }}
-      >
-        <AddIcon
-          style={{ cursor: "pointer" }}
-          onClick={handleTabAdd}
-          titleAccess="Add New Tab"
-        />
+      {/* Right-hand icons */}
+      <div style={{ display: "flex", alignItems: "center", gap: 16, paddingLeft: 12 }}>
         <SearchIcon style={{ cursor: "pointer" }} />
         <NotificationsIcon style={{ cursor: "pointer" }} />
         <AccountCircleIcon style={{ cursor: "pointer" }} />
       </div>
 
-      {/* Inline CSS for chrome-tabs */}
-     <style>
-  {`
-    .chrome-tabs {
-      background-color: transparent !important;
-      border-bottom: none !important;
-    }
-
-
-    .chrome-tab-title {
-    text-align: left;
-    }
-
-    .chrome-tab-favicon {
-  display: none !important;
-}
-
-.chrome-tabs-bottom-bar {
-  display: none !important;
-}
-    /* Make the bottom bar span full width */
-    .chrome-tabs-bottom-bar {
-      left: 0 !important;
-      background-color: rgba(255,255,255,0.3) !important; /* optional highlight for active bar */
-    }
-  `}
-</style>
-
+      {/* Override ChromeTabs styles */}
+      <style>
+        {`
+          .chrome-tab-favicon { display: none !important; }
+          .chrome-tabs-bottom-bar { width: 100% !important; }
+        `}
+      </style>
     </div>
   );
 };
