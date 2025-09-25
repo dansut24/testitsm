@@ -102,24 +102,24 @@ const Login = () => {
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", width: "100vw", display: "flex", flexDirection: "column", bgcolor: "#f0f2f5", p: isMobile ? 2 : 6, boxSizing: "border-box", justifyContent: "center" }}>
+    <Box sx={{ height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', bgcolor: '#f0f2f5', p: isMobile ? 2 : 6, boxSizing: 'border-box', justifyContent: 'center', alignItems: 'center' }}>
       {/* Header Section */}
-      <Box sx={{ maxWidth: 900, mx: "auto", textAlign: "center", mb: 5 }}>
-        <MuiLink component={Link} to="/self-service" underline="hover" fontSize="0.9rem" sx={{ fontWeight: 500, display: "inline-block", mb: 1, color: theme.palette.primary.main }}>
+      <Box sx={{ maxWidth: 900, width: '100%', textAlign: 'center', mb: 5 }}>
+        <MuiLink component={Link} to="/self-service" underline="hover" fontSize="0.9rem" sx={{ fontWeight: 500, display: 'inline-block', mb: 1, color: theme.palette.primary.main }}>
           Go to Self-Service
         </MuiLink>
-        <Typography variant="h3" fontWeight={700} sx={{ fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" }, mb: 1 }}>
+        <Typography variant="h3" fontWeight={700} sx={{ fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' }, mb: 1 }}>
           Welcome Back 👋
         </Typography>
-        <Typography variant="h6" color="text.secondary" sx={{ fontSize: { xs: "1rem", sm: "1.2rem" } }}>
+        <Typography variant="h6" color="text.secondary" sx={{ fontSize: { xs: '1rem', sm: '1.2rem' } }}>
           Manage your services, assets, and requests all in one place.
         </Typography>
       </Box>
 
       {/* Login Form Section */}
-      <Box sx={{ flex: 1, display: "flex", flexDirection: isMobile ? "column" : "row", gap: 4, justifyContent: "center", alignItems: "center", flexWrap: "wrap" }}>
-        <Paper elevation={3} sx={{ p: 5, width: "100%", maxWidth: 440, borderRadius: 4, boxShadow: theme.shadows[4] }}>
-          <Box sx={{ textAlign: "center", mb: 3 }}>
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 4, justifyContent: 'center', alignItems: 'center', width: '100%', maxWidth: 1000 }}>
+        <Paper elevation={3} sx={{ p: 5, width: '100%', maxWidth: 440, borderRadius: 4, boxShadow: theme.shadows[4] }}>
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
             <img src={logoUrl} alt="Tenant Logo" style={{ maxHeight: 60, marginBottom: 16 }} />
             <Typography variant="h5" fontWeight={600} gutterBottom>
               Sign in to Hi5Tech
@@ -146,13 +146,13 @@ const Login = () => {
           <TextField fullWidth label="Email" name="email" type="email" value={formData.email} onChange={handleChange} margin="dense" autoComplete="email" />
           <TextField fullWidth label="Password" name="password" type="password" value={formData.password} onChange={handleChange} margin="dense" autoComplete="current-password" />
 
-          <Box sx={{ textAlign: "right", mt: 1 }}>
+          <Box sx={{ textAlign: 'right', mt: 1 }}>
             <MuiLink component={Link} to="/reset-password" underline="hover" fontSize="0.875rem">
               Forgot password?
             </MuiLink>
           </Box>
 
-          {error && <Typography color="error" mt={1} sx={{ fontSize: "0.875rem" }}>{error}</Typography>}
+          {error && <Typography color="error" mt={1} sx={{ fontSize: '0.875rem' }}>{error}</Typography>}
 
           <Button variant="contained" fullWidth sx={{ mt: 4, py: 1.5, fontWeight: 600 }} onClick={handleLogin}>
             Login
@@ -160,8 +160,8 @@ const Login = () => {
         </Paper>
 
         {!isMobile && (
-          <Box sx={{ maxWidth: 440, width: "100%", textAlign: "center" }}>
-            <img src={logoUrl} alt="Welcome Visual" style={{ width: "100%", maxHeight: 220, objectFit: "contain", opacity: 0.85 }} />
+          <Box sx={{ maxWidth: 440, width: '100%', textAlign: 'center' }}>
+            <img src={logoUrl} alt="Welcome Visual" style={{ width: '100%', maxHeight: 220, objectFit: 'contain', opacity: 0.85 }} />
           </Box>
         )}
       </Box>
