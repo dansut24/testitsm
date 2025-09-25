@@ -202,7 +202,7 @@ const Layout = () => {
           display: "flex",
           flexDirection: "column",
           minWidth: 0,
-          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
+          marginLeft: 0,
           height: "100vh",
           position: "relative",
         }}
