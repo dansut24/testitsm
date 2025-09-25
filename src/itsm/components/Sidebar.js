@@ -1,204 +1,204 @@
-// Sidebar.js
-import React from "react";
+import React, { useState } from "react";
 import {
   Box,
+  SwipeableDrawer,
+  Toolbar,
   IconButton,
   List,
   ListItem,
   ListItemIcon,
   ListItemText,
-  Divider,
-  useTheme,
+  Collapse,
 } from "@mui/material";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import SearchIcon from "@mui/icons-material/Search";
-import NotificationsIcon from "@mui/icons-material/Notifications";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import ReportProblemIcon from "@mui/icons-material/ReportProblem";
-import AssignmentIcon from "@mui/icons-material/Assignment";
-import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
-import BugReportIcon from "@mui/icons-material/BugReport";
-import DevicesOtherIcon from "@mui/icons-material/DevicesOther";
-import MenuBookIcon from "@mui/icons-material/MenuBook";
-import BarChartIcon from "@mui/icons-material/BarChart";
-import HowToVoteIcon from "@mui/icons-material/HowToVote";
-import PersonIcon from "@mui/icons-material/Person";
-import SettingsIcon from "@mui/icons-material/Settings";
+import {
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  ExpandLess,
+  ExpandMore,
+} from "@mui/icons-material";
+import { useTheme } from "@mui/material/styles";
 import { useNavigate, useLocation } from "react-router-dom";
 
-const defaultMenu = [
-  { text: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
-  { text: "Incidents", icon: <ReportProblemIcon />, path: "/incidents" },
-  { text: "Service Requests", icon: <AssignmentIcon />, path: "/service-requests" },
-  { text: "Changes", icon: <AutoFixHighIcon />, path: "/changes" },
-  { text: "Problems", icon: <BugReportIcon />, path: "/problems" },
-  { text: "Assets", icon: <DevicesOtherIcon />, path: "/assets" },
-  { text: "Knowledge Base", icon: <MenuBookIcon />, path: "/knowledge-base" },
-  { text: "Reports", icon: <BarChartIcon />, path: "/reports" },
-  { text: "Approvals", icon: <HowToVoteIcon />, path: "/approvals" },
-  { text: "Profile", icon: <PersonIcon />, path: "/profile" },
-  { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
-];
+const expandedWidth = 256;
+const collapsedWidth = 48;
 
 const Sidebar = ({
-  sidebarOpen = true,
-  mobileOpen = false,
-  handleSidebarToggle = () => {},
-  handleMobileSidebarToggle = () => {},
-  sidebarWidth = 256,
-  collapsedWidth = 48,
-  menuItems = defaultMenu,
-  isMobile = false,
-  navbarOffset = 40, // top offset for mobile overlay so it renders under the navbar
+  sidebarOpen,
+  mobileOpen,
+  handleSidebarToggle,
+  handleMobileSidebarToggle,
+  sidebarWidth,
+  collapsedWidth,
+  isMobile,
+  tabs,
+  handleTabChange,
+  tabIndex,
 }) => {
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const [openDropdowns, setOpenDropdowns] = useState({});
 
-  const items = Array.isArray(menuItems) ? menuItems : defaultMenu;
+  const toggleDropdown = (text) => {
+    setOpenDropdowns((prev) => ({
+      ...prev,
+      [text]: !prev[text],
+    }));
+  };
 
-  // Desktop (fixed) sidebar
-  const desktopSidebar = (
-    <Box
-      sx={{
-        width: sidebarOpen ? sidebarWidth : collapsedWidth,
-        height: "100vh",
-        bgcolor: "background.paper",
-        color: "text.primary",
-        borderRight: 1,
-        borderColor: "divider",
-        position: "fixed",
-        top: 0,
-        left: 0,
-        display: "flex",
-        flexDirection: "column",
-        transition: "width 220ms ease",
-        zIndex: 1300, // below navbar which has higher zIndex
-        boxShadow: sidebarOpen ? "none" : "none",
-      }}
-    >
-      {/* Toggle */}
-      <Box sx={{ px: 1.25, py: 0.5, display: "flex", justifyContent: sidebarOpen ? "flex-end" : "center" }}>
-        <IconButton onClick={handleSidebarToggle} size="small" aria-label="Toggle sidebar">
-          {sidebarOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+  const closeAllDropdowns = () => setOpenDropdowns({});
+
+  const menuItems = [
+    {
+      text: "Dashboard",
+      path: "/dashboard",
+    },
+    {
+      text: "Incidents",
+      path: "/incidents",
+      children: [
+        { text: "View Incidents", path: "/incidents/view" },
+        { text: "Raise Incident", path: "/incidents/raise" },
+      ],
+    },
+    {
+      text: "Profile",
+      path: "/profile",
+    },
+  ];
+
+  const drawerContent = (
+    <>
+      <Toolbar
+        sx={{
+          display: "flex",
+          justifyContent: sidebarOpen || isMobile ? "flex-end" : "center",
+          px: 1,
+          minHeight: "34.6px",
+        }}
+      >
+        <IconButton
+          onClick={isMobile ? handleMobileSidebarToggle : handleSidebarToggle}
+          sx={{ color: theme.palette.common.white }}
+        >
+          {sidebarOpen || isMobile ? <ChevronLeftIcon /> : <ChevronRightIcon />}
         </IconButton>
-      </Box>
+      </Toolbar>
 
-      {/* Menu */}
-      <Box sx={{ overflowY: "auto", flex: 1, pb: 2 }}>
+      <Box
+        sx={{
+          overflowY: "auto",
+          flexGrow: 1,
+          WebkitOverflowScrolling: "touch",
+          pr: 1,
+          pb: 4,
+          backgroundColor: "transparent",
+          color: theme.palette.text.primary,
+        }}
+      >
         <List>
-          {items.map((item) => {
-            const selected = location.pathname === item.path;
-            return (
+          {menuItems.map((item, index) => (
+            <React.Fragment key={item.text}>
               <ListItem
-                key={item.text}
                 button
-                selected={selected}
                 onClick={() => {
-                  navigate(item.path);
+                  if (item.children) toggleDropdown(item.text);
+                  else if (item.path) {
+                    handleTabChange(null, tabs.findIndex(t => t.path === item.path), item.path);
+                    if (isMobile) handleMobileSidebarToggle();
+                    closeAllDropdowns();
+                  }
                 }}
+                selected={location.pathname === item.path}
                 sx={{
-                  px: sidebarOpen ? 2 : 1,
-                  py: 1,
-                  display: "flex",
+                  flexDirection: sidebarOpen || isMobile ? "row" : "column",
+                  justifyContent: "center",
                   alignItems: "center",
-                  justifyContent: sidebarOpen ? "flex-start" : "center",
+                  py: sidebarOpen || isMobile ? 1 : 2,
                 }}
               >
-                <ListItemIcon sx={{ minWidth: 36, justifyContent: "center" }}>{item.icon}</ListItemIcon>
-                {sidebarOpen && <ListItemText primary={item.text} />}
+                <ListItemText
+                  primary={item.text}
+                  sx={{
+                    ml: sidebarOpen || isMobile ? 1 : 0,
+                    fontSize: sidebarOpen || isMobile ? "1rem" : "0.7rem",
+                  }}
+                />
+                {item.children &&
+                  (openDropdowns[item.text] ? <ExpandLess /> : <ExpandMore />)}
               </ListItem>
-            );
-          })}
+
+              {item.children && (
+                <Collapse in={openDropdowns[item.text]} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    {item.children.map((child) => (
+                      <ListItem
+                        button
+                        key={child.text}
+                        sx={{ pl: 4 }}
+                        selected={location.pathname === child.path}
+                        onClick={() => {
+                          handleTabChange(
+                            null,
+                            tabs.findIndex(t => t.path === child.path),
+                            child.path
+                          );
+                          if (isMobile) handleMobileSidebarToggle();
+                          closeAllDropdowns();
+                        }}
+                      >
+                        <ListItemText primary={child.text} />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Collapse>
+              )}
+            </React.Fragment>
+          ))}
         </List>
       </Box>
 
-      <Divider />
-
-      {/* Bottom small icons */}
-      <Box sx={{ px: 1.25, py: 1, display: "flex", gap: 1, justifyContent: sidebarOpen ? "flex-end" : "center" }}>
-        <IconButton size="small" aria-label="search"><SearchIcon /></IconButton>
-        <IconButton size="small" aria-label="notifications"><NotificationsIcon /></IconButton>
-        <IconButton size="small" aria-label="profile"><AccountCircleIcon /></IconButton>
-      </Box>
-    </Box>
-  );
-
-  // Mobile: slide-in overlay placed *under* the navbar (top offset)
-  const mobileOverlay = (
-    <>
-      {/* dim backdrop */}
-      <Box
-        onClick={handleMobileSidebarToggle}
-        sx={{
-          position: "fixed",
-          top: `${navbarOffset}px`,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: mobileOpen ? "rgba(0,0,0,0.36)" : "transparent",
-          opacity: mobileOpen ? 1 : 0,
-          transition: "opacity 220ms ease",
-          zIndex: 1400,
-          pointerEvents: mobileOpen ? "auto" : "none",
-        }}
-      />
-
-      {/* sliding panel */}
-      <Box
-        sx={{
-          position: "fixed",
-          top: `${navbarOffset}px`,
-          left: 0,
-          height: `calc(100vh - ${navbarOffset}px)`,
-          width: sidebarWidth,
-          transform: mobileOpen ? "translateX(0%)" : "translateX(-100%)",
-          transition: "transform 300ms cubic-bezier(.2,.9,.2,1), box-shadow 300ms linear",
-          zIndex: 1450,
-          bgcolor: "background.paper",
-          boxShadow: "0 8px 30px rgba(2,6,23,0.14)",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <Box sx={{ display: "flex", justifyContent: "flex-end", px: 1 }}>
-          <IconButton onClick={handleMobileSidebarToggle}>
-            <ChevronLeftIcon />
-          </IconButton>
+      {/* Mobile profile/search/notifications */}
+      {isMobile && (
+        <Box sx={{ display: "flex", justifyContent: "space-around", p: 1 }}>
+          <ChevronLeftIcon sx={{ cursor: "pointer" }} onClick={handleMobileSidebarToggle} />
+          <SearchIcon sx={{ cursor: "pointer" }} />
+          <NotificationsIcon sx={{ cursor: "pointer" }} />
+          <AccountCircleIcon sx={{ cursor: "pointer" }} />
         </Box>
-
-        <Box sx={{ overflowY: "auto", flex: 1 }}>
-          <List>
-            {items.map((item) => (
-              <ListItem
-                button
-                key={item.text}
-                onClick={() => {
-                  navigate(item.path);
-                  handleMobileSidebarToggle();
-                }}
-                selected={location.pathname === item.path}
-              >
-                <ListItemIcon sx={{ minWidth: 36 }}>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.text} />
-              </ListItem>
-            ))}
-          </List>
-        </Box>
-
-        <Divider />
-        <Box sx={{ display: "flex", justifyContent: "space-around", py: 2 }}>
-          <IconButton aria-label="search"><SearchIcon /></IconButton>
-          <IconButton aria-label="notifications"><NotificationsIcon /></IconButton>
-          <IconButton aria-label="profile"><AccountCircleIcon /></IconButton>
-        </Box>
-      </Box>
+      )}
     </>
   );
 
-  return isMobile ? mobileOverlay : desktopSidebar;
+  if (isMobile) {
+    return (
+      <SwipeableDrawer
+        anchor="left"
+        open={mobileOpen}
+        onClose={handleMobileSidebarToggle}
+        onOpen={handleMobileSidebarToggle}
+      >
+        <Box sx={{ width: expandedWidth }}>{drawerContent}</Box>
+      </SwipeableDrawer>
+    );
+  }
+
+  return (
+    <Box
+      sx={{
+        width: sidebarWidth,
+        flexShrink: 0,
+        whiteSpace: "nowrap",
+        overflowX: "hidden",
+        transition: theme.transitions.create("width", {
+          easing: theme.transitions.easing.sharp,
+          duration: theme.transitions.duration.enteringScreen,
+        }),
+      }}
+    >
+      {drawerContent}
+    </Box>
+  );
 };
 
 export default Sidebar;
