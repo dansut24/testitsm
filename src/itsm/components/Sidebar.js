@@ -19,6 +19,9 @@ import ExpandMore from "@mui/icons-material/ExpandMore";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import AssignmentIcon from "@mui/icons-material/Assignment";
+import SearchIcon from "@mui/icons-material/Search";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import { useTheme } from "@mui/material/styles";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -79,7 +82,7 @@ const Sidebar = ({
         {!isMobile && (
           <IconButton
             onClick={handleSidebarToggle}
-            sx={{ color: theme.palette.common.white }}
+            sx={{ color: theme.palette.text.primary }}
           >
             {sidebarOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
           </IconButton>
@@ -161,6 +164,23 @@ const Sidebar = ({
           ))}
         </List>
       </Box>
+
+      {/* Extra icons at bottom (mobile only) */}
+      {isMobile && (
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-around",
+            alignItems: "center",
+            p: 2,
+            borderTop: `1px solid ${theme.palette.divider}`,
+          }}
+        >
+          <SearchIcon />
+          <NotificationsIcon />
+          <AccountCircleIcon />
+        </Box>
+      )}
     </>
   );
 
