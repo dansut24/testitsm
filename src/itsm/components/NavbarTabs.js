@@ -157,14 +157,22 @@ const NavbarTabs = ({
       </div>
 
       {/* Inline CSS for chrome-tabs */}
-      <style>
-        {`
-          .chrome-tabs {
-            background-color: transparent !important;
-            border-bottom: none !important;
-          }
-        `}
-      </style>
+     <style>
+  {`
+    .chrome-tabs {
+      background-color: transparent !important;
+      border-bottom: none !important;
+    }
+
+    /* Make the bottom bar span full width */
+    .chrome-tabs-bottom-bar {
+      width: 100% !important;
+      left: 0 !important;
+      background-color: rgba(255,255,255,0.3) !important; /* optional highlight for active bar */
+    }
+  `}
+</style>
+
     </div>
   );
 };
