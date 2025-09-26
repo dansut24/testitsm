@@ -1,9 +1,10 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Tabs } from "@sinm/react-chrome-tabs";
 import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
 import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
 
 import { Menu, MenuItem, IconButton } from "@mui/material";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
@@ -28,7 +29,6 @@ const styles = `
     align-items: center;
     height: ${NAVBAR_HEIGHT}px;
   }
-
   .navbar-container::after {
     content: "";
     position: absolute;
@@ -40,7 +40,6 @@ const styles = `
     pointer-events: none;
     z-index: 999;
   }
-
   .chrome-tabs-bottom-bar { display: none !important; }
 
   .ctn-bar { display:flex; align-items:center; width:100%; position:relative; height:100%; }
@@ -62,7 +61,6 @@ const styles = `
     z-index:5;
     background:#f8f9fa;
   }
-
   .navbar-logo {
     position:absolute;
     left:8px;
@@ -74,7 +72,6 @@ const styles = `
     z-index:6;
     background:#f8f9fa;
   }
-
   .ctn-scroll { padding-right:160px; padding-left:60px; }
 
   @media (max-width: 600px) {
@@ -85,7 +82,6 @@ const styles = `
       display:flex; 
       justify-content:space-between; 
     }
-
     .chrome-tabs { display:flex !important; flex:1; }
     .chrome-tab { flex:1 1 auto !important; max-width:none !important; }
     .chrome-tab-title { font-size: 12px; text-align:center; overflow:hidden; text-overflow:ellipsis; }
@@ -94,10 +90,26 @@ const styles = `
 
 let nextId = 1;
 
+const ROUTE_LABELS = {
+  "/dashboard": "Dashboard",
+  "/incidents": "Incidents",
+  "/assets": "Assets",
+  "/settings": "Settings",
+};
+
 export default function ChromeTabsNavbar({ isMobile }) {
   const [darkMode] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [tabs, setTabs] = useState([
-    { id: "/dashboard", title: "Dashboard", active: true, favicon: REMOTE_FAVICONS[0] },
+    {
+      id: "/dashboard",
+      title: "Dashboard",
+      active: true,
+      favicon: REMOTE_FAVICONS[0],
+      isCloseIconVisible: false, // pinned
+    },
   ]);
 
   const scrollRef = useRef(null);
@@ -139,29 +151,54 @@ export default function ChromeTabsNavbar({ isMobile }) {
         ];
       }
     });
-    requestAnimationFrame(() => {
-      const el = scrollRef.current;
-      if (!el) return;
-      const activeTab = el.querySelector(".chrome-tab.chrome-tab-active");
-      scrollElementIntoView(activeTab, { inline: "center" });
-    });
+    navigate(id); // sync with router
   };
 
   const onTabActive = (id) => {
     setTabs((prev) => prev.map((t) => ({ ...t, active: t.id === id })));
+    navigate(id);
   };
 
   const onTabClose = (id) => {
     setTabs((prev) => {
+      const closing = prev.find((t) => t.id === id);
+      if (closing?.isCloseIconVisible === false) return prev; // don’t close pinned Dashboard
+
       const idx = prev.findIndex((t) => t.id === id);
       const filtered = prev.filter((t) => t.id !== id);
-      if (prev[idx]?.active && filtered.length) {
+
+      if (closing?.active && filtered.length) {
         const neighbor = filtered[Math.max(0, idx - 1)];
+        navigate(neighbor.id);
         return filtered.map((t) => ({ ...t, active: t.id === neighbor.id }));
       }
       return filtered;
     });
   };
+
+  // 🔄 Sync tabs with router location
+  useEffect(() => {
+    const path = location.pathname;
+    const label = ROUTE_LABELS[path];
+    if (!label) return;
+
+    setTabs((prev) => {
+      const exists = prev.find((t) => t.id === path);
+      if (exists) {
+        return prev.map((t) => ({ ...t, active: t.id === path }));
+      } else {
+        return [
+          ...prev.map((t) => ({ ...t, active: false })),
+          {
+            id: path,
+            title: label,
+            favicon: REMOTE_FAVICONS[Object.keys(ROUTE_LABELS).indexOf(path) % REMOTE_FAVICONS.length],
+            active: true,
+          },
+        ];
+      }
+    });
+  }, [location.pathname]);
 
   return (
     <>
@@ -177,17 +214,12 @@ export default function ChromeTabsNavbar({ isMobile }) {
             />
           </IconButton>
           <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
-            {[
-              { title: "Dashboard", id: "/dashboard" },
-              { title: "Incidents", id: "/incidents" },
-              { title: "Assets", id: "/assets" },
-              { title: "Settings", id: "/settings" },
-            ].map(({ title, id }, i) => (
+            {Object.entries(ROUTE_LABELS).map(([path, title], i) => (
               <MenuItem
-                key={id}
+                key={path}
                 onClick={() => {
                   closeMenu();
-                  openOrActivateTab(title, id, REMOTE_FAVICONS[i % REMOTE_FAVICONS.length]);
+                  openOrActivateTab(title, path, REMOTE_FAVICONS[i % REMOTE_FAVICONS.length]);
                 }}
               >
                 {title}
