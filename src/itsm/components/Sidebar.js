@@ -1,54 +1,73 @@
-// Sidebar.js
 import React from "react";
-import { Box, Typography } from "@mui/material";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import SettingsIcon from "@mui/icons-material/Settings";
-import ArticleIcon from "@mui/icons-material/Article";
-import DevicesIcon from "@mui/icons-material/Devices";
+import { Box, useTheme } from "@mui/material";
 
-const Sidebar = ({ pinned, activateOrAddTab }) => {
-  const items = [
-    { label: "Dashboard", icon: <DashboardIcon /> },
-    { label: "Incidents", icon: <ArticleIcon /> },
-    { label: "Assets", icon: <DevicesIcon /> },
-    { label: "Settings", icon: <SettingsIcon /> },
-  ];
+const Sidebar = ({
+  pinned = true,
+  onToggle = () => {},
+  items = [],
+  onItemClick = () => {},
+  widthExpanded = 260,
+  widthCollapsed = 48,
+  isMobile = false,
+}) => {
+  const theme = useTheme();
+  const width = pinned ? widthExpanded : widthCollapsed;
 
   return (
     <Box
       sx={{
-        width: pinned ? 260 : 48,
-        bgcolor: "background.paper",
-        borderRight: "1px solid",
-        borderColor: "divider",
-        height: "100vh",
+        width,
         transition: "width 0.3s ease",
+        backgroundColor: theme.palette.background.paper,
+        borderRight: `1px solid ${theme.palette.divider}`,
         display: "flex",
         flexDirection: "column",
-        alignItems: pinned ? "flex-start" : "center",
-        pt: 1,
+        height: "100vh",
       }}
     >
-      {items.map((item) => (
-        <Box
-          key={item.label}
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            width: "100%",
-            px: pinned ? 2 : 0,
-            py: 1,
-            cursor: "pointer",
-            "&:hover": { bgcolor: "action.hover" },
-          }}
-          onClick={() => activateOrAddTab(item.label)}
-        >
-          {item.icon}
-          {pinned && (
-            <Typography sx={{ ml: 2, fontSize: 14 }}>{item.label}</Typography>
-          )}
-        </Box>
-      ))}
+      {/* Sidebar Logo / Toggle */}
+      <Box
+        sx={{
+          height: 48,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: isMobile ? "default" : "pointer",
+          borderBottom: `1px solid ${theme.palette.divider}`,
+        }}
+        onClick={() => !isMobile && onToggle()}
+        title={isMobile ? undefined : pinned ? "Collapse" : "Expand"}
+      >
+        <img
+          src="https://www.bing.com/sa/simg/favicon-2x.ico"
+          alt="Logo"
+          style={{ width: 28, height: 28 }}
+        />
+      </Box>
+
+      {/* Navigation Items */}
+      <Box sx={{ flex: 1, p: 1 }}>
+        {items.map((label) => (
+          <Box
+            key={label}
+            sx={{
+              py: 1,
+              px: pinned ? 2 : 1,
+              cursor: "pointer",
+              fontSize: 14,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              borderRadius: 1,
+              "&:hover": { backgroundColor: theme.palette.action.hover },
+            }}
+            onClick={() => onItemClick(label)}
+            title={!pinned ? label : undefined}
+          >
+            {label}
+          </Box>
+        ))}
+      </Box>
     </Box>
   );
 };
