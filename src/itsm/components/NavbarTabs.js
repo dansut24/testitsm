@@ -85,7 +85,7 @@ const styles = `
 
 let nextId = 1;
 
-export default function ChromeTabsNavbar() {
+export default function ChromeTabsNavbar({ isMobile }) {
   const [darkMode] = useState(false);
   const [tabs, setTabs] = useState([
     { id: "t-welcome", title: "Welcome", active: true, favicon: REMOTE_FAVICONS[0] },
@@ -144,7 +144,7 @@ export default function ChromeTabsNavbar() {
     <>
       <style>{styles}</style>
       <div className="navbar-container">
-        {/* Left Logo (static now) */}
+        {/* Left Logo */}
         <div className="navbar-logo">
           <img
             src="https://www.bing.com/sa/simg/favicon-2x.ico"
@@ -171,9 +171,13 @@ export default function ChromeTabsNavbar() {
             onClick={() => addTab()}
             style={{ cursor: "pointer", fontSize: 28, fontWeight: "bold" }}
           />
-          <SearchIcon style={{ cursor: "pointer" }} />
-          <NotificationsIcon style={{ cursor: "pointer" }} />
-          <AccountCircleIcon style={{ cursor: "pointer" }} />
+          {!isMobile && (
+            <>
+              <SearchIcon style={{ cursor: "pointer" }} />
+              <NotificationsIcon style={{ cursor: "pointer" }} />
+              <AccountCircleIcon style={{ cursor: "pointer" }} />
+            </>
+          )}
         </div>
       </div>
     </>
