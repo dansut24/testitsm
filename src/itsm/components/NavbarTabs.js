@@ -1,5 +1,5 @@
 // src/itsm/components/NavbarTabs.js
-import React, { useMemo } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Tabs } from "@sinm/react-chrome-tabs";
 import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
 
@@ -11,7 +11,7 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
 const NAVBAR_HEIGHT = 44;
 const DEFAULT_TAB_W = 120;
-const MIN_TAB_W = 70;
+const MIN_TAB_W = 90; // keep enough room for favicon + text
 
 export default function NavbarTabs({
   tabs = [],
@@ -22,7 +22,7 @@ export default function NavbarTabs({
   isMobile = false,
   onLogoClick = () => {},
 }) {
-  // Insert Dashboard tab as the first item, but let it behave like the others
+  // Always keep Dashboard at front, but shrink with others
   const ensuredTabs = useMemo(() => {
     const rest = tabs.filter((t) => t.id !== "dashboard" && t.path !== "/dashboard");
     return [
@@ -43,6 +43,33 @@ export default function NavbarTabs({
     favicon: t.favicon || "/favicon.ico",
     active: i === tabIndex,
   }));
+
+  // Measure available width
+  const stripRef = useRef(null);
+  const [stripW, setStripW] = useState(0);
+
+  useLayoutEffect(() => {
+    if (!stripRef.current) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const w = entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
+      setStripW(Math.max(0, Math.floor(w)));
+    });
+    ro.observe(stripRef.current);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (stripRef.current) setStripW(stripRef.current.clientWidth);
+  }, [sinmTabs.length]);
+
+  // Dynamic width calc
+  const count = sinmTabs.length || 1;
+  let computed = DEFAULT_TAB_W;
+  if (stripW > 0) {
+    computed = Math.floor(stripW / count);
+    if (computed < MIN_TAB_W) computed = MIN_TAB_W;
+  }
+  if (count === 1) computed = DEFAULT_TAB_W;
 
   const onNewTab = () => {
     const newId = Date.now().toString();
@@ -65,10 +92,8 @@ export default function NavbarTabs({
         borderBottom: "1px solid rgba(0,0,0,0.15)",
       }}
     >
-      {/* Left logo/menu */}
+      {/* Logo/menu */}
       <button
-        type="button"
-        aria-label="Menu"
         onClick={onLogoClick}
         style={{
           border: "none",
@@ -85,7 +110,18 @@ export default function NavbarTabs({
       </button>
 
       {/* Tab strip */}
-      <div style={{ flex: 1, minWidth: 0, height: "100%" }}>
+      <div
+        ref={stripRef}
+        style={{
+          flex: 1,
+          minWidth: 0,
+          height: "100%",
+          display: "flex",
+          alignItems: "flex-end",
+          position: "relative",
+          ["--tabWidth"]: `${computed}px`,
+        }}
+      >
         <Tabs
           draggable
           tabs={sinmTabs}
@@ -94,14 +130,14 @@ export default function NavbarTabs({
             handleTabChange(null, idx, ensuredTabs[idx]?.path || id);
           }}
           onTabClose={(id) => {
-            if (id === "dashboard") return; // Dashboard can’t be closed
+            if (id === "dashboard") return;
             const idx = sinmTabs.findIndex((t) => t.id === id);
             handleTabClose(ensuredTabs[idx]?.path || id);
           }}
           onTabReorder={(from, to) => handleTabReorder(from, to)}
         />
+
         <style>{`
-          /* Let library do positioning, but control widths */
           .chrome-tabs {
             display: flex !important;
             flex-direction: row !important;
@@ -109,10 +145,12 @@ export default function NavbarTabs({
             height: 100%;
           }
 
+          /* Tabs: fixed equal width */
           .chrome-tabs .chrome-tab {
-            width: ${DEFAULT_TAB_W}px;
-            min-width: ${MIN_TAB_W}px;
-            height: 88%;
+            flex: 0 0 var(--tabWidth) !important;
+            max-width: var(--tabWidth) !important;
+            min-width: var(--tabWidth) !important;
+            height: 100%;
             margin-right: -10px;
             border-top-left-radius: 12px;
             border-top-right-radius: 12px;
@@ -120,7 +158,21 @@ export default function NavbarTabs({
             box-sizing: border-box;
           }
 
-          /* Divider line */
+          /* Title centered properly */
+          .chrome-tabs .chrome-tab .chrome-tab-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            height: 100%;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 0 6px;
+          }
+
+          /* Divider */
           .chrome-tabs .chrome-tab:not(.chrome-tab-active)::before {
             content: "";
             position: absolute;
@@ -139,12 +191,13 @@ export default function NavbarTabs({
             opacity: 0;
             transition: opacity .2s ease;
             border-radius: 50%;
+            margin-left: 4px;
           }
           .chrome-tabs .chrome-tab:hover .chrome-tab-close {
             opacity: 1;
           }
           .chrome-tabs .chrome-tab .chrome-tab-close svg {
-            width: 12px; height: 12px;
+            width: 10px; height: 10px;
           }
 
           /* Active tab highlight */
@@ -155,7 +208,7 @@ export default function NavbarTabs({
         `}</style>
       </div>
 
-      {/* Right side icons */}
+      {/* Right icons */}
       <div
         style={{
           display: "flex",
