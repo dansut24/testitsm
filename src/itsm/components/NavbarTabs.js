@@ -72,15 +72,9 @@ const styles = `
     padding:0 8px;
     z-index:6;
     background:#f8f9fa;
-    cursor: pointer;
   }
 
   .ctn-scroll { padding-right:160px; padding-left:60px; }
-
-  .main-content {
-    margin-top: ${NAVBAR_HEIGHT}px;
-    padding: 20px;
-  }
 
   @media (max-width: 600px) {
     .ctn-bar { padding: 0 4px; }
@@ -91,8 +85,8 @@ const styles = `
 
 let nextId = 1;
 
-export default function ChromeTabsNavbar({ onLogoClick }) {
-  const [darkMode, setDarkMode] = useState(false);
+export default function ChromeTabsNavbar() {
+  const [darkMode] = useState(false);
   const [tabs, setTabs] = useState([
     { id: "t-welcome", title: "Welcome", active: true, favicon: REMOTE_FAVICONS[0] },
     { id: "t-docs", title: "Docs", favicon: REMOTE_FAVICONS[1] },
@@ -146,23 +140,12 @@ export default function ChromeTabsNavbar({ onLogoClick }) {
     });
   };
 
-  const onTabReorder = (tabId, fromIndex, toIndex) => {
-    setTabs((prev) => {
-      const moving = prev.find((t) => t.id === tabId);
-      if (!moving) return prev;
-      const rest = prev.filter((t) => t.id !== tabId);
-      const clampedTo = Math.max(0, Math.min(toIndex, rest.length));
-      rest.splice(clampedTo, 0, moving);
-      return rest;
-    });
-  };
-
   return (
     <>
       <style>{styles}</style>
       <div className="navbar-container">
-        {/* Left Logo (calls onLogoClick from Layout) */}
-        <div className="navbar-logo" onClick={onLogoClick}>
+        {/* Left Logo (static now) */}
+        <div className="navbar-logo">
           <img
             src="https://www.bing.com/sa/simg/favicon-2x.ico"
             alt="Logo"
@@ -175,9 +158,7 @@ export default function ChromeTabsNavbar({ onLogoClick }) {
           <div ref={scrollRef} className="ctn-scroll">
             <Tabs
               darkMode={darkMode}
-              draggable
               onTabClose={onTabClose}
-              onTabReorder={onTabReorder}
               onTabActive={onTabActive}
               tabs={tabs}
             />
