@@ -125,16 +125,16 @@ const Layout = () => {
 
       {/* Main area */}
       <Box
-        sx={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          minWidth: 0,
-          height: "100vh",
-          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
-          transition: "margin-left 0.3s ease",
-        }}
-      >
+  sx={{
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    minWidth: 0,
+    height: "100vh",
+    marginLeft: !isMobile && sidebarPinned ? `${sidebarWidth}px` : 0,
+    transition: "margin-left 0.3s ease",
+  }}
+>
         {/* Navbar Tabs */}
         <NavbarTabs
           tabs={tabs}
