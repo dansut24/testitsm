@@ -9,6 +9,7 @@ import {
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
+import Sidebar from "./Sidebar"; // <-- add Sidebar back
 
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
@@ -48,6 +49,8 @@ const Layout = () => {
   });
 
   const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile"
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarPinned, setSidebarPinned] = useState(false);
 
   // Update tabs on route change
   useEffect(() => {
@@ -94,7 +97,21 @@ const Layout = () => {
 
   return (
     <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
-      {/* Main area (no sidebar now) */}
+      {/* Sidebar */}
+      <Sidebar
+        sidebarOpen={sidebarOpen}
+        sidebarPinned={sidebarPinned}
+        setSidebarOpen={setSidebarOpen}
+        setSidebarPinned={setSidebarPinned}
+        onActivateTab={(title, favicon) =>
+          setTabs((prev) => [
+            ...prev.map((t) => ({ ...t, active: false })),
+            { id: `tab-${Date.now()}`, label: title, path: `/${title.toLowerCase()}`, active: true, favicon },
+          ])
+        }
+      />
+
+      {/* Main area */}
       <Box
         sx={{
           flex: 1,
@@ -113,6 +130,7 @@ const Layout = () => {
           handleTabClose={handleTabClose}
           handleTabReorder={handleTabReorder}
           isMobile={isMobile}
+          onLogoClick={() => setSidebarOpen((prev) => !prev)} // logo toggles sidebar
         />
 
         {/* Content */}
@@ -124,7 +142,7 @@ const Layout = () => {
             overflowY: "auto",
             overflowX: "hidden",
             px: 1,
-            pb: isMobile ? 7 : 0, // leave room for bottom bar on mobile
+            pb: isMobile ? 7 : 0,
           }}
         >
           <Outlet />
