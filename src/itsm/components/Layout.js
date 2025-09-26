@@ -1,11 +1,21 @@
 // Layout.js
 import React, { useState, useEffect } from "react";
-import { Box, useTheme, useMediaQuery } from "@mui/material";
+import {
+  Box,
+  useTheme,
+  useMediaQuery,
+  SwipeableDrawer,
+  Typography,
+} from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import NavbarTabs from "./NavbarTabs";
 
-const expandedWidth = 256;
+import SearchIcon from "@mui/icons-material/Search";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+
+const expandedWidth = 240;
 const collapsedWidth = 48;
 const NAVBAR_HEIGHT = 34;
 const NAVBAR_PADDING_TOP = 6;
@@ -42,6 +52,8 @@ const Layout = () => {
     const storedIndex = sessionStorage.getItem("tabIndex");
     return storedIndex ? parseInt(storedIndex, 10) : 0;
   });
+
+  const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile"
 
   const sidebarWidth = sidebarOpen ? expandedWidth : collapsedWidth;
 
@@ -93,6 +105,7 @@ const Layout = () => {
 
   return (
     <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
+      {/* Sidebar */}
       <Sidebar
         sidebarOpen={sidebarOpen}
         mobileOpen={mobileOpen}
@@ -103,6 +116,7 @@ const Layout = () => {
         isMobile={isMobile}
       />
 
+      {/* Main area */}
       <Box
         sx={{
           flex: 1,
@@ -114,6 +128,7 @@ const Layout = () => {
           position: "relative",
         }}
       >
+        {/* Navbar + Tabs */}
         <NavbarTabs
           tabs={tabs}
           tabIndex={tabIndex}
@@ -127,6 +142,7 @@ const Layout = () => {
           onLogoClick={handleMobileSidebarToggle}
         />
 
+        {/* Content */}
         <Box
           component="main"
           sx={{
@@ -135,11 +151,56 @@ const Layout = () => {
             overflowY: "auto",
             overflowX: "hidden",
             px: 1,
+            pb: isMobile ? 7 : 0, // leave room for bottom bar on mobile
           }}
         >
           <Outlet />
         </Box>
+
+        {/* Mobile bottom bar */}
+        {isMobile && (
+          <Box
+            sx={{
+              position: "fixed",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              display: "flex",
+              justifyContent: "space-around",
+              alignItems: "center",
+              borderTop: `1px solid ${theme.palette.divider}`,
+              backgroundColor: theme.palette.background.paper,
+              zIndex: 1500,
+              height: 56,
+            }}
+          >
+            <SearchIcon onClick={() => setDrawerType("search")} />
+            <NotificationsIcon onClick={() => setDrawerType("notifications")} />
+            <AccountCircleIcon onClick={() => setDrawerType("profile")} />
+          </Box>
+        )}
       </Box>
+
+      {/* Swipeable Drawers for mobile actions */}
+      <SwipeableDrawer
+        anchor="bottom"
+        open={Boolean(drawerType)}
+        onClose={() => setDrawerType(null)}
+        onOpen={() => {}}
+        PaperProps={{
+          sx: { height: "50%", p: 2, borderTopLeftRadius: 12, borderTopRightRadius: 12 },
+        }}
+      >
+        {drawerType === "search" && (
+          <Typography variant="h6">Search (mobile drawer)</Typography>
+        )}
+        {drawerType === "notifications" && (
+          <Typography variant="h6">Notifications (mobile drawer)</Typography>
+        )}
+        {drawerType === "profile" && (
+          <Typography variant="h6">Profile (mobile drawer)</Typography>
+        )}
+      </SwipeableDrawer>
     </Box>
   );
 };
