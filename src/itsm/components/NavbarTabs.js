@@ -3,11 +3,7 @@ import { Tabs } from "@sinm/react-chrome-tabs";
 import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
 import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
 
-import {
-  Menu,
-  MenuItem,
-  IconButton,
-} from "@mui/material";
+import { Menu, MenuItem, IconButton } from "@mui/material";
 
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
@@ -98,35 +94,30 @@ const styles = `
 
 let nextId = 1;
 
-export default function ChromeTabsNavbar({ isMobile, onNavigate }) {
+export default function ChromeTabsNavbar({ isMobile }) {
   const [darkMode] = useState(false);
   const [tabs, setTabs] = useState([
-    { id: "t-welcome", title: "Welcome", active: true, favicon: REMOTE_FAVICONS[0] },
-    { id: "t-docs", title: "Docs", favicon: REMOTE_FAVICONS[1] },
-    { id: "t-pinned", title: "Pinned", isCloseIconVisible: false, favicon: REMOTE_FAVICONS[2] },
+    { id: "/dashboard", title: "Dashboard", active: true, favicon: REMOTE_FAVICONS[0] },
   ]);
 
   const scrollRef = useRef(null);
-
   const [menuAnchor, setMenuAnchor] = useState(null);
 
   const openMenu = (event) => setMenuAnchor(event.currentTarget);
   const closeMenu = () => setMenuAnchor(null);
 
   const scrollElementIntoView = (el, opts = { inline: "center" }) => {
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "nearest", ...opts });
-    }
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest", ...opts });
   };
 
   const addTab = (
     title = `New Tab ${++nextId}`,
-    favicon = REMOTE_FAVICONS[nextId % REMOTE_FAVICONS.length]
+    favicon = REMOTE_FAVICONS[nextId % REMOTE_FAVICONS.length],
+    id = `tab-${nextId}`
   ) => {
-    const newId = `tab-${nextId}`;
     setTabs((prev) => [
       ...prev.map((t) => ({ ...t, active: false })),
-      { id: newId, title, favicon, active: true },
+      { id, title, favicon, active: true },
     ]);
     requestAnimationFrame(() => {
       const el = scrollRef.current;
@@ -136,14 +127,28 @@ export default function ChromeTabsNavbar({ isMobile, onNavigate }) {
     });
   };
 
-  const onTabActive = (id) => {
-    setTabs((prev) => prev.map((t) => ({ ...t, active: t.id === id })));
+  const openOrActivateTab = (title, id, favicon = REMOTE_FAVICONS[0]) => {
+    setTabs((prev) => {
+      const exists = prev.find((t) => t.id === id);
+      if (exists) {
+        return prev.map((t) => ({ ...t, active: t.id === id }));
+      } else {
+        return [
+          ...prev.map((t) => ({ ...t, active: false })),
+          { id, title, favicon, active: true },
+        ];
+      }
+    });
     requestAnimationFrame(() => {
       const el = scrollRef.current;
       if (!el) return;
       const activeTab = el.querySelector(".chrome-tab.chrome-tab-active");
       scrollElementIntoView(activeTab, { inline: "center" });
     });
+  };
+
+  const onTabActive = (id) => {
+    setTabs((prev) => prev.map((t) => ({ ...t, active: t.id === id })));
   };
 
   const onTabClose = (id) => {
@@ -172,15 +177,20 @@ export default function ChromeTabsNavbar({ isMobile, onNavigate }) {
             />
           </IconButton>
           <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
-            {["Dashboard", "Incidents", "Assets", "Settings"].map((label) => (
+            {[
+              { title: "Dashboard", id: "/dashboard" },
+              { title: "Incidents", id: "/incidents" },
+              { title: "Assets", id: "/assets" },
+              { title: "Settings", id: "/settings" },
+            ].map(({ title, id }, i) => (
               <MenuItem
-                key={label}
+                key={id}
                 onClick={() => {
                   closeMenu();
-                  if (onNavigate) onNavigate(label);
+                  openOrActivateTab(title, id, REMOTE_FAVICONS[i % REMOTE_FAVICONS.length]);
                 }}
               >
-                {label}
+                {title}
               </MenuItem>
             ))}
           </Menu>
@@ -189,7 +199,12 @@ export default function ChromeTabsNavbar({ isMobile, onNavigate }) {
         {/* Tabs */}
         <div className={"ctn-bar" + (darkMode ? " dark" : "")} style={{ flex: 1 }}>
           <div ref={scrollRef} className="ctn-scroll">
-            <Tabs darkMode={darkMode} onTabClose={onTabClose} onTabActive={onTabActive} tabs={tabs} />
+            <Tabs
+              darkMode={darkMode}
+              onTabClose={onTabClose}
+              onTabActive={onTabActive}
+              tabs={tabs}
+            />
           </div>
         </div>
 
