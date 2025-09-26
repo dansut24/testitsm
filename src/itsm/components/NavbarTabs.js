@@ -1,240 +1,292 @@
-// src/itsm/components/NavbarTabs.js
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { Tabs } from "@sinm/react-chrome-tabs";
 import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
+import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
 
-import MenuIcon from "@mui/icons-material/Menu";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
-const NAVBAR_HEIGHT = 44;
-const DEFAULT_TAB_W = 120;
-const MIN_TAB_W = 90;
+/**
+ * ChromeTabsNavbar with Sidebar
+ */
 
-export default function NavbarTabs({
-  tabs = [],
-  tabIndex = 0,
-  handleTabChange = () => {},
-  handleTabClose = () => {},
-  handleTabReorder = () => {},
-  isMobile = false,
-  onLogoClick = () => {},
-  setTabs = () => {},
-}) {
-  // Ensure one tab is always pinned
-  const ensuredTabs = useMemo(() => {
-    if (!tabs.length) {
-      return [
-        {
-          id: "dashboard",
-          path: "/dashboard",
-          title: "Dashboard",
-          pinned: true,
-          favicon: "/favicon.ico",
-        },
-      ];
-    }
+const REMOTE_FAVICONS = [
+  "https://www.google.com/favicon.ico",
+  "https://static.xx.fbcdn.net/rsrc.php/yo/r/iRmz9lCMBD2.ico",
+  "https://www.bing.com/sa/simg/favicon-2x.ico",
+  "https://github.githubassets.com/favicons/favicon.png",
+];
 
-    // Ensure first tab is pinned (dashboard if present, otherwise first tab)
-    return tabs.map((t, i) => ({
-      ...t,
-      pinned: i === 0,
-    }));
-  }, [tabs]);
+const NAVBAR_HEIGHT = 48;
 
-  const sinmTabs = ensuredTabs.map((t, i) => ({
-    id: t.id || t.path || `tab-${i}`,
-    title: t.title || "Untitled",
-    favicon: t.favicon || "/favicon.ico",
-    active: i === tabIndex,
-  }));
-
-  // Measure available width
-  const stripRef = useRef(null);
-  const [stripW, setStripW] = useState(0);
-
-  useLayoutEffect(() => {
-    if (!stripRef.current) return;
-    const ro = new ResizeObserver(([entry]) => {
-      const w = entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
-      setStripW(Math.max(0, Math.floor(w)));
-    });
-    ro.observe(stripRef.current);
-    return () => ro.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (stripRef.current) setStripW(stripRef.current.clientWidth);
-  }, [sinmTabs.length]);
-
-  // Dynamic tab width
-  const count = sinmTabs.length || 1;
-  let computed = DEFAULT_TAB_W;
-  if (stripW > 0) {
-    computed = Math.floor(stripW / count);
-    if (computed < MIN_TAB_W) computed = MIN_TAB_W;
+const styles = `
+  .navbar-container {
+    width: 100%;
+    position: relative;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    height: ${NAVBAR_HEIGHT}px;
   }
-  if (count === 1) computed = DEFAULT_TAB_W;
 
-  const onNewTab = () => {
-    const newId = Date.now().toString();
-    handleTabChange(null, ensuredTabs.length, `/new-tab/${newId}`);
+  .navbar-container::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4px;
+    background: #ffffff;
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  .chrome-tabs-bottom-bar { display: none !important; }
+
+  .ctn-bar { display:flex; align-items:center; width:100%; position:relative; background:transparent !important; height:100%; }
+  .ctn-scroll { flex:1; overflow-x:auto; overflow-y:hidden; background:transparent !important; height:100%; }
+  .ctn-scroll::-webkit-scrollbar { height:6px; }
+
+  .chrome-tabs { background:transparent !important; height:100%; }
+  .chrome-tab { background:transparent !important; height:100%; }
+
+  .navbar-icons {
+    position:absolute;
+    right:8px;
+    top:0;
+    bottom:0;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:0 8px;
+    pointer-events:auto;
+    z-index:5;
+    background:#f8f9fa;
+  }
+
+  .navbar-logo {
+    position:absolute;
+    left:8px;
+    top:0;
+    bottom:0;
+    display:flex;
+    align-items:center;
+    padding:0 8px;
+    z-index:6;
+    background:#f8f9fa;
+    cursor: pointer;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: ${NAVBAR_HEIGHT}px;
+    left: 0;
+    bottom: 0;
+    width: 220px;
+    background: #ffffff;
+    border-right: 1px solid rgba(0,0,0,0.12);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease, width 0.3s ease;
+    z-index: 2000;
+    overflow: hidden;
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar.pinned { transform: translateX(0); width: 48px; }
+  .sidebar.pinned:hover { width: 220px; }
+
+  .sidebar .nav-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    white-space: nowrap;
+  }
+  .sidebar .nav-item:hover { background: #f0f0f0; }
+
+  .sidebar.pinned .nav-item span {
+    display: none;
+  }
+  .sidebar.pinned:hover .nav-item span {
+    display: inline;
+  }
+
+  .ctn-scroll { padding-right:160px; padding-left:60px; }
+
+  .main-content {
+    margin-top: ${NAVBAR_HEIGHT}px;
+    padding: 20px;
+    transition: margin-left 0.3s ease;
+  }
+  .main-content.pushed { margin-left: 220px; }
+  .main-content.pushed-collapsed { margin-left: 48px; }
+
+  @media (max-width: 600px) {
+    .ctn-bar { padding: 0 4px; }
+    .ctn-scroll { -webkit-overflow-scrolling: touch; }
+    .chrome-tab-title { font-size: 12px; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+    .sidebar { width: 180px; }
+    .sidebar.pinned:hover { width: 180px; }
+    .main-content.pushed { margin-left: 180px; }
+  }
+`;
+
+let nextId = 1;
+
+export default function ChromeTabsNavbar() {
+  const [darkMode, setDarkMode] = useState(false);
+  const [tabs, setTabs] = useState([
+    { id: "t-welcome", title: "Welcome", active: true, favicon: REMOTE_FAVICONS[0] },
+    { id: "t-docs", title: "Docs", favicon: REMOTE_FAVICONS[1] },
+    { id: "t-pinned", title: "Pinned", isCloseIconVisible: false, favicon: REMOTE_FAVICONS[2] },
+  ]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarPinned, setSidebarPinned] = useState(false);
+
+  const scrollRef = useRef(null);
+
+  const toggleSidebar = () => setSidebarOpen((prev) => !prev);
+
+  const scrollElementIntoView = (el, opts = { inline: "center" }) => {
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "nearest", ...opts });
+    }
+  };
+
+  const addTab = (title = `New Tab ${++nextId}`, favicon = REMOTE_FAVICONS[nextId % REMOTE_FAVICONS.length]) => {
+    const newId = `tab-${nextId}`;
+    setTabs((prev) => [
+      ...prev.map((t) => ({ ...t, active: false })),
+      { id: newId, title, favicon, active: true },
+    ]);
+    requestAnimationFrame(() => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const newTab = el.querySelector(".chrome-tab.chrome-tab-active");
+      scrollElementIntoView(newTab, { inline: "center" });
+    });
+  };
+
+  const activateOrAddTab = (title, favicon) => {
+    setTabs((prev) => {
+      const existing = prev.find((t) => t.title === title);
+      if (existing) {
+        return prev.map((t) => ({ ...t, active: t.title === title }));
+      } else {
+        const newId = `tab-${++nextId}`;
+        return [
+          ...prev.map((t) => ({ ...t, active: false })),
+          { id: newId, title, favicon, active: true },
+        ];
+      }
+    });
+    requestAnimationFrame(() => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const activeTab = el.querySelector(".chrome-tab.chrome-tab-active");
+      if (activeTab) scrollElementIntoView(activeTab, { inline: "center" });
+    });
+  };
+
+  const onTabActive = (id) => {
+    setTabs((prev) => prev.map((t) => ({ ...t, active: t.id === id })));
+    requestAnimationFrame(() => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const activeTab = el.querySelector(".chrome-tab.chrome-tab-active");
+      if (activeTab) {
+        const rect = activeTab.getBoundingClientRect();
+        const containerRect = el.getBoundingClientRect();
+        if (rect.left < containerRect.left + 50) {
+          el.scrollBy({ left: -150, behavior: "smooth" });
+        } else if (rect.right > containerRect.right - 50) {
+          el.scrollBy({ left: 150, behavior: "smooth" });
+        } else {
+          scrollElementIntoView(activeTab, { inline: "center" });
+        }
+      }
+    });
+  };
+
+  const onTabClose = (id) => {
+    setTabs((prev) => {
+      const idx = prev.findIndex((t) => t.id === id);
+      const filtered = prev.filter((t) => t.id !== id);
+      if (prev[idx]?.active && filtered.length) {
+        const neighbor = filtered[Math.max(0, idx - 1)];
+        return filtered.map((t) => ({ ...t, active: t.id === neighbor.id }));
+      }
+      return filtered;
+    });
+  };
+
+  const onTabReorder = (tabId, fromIndex, toIndex) => {
+    setTabs((prev) => {
+      const moving = prev.find((t) => t.id === tabId);
+      if (!moving) return prev;
+      const rest = prev.filter((t) => t.id !== tabId);
+      const clampedTo = Math.max(0, Math.min(toIndex, rest.length));
+      rest.splice(clampedTo, 0, moving);
+      return rest;
+    });
   };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        height: NAVBAR_HEIGHT,
-        zIndex: 1500,
-        display: "flex",
-        alignItems: "center",
-        padding: "0 8px",
-        background: "#f8f9fa",
-        borderBottom: "1px solid rgba(0,0,0,0.15)",
-      }}
-    >
-      {/* Logo/Menu */}
-      <button
-        onClick={onLogoClick}
-        style={{
-          border: "none",
-          background: "transparent",
-          cursor: "pointer",
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          padding: "0 6px",
-          marginRight: 6,
-        }}
-      >
-        <MenuIcon />
-      </button>
+    <>
+      <style>{styles}</style>
+      <div className="navbar-container">
+        {/* Left Logo (acts as sidebar toggle) */}
+        <div className="navbar-logo" onClick={toggleSidebar}>
+          <img src="https://www.bing.com/sa/simg/favicon-2x.ico" alt="Logo" style={{ width: 28, height: 28 }} />
+        </div>
 
-      {/* Tab Strip */}
-      <div
-        ref={stripRef}
-        style={{
-          flex: 1,
-          minWidth: 0,
-          height: "100%",
-          display: "flex",
-          alignItems: "flex-end",
-          ["--tabWidth"]: `${computed}px`,
-        }}
-      >
-        <Tabs
-          draggable
-          tabs={sinmTabs}
-          onTabActive={(id) => {
-            const idx = sinmTabs.findIndex((t) => t.id === id);
-            handleTabChange(null, idx, ensuredTabs[idx]?.path || id);
-          }}
-          onTabClose={(id) => {
-            const idx = sinmTabs.findIndex((t) => t.id === id);
+        {/* Tabs */}
+        <div className={"ctn-bar" + (darkMode ? " dark" : "")} style={{ flex: 1 }}>        
+          <div ref={scrollRef} className="ctn-scroll">
+            <Tabs
+              darkMode={darkMode}
+              draggable
+              onTabClose={onTabClose}
+              onTabReorder={onTabReorder}
+              onTabActive={onTabActive}
+              tabs={tabs}
+            />
+          </div>
+        </div>
 
-            if (idx === 0) {
-              // If first (pinned) tab is closed, repin the next one
-              const updated = [...ensuredTabs];
-              updated.splice(idx, 1);
-              if (updated.length > 0) updated[0].pinned = true;
-              setTabs(updated);
-              return;
-            }
-
-            handleTabClose(ensuredTabs[idx]?.path || id);
-          }}
-          onTabReorder={(from, to) => handleTabReorder(from, to)}
-        />
-
-        <style>{`
-          .chrome-tabs {
-            display: flex !important;
-            flex-direction: row !important;
-            align-items: flex-end;
-            height: 100%;
-          }
-          .chrome-tabs .chrome-tab {
-            flex: 0 0 var(--tabWidth) !important;
-            max-width: var(--tabWidth) !important;
-            min-width: var(--tabWidth) !important;
-            height: 100%;
-            margin-right: -10px;
-            border-top-left-radius: 12px;
-            border-top-right-radius: 12px;
-            clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 100%, 0% 100%);
-            box-sizing: border-box;
-          }
-          .chrome-tabs .chrome-tab .chrome-tab-title {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            line-height: 1.2;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            padding: 0 6px;
-          }
-          .chrome-tabs .chrome-tab .chrome-tab-favicon {
-            margin-right: 6px;
-            flex-shrink: 0;
-          }
-          .chrome-tabs .chrome-tab:not(.chrome-tab-active)::before {
-            content: "";
-            position: absolute;
-            left: 0;
-            top: 6px;
-            bottom: 6px;
-            width: 1px;
-            background: rgba(0,0,0,0.1);
-            pointer-events: none;
-          }
-          .chrome-tabs .chrome-tab .chrome-tab-close {
-            width: 14px;
-            height: 14px;
-            opacity: 0;
-            transition: opacity .2s ease;
-            border-radius: 50%;
-            margin-left: 4px;
-          }
-          .chrome-tabs .chrome-tab:hover .chrome-tab-close {
-            opacity: 1;
-          }
-          .chrome-tabs .chrome-tab .chrome-tab-close svg {
-            width: 10px; height: 10px;
-          }
-          .chrome-tabs .chrome-tab.chrome-tab-active {
-            background: #fff;
-            border-bottom: 2px solid #2BD3C6;
-          }
-        `}</style>
+        {/* Right Icons */}
+        <div className="navbar-icons">
+          <AddIcon onClick={() => addTab()} style={{ cursor: "pointer", fontSize: 28, fontWeight: "bold" }} />
+          <SearchIcon style={{ cursor: "pointer" }} />
+          <NotificationsIcon style={{ cursor: "pointer" }} />
+          <AccountCircleIcon style={{ cursor: "pointer" }} />
+        </div>
       </div>
 
-      {/* Right Icons */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          flexShrink: 0,
-          marginLeft: 8,
-        }}
-      >
-        <AddIcon onClick={onNewTab} style={{ cursor: "pointer" }} />
-        {!isMobile && (
-          <>
-            <SearchIcon style={{ cursor: "pointer" }} />
-            <NotificationsIcon style={{ cursor: "pointer" }} />
-            <AccountCircleIcon style={{ cursor: "pointer" }} />
-          </>
-        )}
+      {/* Sidebar */}
+      <div className={`sidebar${sidebarOpen || sidebarPinned ? " open" : ""}${sidebarPinned ? " pinned" : ""}`}>
+        <div>
+          <div className="nav-item" onClick={() => activateOrAddTab("Home", REMOTE_FAVICONS[0])}>🏠 <span>Home</span></div>
+          <div className="nav-item" onClick={() => activateOrAddTab("Profile", REMOTE_FAVICONS[1])}>👤 <span>Profile</span></div>
+          <div className="nav-item" onClick={() => activateOrAddTab("Settings", REMOTE_FAVICONS[2])}>⚙️ <span>Settings</span></div>
+          <div className="nav-item" onClick={() => activateOrAddTab("Help", REMOTE_FAVICONS[3])}>❓ <span>Help</span></div>
+        </div>
       </div>
-    </div>
+
+      {/* Test toggle for always-visible sidebar */}
+      <div style={{ marginTop: NAVBAR_HEIGHT + 10, padding: "0 20px" }}>
+        <label>
+          <input type="checkbox" checked={sidebarPinned} onChange={(e) => setSidebarPinned(e.target.checked)} />
+          Always show sidebar (collapsed to 48px, expand on hover)
+        </label>
+      </div>
+
+      {/* Main Content */}
+      <div className={`main-content${sidebarPinned ? " pushed-collapsed" : sidebarOpen ? " pushed" : ""}`}>
+        <h1>Main Content Area</h1>
+        <p>This is some placeholder content to demonstrate how the sidebar interacts with the main view.</p>
+        <p>Open the sidebar with the logo or pin it using the checkbox above. When pinned, it collapses to 48px and expands on hover.</p>
+      </div>
+    </>
   );
 }
