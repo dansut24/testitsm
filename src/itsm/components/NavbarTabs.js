@@ -48,8 +48,8 @@ const styles = `
 
   /* Tab dividers: shorten them so they don’t clash with underline */
   .chrome-tab-divider {
-    top: 8px !important;   /* move divider down slightly */
-    bottom: 8px !important; /* make it shorter */
+    top: 4px !important;   /* move divider down slightly */
+    bottom: 4px !important; /* make it shorter */
     opacity: 0.6;          /* optional: soften it a bit */
   }
 
