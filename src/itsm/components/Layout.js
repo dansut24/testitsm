@@ -131,7 +131,7 @@ const Layout = () => {
     flexDirection: "column",
     minWidth: 0,
     height: "100vh",
-    marginLeft: !isMobile && sidebarPinned ? `${sidebarWidth}px` : 0,
+    marginLeft: !isMobile ? `${COLLAPSED_WIDTH}px` : 0,
     transition: "margin-left 0.3s ease",
   }}
 >
