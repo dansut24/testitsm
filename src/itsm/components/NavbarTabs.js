@@ -40,7 +40,7 @@ const NavbarTabs = ({
         height: NAVBAR_HEIGHT,
         display: "flex",
         alignItems: "center",
-        backgroundColor: "transparent",
+        backgroundColor: "#f1f3f4", // Chrome-like background
         borderBottom: "1px solid rgba(0,0,0,0.1)",
       }}
     >
@@ -49,13 +49,14 @@ const NavbarTabs = ({
         style={{
           display: "flex",
           alignItems: "center",
-          marginRight: 12,
+          marginRight: 8,
           cursor: isMobile ? "pointer" : "default",
           height: "100%",
+          padding: "0 6px",
         }}
         onClick={isMobile ? onLogoClick : undefined}
       >
-        <img src="/logo192.png" alt="Logo" style={{ height: 28 }} />
+        <img src="/logo192.png" alt="Logo" style={{ height: 24 }} />
       </div>
 
       {/* Tabs */}
@@ -66,8 +67,6 @@ const NavbarTabs = ({
           alignItems: "center",
           height: "100%",
           minWidth: 0,
-          overflowX: "auto",
-          scrollbarWidth: "none",
         }}
       >
         {ensuredTabs.map((tab, index) => (
@@ -75,31 +74,57 @@ const NavbarTabs = ({
             key={tab.path || index}
             onClick={() => handleTabChange(null, index, tab.path)}
             style={{
-              flex: "1 1 auto",
-              minWidth: isMobile ? 70 : 120,
-              maxWidth: isMobile ? 140 : 200,
-              padding: "0 8px",
+              flex: "1 1 0", // 🚀 all tabs share space equally
+              minWidth: isMobile ? 60 : 90,
+              maxWidth: isMobile ? 120 : 180,
+              margin: "0 2px",
               height: "100%",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              borderBottom: index === tabIndex ? "2px solid #1976d2" : "2px solid transparent",
+              padding: "0 8px",
+              borderRadius: index === tabIndex ? "6px 6px 0 0" : "6px 6px 0 0",
+              backgroundColor:
+                index === tabIndex ? "#ffffff" : "transparent",
+              border: index === tabIndex
+                ? "1px solid rgba(0,0,0,0.2)"
+                : "1px solid transparent",
+              borderBottom: index === tabIndex ? "none" : "1px solid rgba(0,0,0,0.1)",
               fontSize: "13px",
               fontWeight: tab.pinned ? "bold" : "normal",
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
               cursor: "pointer",
-              backgroundColor: index === tabIndex ? "rgba(25,118,210,0.08)" : "transparent",
+              transition: "background-color 0.2s ease",
+            }}
+            onMouseEnter={(e) => {
+              if (index !== tabIndex) e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.05)";
+            }}
+            onMouseLeave={(e) => {
+              if (index !== tabIndex) e.currentTarget.style.backgroundColor = "transparent";
             }}
           >
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+            <span
+              style={{
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                flex: 1,
+              }}
+            >
               {tab.label}
             </span>
             {!tab.pinned && (
               <CloseIcon
                 fontSize="small"
-                style={{ marginLeft: 6, cursor: "pointer" }}
+                style={{
+                  marginLeft: 6,
+                  cursor: "pointer",
+                  opacity: 0.6,
+                  transition: "opacity 0.2s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleTabClose(tab.path);
@@ -112,7 +137,11 @@ const NavbarTabs = ({
 
       {/* New Tab Button */}
       <AddIcon
-        style={{ cursor: "pointer", marginRight: 12 }}
+        style={{
+          cursor: "pointer",
+          marginRight: 12,
+          color: "#444",
+        }}
         onClick={() => {
           const newId = Date.now();
           handleTabChange(null, ensuredTabs.length, `/new-tab/${newId}`);
@@ -122,9 +151,9 @@ const NavbarTabs = ({
       {/* Right-hand icons (desktop only) */}
       {!isMobile && (
         <div style={{ display: "flex", gap: 16, paddingRight: 12 }}>
-          <SearchIcon style={{ cursor: "pointer" }} />
-          <NotificationsIcon style={{ cursor: "pointer" }} />
-          <AccountCircleIcon style={{ cursor: "pointer" }} />
+          <SearchIcon style={{ cursor: "pointer", color: "#444" }} />
+          <NotificationsIcon style={{ cursor: "pointer", color: "#444" }} />
+          <AccountCircleIcon style={{ cursor: "pointer", color: "#444" }} />
         </div>
       )}
     </div>
