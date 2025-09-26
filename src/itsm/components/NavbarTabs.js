@@ -8,8 +8,8 @@ import CloseIcon from "@mui/icons-material/Close";
 
 const NAVBAR_HEIGHT = 44;
 const DEFAULT_TAB_W = 120;
-const GAP_X = 4;
-const PAD_X = 10;
+const GAP_X = 0; // no gap, flicks handle spacing
+const PAD_X = 8;
 
 export default function NavbarTabs({
   tabs = [],
@@ -20,7 +20,7 @@ export default function NavbarTabs({
   onLogoClick = () => {},
 }) {
   const ensuredTabs = useMemo(
-    () => [{ label: "Dashboard", path: "/dashboard", pinned: true }, ...tabs.filter(t => t.path !== "/dashboard")],
+    () => [{ label: "Dashboard", path: "/dashboard", pinned: true, favicon: "📊" }, ...tabs.filter(t => t.path !== "/dashboard")],
     [tabs]
   );
 
@@ -43,8 +43,6 @@ export default function NavbarTabs({
 
   const tabCount = ensuredTabs.length || 1;
   const totalGaps = GAP_X * Math.max(0, tabCount - 1);
-
-  // 👇 Default 120px each, only shrink if needed
   let computed = DEFAULT_TAB_W;
   if (stripW > 0) {
     const maxPossible = (stripW - totalGaps) / tabCount;
@@ -52,13 +50,9 @@ export default function NavbarTabs({
       computed = Math.floor(maxPossible);
     }
   }
+  if (tabCount === 1) computed = DEFAULT_TAB_W;
 
-  // 👇 Ensure with only 1 tab, it stays at default size (not full width)
-  if (tabCount === 1) {
-    computed = DEFAULT_TAB_W;
-  }
-
-  const labelFontSize = computed < 60 ? 10 : computed < 90 ? 12 : 13;
+  const labelFontSize = computed < 70 ? 10 : 12;
 
   const onNewTab = () => {
     const newId = Date.now();
@@ -108,9 +102,8 @@ export default function NavbarTabs({
           minWidth: 0,
           height: "100%",
           display: "flex",
-          alignItems: "center",
-          gap: `${GAP_X}px`,
-          overflow: "hidden", // no scroll
+          alignItems: "flex-end",
+          overflow: "hidden",
         }}
       >
         {ensuredTabs.map((tab, idx) => {
@@ -122,37 +115,49 @@ export default function NavbarTabs({
               style={{
                 flex: "0 0 auto",
                 width: `${computed}px`,
-                height: "100%",
+                height: "90%", // a bit shorter for flick illusion
+                marginRight: "-12px", // overlap for angled edges
+                padding: `0 ${PAD_X}px`,
+                background: isActive ? "#fff" : "#e9ecef",
+                border: "1px solid rgba(0,0,0,0.2)",
+                borderBottom: isActive ? "2px solid #2BD3C6" : "1px solid rgba(0,0,0,0.2)",
+                borderRadius: "8px 8px 0 0",
+                clipPath:
+                  "polygon(12px 0, calc(100% - 12px) 0, 100% 100%, 0% 100%)", // angled flicks
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: `0 ${PAD_X}px`,
-                borderRadius: "6px 6px 0 0",
-                background: isActive ? "#fff" : "transparent",
-                border: isActive
-                  ? "1px solid rgba(0,0,0,0.18)"
-                  : "1px solid transparent",
-                borderBottom: isActive
-                  ? "2px solid #2BD3C6"
-                  : "2px solid transparent",
-                cursor: "pointer",
                 boxSizing: "border-box",
+                cursor: "pointer",
+                transition: "background 0.15s ease",
+                zIndex: isActive ? 2 : 1,
               }}
             >
-              <span
+              {/* Favicon + label */}
+              <div
                 style={{
-                  fontSize: labelFontSize,
-                  fontWeight: tab.pinned ? 600 : 500,
-                  whiteSpace: "nowrap",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
                   overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  lineHeight: `${NAVBAR_HEIGHT}px`,
-                  paddingRight: tab.pinned ? 0 : 6,
                 }}
-                title={tab.label}
               >
-                {tab.label}
-              </span>
+                <span style={{ fontSize: 14 }}>{tab.favicon || "📄"}</span>
+                <span
+                  style={{
+                    fontSize: labelFontSize,
+                    fontWeight: tab.pinned ? 600 : 500,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                  title={tab.label}
+                >
+                  {tab.label}
+                </span>
+              </div>
+
+              {/* Close icon */}
               {!tab.pinned && (
                 <CloseIcon
                   fontSize="small"
