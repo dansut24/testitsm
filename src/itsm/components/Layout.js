@@ -51,8 +51,8 @@ const Layout = () => {
   });
 
   // Sidebar state
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarPinned, setSidebarPinned] = useState(false);
+  const [sidebarPinned, setSidebarPinned] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Mobile drawer state
   const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile"
@@ -103,20 +103,20 @@ const Layout = () => {
 
   const handleLogoClick = () => {
     if (isMobile) {
-      setSidebarOpen((prev) => !prev);
+      setMobileSidebarOpen((prev) => !prev);
     } else {
       setSidebarPinned((prev) => !prev);
     }
   };
 
-  const activateOrAddTab = (label, faviconIndex) => {
+  const activateOrAddTab = (label) => {
     const existing = tabs.find((t) => t.label === label);
     if (existing) {
-      setTabs((prev) => prev.map((t) => ({ ...t, active: t.label === label })));
       setTabIndex(tabs.findIndex((t) => t.label === label));
+      navigate(existing.path);
     } else {
       const newTab = { label, path: `/${label.toLowerCase().replace(/\s+/g, "-")}` };
-      const newTabs = [...tabs.map((t) => ({ ...t, active: false })), newTab];
+      const newTabs = [...tabs, newTab];
       setTabs(newTabs);
       setTabIndex(newTabs.length - 1);
       navigate(newTab.path);
@@ -127,13 +127,34 @@ const Layout = () => {
 
   return (
     <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
-      {/* Sidebar (desktop or toggleable on mobile) */}
+      {/* Sidebar (desktop) */}
       {!isMobile && (
         <Sidebar
-          sidebarOpen={sidebarOpen}
           sidebarPinned={sidebarPinned}
           activateOrAddTab={activateOrAddTab}
+          onLogoClick={handleLogoClick}
         />
+      )}
+
+      {/* Sidebar (mobile) */}
+      {isMobile && (
+        <SwipeableDrawer
+          anchor="left"
+          open={mobileSidebarOpen}
+          onClose={() => setMobileSidebarOpen(false)}
+          PaperProps={{
+            sx: {
+              width: EXPANDED_WIDTH,
+              backgroundColor: theme.palette.background.paper,
+            },
+          }}
+        >
+          <Sidebar
+            sidebarPinned={true} // always expanded on mobile drawer
+            activateOrAddTab={activateOrAddTab}
+            onLogoClick={() => setMobileSidebarOpen(false)}
+          />
+        </SwipeableDrawer>
       )}
 
       {/* Main area */}
@@ -177,7 +198,7 @@ const Layout = () => {
             overflowY: "auto",
             overflowX: "hidden",
             px: 1,
-            pb: isMobile ? 7 : 0, // leave room for bottom bar on mobile
+            pb: isMobile ? 7 : 0,
           }}
         >
           <Outlet />
@@ -207,7 +228,7 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Swipeable Drawers for mobile actions */}
+      {/* Mobile action drawers */}
       <SwipeableDrawer
         anchor="bottom"
         open={Boolean(drawerType)}
@@ -217,11 +238,9 @@ const Layout = () => {
           sx: { height: "50%", p: 2, borderTopLeftRadius: 12, borderTopRightRadius: 12 },
         }}
       >
-        {drawerType === "search" && <Typography variant="h6">Search (mobile drawer)</Typography>}
-        {drawerType === "notifications" && (
-          <Typography variant="h6">Notifications (mobile drawer)</Typography>
-        )}
-        {drawerType === "profile" && <Typography variant="h6">Profile (mobile drawer)</Typography>}
+        {drawerType === "search" && <Typography variant="h6">Search</Typography>}
+        {drawerType === "notifications" && <Typography variant="h6">Notifications</Typography>}
+        {drawerType === "profile" && <Typography variant="h6">Profile</Typography>}
       </SwipeableDrawer>
     </Box>
   );
