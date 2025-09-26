@@ -1,5 +1,4 @@
-// NavbarTabs.js – Halo style with shrink + scroll fallback
-import React, { useRef } from "react";
+import React from "react";
 import MenuIcon from "@mui/icons-material/Menu";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
@@ -8,8 +7,6 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import CloseIcon from "@mui/icons-material/Close";
 
 const NAVBAR_HEIGHT = 44;
-const MIN_TAB_WIDTH = 90;
-const MAX_TAB_WIDTH = 200;
 
 const NavbarTabs = ({
   tabs = [],
@@ -18,9 +15,7 @@ const NavbarTabs = ({
   handleTabClose = () => {},
   onLogoClick = () => {},
 }) => {
-  const tabStripRef = useRef(null);
-
-  // Ensure Dashboard pinned
+  // Dashboard pinned at start
   const ensuredTabs = [
     { label: "Dashboard", path: "/dashboard", pinned: true },
     ...tabs.filter((t) => t.path !== "/dashboard"),
@@ -58,18 +53,16 @@ const NavbarTabs = ({
         <MenuIcon />
       </button>
 
-      {/* Tab strip */}
+      {/* Tabs strip */}
       <div
-        ref={tabStripRef}
         className="tab-container"
         style={{
           display: "flex",
           flex: 1,
           alignItems: "center",
           height: "100%",
-          minWidth: 0,
-          overflowX: "auto",
-          scrollbarWidth: "thin",
+          minWidth: 0, // critical for flex shrink
+          gap: 2,
         }}
       >
         {ensuredTabs.map((tab, index) => (
@@ -78,11 +71,9 @@ const NavbarTabs = ({
             onClick={() => handleTabChange(null, index, tab.path)}
             className={`tab ${index === tabIndex ? "tabactive" : ""}`}
             style={{
-              flex: "1 1 auto",
-              minWidth: MIN_TAB_WIDTH,
-              maxWidth: MAX_TAB_WIDTH,
-              padding: "0 12px",
-              marginRight: 2,
+              flex: "1 1 0%", // 🚀 distribute evenly
+              minWidth: 40,   // 🚀 allow shrink below 90px
+              padding: "0 8px",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -96,6 +87,7 @@ const NavbarTabs = ({
               overflow: "hidden",
               textOverflow: "ellipsis",
               borderRadius: "6px 6px 0 0",
+              fontSize: "13px",
             }}
           >
             <span
@@ -146,6 +138,7 @@ const NavbarTabs = ({
           display: "flex",
           alignItems: "center",
           gap: 12,
+          flexShrink: 0, // 🚀 ensures this section never shrinks
         }}
       >
         <SearchIcon style={{ cursor: "pointer" }} />
