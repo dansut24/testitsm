@@ -1,96 +1,98 @@
 // Sidebar.js
 import React from "react";
-import { Box, Divider } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
-import BugReportIcon from "@mui/icons-material/BugReport";
 import AssignmentIcon from "@mui/icons-material/Assignment";
-import ChangeCircleIcon from "@mui/icons-material/ChangeCircle";
-import ReportProblemIcon from "@mui/icons-material/ReportProblem";
-import DevicesIcon from "@mui/icons-material/Devices";
-import MenuBookIcon from "@mui/icons-material/MenuBook";
+import BuildIcon from "@mui/icons-material/Build";
+import StorageIcon from "@mui/icons-material/Storage";
+import BookIcon from "@mui/icons-material/Book";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import PersonIcon from "@mui/icons-material/Person";
 import SettingsIcon from "@mui/icons-material/Settings";
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import PersonIcon from "@mui/icons-material/Person";
+import HelpIcon from "@mui/icons-material/Help";
 
-const DEFAULT_FAVICONS = [
-  "https://www.google.com/favicon.ico",
-  "https://static.xx.fbcdn.net/rsrc.php/yo/r/iRmz9lCMBD2.ico",
-  "https://www.bing.com/sa/simg/favicon-2x.ico",
-  "https://github.githubassets.com/favicons/favicon.png",
-];
-
-export default function Sidebar({
-  open = false,
-  pinned = false,
-  topOffset = 34, // match your NAVBAR_HEIGHT in Layout
-  activateOrAddTab,
-  favicons = DEFAULT_FAVICONS,
-}) {
-  const width = pinned ? 48 : 260;
-
+const Sidebar = ({ sidebarOpen, sidebarPinned, activateOrAddTab }) => {
   const items = [
-    { label: "Dashboard", icon: <DashboardIcon fontSize="small" />, favicon: favicons[0] },
-    { label: "Incidents", icon: <BugReportIcon fontSize="small" />, favicon: favicons[1] },
-    { label: "Service Requests", icon: <AssignmentIcon fontSize="small" />, favicon: favicons[2] },
-    { label: "Changes", icon: <ChangeCircleIcon fontSize="small" />, favicon: favicons[3] },
-    { label: "Problems", icon: <ReportProblemIcon fontSize="small" />, favicon: favicons[0] },
-    { label: "Assets", icon: <DevicesIcon fontSize="small" />, favicon: favicons[1] },
-    { label: "Knowledge Base", icon: <MenuBookIcon fontSize="small" />, favicon: favicons[2] },
-    { label: "Reports", icon: <BarChartIcon fontSize="small" />, favicon: favicons[3] },
-    { label: "Approvals", icon: <CheckCircleIcon fontSize="small" />, favicon: favicons[0] },
-    { label: "Profile", icon: <PersonIcon fontSize="small" />, favicon: favicons[1] },
-    { label: "Settings", icon: <SettingsIcon fontSize="small" />, favicon: favicons[2] },
-    { label: "Help", icon: <HelpOutlineIcon fontSize="small" />, favicon: favicons[3] },
+    { label: "Dashboard", icon: <DashboardIcon />, faviconIndex: 0 },
+    { label: "Incidents", icon: <AssignmentIcon />, faviconIndex: 1 },
+    { label: "Service Requests", icon: <AssignmentIcon />, faviconIndex: 2 },
+    { label: "Changes", icon: <BuildIcon />, faviconIndex: 3 },
+    { label: "Problems", icon: <BuildIcon />, faviconIndex: 0 },
+    { label: "Assets", icon: <StorageIcon />, faviconIndex: 1 },
+    { label: "Knowledge Base", icon: <BookIcon />, faviconIndex: 2 },
+    { label: "Reports", icon: <BarChartIcon />, faviconIndex: 3 },
+    { label: "Approvals", icon: <CheckCircleIcon />, faviconIndex: 0 },
+    { label: "Profile", icon: <PersonIcon />, faviconIndex: 1 },
+    { label: "Settings", icon: <SettingsIcon />, faviconIndex: 2 },
+    { label: "Help", icon: <HelpIcon />, faviconIndex: 3 },
   ];
 
   return (
-    <>
-      {/* Sidebar panel */}
-      <Box
-        className="app-sidebar"
-        sx={{
-          position: "fixed",
-          top: topOffset,
-          left: 0,
-          bottom: 0,
-          width,
-          bgcolor: "#fff",
-          borderRight: 1,
-          borderColor: "divider",
-          zIndex: 2000,
-          overflow: "hidden",
-          transform: open ? "translateX(0)" : "translateX(-100%)",
-          transition: "transform 0.3s ease, width 0.2s ease",
-        }}
-      >
-        <Box sx={{ display: "flex", flexDirection: "column", py: 1 }}>
-          {items.map((it) => (
-            <Box
-              key={it.label}
-              onClick={() => activateOrAddTab(it.label, it.favicon)}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1.25,
-                px: 2,
-                py: 1.25,
-                cursor: "pointer",
-                color: "text.primary",
-                "&:hover": { bgcolor: "action.hover", color: "primary.main" },
-              }}
-              title={it.label}
-            >
-              <Box sx={{ minWidth: 20, display: "flex", justifyContent: "center" }}>{it.icon}</Box>
-              {!pinned && <Box component="span" sx={{ fontSize: 14, fontWeight: 500 }}>{it.label}</Box>}
-            </Box>
-          ))}
-        </Box>
-        <Divider />
-      </Box>
+    <div
+      className={`sidebar ${sidebarOpen || sidebarPinned ? "open" : ""} ${
+        sidebarPinned ? "pinned" : ""
+      }`}
+    >
+      {items.map((item) => (
+        <div
+          key={item.label}
+          className="nav-item"
+          onClick={() => activateOrAddTab(item.label, item.faviconIndex)}
+        >
+          <div className="icon">{item.icon}</div>
+          <span className="label">{item.label}</span>
+        </div>
+      ))}
 
-      {/* Optional scrim on mobile when open (click to close) — handled by parent if you want */}
-    </>
+      <style jsx>{`
+        .sidebar {
+          position: fixed;
+          top: 48px; /* sits under navbar */
+          left: 0;
+          bottom: 0;
+          background: #fff;
+          border-right: 1px solid rgba(0, 0, 0, 0.12);
+          width: ${sidebarOpen ? "260px" : "48px"};
+          transition: width 0.3s ease;
+          overflow-x: hidden;
+          overflow-y: auto;
+          z-index: 1000;
+        }
+
+        .nav-item {
+          display: flex;
+          align-items: center;
+          padding: 12px;
+          cursor: pointer;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item:hover {
+          background: #f5f5f5;
+        }
+
+        .icon {
+          min-width: 24px;
+          margin-right: ${sidebarOpen ? "12px" : "0"};
+          display: flex;
+          justify-content: center;
+        }
+
+        .label {
+          font-size: ${sidebarOpen ? "14px" : "10px"};
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          transition: opacity 0.2s ease, font-size 0.2s ease;
+          opacity: ${sidebarOpen ? "1" : "0.8"};
+        }
+
+        .sidebar:not(.open) .label {
+          text-align: center;
+        }
+      `}</style>
+    </div>
   );
-}
+};
+
+export default Sidebar;
