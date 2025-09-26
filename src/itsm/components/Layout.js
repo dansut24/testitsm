@@ -9,7 +9,6 @@ import {
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
-import Sidebar from "./Sidebar";
 
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
@@ -17,9 +16,6 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
 const NAVBAR_HEIGHT = 34;
 const NAVBAR_PADDING_TOP = 6;
-
-const expandedWidth = 260; // updated
-const collapsedWidth = 48; // updated
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -98,10 +94,7 @@ const Layout = () => {
 
   return (
     <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
-      {/* Sidebar (hidden on mobile, pinned on desktop) */}
-      {!isMobile && <Sidebar />}
-
-      {/* Main area */}
+      {/* Main area only (no sidebar) */}
       <Box
         sx={{
           flex: 1,
@@ -110,8 +103,6 @@ const Layout = () => {
           minWidth: 0,
           height: "100vh",
           position: "relative",
-          marginLeft: !isMobile ? `${collapsedWidth}px` : 0, // base offset for collapsed sidebar
-          transition: "margin-left 0.3s ease",
         }}
       >
         {/* Navbar + Tabs */}
