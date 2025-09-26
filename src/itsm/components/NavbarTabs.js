@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState } from "react";
 import { Tabs } from "@sinm/react-chrome-tabs";
 import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
 import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
@@ -20,13 +20,11 @@ const NAVBAR_HEIGHT = 48;
 const styles = `
   .navbar-container {
     width: 100%;
-    position: sticky;
-    top: 0;
+    position: relative;
     background: #f8f9fa;
     display: flex;
     align-items: center;
     height: ${NAVBAR_HEIGHT}px;
-    z-index: 1200;
   }
 
   .navbar-container::after {
@@ -43,8 +41,8 @@ const styles = `
 
   .chrome-tabs-bottom-bar { display: none !important; }
 
-  .ctn-bar { display:flex; align-items:center; width:100%; position:relative; height:100%; }
-  .ctn-scroll { flex:1; overflow-x:auto; overflow-y:hidden; height:100%; }
+  .ctn-bar { display:flex; align-items:center; width:100%; position:relative; background:transparent !important; height:100%; }
+  .ctn-scroll { flex:1; overflow-x:auto; overflow-y:hidden; background:transparent !important; height:100%; }
   .ctn-scroll::-webkit-scrollbar { height:6px; }
 
   .chrome-tabs { background:transparent !important; height:100%; }
@@ -59,8 +57,9 @@ const styles = `
     align-items:center;
     gap:12px;
     padding:0 8px;
-    background:#f8f9fa;
+    pointer-events:auto;
     z-index:5;
+    background:#f8f9fa;
   }
 
   .navbar-logo {
@@ -95,17 +94,11 @@ export default function ChromeTabsNavbar({ isMobile }) {
   ]);
 
   const scrollRef = useRef(null);
-  const tabsRef = useRef(null);
-
-  // Call resize on every tabs change to instantly reflow widths
-  useEffect(() => {
-    if (tabsRef.current && typeof tabsRef.current.resize === "function") {
-      tabsRef.current.resize();
-    }
-  }, [tabs]);
 
   const scrollElementIntoView = (el, opts = { inline: "center" }) => {
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest", ...opts });
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "nearest", ...opts });
+    }
   };
 
   const addTab = (
@@ -121,7 +114,7 @@ export default function ChromeTabsNavbar({ isMobile }) {
       const el = scrollRef.current;
       if (!el) return;
       const newTab = el.querySelector(".chrome-tab.chrome-tab-active");
-      if (newTab) scrollElementIntoView(newTab, { inline: "center" });
+      scrollElementIntoView(newTab, { inline: "center" });
     });
   };
 
@@ -151,7 +144,7 @@ export default function ChromeTabsNavbar({ isMobile }) {
     <>
       <style>{styles}</style>
       <div className="navbar-container">
-        {/* Left Logo */}
+        {/* Left Logo (static now) */}
         <div className="navbar-logo">
           <img
             src="https://www.bing.com/sa/simg/favicon-2x.ico"
@@ -164,7 +157,6 @@ export default function ChromeTabsNavbar({ isMobile }) {
         <div className={"ctn-bar" + (darkMode ? " dark" : "")} style={{ flex: 1 }}>
           <div ref={scrollRef} className="ctn-scroll">
             <Tabs
-              ref={tabsRef}
               darkMode={darkMode}
               onTabClose={onTabClose}
               onTabActive={onTabActive}
