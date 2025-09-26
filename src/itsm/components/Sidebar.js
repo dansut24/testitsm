@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import {
   Box,
   SwipeableDrawer,
-  Toolbar,
   IconButton,
   List,
   ListItem,
@@ -19,13 +18,10 @@ import ExpandMore from "@mui/icons-material/ExpandMore";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import AssignmentIcon from "@mui/icons-material/Assignment";
-import SearchIcon from "@mui/icons-material/Search";
-import NotificationsIcon from "@mui/icons-material/Notifications";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import { useTheme } from "@mui/material/styles";
 import { useNavigate, useLocation } from "react-router-dom";
 
-const expandedWidth = 256;
+const expandedWidth = 240;
 const collapsedWidth = 48;
 
 const Sidebar = ({
@@ -33,8 +29,6 @@ const Sidebar = ({
   mobileOpen,
   handleSidebarToggle,
   handleMobileSidebarToggle,
-  sidebarWidth,
-  collapsedWidth,
   isMobile,
 }) => {
   const theme = useTheme();
@@ -63,37 +57,24 @@ const Sidebar = ({
   ];
 
   const toggleDropdown = (text) => {
-    setOpenDropdowns((prev) => ({
-      ...prev,
-      [text]: !prev[text],
-    }));
+    setOpenDropdowns((prev) => ({ ...prev, [text]: !prev[text] }));
   };
 
+  // Sidebar content shared for desktop & mobile
   const drawerContent = (
-    <>
-      <Toolbar
-        sx={{
-          display: "flex",
-          justifyContent: sidebarOpen || isMobile ? "flex-end" : "center",
-          px: 1,
-          minHeight: "34px",
-        }}
-      >
-        {!isMobile && (
-          <IconButton
-            onClick={handleSidebarToggle}
-            sx={{ color: theme.palette.text.primary }}
-          >
-            {sidebarOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
-          </IconButton>
-        )}
-      </Toolbar>
-
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        backgroundColor: theme.palette.background.paper,
+      }}
+    >
+      {/* Menu list */}
       <Box
         sx={{
-          overflowY: "auto",
           flexGrow: 1,
-          backgroundColor: theme.palette.background.paper,
+          overflowY: "auto",
           "&::-webkit-scrollbar": { width: 0, height: 0 },
         }}
       >
@@ -112,34 +93,47 @@ const Sidebar = ({
                 }}
                 selected={location.pathname === item.path}
                 sx={{
-                  flexDirection: sidebarOpen || isMobile ? "row" : "column",
+                  flexDirection: "column",
                   justifyContent: "center",
                   alignItems: "center",
-                  py: sidebarOpen || isMobile ? 1 : 2,
+                  py: 1.5,
+                  "& .MuiSvgIcon-root": {
+                    fontSize: sidebarOpen || isMobile ? "1.6rem" : "1.3rem",
+                  },
                 }}
               >
                 <ListItemIcon
                   sx={{
                     minWidth: 0,
-                    mr: sidebarOpen || isMobile ? 2 : 0,
-                    justifyContent: "center",
                     color: theme.palette.text.primary,
+                    mb: 0.5,
+                    justifyContent: "center",
                   }}
                 >
                   {item.icon}
                 </ListItemIcon>
+
                 {sidebarOpen || isMobile ? (
                   <>
-                    <ListItemText primary={item.text} />
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontSize: sidebarOpen ? "0.75rem" : "0.7rem",
+                        textAlign: "center",
+                      }}
+                    >
+                      {item.text}
+                    </Typography>
                     {item.children &&
                       (openDropdowns[item.text] ? <ExpandLess /> : <ExpandMore />)}
                   </>
                 ) : (
-                  <Typography variant="caption" sx={{ fontSize: "0.7rem" }}>
+                  <Typography variant="caption" sx={{ fontSize: "0.65rem" }}>
                     {item.text}
                   </Typography>
                 )}
               </ListItem>
+
               {item.children && (
                 <Collapse in={openDropdowns[item.text]} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
@@ -165,23 +159,21 @@ const Sidebar = ({
         </List>
       </Box>
 
-      {/* Extra icons at bottom (mobile only) */}
-      {isMobile && (
+      {/* Collapse/Expand toggle (desktop only) */}
+      {!isMobile && (
         <Box
           sx={{
-            display: "flex",
-            justifyContent: "space-around",
-            alignItems: "center",
-            p: 2,
+            p: 1,
             borderTop: `1px solid ${theme.palette.divider}`,
+            textAlign: "center",
           }}
         >
-          <SearchIcon />
-          <NotificationsIcon />
-          <AccountCircleIcon />
+          <IconButton onClick={handleSidebarToggle}>
+            {sidebarOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+          </IconButton>
         </Box>
       )}
-    </>
+    </Box>
   );
 
   if (isMobile) {
@@ -193,8 +185,9 @@ const Sidebar = ({
         onOpen={() => {}}
         sx={{
           "& .MuiDrawer-paper": {
+            top: 34, // below Navbar
+            height: "calc(100% - 34px)",
             width: expandedWidth,
-            backgroundColor: theme.palette.background.paper,
           },
         }}
       >
