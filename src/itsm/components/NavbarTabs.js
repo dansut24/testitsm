@@ -43,13 +43,21 @@ export default function NavbarTabs({
 
   const tabCount = ensuredTabs.length || 1;
   const totalGaps = GAP_X * Math.max(0, tabCount - 1);
-  let computed = DEFAULT_TAB_W;
 
+  // 👇 Default 120px each, only shrink if needed
+  let computed = DEFAULT_TAB_W;
   if (stripW > 0) {
-    computed = Math.floor((stripW - totalGaps) / tabCount);
+    const maxPossible = (stripW - totalGaps) / tabCount;
+    if (maxPossible < DEFAULT_TAB_W) {
+      computed = Math.floor(maxPossible);
+    }
   }
 
-  // font-size adapts when very narrow
+  // 👇 Ensure with only 1 tab, it stays at default size (not full width)
+  if (tabCount === 1) {
+    computed = DEFAULT_TAB_W;
+  }
+
   const labelFontSize = computed < 60 ? 10 : computed < 90 ? 12 : 13;
 
   const onNewTab = () => {
@@ -113,7 +121,7 @@ export default function NavbarTabs({
               onClick={() => handleTabChange(null, idx, tab.path)}
               style={{
                 flex: "0 0 auto",
-                width: `${computed}px`, // 🚀 always shrink to fit strip
+                width: `${computed}px`,
                 height: "100%",
                 display: "flex",
                 alignItems: "center",
@@ -153,12 +161,8 @@ export default function NavbarTabs({
                     e.stopPropagation();
                     handleTabClose(tab.path);
                   }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.opacity = "1")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.opacity = "0.7")
-                  }
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
                 />
               )}
             </div>
@@ -172,7 +176,7 @@ export default function NavbarTabs({
           display: "flex",
           alignItems: "center",
           gap: 12,
-          flexShrink: 0, // prevents overlap
+          flexShrink: 0,
           marginLeft: 8,
         }}
       >
