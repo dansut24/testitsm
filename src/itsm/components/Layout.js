@@ -8,15 +8,12 @@ import {
   Typography,
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
-import Sidebar from "./Sidebar";
 import NavbarTabs from "./NavbarTabs";
 
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
-const expandedWidth = 240;
-const collapsedWidth = 48;
 const NAVBAR_HEIGHT = 34;
 const NAVBAR_PADDING_TOP = 6;
 
@@ -40,9 +37,6 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [mobileOpen, setMobileOpen] = useState(false);
-
   const [tabs, setTabs] = useState(() => {
     const stored = sessionStorage.getItem("tabs");
     return stored ? JSON.parse(stored) : [{ label: "Dashboard", path: "/dashboard" }];
@@ -54,8 +48,6 @@ const Layout = () => {
   });
 
   const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile"
-
-  const sidebarWidth = sidebarOpen ? expandedWidth : collapsedWidth;
 
   // Update tabs on route change
   useEffect(() => {
@@ -100,30 +92,15 @@ const Layout = () => {
     setTabs(tabsReordered);
   };
 
-  const handleSidebarToggle = () => setSidebarOpen((prev) => !prev);
-  const handleMobileSidebarToggle = () => setMobileOpen((prev) => !prev);
-
   return (
     <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
-      {/* Sidebar */}
-      <Sidebar
-        sidebarOpen={sidebarOpen}
-        mobileOpen={mobileOpen}
-        handleSidebarToggle={handleSidebarToggle}
-        handleMobileSidebarToggle={handleMobileSidebarToggle}
-        sidebarWidth={sidebarWidth}
-        collapsedWidth={collapsedWidth}
-        isMobile={isMobile}
-      />
-
-      {/* Main area */}
+      {/* Main area (no sidebar now) */}
       <Box
         sx={{
           flex: 1,
           display: "flex",
           flexDirection: "column",
           minWidth: 0,
-          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
           height: "100vh",
           position: "relative",
         }}
@@ -135,11 +112,7 @@ const Layout = () => {
           handleTabChange={handleTabChange}
           handleTabClose={handleTabClose}
           handleTabReorder={handleTabReorder}
-          sidebarOpen={sidebarOpen}
-          sidebarWidth={sidebarWidth}
-          collapsedWidth={collapsedWidth}
           isMobile={isMobile}
-          onLogoClick={handleMobileSidebarToggle}
         />
 
         {/* Content */}
