@@ -1,35 +1,63 @@
 // src/itsm/components/NavbarTabs.js
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Tabs } from "@sinm/react-chrome-tabs";
+import "@sinm/react-chrome-tabs/css/chrome-tabs.css"; // required base styles
+// Optional dark theme:
+// import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
+
+import MenuIcon from "@mui/icons-material/Menu";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import MenuIcon from "@mui/icons-material/Menu";
-import CloseIcon from "@mui/icons-material/Close";
 
 const NAVBAR_HEIGHT = 44;
 const DEFAULT_TAB_W = 120;
-const MIN_TAB_W = 60;
+const SAFE_ICON_SPACE = 24; // space to ensure favicon always visible
+const PAD_X = 8;
 
 export default function NavbarTabs({
+  // Expect your app-level tabs as [{ id, path, label, faviconUrl?, pinned? }, ...]
   tabs = [],
   tabIndex = 0,
   handleTabChange = () => {},
   handleTabClose = () => {},
+  handleTabReorder = () => {},
   isMobile = false,
   onLogoClick = () => {},
 }) {
-  // Force a pinned Dashboard tab at the front
-  const ensuredTabs = [
-    { id: "dashboard", title: "Dashboard", favicon: "📊", pinned: true },
-    ...tabs.filter((t) => t.id !== "dashboard"),
-  ];
+  // 1) Ensure a pinned Dashboard tab at the front
+  const ensuredTabs = useMemo(() => {
+    const rest = tabs.filter((t) => t.path !== "/dashboard" && t.id !== "dashboard");
+    return [
+      {
+        id: "dashboard",
+        path: "/dashboard",
+        label: "Dashboard",
+        pinned: true,
+        faviconUrl: "/favicon.ico", // make sure this is a valid URL
+      },
+      ...rest,
+    ];
+  }, [tabs]);
 
-  const [stripW, setStripW] = useState(0);
+  // 2) Compute which tab is active safely
+  const safeActiveIndex =
+    tabIndex >= 0 && tabIndex < ensuredTabs.length ? tabIndex : 0;
+
+  // 3) Map to sinm TabProperties (IMPORTANT: favicon must be an image URL)
+  const sinmTabs = ensuredTabs.map((t, i) => ({
+    id: t.id || t.path || `tab-${i}`,
+    title: t.label || t.title || "Untitled",
+    favicon: t.faviconUrl || "/favicon.ico",
+    active: i === safeActiveIndex,
+  }));
+
+  // 4) Measure the center strip (between menu and right icons) to size tabs
   const stripRef = useRef(null);
+  const [stripW, setStripW] = useState(0);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!stripRef.current) return;
     const ro = new ResizeObserver(([entry]) => {
       const w = entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
@@ -39,14 +67,27 @@ export default function NavbarTabs({
     return () => ro.disconnect();
   }, []);
 
-  // Dynamic tab width calc
-  const tabCount = ensuredTabs.length || 1;
-  const computed =
-    stripW > 0 ? Math.max(MIN_TAB_W, Math.floor(stripW / tabCount)) : DEFAULT_TAB_W;
+  useEffect(() => {
+    if (stripRef.current) setStripW(stripRef.current.clientWidth);
+  }, [sinmTabs.length]);
 
-  // Add new tab
+  // 5) Deterministic width per tab (no overlap with right icons, no scroll)
+  const count = sinmTabs.length || 1;
+  let computed = DEFAULT_TAB_W;
+  if (stripW > 0) {
+    computed = Math.floor((stripW - 0) / count);
+    if (computed < SAFE_ICON_SPACE + 8) {
+      computed = SAFE_ICON_SPACE + 8; // keep favicon space
+    }
+  }
+  if (count === 1) computed = DEFAULT_TAB_W; // no full-width single tab
+
+  const labelFontSize = computed < 70 ? 10 : 12;
+  const ultraTight = computed <= SAFE_ICON_SPACE + 30; // hide text at tiny widths
+
   const onNewTab = () => {
     const newId = Date.now().toString();
+    // You likely push a new tab in your parent state; we just signal selection target:
     handleTabChange(null, ensuredTabs.length, `/new-tab/${newId}`);
   };
 
@@ -66,7 +107,7 @@ export default function NavbarTabs({
         borderBottom: "1px solid rgba(0,0,0,0.15)",
       }}
     >
-      {/* Left logo/menu */}
+      {/* Left menu / logo */}
       <button
         type="button"
         aria-label="Menu"
@@ -85,7 +126,7 @@ export default function NavbarTabs({
         <MenuIcon />
       </button>
 
-      {/* Chrome Tabs container */}
+      {/* Tab strip (center) */}
       <div
         ref={stripRef}
         style={{
@@ -94,94 +135,103 @@ export default function NavbarTabs({
           height: "100%",
           display: "flex",
           alignItems: "flex-end",
+          overflow: "hidden",
+          // Expose sizing + states as CSS vars/classes for styling below
+          ["--tabWidth"]: `${computed}px`,
+          ["--tabFontSize"]: `${labelFontSize}px`,
+          position: "relative",
         }}
+        className={ultraTight ? "tabs-ultratight" : "tabs-normal"}
       >
         <Tabs
-          tabs={ensuredTabs.map((t, idx) => ({
-            id: t.id,
-            title: t.title,
-            favicon: t.favicon,
-            active: idx === tabIndex,
-            // Our custom render per tab
-            render: ({ tab, onClose }) => (
-              <div
-                title={tab.title} // tooltip on hover
-                style={{
-                  flex: "0 0 auto",
-                  width: `${computed}px`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "0 8px",
-                  cursor: "pointer",
-                  borderTopLeftRadius: 12,
-                  borderTopRightRadius: 12,
-                  background: tab.active ? "#fff" : "#e5e7eb",
-                  border: "1px solid rgba(0,0,0,0.2)",
-                  borderBottom: tab.active
-                    ? "2px solid #2BD3C6"
-                    : "1px solid rgba(0,0,0,0.15)",
-                  clipPath:
-                    "polygon(10px 0, calc(100% - 10px) 0, 100% 100%, 0% 100%)",
-                  fontSize: computed < 70 ? 10 : 12,
-                  position: "relative",
-                }}
-                onClick={() => handleTabChange(null, idx, t.path || t.id)}
-              >
-                <span style={{ marginRight: 6 }}>{tab.favicon || "📄"}</span>
-                <span
-                  style={{
-                    flex: 1,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {tab.title}
-                </span>
-                {!t.pinned && (
-                  <span
-                    className="tab-close-btn"
-                    style={{
-                      flexShrink: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: 16,
-                      height: 16,
-                      marginLeft: 4,
-                      borderRadius: "50%",
-                      cursor: "pointer",
-                      opacity: 0,
-                      transition: "opacity 0.2s ease",
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onClose?.();
-                      handleTabClose(t.path || t.id);
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.opacity = "1")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.opacity = "0")
-                    }
-                  >
-                    <CloseIcon style={{ fontSize: 12 }} />
-                  </span>
-                )}
-              </div>
-            ),
-          }))}
-          onTabClose={(tab) => handleTabClose(tab.id)}
-          onTabSelect={(tab) =>
-            handleTabChange(null, ensuredTabs.findIndex((t) => t.id === tab.id), tab.id)
-          }
-          onTabAdd={onNewTab}
+          draggable
+          tabs={sinmTabs}
+          onTabActive={(id) => {
+            const idx = sinmTabs.findIndex((t) => t.id === id);
+            const target = ensuredTabs[idx];
+            handleTabChange(null, idx, target?.path || id);
+          }}
+          onTabClose={(id) => {
+            // prevent closing pinned dashboard
+            if (id === "dashboard") return;
+            const idx = sinmTabs.findIndex((t) => t.id === id);
+            const target = ensuredTabs[idx];
+            handleTabClose(target?.path || id);
+          }}
+          onTabReorder={(from, to) => {
+            handleTabReorder(from, to);
+          }}
         />
+
+        {/* Style overrides — kept local to this component */}
+        <style>{`
+          /* Fix widths deterministically */
+          .chrome-tabs .chrome-tab {
+            flex: 0 0 var(--tabWidth) !important;
+            width: var(--tabWidth) !important;
+            height: 88%;
+            margin-right: -10px;              /* overlap for the flick illusion */
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            position: relative;
+            clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 100%, 0% 100%);
+            box-sizing: border-box;
+          }
+          .chrome-tabs .chrome-tab .chrome-tab-title {
+            font-size: var(--tabFontSize);
+            padding: 0 ${PAD_X}px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          /* Divider between tabs (inactive ones) */
+          .chrome-tabs .chrome-tab:not(.chrome-tab-active)::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 6px;
+            bottom: 6px;
+            width: 1px;
+            background: rgba(0,0,0,0.1);
+            pointer-events: none;
+          }
+
+          /* Hover-only, small close button */
+          .chrome-tabs .chrome-tab .chrome-tab-close {
+            width: 16px;
+            height: 16px;
+            opacity: 0;
+            transition: opacity .2s ease, background .2s ease;
+            border-radius: 50%;
+            margin-right: ${PAD_X}px;
+          }
+          .chrome-tabs .chrome-tab:hover .chrome-tab-close { opacity: 1; }
+          .chrome-tabs .chrome-tab .chrome-tab-close svg {
+            width: 12px; height: 12px;
+          }
+          .chrome-tabs .chrome-tab .chrome-tab-close:hover {
+            background: rgba(0,0,0,0.10);
+          }
+
+          /* Make active tab pop */
+          .chrome-tabs .chrome-tab.chrome-tab-active {
+            background: #fff;
+            border-bottom: 2px solid #2BD3C6;
+          }
+
+          /* Hide titles when ultra tight, keep favicon visible */
+          .tabs-ultratight .chrome-tabs .chrome-tab .chrome-tab-title {
+            display: none;
+          }
+
+          /* Tooltips: mirror the title string on hover using native title attribute already set by the lib on the tab title node (fallback with attr) */
+          .chrome-tabs .chrome-tab .chrome-tab-title[title] {
+            /* native browser tooltip will show the full string */
+          }
+        `}</style>
       </div>
 
-      {/* Right side icons */}
+      {/* Right section (never shrinks) */}
       <div
         style={{
           display: "flex",
@@ -191,7 +241,7 @@ export default function NavbarTabs({
           marginLeft: 8,
         }}
       >
-        <AddIcon onClick={onNewTab} style={{ cursor: "pointer" }} />
+        <AddIcon onClick={onNewTab} style={{ cursor: "pointer" }} titleAccess="New Tab" />
         {!isMobile && (
           <>
             <SearchIcon style={{ cursor: "pointer" }} />
