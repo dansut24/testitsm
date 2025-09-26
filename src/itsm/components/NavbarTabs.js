@@ -3,6 +3,12 @@ import { Tabs } from "@sinm/react-chrome-tabs";
 import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
 import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
 
+import {
+  Menu,
+  MenuItem,
+  IconButton,
+} from "@mui/material";
+
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
@@ -41,22 +47,8 @@ const styles = `
 
   .chrome-tabs-bottom-bar { display: none !important; }
 
-  .ctn-bar { 
-    display:flex; 
-    align-items:center; 
-    width:100%; 
-    position:relative; 
-    background:transparent !important; 
-    height:100%; 
-  }
-
-  .ctn-scroll { 
-    flex:1; 
-    overflow-x:auto; 
-    overflow-y:hidden; 
-    background:transparent !important; 
-    height:100%; 
-  }
+  .ctn-bar { display:flex; align-items:center; width:100%; position:relative; height:100%; }
+  .ctn-scroll { flex:1; overflow-x:auto; overflow-y:hidden; height:100%; }
   .ctn-scroll::-webkit-scrollbar { height:6px; }
 
   .chrome-tabs { background:transparent !important; height:100%; }
@@ -71,7 +63,6 @@ const styles = `
     align-items:center;
     gap:12px;
     padding:0 8px;
-    pointer-events:auto;
     z-index:5;
     background:#f8f9fa;
   }
@@ -90,7 +81,6 @@ const styles = `
 
   .ctn-scroll { padding-right:160px; padding-left:60px; }
 
-  /* Mobile tweaks */
   @media (max-width: 600px) {
     .ctn-scroll { 
       overflow-x:hidden; 
@@ -100,29 +90,15 @@ const styles = `
       justify-content:space-between; 
     }
 
-    /* Force tabs to grow equally */
-    .chrome-tabs { 
-      display:flex !important; 
-      flex:1; 
-    }
-
-    .chrome-tab { 
-      flex:1 1 auto !important; 
-      max-width:none !important; 
-    }
-
-    .chrome-tab-title { 
-      font-size: 12px; 
-      overflow:hidden; 
-      text-overflow:ellipsis; 
-      text-align:center; 
-    }
+    .chrome-tabs { display:flex !important; flex:1; }
+    .chrome-tab { flex:1 1 auto !important; max-width:none !important; }
+    .chrome-tab-title { font-size: 12px; text-align:center; overflow:hidden; text-overflow:ellipsis; }
   }
 `;
 
 let nextId = 1;
 
-export default function ChromeTabsNavbar({ isMobile }) {
+export default function ChromeTabsNavbar({ isMobile, onNavigate }) {
   const [darkMode] = useState(false);
   const [tabs, setTabs] = useState([
     { id: "t-welcome", title: "Welcome", active: true, favicon: REMOTE_FAVICONS[0] },
@@ -131,6 +107,11 @@ export default function ChromeTabsNavbar({ isMobile }) {
   ]);
 
   const scrollRef = useRef(null);
+
+  const [menuAnchor, setMenuAnchor] = useState(null);
+
+  const openMenu = (event) => setMenuAnchor(event.currentTarget);
+  const closeMenu = () => setMenuAnchor(null);
 
   const scrollElementIntoView = (el, opts = { inline: "center" }) => {
     if (el) {
@@ -181,24 +162,34 @@ export default function ChromeTabsNavbar({ isMobile }) {
     <>
       <style>{styles}</style>
       <div className="navbar-container">
-        {/* Left Logo */}
+        {/* Left Logo -> opens menu */}
         <div className="navbar-logo">
-          <img
-            src="https://www.bing.com/sa/simg/favicon-2x.ico"
-            alt="Logo"
-            style={{ width: 28, height: 28 }}
-          />
+          <IconButton onClick={openMenu} size="small">
+            <img
+              src="https://www.bing.com/sa/simg/favicon-2x.ico"
+              alt="Logo"
+              style={{ width: 28, height: 28 }}
+            />
+          </IconButton>
+          <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
+            {["Dashboard", "Incidents", "Assets", "Settings"].map((label) => (
+              <MenuItem
+                key={label}
+                onClick={() => {
+                  closeMenu();
+                  if (onNavigate) onNavigate(label);
+                }}
+              >
+                {label}
+              </MenuItem>
+            ))}
+          </Menu>
         </div>
 
         {/* Tabs */}
         <div className={"ctn-bar" + (darkMode ? " dark" : "")} style={{ flex: 1 }}>
           <div ref={scrollRef} className="ctn-scroll">
-            <Tabs
-              darkMode={darkMode}
-              onTabClose={onTabClose}
-              onTabActive={onTabActive}
-              tabs={tabs}
-            />
+            <Tabs darkMode={darkMode} onTabClose={onTabClose} onTabActive={onTabActive} tabs={tabs} />
           </div>
         </div>
 
