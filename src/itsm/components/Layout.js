@@ -9,26 +9,24 @@ import {
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
-import Sidebar from "./Sidebar"; // ✅ keep only for mobile
+import Sidebar from "./Sidebar";
 
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import MenuIcon from "@mui/icons-material/Menu";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import ListAltIcon from "@mui/icons-material/ListAlt";
+import StorageIcon from "@mui/icons-material/Storage";
+import SettingsIcon from "@mui/icons-material/Settings";
 
 const EXPANDED_WIDTH = 260;
+const COLLAPSED_WIDTH = 48;
 
 const routeLabels = {
   "/dashboard": "Dashboard",
   "/incidents": "Incidents",
-  "/service-requests": "Service Requests",
-  "/changes": "Changes",
-  "/problems": "Problems",
   "/assets": "Assets",
-  "/knowledge-base": "Knowledge Base",
-  "/reports": "Reports",
-  "/approvals": "Approvals",
-  "/profile": "Profile",
   "/settings": "Settings",
 };
 
@@ -38,17 +36,18 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Tabs state (Dashboard only at start)
+  // Tabs state
   const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
 
-  // Mobile sidebar drawer
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  // Sidebar
+  const [sidebarPinned, setSidebarPinned] = useState(true);
 
-  // Mobile bottom action drawer
+  // Mobile
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null);
 
-  // Route -> tabs sync
+  // Route sync
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -60,8 +59,7 @@ const Layout = () => {
     } else {
       setTabIndex(tabs.findIndex((t) => t.path === currentPath));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
+  }, [location.pathname]); // eslint-disable-line
 
   // Persist
   useEffect(() => {
@@ -69,20 +67,16 @@ const Layout = () => {
     sessionStorage.setItem("tabIndex", tabIndex.toString());
   }, [tabs, tabIndex]);
 
-  // Handlers
   const handleTabChange = (ev, newIndex, path) => {
     setTabIndex(newIndex);
     if (path) navigate(path);
   };
 
   const handleTabClose = (tabId) => {
-    // Prevent closing the first tab (Dashboard)
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return;
-
+    if (closingIndex === 0) return; // dashboard cannot be closed
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
-
     if (location.pathname === tabId) {
       const fallbackIndex = Math.max(0, closingIndex - 1);
       navigate(newTabs[fallbackIndex]?.path || "/dashboard");
@@ -106,11 +100,30 @@ const Layout = () => {
     }
   };
 
-  const sidebarItems = Object.values(routeLabels);
+  const sidebarWidth = sidebarPinned ? EXPANDED_WIDTH : COLLAPSED_WIDTH;
+
+  const sidebarItems = [
+    { label: "Dashboard", icon: <DashboardIcon /> },
+    { label: "Incidents", icon: <ListAltIcon /> },
+    { label: "Assets", icon: <StorageIcon /> },
+    { label: "Settings", icon: <SettingsIcon /> },
+  ];
 
   return (
     <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
-      {/* Main Column */}
+      {/* Desktop Sidebar */}
+      {!isMobile && (
+        <Sidebar
+          pinned={sidebarPinned}
+          onToggle={() => setSidebarPinned((p) => !p)}
+          items={sidebarItems}
+          onItemClick={activateOrAddTab}
+          widthExpanded={EXPANDED_WIDTH}
+          widthCollapsed={COLLAPSED_WIDTH}
+        />
+      )}
+
+      {/* Main area */}
       <Box
         sx={{
           flex: 1,
@@ -118,28 +131,10 @@ const Layout = () => {
           flexDirection: "column",
           minWidth: 0,
           height: "100vh",
+          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
+          transition: "margin-left 0.3s ease",
         }}
       >
-        {/* Mobile: Full-width logo bar */}
-        {isMobile && (
-          <Box
-            sx={{
-              height: 48,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              borderBottom: `1px solid ${theme.palette.divider}`,
-              backgroundColor: theme.palette.background.paper,
-            }}
-          >
-            <img
-              src="https://www.bing.com/sa/simg/favicon-2x.ico"
-              alt="Logo"
-              style={{ width: 28, height: 28 }}
-            />
-          </Box>
-        )}
-
         {/* Navbar Tabs */}
         <NavbarTabs
           tabs={tabs}
@@ -150,16 +145,10 @@ const Layout = () => {
           isMobile={isMobile}
         />
 
-        {/* Main Content */}
+        {/* Content */}
         <Box
           component="main"
-          sx={{
-            flex: 1,
-            overflowY: "auto",
-            overflowX: "hidden",
-            px: 2,
-            pb: isMobile ? 7 : 0, // leave space for bottom bar
-          }}
+          sx={{ flex: 1, overflowY: "auto", overflowX: "hidden", px: 2, pb: isMobile ? 7 : 0 }}
         >
           <Outlet />
         </Box>
@@ -194,9 +183,7 @@ const Layout = () => {
         anchor="left"
         open={mobileSidebarOpen}
         onClose={() => setMobileSidebarOpen(false)}
-        PaperProps={{
-          sx: { width: EXPANDED_WIDTH, backgroundColor: theme.palette.background.paper },
-        }}
+        PaperProps={{ sx: { width: EXPANDED_WIDTH, backgroundColor: theme.palette.background.paper } }}
       >
         <Sidebar
           pinned
@@ -207,23 +194,20 @@ const Layout = () => {
             setMobileSidebarOpen(false);
           }}
           widthExpanded={EXPANDED_WIDTH}
-          widthCollapsed={EXPANDED_WIDTH}
-          isMobile
+          widthCollapsed={COLLAPSED_WIDTH}
         />
       </SwipeableDrawer>
 
-      {/* Mobile action drawers */}
+      {/* Mobile Action Drawer */}
       <SwipeableDrawer
         anchor="bottom"
         open={Boolean(drawerType)}
         onClose={() => setDrawerType(null)}
-        PaperProps={{
-          sx: { height: "50%", p: 2, borderTopLeftRadius: 12, borderTopRightRadius: 12 },
-        }}
+        PaperProps={{ sx: { height: "50%", p: 2, borderTopLeftRadius: 12, borderTopRightRadius: 12 } }}
       >
-        {drawerType === "search" && <Typography variant="h6">Search (mobile)</Typography>}
-        {drawerType === "notifications" && <Typography variant="h6">Notifications (mobile)</Typography>}
-        {drawerType === "profile" && <Typography variant="h6">Profile (mobile)</Typography>}
+        {drawerType === "search" && <Typography variant="h6">Search</Typography>}
+        {drawerType === "notifications" && <Typography variant="h6">Notifications</Typography>}
+        {drawerType === "profile" && <Typography variant="h6">Profile</Typography>}
       </SwipeableDrawer>
     </Box>
   );
