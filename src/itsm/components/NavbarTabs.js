@@ -21,7 +21,6 @@ export default function NavbarTabs({
   isMobile = false,
   onLogoClick = () => {},
 }) {
-  // Always ensure Dashboard tab exists & pinned
   const ensuredTabs = useMemo(
     () => [
       { label: "Dashboard", path: "/dashboard", pinned: true, favicon: "📊" },
@@ -33,7 +32,6 @@ export default function NavbarTabs({
   const stripRef = useRef(null);
   const [stripW, setStripW] = useState(0);
 
-  // Observe container width
   useLayoutEffect(() => {
     if (!stripRef.current) return;
     const ro = new ResizeObserver(([entry]) => {
@@ -49,7 +47,6 @@ export default function NavbarTabs({
     if (stripRef.current) setStripW(stripRef.current.clientWidth);
   }, [ensuredTabs.length]);
 
-  // --- Tab width calculation ---
   const tabCount = ensuredTabs.length || 1;
   const totalGaps = GAP_X * Math.max(0, tabCount - 1);
 
@@ -58,9 +55,8 @@ export default function NavbarTabs({
     const maxPossible = (stripW - totalGaps) / tabCount;
     computed = Math.floor(maxPossible);
 
-    // ensure favicon space even if text hidden
     if (computed < SAFE_ICON_SPACE + 8) {
-      computed = SAFE_ICON_SPACE + 8;
+      computed = SAFE_ICON_SPACE + 8; // favicon always visible
     }
   }
   if (tabCount === 1) computed = DEFAULT_TAB_W;
@@ -88,7 +84,7 @@ export default function NavbarTabs({
         borderBottom: "1px solid rgba(0,0,0,0.15)",
       }}
     >
-      {/* Left menu / logo */}
+      {/* Left menu */}
       <button
         type="button"
         aria-label="Menu"
@@ -107,7 +103,7 @@ export default function NavbarTabs({
         <MenuIcon />
       </button>
 
-      {/* Tabs */}
+      {/* Tab strip */}
       <div
         ref={stripRef}
         style={{
@@ -124,12 +120,13 @@ export default function NavbarTabs({
           return (
             <div
               key={tab.path || idx}
+              title={tab.label} // 👈 tooltip on hover
               onClick={() => handleTabChange(null, idx, tab.path)}
               style={{
                 flex: "0 0 auto",
                 width: `${computed}px`,
                 height: "88%",
-                marginRight: "-10px", // overlap for flick illusion
+                marginRight: "-10px",
                 padding: `0 ${PAD_X}px`,
                 background: isActive ? "#fff" : "#e5e7eb",
                 border: "1px solid rgba(0,0,0,0.2)",
@@ -139,7 +136,7 @@ export default function NavbarTabs({
                 borderTopLeftRadius: 12,
                 borderTopRightRadius: 12,
                 clipPath:
-                  "polygon(10px 0, calc(100% - 10px) 0, 100% 100%, 0% 100%)", // angled flicks
+                  "polygon(10px 0, calc(100% - 10px) 0, 100% 100%, 0% 100%)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -193,7 +190,6 @@ export default function NavbarTabs({
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                     }}
-                    title={tab.label}
                   >
                     {tab.label}
                   </span>
@@ -214,19 +210,19 @@ export default function NavbarTabs({
                     marginLeft: 4,
                     borderRadius: "50%",
                     cursor: "pointer",
-                    opacity: 0, // hidden until hover
+                    opacity: 0,
                     transition: "opacity 0.2s ease, background 0.2s ease",
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleTabClose(tab.path);
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(0,0,0,0.1)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "transparent";
-                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = "rgba(0,0,0,0.1)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
                 >
                   <CloseIcon style={{ fontSize: 12, pointerEvents: "none" }} />
                 </div>
