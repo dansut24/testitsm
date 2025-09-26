@@ -1,3 +1,4 @@
+// Layout.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -8,7 +9,7 @@ import {
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
-// import Sidebar from "./Sidebar";
+import Sidebar from "./Sidebar"; // ✅ keep only for mobile
 
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
@@ -16,7 +17,6 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import MenuIcon from "@mui/icons-material/Menu";
 
 const EXPANDED_WIDTH = 260;
-const COLLAPSED_WIDTH = 48;
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -42,14 +42,10 @@ const Layout = () => {
   const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
 
-  // Desktop sidebar state
-  const [sidebarPinned, setSidebarPinned] = useState(true);
-  const sidebarWidth = sidebarPinned ? EXPANDED_WIDTH : COLLAPSED_WIDTH;
-
   // Mobile sidebar drawer
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  // Bottom action drawer (mobile)
+  // Mobile bottom action drawer
   const [drawerType, setDrawerType] = useState(null);
 
   // Route -> tabs sync
@@ -114,19 +110,6 @@ const Layout = () => {
 
   return (
     <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
-      {/* Desktop Sidebar (pushes content right) */}
-      {!isMobile && (
-        <Sidebar
-          pinned={sidebarPinned}
-          onToggle={() => setSidebarPinned((p) => !p)}
-          items={sidebarItems}
-          onItemClick={activateOrAddTab}
-          widthExpanded={EXPANDED_WIDTH}
-          widthCollapsed={COLLAPSED_WIDTH}
-          isMobile={false}
-        />
-      )}
-
       {/* Main Column */}
       <Box
         sx={{
@@ -135,12 +118,9 @@ const Layout = () => {
           flexDirection: "column",
           minWidth: 0,
           height: "100vh",
-          // Push by sidebar on desktop
-          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
-          transition: "margin-left 0.3s ease",
         }}
       >
-        {/* Mobile: Full-width logo bar on top */}
+        {/* Mobile: Full-width logo bar */}
         {isMobile && (
           <Box
             sx={{
@@ -160,7 +140,7 @@ const Layout = () => {
           </Box>
         )}
 
-        {/* Navbar Tabs (no logo inside) */}
+        {/* Navbar Tabs */}
         <NavbarTabs
           tabs={tabs}
           tabIndex={tabIndex}
@@ -178,13 +158,13 @@ const Layout = () => {
             overflowY: "auto",
             overflowX: "hidden",
             px: 2,
-            pb: isMobile ? 7 : 0, // leave room for bottom bar on mobile
+            pb: isMobile ? 7 : 0, // leave space for bottom bar
           }}
         >
           <Outlet />
         </Box>
 
-        {/* Mobile bottom bar (kept) */}
+        {/* Mobile bottom bar */}
         {isMobile && (
           <Box
             sx={{
@@ -209,7 +189,7 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Mobile Sidebar Drawer (hamburger) */}
+      {/* Mobile Sidebar Drawer */}
       <SwipeableDrawer
         anchor="left"
         open={mobileSidebarOpen}
@@ -227,7 +207,7 @@ const Layout = () => {
             setMobileSidebarOpen(false);
           }}
           widthExpanded={EXPANDED_WIDTH}
-          widthCollapsed={COLLAPSED_WIDTH}
+          widthCollapsed={EXPANDED_WIDTH}
           isMobile
         />
       </SwipeableDrawer>
