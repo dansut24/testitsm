@@ -36,13 +36,10 @@ const NavbarTabs = ({
 
   const onTabActive = (tabId) => {
     const index = chromeTabs.findIndex((t) => t.id === tabId);
-    if (index >= 0) {
-      handleTabChange(null, index, tabs[index].path);
-    }
+    if (index >= 0) handleTabChange(null, index, tabs[index].path);
   };
 
   const onTabClose = (tabId) => handleTabClose(tabId);
-
   const onTabReorder = (tabsReordered) => {
     if (isMobile) return;
     handleTabReorder(
@@ -53,66 +50,31 @@ const NavbarTabs = ({
   const leftOffset = isMobile ? 0 : sidebarOpen ? sidebarWidth : collapsedWidth;
   const widthCalc = isMobile ? "100%" : `calc(100% - ${leftOffset}px)`;
 
-  const tabMinWidth = isMobile ? 74 : 120;
-  const tabPaddingX = isMobile ? 6 : 12;
-
   return (
     <>
-      {/* Inline style overrides for Chrome Tabs */}
       <style>
         {`
           .chrome-tabs {
-            background-color: transparent !important;
+            background: transparent !important;
             border-bottom: none !important;
             box-shadow: none !important;
             height: ${NAVBAR_HEIGHT}px !important;
-            --tab-content-margin: 0px !important;
           }
-
           .chrome-tabs .chrome-tabs-content {
             height: ${NAVBAR_HEIGHT}px !important;
             align-items: center;
           }
-
-          .chrome-tabs .chrome-tabs-bottom-bar {
-            display: none !important;
-            height: 0 !important;
+          .chrome-tabs .chrome-tab {
+            flex: 1 1 auto;
+            min-width: ${isMobile ? 60 : 90}px;
+            max-width: ${isMobile ? 120 : 180}px;
+            transition: flex-basis .2s ease;
           }
-
-          .chrome-tab,
-          .chrome-tab .chrome-tab-content,
-          .chrome-tab .chrome-tab-background {
-            height: ${TAB_DRAW_HEIGHT}px !important;
-          }
-
           .chrome-tab .chrome-tab-title {
-            line-height: ${TAB_DRAW_HEIGHT}px !important;
-            text-align: left !important;
-          }
-
-          .chrome-tab .chrome-tab-favicon {
-            display: none !important;
-            width: 0 !important;
-            margin: 0 !important;
-          }
-
-          .chrome-tab[active],
-          .chrome-tab[active="true"],
-          .chrome-tab[active=""] {
-            border-radius: 6px;
-            filter: drop-shadow(0 1px 3px rgba(0,0,0,0.15));
-          }
-
-          .chrome-tab {
-            min-width: 120px;
-          }
-          @media (max-width: 600px) {
-            .chrome-tab {
-              min-width: 74px;
-            }
-            .chrome-tab .chrome-tab-title {
-              font-size: 12px;
-            }
+            font-size: ${isMobile ? "12px" : "13px"};
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
         `}
       </style>
@@ -142,7 +104,7 @@ const NavbarTabs = ({
           }}
           onClick={isMobile ? onLogoClick : undefined}
         >
-          <img src="/logo192.png" alt="Logo" style={{ height: 28, objectFit: "contain" }} />
+          <img src="/logo192.png" alt="Logo" style={{ height: 28 }} />
         </div>
 
         {/* Tabs */}
@@ -154,37 +116,7 @@ const NavbarTabs = ({
             onTabReorder={!isMobile ? onTabReorder : undefined}
             draggable={!isMobile}
             className="chrome-tabs"
-            tabContentStyle={{ textAlign: "left" }}
             style={{ width: "100%" }}
-            tabRenderer={(tab) => (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-start",
-                  minWidth: tabMinWidth,
-                  maxWidth: 320,
-                  overflow: "hidden",
-                  padding: `0 ${tabPaddingX}px`,
-                  borderRadius: tab.active ? 6 : 4,
-                  backgroundColor: tab.active
-                    ? "rgba(0,0,0,0.06)"
-                    : "transparent",
-                  transition: "background-color .15s ease",
-                  height: TAB_DRAW_HEIGHT,
-                }}
-              >
-                <span
-                  style={{
-                    whiteSpace: "nowrap",
-                    textOverflow: "ellipsis",
-                    overflow: "hidden",
-                  }}
-                >
-                  {tab.title}
-                </span>
-              </div>
-            )}
           />
         </div>
 
@@ -198,15 +130,7 @@ const NavbarTabs = ({
 
         {/* Right-hand icons (desktop only) */}
         {!isMobile && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 16,
-              paddingRight: 12,
-              height: "100%",
-            }}
-          >
+          <div style={{ display: "flex", gap: 16, paddingRight: 12 }}>
             <SearchIcon style={{ cursor: "pointer" }} />
             <NotificationsIcon style={{ cursor: "pointer" }} />
             <AccountCircleIcon style={{ cursor: "pointer" }} />
