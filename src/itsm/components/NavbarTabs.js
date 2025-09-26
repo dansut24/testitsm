@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Tabs } from "@sinm/react-chrome-tabs";
 import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
 import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
@@ -47,20 +47,8 @@ const styles = `
   .ctn-scroll { flex:1; overflow-x:auto; overflow-y:hidden; height:100%; }
   .ctn-scroll::-webkit-scrollbar { height:6px; }
 
-  .chrome-tabs {
-    background:transparent !important;
-    height:100%;
-    display:flex !important;
-    flex:1 1 auto !important;
-    width:100% !important;
-  }
-
-  .chrome-tab {
-    flex:1 1 auto !important;
-    max-width:none !important;
-    height:100%;
-    transition:flex 0.2s ease;
-  }
+  .chrome-tabs { background:transparent !important; height:100%; }
+  .chrome-tab { background:transparent !important; height:100%; }
 
   .navbar-icons {
     position:absolute;
@@ -107,6 +95,14 @@ export default function ChromeTabsNavbar({ isMobile }) {
   ]);
 
   const scrollRef = useRef(null);
+  const tabsRef = useRef(null);
+
+  // Call resize on every tabs change to instantly reflow widths
+  useEffect(() => {
+    if (tabsRef.current && typeof tabsRef.current.resize === "function") {
+      tabsRef.current.resize();
+    }
+  }, [tabs]);
 
   const scrollElementIntoView = (el, opts = { inline: "center" }) => {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest", ...opts });
@@ -149,11 +145,6 @@ export default function ChromeTabsNavbar({ isMobile }) {
       }
       return filtered;
     });
-
-    // ✅ Force instant resize/reflow
-    requestAnimationFrame(() => {
-      window.dispatchEvent(new Event("resize"));
-    });
   };
 
   return (
@@ -173,6 +164,7 @@ export default function ChromeTabsNavbar({ isMobile }) {
         <div className={"ctn-bar" + (darkMode ? " dark" : "")} style={{ flex: 1 }}>
           <div ref={scrollRef} className="ctn-scroll">
             <Tabs
+              ref={tabsRef}
               darkMode={darkMode}
               onTabClose={onTabClose}
               onTabActive={onTabActive}
@@ -187,7 +179,6 @@ export default function ChromeTabsNavbar({ isMobile }) {
             onClick={() => addTab()}
             style={{ cursor: "pointer", fontSize: 28, fontWeight: "bold" }}
           />
-          {/* Only show these icons on desktop */}
           {!isMobile && (
             <>
               <SearchIcon style={{ cursor: "pointer" }} />
