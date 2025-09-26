@@ -1,73 +1,65 @@
+// Sidebar.js
 import React from "react";
-import { Box, useTheme } from "@mui/material";
+import { Box, IconButton, List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import ListAltIcon from "@mui/icons-material/ListAlt";
+import StorageIcon from "@mui/icons-material/Storage";
+import SettingsIcon from "@mui/icons-material/Settings";
 
-const Sidebar = ({
-  pinned = true,
-  onToggle = () => {},
-  items = [],
-  onItemClick = () => {},
-  widthExpanded = 260,
-  widthCollapsed = 48,
-  isMobile = false,
-}) => {
-  const theme = useTheme();
+const Sidebar = ({ pinned, onToggle, items, onItemClick, widthExpanded, widthCollapsed }) => {
   const width = pinned ? widthExpanded : widthCollapsed;
 
   return (
     <Box
       sx={{
         width,
-        transition: "width 0.3s ease",
-        backgroundColor: theme.palette.background.paper,
-        borderRight: `1px solid ${theme.palette.divider}`,
+        height: "100vh",
         display: "flex",
         flexDirection: "column",
-        height: "100vh",
+        borderRight: "1px solid rgba(0,0,0,0.12)",
+        transition: "width 0.3s ease",
+        backgroundColor: "#fff",
       }}
     >
-      {/* Sidebar Logo / Toggle */}
+      {/* Logo toggle */}
       <Box
         sx={{
-          height: 48,
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
-          cursor: isMobile ? "default" : "pointer",
-          borderBottom: `1px solid ${theme.palette.divider}`,
+          justifyContent: pinned ? "space-between" : "center",
+          p: 1,
+          borderBottom: "1px solid rgba(0,0,0,0.12)",
         }}
-        onClick={() => !isMobile && onToggle()}
-        title={isMobile ? undefined : pinned ? "Collapse" : "Expand"}
       >
-        <img
-          src="https://www.bing.com/sa/simg/favicon-2x.ico"
-          alt="Logo"
-          style={{ width: 28, height: 28 }}
-        />
+        <IconButton onClick={onToggle}>
+          <img
+            src="https://www.bing.com/sa/simg/favicon-2x.ico"
+            alt="Logo"
+            style={{ width: 28, height: 28 }}
+          />
+        </IconButton>
+        {pinned && <span style={{ fontWeight: "bold" }}>MyApp</span>}
       </Box>
 
-      {/* Navigation Items */}
-      <Box sx={{ flex: 1, p: 1 }}>
-        {items.map((label) => (
-          <Box
+      {/* Menu */}
+      <List dense sx={{ flex: 1 }}>
+        {items.map(({ label, icon }) => (
+          <ListItem
+            button
             key={label}
-            sx={{
-              py: 1,
-              px: pinned ? 2 : 1,
-              cursor: "pointer",
-              fontSize: 14,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              borderRadius: 1,
-              "&:hover": { backgroundColor: theme.palette.action.hover },
-            }}
             onClick={() => onItemClick(label)}
-            title={!pinned ? label : undefined}
+            sx={{
+              px: pinned ? 2 : 1,
+              justifyContent: pinned ? "flex-start" : "center",
+            }}
           >
-            {label}
-          </Box>
+            <ListItemIcon sx={{ minWidth: 0, mr: pinned ? 2 : "auto", justifyContent: "center" }}>
+              {icon}
+            </ListItemIcon>
+            {pinned && <ListItemText primary={label} />}
+          </ListItem>
         ))}
-      </Box>
+      </List>
     </Box>
   );
 };
