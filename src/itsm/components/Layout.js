@@ -10,14 +10,15 @@ import {
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
 
+import MenuIcon from "@mui/icons-material/Menu";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
-const EXPANDED_WIDTH = 260;
-const COLLAPSED_WIDTH = 48;
+const NAVBAR_HEIGHT = 34;
+const NAVBAR_PADDING_TOP = 6;
 
-export const routeLabels = {
+const routeLabels = {
   "/dashboard": "Dashboard",
   "/incidents": "Incidents",
   "/service-requests": "Service Requests",
@@ -47,12 +48,9 @@ const Layout = () => {
     return storedIndex ? parseInt(storedIndex, 10) : 0;
   });
 
-  // Sidebar state
-  const [sidebarPinned, setSidebarPinned] = useState(true);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-
-  // Mobile bottom drawer state
-  const [drawerType, setDrawerType] = useState(null);
+  // Mobile drawer state
+  const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile"
+  const [mobileSidebar, setMobileSidebar] = useState(false); // left sidebar on mobile
 
   // Update tabs on route change
   useEffect(() => {
@@ -65,7 +63,8 @@ const Layout = () => {
       setTabs(newTabs);
       setTabIndex(newTabs.length - 1);
     } else {
-      setTabIndex(tabs.findIndex((t) => t.path === currentPath));
+      const index = tabs.findIndex((t) => t.path === currentPath);
+      setTabIndex(index);
     }
   }, [location.pathname]); // eslint-disable-line
 
@@ -97,25 +96,23 @@ const Layout = () => {
     setTabs(tabsReordered);
   };
 
-  const activateOrAddTab = (label, path) => {
-    const existing = tabs.find((t) => t.path === path);
+  const activateOrAddTab = (label) => {
+    const existing = tabs.find((t) => t.label === label);
     if (existing) {
-      setTabIndex(tabs.findIndex((t) => t.path === path));
-      navigate(path);
+      setTabIndex(tabs.findIndex((t) => t.label === label));
+      navigate(existing.path);
     } else {
-      const newTab = { label, path };
+      const newTab = { label, path: `/${label.toLowerCase().replace(/\s+/g, "-")}` };
       const newTabs = [...tabs, newTab];
       setTabs(newTabs);
       setTabIndex(newTabs.length - 1);
-      navigate(path);
+      navigate(newTab.path);
     }
   };
 
-  const sidebarWidth = sidebarPinned ? EXPANDED_WIDTH : COLLAPSED_WIDTH;
-
   return (
     <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
-      {/* Main area */}
+      {/* Main area only */}
       <Box
         sx={{
           flex: 1,
@@ -123,8 +120,7 @@ const Layout = () => {
           flexDirection: "column",
           minWidth: 0,
           height: "100vh",
-          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
-          transition: "margin-left 0.3s ease",
+          position: "relative",
         }}
       >
         {/* Sticky Navbar + Tabs */}
@@ -143,11 +139,6 @@ const Layout = () => {
             handleTabClose={handleTabClose}
             handleTabReorder={handleTabReorder}
             isMobile={isMobile}
-            sidebarPinned={sidebarPinned}
-            setSidebarPinned={setSidebarPinned}
-            mobileSidebarOpen={mobileSidebarOpen}
-            setMobileSidebarOpen={setMobileSidebarOpen}
-            activateOrAddTab={activateOrAddTab}
           />
         </Box>
 
@@ -159,7 +150,7 @@ const Layout = () => {
             overflowY: "auto",
             overflowX: "hidden",
             px: 1,
-            pb: isMobile ? 7 : 0,
+            pb: isMobile ? 7 : 0, // leave room for bottom bar on mobile
           }}
         >
           <Outlet />
@@ -182,6 +173,7 @@ const Layout = () => {
               height: 56,
             }}
           >
+            <MenuIcon onClick={() => setMobileSidebar(true)} /> {/* Hamburger */}
             <SearchIcon onClick={() => setDrawerType("search")} />
             <NotificationsIcon onClick={() => setDrawerType("notifications")} />
             <AccountCircleIcon onClick={() => setDrawerType("profile")} />
@@ -189,7 +181,35 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Mobile action drawers */}
+      {/* Swipeable Drawers */}
+      {/* Mobile sidebar (left) */}
+      <SwipeableDrawer
+        anchor="left"
+        open={mobileSidebar}
+        onClose={() => setMobileSidebar(false)}
+        onOpen={() => {}}
+        PaperProps={{
+          sx: { width: 240, p: 2 },
+        }}
+      >
+        <Typography variant="h6" gutterBottom>
+          Menu
+        </Typography>
+        {Object.values(routeLabels).map((label) => (
+          <Typography
+            key={label}
+            sx={{ py: 1, cursor: "pointer" }}
+            onClick={() => {
+              activateOrAddTab(label);
+              setMobileSidebar(false);
+            }}
+          >
+            {label}
+          </Typography>
+        ))}
+      </SwipeableDrawer>
+
+      {/* Bottom actions (search, notifications, profile) */}
       <SwipeableDrawer
         anchor="bottom"
         open={Boolean(drawerType)}
