@@ -40,25 +40,28 @@ const styles = `
   .chrome-tabs { background:transparent !important; height:100%; }
 
   .chrome-tab { 
-    background:transparent !important; 
+    background:#f8f9fa !important; 
     height:48px !important; /* match navbar height */
     margin-top:0 !important; 
     box-shadow:none !important; 
     border-top:none !important;
+    border-bottom-left-radius: 8px !important;
+    border-bottom-right-radius: 8px !important;
+    overflow: visible !important; /* allow pseudo to extend */
+    position: relative;
   }
 
-  /* flatten edges completely */
-  .chrome-tab-shape path {
-    d: path("M 0 0 H 100 V 100 H 0 Z") !important; /* override curve to flat rectangle */
-  }
-
-  .chrome-tab-shape,
-  .chrome-tab-background {
-    clip-path: none !important;
-    border-radius: 0 !important;
-    background: #f8f9fa !important;
-    box-shadow: none !important;
-    border: none !important;
+  /* fake dip into underline */
+  .chrome-tab::after {
+    content: "";
+    position: absolute;
+    bottom: -4px; /* overlap into underline */
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: #f8f9fa; /* same as navbar background */
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
   }
 
   .navbar-icons {
