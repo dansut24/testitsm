@@ -27,25 +27,40 @@ const NavbarTabs = ({
 }) => {
   if (!tabs || tabs.length === 0) return null;
 
-  const chromeTabs = tabs.map((tab, index) => ({
+  // Force Dashboard tab to always exist and be pinned at index 0
+  const ensuredTabs = [
+    { label: "Dashboard", path: "/dashboard", pinned: true },
+    ...tabs.filter((t) => t.path !== "/dashboard"),
+  ];
+
+  const chromeTabs = ensuredTabs.map((tab, index) => ({
     id: tab.path || `tab-${index}`,
     title: tab.label || "Untitled",
     active: index === tabIndex,
-    isCloseIconVisible: tab.path !== "/dashboard",
+    isCloseIconVisible: !tab.pinned, // hide close for pinned Dashboard
   }));
 
   const onTabActive = (tabId) => {
     const index = chromeTabs.findIndex((t) => t.id === tabId);
-    if (index >= 0) handleTabChange(null, index, tabs[index].path);
+    if (index >= 0) handleTabChange(null, index, ensuredTabs[index].path);
   };
 
-  const onTabClose = (tabId) => handleTabClose(tabId);
+  const onTabClose = (tabId) => {
+    const closingTab = ensuredTabs.find((t) => t.path === tabId);
+    if (closingTab?.pinned) return; // prevent closing Dashboard
+    handleTabClose(tabId);
+  };
 
   const onTabReorder = (tabsReordered) => {
     if (isMobile) return;
-    handleTabReorder(
-      tabsReordered.map((t) => tabs.find((tab) => tab.path === t.id))
+
+    // Prevent pinned Dashboard from being reordered
+    const dashboard = ensuredTabs[0];
+    const reordered = tabsReordered.map((t) =>
+      ensuredTabs.find((tab) => tab.path === t.id)
     );
+    const withoutDashboard = reordered.filter((t) => t.path !== "/dashboard");
+    handleTabReorder([dashboard, ...withoutDashboard]);
   };
 
   const leftOffset = isMobile ? 0 : sidebarOpen ? sidebarWidth : collapsedWidth;
@@ -66,6 +81,7 @@ const NavbarTabs = ({
           .chrome-tabs .chrome-tabs-content {
             height: ${NAVBAR_HEIGHT}px !important;
             align-items: center;
+            padding: 0 !important; /* 🚀 Remove all padding */
           }
 
           .chrome-tabs .chrome-tab {
@@ -86,6 +102,11 @@ const NavbarTabs = ({
 
           .chrome-tab .chrome-tab-favicon {
             display: none !important;
+          }
+
+          /* Style pinned Dashboard differently */
+          .chrome-tab[pinned="true"] {
+            font-weight: bold;
           }
         `}
       </style>
@@ -143,7 +164,7 @@ const NavbarTabs = ({
           style={{ cursor: "pointer", marginRight: 12 }}
           onClick={() => {
             const newId = Date.now();
-            handleTabChange(null, tabs.length, `/new-tab/${newId}`);
+            handleTabChange(null, ensuredTabs.length, `/new-tab/${newId}`);
           }}
         />
 
