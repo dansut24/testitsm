@@ -45,7 +45,7 @@ const styles = `
   .ctn-scroll { flex:1; overflow-x:auto; overflow-y:hidden; background:transparent !important; height:100%; }
   .ctn-scroll::-webkit-scrollbar { height:6px; }
 
-  .chrome-tabs { background:transparent !important; height:100%; }
+  .chrome-tabs { background:transparent !important; height:100%; display:flex; flex:1; }
   .chrome-tab { background:transparent !important; height:100%; }
 
   .navbar-icons {
@@ -77,9 +77,27 @@ const styles = `
   .ctn-scroll { padding-right:160px; padding-left:60px; }
 
   @media (max-width: 600px) {
-    .ctn-bar { padding: 0 4px; }
-    .ctn-scroll { -webkit-overflow-scrolling: touch; }
-    .chrome-tab-title { font-size: 12px; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+    .ctn-scroll { 
+      padding-left: 0; 
+      padding-right: 0; 
+    }
+
+    .chrome-tabs { 
+      flex: 1; 
+      display: flex; 
+    }
+
+    .chrome-tab { 
+      flex: 1 1 auto; 
+      min-width: 0; 
+    }
+
+    .chrome-tab-title { 
+      font-size: 12px; 
+      max-width: 100%; 
+      overflow: hidden; 
+      text-overflow: ellipsis; 
+    }
   }
 `;
 
