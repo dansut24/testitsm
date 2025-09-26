@@ -105,22 +105,30 @@ const Layout = () => {
           position: "relative",
         }}
       >
-        {/* Navbar + Tabs */}
-        <NavbarTabs
-          tabs={tabs}
-          tabIndex={tabIndex}
-          handleTabChange={handleTabChange}
-          handleTabClose={handleTabClose}
-          handleTabReorder={handleTabReorder}
-          isMobile={isMobile}
-        />
+        {/* Sticky Navbar + Tabs */}
+        <Box
+          sx={{
+            position: "sticky",
+            top: 0,
+            zIndex: 1200,
+            backgroundColor: theme.palette.background.paper,
+          }}
+        >
+          <NavbarTabs
+            tabs={tabs}
+            tabIndex={tabIndex}
+            handleTabChange={handleTabChange}
+            handleTabClose={handleTabClose}
+            handleTabReorder={handleTabReorder}
+            isMobile={isMobile}
+          />
+        </Box>
 
         {/* Content */}
         <Box
           component="main"
           sx={{
             flex: 1,
-            mt: `${NAVBAR_HEIGHT + NAVBAR_PADDING_TOP}px`,
             overflowY: "auto",
             overflowX: "hidden",
             px: 1,
