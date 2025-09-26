@@ -1,12 +1,19 @@
 // Layout.js
 import React, { useState, useEffect } from "react";
-import { Box, useTheme, useMediaQuery, SwipeableDrawer, Typography } from "@mui/material";
+import {
+  Box,
+  useTheme,
+  useMediaQuery,
+  SwipeableDrawer,
+  Typography,
+} from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
 
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import MenuIcon from "@mui/icons-material/Menu";
 
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 48;
@@ -31,15 +38,18 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Tabs state
+  // Tabs
   const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
 
-  // Sidebar state
+  // Desktop sidebar
   const [sidebarPinned, setSidebarPinned] = useState(true);
   const sidebarWidth = sidebarPinned ? EXPANDED_WIDTH : COLLAPSED_WIDTH;
 
-  // Mobile drawer state
+  // Mobile drawer
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Bottom action drawer
   const [drawerType, setDrawerType] = useState(null);
 
   // Update tabs on route change
@@ -53,8 +63,7 @@ const Layout = () => {
       setTabs(newTabs);
       setTabIndex(newTabs.length - 1);
     } else {
-      const index = tabs.findIndex((t) => t.path === currentPath);
-      setTabIndex(index);
+      setTabIndex(tabs.findIndex((t) => t.path === currentPath));
     }
   }, [location.pathname]); // eslint-disable-line
 
@@ -64,7 +73,7 @@ const Layout = () => {
     sessionStorage.setItem("tabIndex", tabIndex.toString());
   }, [tabs, tabIndex]);
 
-  // Handlers
+  // Tab handlers
   const handleTabChange = (ev, newIndex, path) => {
     setTabIndex(newIndex);
     if (path) navigate(path);
@@ -72,14 +81,13 @@ const Layout = () => {
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return; // don’t close first tab
+    if (closingIndex === 0) return; // first tab cannot close
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
 
     if (location.pathname === tabId) {
-      const fallbackIndex = closingIndex - 1 >= 0 ? closingIndex - 1 : 0;
-      const fallbackTab = newTabs[fallbackIndex] || { path: "/dashboard" };
-      navigate(fallbackTab.path);
+      const fallbackIndex = Math.max(0, closingIndex - 1);
+      navigate(newTabs[fallbackIndex]?.path || "/dashboard");
     }
   };
 
@@ -99,62 +107,69 @@ const Layout = () => {
     }
   };
 
+  // Sidebar content
+  const sidebarContent = (
+    <Box
+      sx={{
+        width: sidebarPinned ? EXPANDED_WIDTH : COLLAPSED_WIDTH,
+        transition: "width 0.3s ease",
+        backgroundColor: theme.palette.background.paper,
+        borderRight: `1px solid ${theme.palette.divider}`,
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+      }}
+    >
+      {/* Logo */}
+      <Box
+        sx={{
+          height: 48,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          borderBottom: `1px solid ${theme.palette.divider}`,
+        }}
+        onClick={() => !isMobile && setSidebarPinned((prev) => !prev)}
+      >
+        <img
+          src="https://www.bing.com/sa/simg/favicon-2x.ico"
+          alt="Logo"
+          style={{ width: 28, height: 28 }}
+        />
+      </Box>
+
+      {/* Items */}
+      <Box sx={{ flex: 1, p: 1 }}>
+        {Object.values(routeLabels).map((label) => (
+          <Box
+            key={label}
+            sx={{
+              py: 1,
+              px: sidebarPinned ? 2 : 1,
+              cursor: "pointer",
+              fontSize: 14,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              "&:hover": { backgroundColor: theme.palette.action.hover },
+            }}
+            onClick={() => {
+              activateOrAddTab(label);
+              if (isMobile) setMobileSidebarOpen(false);
+            }}
+          >
+            {label}
+          </Box>
+        ))}
+      </Box>
+    </Box>
+  );
+
   return (
     <Box sx={{ display: "flex", height: "100vh", width: "100%" }}>
-      {/* Sidebar with logo + items */}
-      {!isMobile && (
-        <Box
-          sx={{
-            width: sidebarWidth,
-            transition: "width 0.3s ease",
-            backgroundColor: theme.palette.background.paper,
-            borderRight: `1px solid ${theme.palette.divider}`,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          {/* Logo */}
-          <Box
-            sx={{
-              height: 48,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              borderBottom: `1px solid ${theme.palette.divider}`,
-            }}
-            onClick={() => setSidebarPinned((prev) => !prev)}
-          >
-            <img
-              src="https://www.bing.com/sa/simg/favicon-2x.ico"
-              alt="Logo"
-              style={{ width: 28, height: 28 }}
-            />
-          </Box>
-
-          {/* Sidebar items */}
-          <Box sx={{ flex: 1, p: 1 }}>
-            {Object.values(routeLabels).map((label) => (
-              <Box
-                key={label}
-                sx={{
-                  py: 1,
-                  px: sidebarPinned ? 2 : 1,
-                  cursor: "pointer",
-                  fontSize: 14,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  "&:hover": { backgroundColor: theme.palette.action.hover },
-                }}
-                onClick={() => activateOrAddTab(label)}
-              >
-                {label}
-              </Box>
-            ))}
-          </Box>
-        </Box>
-      )}
+      {/* Sidebar (desktop only) */}
+      {!isMobile && sidebarContent}
 
       {/* Main area */}
       <Box
@@ -163,6 +178,8 @@ const Layout = () => {
           display: "flex",
           flexDirection: "column",
           minWidth: 0,
+          height: "100vh",
+          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
           transition: "margin-left 0.3s ease",
         }}
       >
@@ -207,6 +224,7 @@ const Layout = () => {
               height: 56,
             }}
           >
+            <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
             <SearchIcon onClick={() => setDrawerType("search")} />
             <NotificationsIcon onClick={() => setDrawerType("notifications")} />
             <AccountCircleIcon onClick={() => setDrawerType("profile")} />
@@ -214,7 +232,19 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Mobile drawers */}
+      {/* Mobile sidebar drawer */}
+      <SwipeableDrawer
+        anchor="left"
+        open={mobileSidebarOpen}
+        onClose={() => setMobileSidebarOpen(false)}
+        PaperProps={{
+          sx: { width: EXPANDED_WIDTH, backgroundColor: theme.palette.background.paper },
+        }}
+      >
+        {sidebarContent}
+      </SwipeableDrawer>
+
+      {/* Mobile action drawers */}
       <SwipeableDrawer
         anchor="bottom"
         open={Boolean(drawerType)}
@@ -224,7 +254,9 @@ const Layout = () => {
         }}
       >
         {drawerType === "search" && <Typography variant="h6">Search (mobile)</Typography>}
-        {drawerType === "notifications" && <Typography variant="h6">Notifications (mobile)</Typography>}
+        {drawerType === "notifications" && (
+          <Typography variant="h6">Notifications (mobile)</Typography>
+        )}
         {drawerType === "profile" && <Typography variant="h6">Profile (mobile)</Typography>}
       </SwipeableDrawer>
     </Box>
