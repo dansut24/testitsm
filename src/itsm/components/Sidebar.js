@@ -29,8 +29,8 @@ const Sidebar = ({ pinned, onToggle, items, onItemClick, widthExpanded, widthCol
           height: "48px", // match navbar height
           px: 1,
           backgroundColor: "#f8f9fa", // match Navbar background
-          borderBottom: "1px solid rgba(0,0,0,0.12)", // keep only bottom border
-          borderRight: "none", // remove right border so it blends with navbar
+          borderBottom: "4px solid #ffffff", // same white underline as Navbar
+          borderRight: "none",               // completely remove right outlin
         }}
       >
         <IconButton onClick={onToggle}>
