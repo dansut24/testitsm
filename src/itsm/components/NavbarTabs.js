@@ -8,7 +8,7 @@ import CloseIcon from "@mui/icons-material/Close";
 
 const NAVBAR_HEIGHT = 44;
 const DEFAULT_TAB_W = 120;
-const MIN_TAB_W = 56; // ensures favicon always visible
+const SAFE_ICON_SPACE = 24; // px reserved so favicon is always visible
 const GAP_X = 0;
 const PAD_X = 8;
 
@@ -49,15 +49,20 @@ export default function NavbarTabs({
   const tabCount = ensuredTabs.length || 1;
   const totalGaps = GAP_X * Math.max(0, tabCount - 1);
 
-  // ✅ Tabs shrink only until MIN_TAB_W, never smaller
+  // --- Dynamic width calc ---
   let computed = DEFAULT_TAB_W;
   if (stripW > 0) {
     const maxPossible = (stripW - totalGaps) / tabCount;
-    computed = Math.max(MIN_TAB_W, Math.min(DEFAULT_TAB_W, Math.floor(maxPossible)));
+    computed = Math.floor(maxPossible);
+
+    // 🚀 Never let it be so small that favicon disappears
+    if (computed < SAFE_ICON_SPACE + 8) {
+      computed = SAFE_ICON_SPACE + 8; // 24px icon + padding
+    }
   }
   if (tabCount === 1) computed = DEFAULT_TAB_W;
 
-  const labelFontSize = computed < 80 ? 11 : 12;
+  const labelFontSize = computed < 70 ? 10 : 12;
 
   const onNewTab = () => {
     const newId = Date.now();
@@ -121,7 +126,7 @@ export default function NavbarTabs({
                 flex: "0 0 auto",
                 width: `${computed}px`,
                 height: "88%",
-                marginRight: "-10px", // overlap effect
+                marginRight: "-10px",
                 padding: `0 ${PAD_X}px`,
                 background: isActive ? "#fff" : "#e5e7eb",
                 border: "1px solid rgba(0,0,0,0.2)",
@@ -131,7 +136,7 @@ export default function NavbarTabs({
                 borderTopLeftRadius: 12,
                 borderTopRightRadius: 12,
                 clipPath:
-                  "polygon(10px 0, calc(100% - 10px) 0, 100% 100%, 0% 100%)", // angled flicks top + bottom
+                  "polygon(10px 0, calc(100% - 10px) 0, 100% 100%, 0% 100%)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -142,7 +147,7 @@ export default function NavbarTabs({
                 position: "relative",
               }}
             >
-              {/* Divider between tabs */}
+              {/* Divider */}
               {!isActive && idx > 0 && (
                 <div
                   style={{
@@ -165,36 +170,36 @@ export default function NavbarTabs({
                   overflow: "hidden",
                 }}
               >
-                <span style={{ fontSize: 14 }}>{tab.favicon || "📄"}</span>
-                <span
-                  style={{
-                    fontSize: labelFontSize,
-                    fontWeight: tab.pinned ? 600 : 500,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                  title={tab.label}
-                >
-                  {tab.label}
+                <span style={{ fontSize: 14, flexShrink: 0 }}>
+                  {tab.favicon || "📄"}
                 </span>
+                {computed > SAFE_ICON_SPACE + 30 && ( // hide label if too small
+                  <span
+                    style={{
+                      fontSize: labelFontSize,
+                      fontWeight: tab.pinned ? 600 : 500,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                    title={tab.label}
+                  >
+                    {tab.label}
+                  </span>
+                )}
               </div>
 
               {/* Close icon */}
               {!tab.pinned && (
                 <CloseIcon
                   fontSize="small"
-                  style={{ opacity: 0.7 }}
+                  style={{ opacity: 0.7, flexShrink: 0 }}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleTabClose(tab.path);
                   }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.opacity = "1")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.opacity = "0.7")
-                  }
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
                 />
               )}
             </div>
