@@ -48,6 +48,10 @@ const styles = `
   }
 
   /* flatten edges completely */
+  .chrome-tab-shape path {
+    d: path("M 0 0 H 100 V 100 H 0 Z") !important; /* override curve to flat rectangle */
+  }
+
   .chrome-tab-shape,
   .chrome-tab-background {
     clip-path: none !important;
