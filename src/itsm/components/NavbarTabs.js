@@ -91,7 +91,7 @@ const styles = `
 
 let nextId = 1;
 
-export default function ChromeTabsNavbar() {
+export default function ChromeTabsNavbar({ onLogoClick }) {
   const [darkMode, setDarkMode] = useState(false);
   const [tabs, setTabs] = useState([
     { id: "t-welcome", title: "Welcome", active: true, favicon: REMOTE_FAVICONS[0] },
@@ -161,8 +161,8 @@ export default function ChromeTabsNavbar() {
     <>
       <style>{styles}</style>
       <div className="navbar-container">
-        {/* Left Logo */}
-        <div className="navbar-logo">
+        {/* Left Logo (calls onLogoClick from Layout) */}
+        <div className="navbar-logo" onClick={onLogoClick}>
           <img
             src="https://www.bing.com/sa/simg/favicon-2x.ico"
             alt="Logo"
@@ -194,12 +194,6 @@ export default function ChromeTabsNavbar() {
           <NotificationsIcon style={{ cursor: "pointer" }} />
           <AccountCircleIcon style={{ cursor: "pointer" }} />
         </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="main-content">
-        <h1>Main Content Area</h1>
-        <p>This is some placeholder content to demonstrate layout without a sidebar.</p>
       </div>
     </>
   );
