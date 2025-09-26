@@ -1,16 +1,18 @@
-// NavbarTabs.js
 import React, { useRef, useState } from "react";
 import { Tabs } from "@sinm/react-chrome-tabs";
 import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
 import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
 
+import {
+  Menu,
+  MenuItem,
+  IconButton,
+} from "@mui/material";
+
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import MenuIcon from "@mui/icons-material/Menu";
-
-import { routeLabels } from "./Layout";
 
 const REMOTE_FAVICONS = [
   "https://www.google.com/favicon.ico",
@@ -31,12 +33,26 @@ const styles = `
     height: ${NAVBAR_HEIGHT}px;
   }
 
+  .navbar-container::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4px;
+    background: #ffffff;
+    pointer-events: none;
+    z-index: 999;
+  }
+
   .chrome-tabs-bottom-bar { display: none !important; }
 
-  .ctn-bar { flex:1; display:flex; align-items:center; height:100%; }
-  .ctn-scroll { flex:1; overflow-x:auto; overflow-y:hidden; }
-  .chrome-tabs { height:100%; }
-  .chrome-tab { height:100%; }
+  .ctn-bar { display:flex; align-items:center; width:100%; position:relative; height:100%; }
+  .ctn-scroll { flex:1; overflow-x:auto; overflow-y:hidden; height:100%; }
+  .ctn-scroll::-webkit-scrollbar { height:6px; }
+
+  .chrome-tabs { background:transparent !important; height:100%; }
+  .chrome-tab { background:transparent !important; height:100%; }
 
   .navbar-icons {
     position:absolute;
@@ -47,6 +63,8 @@ const styles = `
     align-items:center;
     gap:12px;
     padding:0 8px;
+    z-index:5;
+    background:#f8f9fa;
   }
 
   .navbar-logo {
@@ -57,100 +75,130 @@ const styles = `
     display:flex;
     align-items:center;
     padding:0 8px;
-    cursor: pointer;
-    z-index:10;
+    z-index:6;
+    background:#f8f9fa;
   }
 
-  /* Sidebar style */
-  .sidebar {
-    position: fixed;
-    top: ${NAVBAR_HEIGHT}px;
-    left: 0;
-    bottom: 0;
-    background: #fff;
-    border-right: 1px solid #ddd;
-    overflow-y: auto;
-    transition: width 0.3s ease;
-  }
-  .sidebar.collapsed { width: 48px; }
-  .sidebar.expanded { width: 260px; }
+  .ctn-scroll { padding-right:160px; padding-left:60px; }
 
-  .sidebar .nav-item {
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    border-bottom: 1px solid #eee;
+  @media (max-width: 600px) {
+    .ctn-scroll { 
+      overflow-x:hidden; 
+      padding-right:60px; 
+      padding-left:50px; 
+      display:flex; 
+      justify-content:space-between; 
+    }
+
+    .chrome-tabs { display:flex !important; flex:1; }
+    .chrome-tab { flex:1 1 auto !important; max-width:none !important; }
+    .chrome-tab-title { font-size: 12px; text-align:center; overflow:hidden; text-overflow:ellipsis; }
   }
-  .sidebar .nav-item:hover { background: #f0f0f0; }
-  .sidebar .label {
-    margin-left: 8px;
-    white-space: nowrap;
-  }
-  .sidebar.collapsed .label { display:none; }
 `;
 
 let nextId = 1;
 
-export default function NavbarTabs({
-  tabs,
-  tabIndex,
-  handleTabChange,
-  handleTabClose,
-  handleTabReorder,
-  isMobile,
-  sidebarPinned,
-  setSidebarPinned,
-  mobileSidebarOpen,
-  setMobileSidebarOpen,
-  activateOrAddTab,
-}) {
+export default function ChromeTabsNavbar({ isMobile, onNavigate }) {
   const [darkMode] = useState(false);
+  const [tabs, setTabs] = useState([
+    { id: "t-welcome", title: "Welcome", active: true, favicon: REMOTE_FAVICONS[0] },
+    { id: "t-docs", title: "Docs", favicon: REMOTE_FAVICONS[1] },
+    { id: "t-pinned", title: "Pinned", isCloseIconVisible: false, favicon: REMOTE_FAVICONS[2] },
+  ]);
+
   const scrollRef = useRef(null);
+
+  const [menuAnchor, setMenuAnchor] = useState(null);
+
+  const openMenu = (event) => setMenuAnchor(event.currentTarget);
+  const closeMenu = () => setMenuAnchor(null);
+
+  const scrollElementIntoView = (el, opts = { inline: "center" }) => {
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "nearest", ...opts });
+    }
+  };
 
   const addTab = (
     title = `New Tab ${++nextId}`,
     favicon = REMOTE_FAVICONS[nextId % REMOTE_FAVICONS.length]
   ) => {
-    // not directly linked to routes
-    activateOrAddTab(title, `/custom-${nextId}`);
+    const newId = `tab-${nextId}`;
+    setTabs((prev) => [
+      ...prev.map((t) => ({ ...t, active: false })),
+      { id: newId, title, favicon, active: true },
+    ]);
+    requestAnimationFrame(() => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const newTab = el.querySelector(".chrome-tab.chrome-tab-active");
+      scrollElementIntoView(newTab, { inline: "center" });
+    });
   };
 
-  const onTabActive = (id) => {};
-  const onTabClose = (id) => handleTabClose(id);
+  const onTabActive = (id) => {
+    setTabs((prev) => prev.map((t) => ({ ...t, active: t.id === id })));
+    requestAnimationFrame(() => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const activeTab = el.querySelector(".chrome-tab.chrome-tab-active");
+      scrollElementIntoView(activeTab, { inline: "center" });
+    });
+  };
+
+  const onTabClose = (id) => {
+    setTabs((prev) => {
+      const idx = prev.findIndex((t) => t.id === id);
+      const filtered = prev.filter((t) => t.id !== id);
+      if (prev[idx]?.active && filtered.length) {
+        const neighbor = filtered[Math.max(0, idx - 1)];
+        return filtered.map((t) => ({ ...t, active: t.id === neighbor.id }));
+      }
+      return filtered;
+    });
+  };
 
   return (
     <>
       <style>{styles}</style>
       <div className="navbar-container">
-        {/* Left Logo toggles sidebar */}
-        <div
-          className="navbar-logo"
-          onClick={() => (isMobile ? setMobileSidebarOpen(true) : setSidebarPinned(!sidebarPinned))}
-        >
-          <MenuIcon />
+        {/* Left Logo -> opens menu */}
+        <div className="navbar-logo">
+          <IconButton onClick={openMenu} size="small">
+            <img
+              src="https://www.bing.com/sa/simg/favicon-2x.ico"
+              alt="Logo"
+              style={{ width: 28, height: 28 }}
+            />
+          </IconButton>
+          <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
+            {["Dashboard", "Incidents", "Assets", "Settings"].map((label) => (
+              <MenuItem
+                key={label}
+                onClick={() => {
+                  closeMenu();
+                  if (onNavigate) onNavigate(label);
+                }}
+              >
+                {label}
+              </MenuItem>
+            ))}
+          </Menu>
         </div>
 
         {/* Tabs */}
-        <div className="ctn-bar">
+        <div className={"ctn-bar" + (darkMode ? " dark" : "")} style={{ flex: 1 }}>
           <div ref={scrollRef} className="ctn-scroll">
-            <Tabs
-              darkMode={darkMode}
-              onTabClose={onTabClose}
-              onTabActive={(id) => handleTabChange(null, tabs.findIndex((t) => t.path === id), id)}
-              tabs={tabs.map((t, i) => ({
-                id: t.path,
-                title: t.label,
-                active: i === tabIndex,
-                favicon: REMOTE_FAVICONS[i % REMOTE_FAVICONS.length],
-              }))}
-            />
+            <Tabs darkMode={darkMode} onTabClose={onTabClose} onTabActive={onTabActive} tabs={tabs} />
           </div>
         </div>
 
         {/* Right Icons */}
         <div className="navbar-icons">
-          <AddIcon onClick={() => addTab()} style={{ cursor: "pointer" }} />
+          <AddIcon
+            onClick={() => addTab()}
+            style={{ cursor: "pointer", fontSize: 28, fontWeight: "bold" }}
+          />
           {!isMobile && (
             <>
               <SearchIcon style={{ cursor: "pointer" }} />
@@ -160,34 +208,6 @@ export default function NavbarTabs({
           )}
         </div>
       </div>
-
-      {/* Sidebar */}
-      {!isMobile && (
-        <div className={`sidebar ${sidebarPinned ? "expanded" : "collapsed"}`}>
-          {Object.entries(routeLabels).map(([path, label]) => (
-            <div key={path} className="nav-item" onClick={() => activateOrAddTab(label, path)}>
-              <span className="icon">📌</span>
-              <span className="label">{label}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Mobile Sidebar Drawer */}
-      {isMobile && mobileSidebarOpen && (
-        <div
-          className="sidebar expanded"
-          style={{ zIndex: 2000 }}
-          onClick={() => setMobileSidebarOpen(false)}
-        >
-          {Object.entries(routeLabels).map(([path, label]) => (
-            <div key={path} className="nav-item" onClick={() => activateOrAddTab(label, path)}>
-              <span className="icon">📌</span>
-              <span className="label">{label}</span>
-            </div>
-          ))}
-        </div>
-      )}
     </>
   );
 }
