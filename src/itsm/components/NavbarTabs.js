@@ -20,11 +20,13 @@ const NAVBAR_HEIGHT = 48;
 const styles = `
   .navbar-container {
     width: 100%;
-    position: relative;
+    position: sticky;
+    top: 0;
     background: #f8f9fa;
     display: flex;
     align-items: center;
     height: ${NAVBAR_HEIGHT}px;
+    z-index: 1200;
   }
 
   .navbar-container::after {
@@ -41,26 +43,24 @@ const styles = `
 
   .chrome-tabs-bottom-bar { display: none !important; }
 
-  .ctn-bar { 
-    display:flex; 
-    align-items:center; 
-    width:100%; 
-    position:relative; 
-    background:transparent !important; 
-    height:100%; 
-  }
-
-  .ctn-scroll { 
-    flex:1; 
-    overflow-x:auto; 
-    overflow-y:hidden; 
-    background:transparent !important; 
-    height:100%; 
-  }
+  .ctn-bar { display:flex; align-items:center; width:100%; position:relative; height:100%; }
+  .ctn-scroll { flex:1; overflow-x:auto; overflow-y:hidden; height:100%; }
   .ctn-scroll::-webkit-scrollbar { height:6px; }
 
-  .chrome-tabs { background:transparent !important; height:100%; }
-  .chrome-tab { background:transparent !important; height:100%; }
+  .chrome-tabs {
+    background:transparent !important;
+    height:100%;
+    display:flex !important;
+    flex:1 1 auto !important;
+    width:100% !important;
+  }
+
+  .chrome-tab {
+    flex:1 1 auto !important;
+    max-width:none !important;
+    height:100%;
+    transition:flex 0.2s ease;
+  }
 
   .navbar-icons {
     position:absolute;
@@ -71,9 +71,8 @@ const styles = `
     align-items:center;
     gap:12px;
     padding:0 8px;
-    pointer-events:auto;
-    z-index:5;
     background:#f8f9fa;
+    z-index:5;
   }
 
   .navbar-logo {
@@ -90,33 +89,10 @@ const styles = `
 
   .ctn-scroll { padding-right:160px; padding-left:60px; }
 
-  /* Mobile tweaks */
   @media (max-width: 600px) {
-    .ctn-scroll { 
-      overflow-x:hidden; 
-      padding-right:60px; 
-      padding-left:50px; 
-      display:flex; 
-      justify-content:space-between; 
-    }
-
-    /* Force tabs to grow equally */
-    .chrome-tabs { 
-      display:flex !important; 
-      flex:1; 
-    }
-
-    .chrome-tab { 
-      flex:1 1 auto !important; 
-      max-width:none !important; 
-    }
-
-    .chrome-tab-title { 
-      font-size: 12px; 
-      overflow:hidden; 
-      text-overflow:ellipsis; 
-      text-align:center; 
-    }
+    .ctn-bar { padding: 0 4px; }
+    .ctn-scroll { -webkit-overflow-scrolling: touch; }
+    .chrome-tab-title { font-size: 12px; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
   }
 `;
 
@@ -133,9 +109,7 @@ export default function ChromeTabsNavbar({ isMobile }) {
   const scrollRef = useRef(null);
 
   const scrollElementIntoView = (el, opts = { inline: "center" }) => {
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "nearest", ...opts });
-    }
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest", ...opts });
   };
 
   const addTab = (
@@ -151,7 +125,7 @@ export default function ChromeTabsNavbar({ isMobile }) {
       const el = scrollRef.current;
       if (!el) return;
       const newTab = el.querySelector(".chrome-tab.chrome-tab-active");
-      scrollElementIntoView(newTab, { inline: "center" });
+      if (newTab) scrollElementIntoView(newTab, { inline: "center" });
     });
   };
 
@@ -161,7 +135,7 @@ export default function ChromeTabsNavbar({ isMobile }) {
       const el = scrollRef.current;
       if (!el) return;
       const activeTab = el.querySelector(".chrome-tab.chrome-tab-active");
-      scrollElementIntoView(activeTab, { inline: "center" });
+      if (activeTab) scrollElementIntoView(activeTab, { inline: "center" });
     });
   };
 
@@ -174,6 +148,11 @@ export default function ChromeTabsNavbar({ isMobile }) {
         return filtered.map((t) => ({ ...t, active: t.id === neighbor.id }));
       }
       return filtered;
+    });
+
+    // ✅ Force instant resize/reflow
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("resize"));
     });
   };
 
@@ -208,6 +187,7 @@ export default function ChromeTabsNavbar({ isMobile }) {
             onClick={() => addTab()}
             style={{ cursor: "pointer", fontSize: 28, fontWeight: "bold" }}
           />
+          {/* Only show these icons on desktop */}
           {!isMobile && (
             <>
               <SearchIcon style={{ cursor: "pointer" }} />
