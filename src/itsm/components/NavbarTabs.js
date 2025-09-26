@@ -41,8 +41,22 @@ const styles = `
 
   .chrome-tabs-bottom-bar { display: none !important; }
 
-  .ctn-bar { display:flex; align-items:center; width:100%; position:relative; background:transparent !important; height:100%; }
-  .ctn-scroll { flex:1; overflow-x:auto; overflow-y:hidden; background:transparent !important; height:100%; }
+  .ctn-bar { 
+    display:flex; 
+    align-items:center; 
+    width:100%; 
+    position:relative; 
+    background:transparent !important; 
+    height:100%; 
+  }
+
+  .ctn-scroll { 
+    flex:1; 
+    overflow-x:auto; 
+    overflow-y:hidden; 
+    background:transparent !important; 
+    height:100%; 
+  }
   .ctn-scroll::-webkit-scrollbar { height:6px; }
 
   .chrome-tabs { background:transparent !important; height:100%; }
@@ -76,10 +90,33 @@ const styles = `
 
   .ctn-scroll { padding-right:160px; padding-left:60px; }
 
+  /* Mobile tweaks */
   @media (max-width: 600px) {
-    .ctn-bar { padding: 0 4px; }
-    .ctn-scroll { -webkit-overflow-scrolling: touch; }
-    .chrome-tab-title { font-size: 12px; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+    .ctn-scroll { 
+      overflow-x:hidden; 
+      padding-right:60px; 
+      padding-left:50px; 
+      display:flex; 
+      justify-content:space-between; 
+    }
+
+    /* Force tabs to grow equally */
+    .chrome-tabs { 
+      display:flex !important; 
+      flex:1; 
+    }
+
+    .chrome-tab { 
+      flex:1 1 auto !important; 
+      max-width:none !important; 
+    }
+
+    .chrome-tab-title { 
+      font-size: 12px; 
+      overflow:hidden; 
+      text-overflow:ellipsis; 
+      text-align:center; 
+    }
   }
 `;
 
@@ -124,7 +161,7 @@ export default function ChromeTabsNavbar({ isMobile }) {
       const el = scrollRef.current;
       if (!el) return;
       const activeTab = el.querySelector(".chrome-tab.chrome-tab-active");
-      if (activeTab) scrollElementIntoView(activeTab, { inline: "center" });
+      scrollElementIntoView(activeTab, { inline: "center" });
     });
   };
 
@@ -144,7 +181,7 @@ export default function ChromeTabsNavbar({ isMobile }) {
     <>
       <style>{styles}</style>
       <div className="navbar-container">
-        {/* Left Logo (static now) */}
+        {/* Left Logo */}
         <div className="navbar-logo">
           <img
             src="https://www.bing.com/sa/simg/favicon-2x.ico"
