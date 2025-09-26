@@ -1,4 +1,3 @@
-// NavbarTabs.js
 import React, { useRef, useState } from "react";
 import { Tabs } from "@sinm/react-chrome-tabs";
 import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
@@ -26,17 +25,28 @@ const styles = `
     display: flex;
     align-items: center;
     height: ${NAVBAR_HEIGHT}px;
-    border-bottom: 4px solid #ffffff;
+  }
+
+  .navbar-container::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4px;
+    background: #ffffff;
+    pointer-events: none;
+    z-index: 999;
   }
 
   .chrome-tabs-bottom-bar { display: none !important; }
 
-  .ctn-bar { display:flex; align-items:center; width:100%; height:100%; }
-  .ctn-scroll { flex:1; overflow-x:auto; overflow-y:hidden; height:100%; }
+  .ctn-bar { display:flex; align-items:center; width:100%; position:relative; background:transparent !important; height:100%; }
+  .ctn-scroll { flex:1; overflow-x:auto; overflow-y:hidden; background:transparent !important; height:100%; }
   .ctn-scroll::-webkit-scrollbar { height:6px; }
 
-  .chrome-tabs { height:100%; }
-  .chrome-tab { height:100%; }
+  .chrome-tabs { background:transparent !important; height:100%; }
+  .chrome-tab { background:transparent !important; height:100%; }
 
   .navbar-icons {
     position:absolute;
@@ -47,8 +57,9 @@ const styles = `
     align-items:center;
     gap:12px;
     padding:0 8px;
-    background:#f8f9fa;
+    pointer-events:auto;
     z-index:5;
+    background:#f8f9fa;
   }
 
   .navbar-logo {
@@ -59,9 +70,8 @@ const styles = `
     display:flex;
     align-items:center;
     padding:0 8px;
-    cursor: pointer;
-    background:#f8f9fa;
     z-index:6;
+    background:#f8f9fa;
   }
 
   .ctn-scroll { padding-right:160px; padding-left:60px; }
@@ -75,17 +85,14 @@ const styles = `
 
 let nextId = 1;
 
-export default function NavbarTabs({
-  tabs,
-  tabIndex,
-  handleTabChange,
-  handleTabClose,
-  handleTabReorder,
-  isMobile,
-  sidebarPinned,
-  setSidebarPinned,
-}) {
+export default function ChromeTabsNavbar({ isMobile }) {
   const [darkMode] = useState(false);
+  const [tabs, setTabs] = useState([
+    { id: "t-welcome", title: "Welcome", active: true, favicon: REMOTE_FAVICONS[0] },
+    { id: "t-docs", title: "Docs", favicon: REMOTE_FAVICONS[1] },
+    { id: "t-pinned", title: "Pinned", isCloseIconVisible: false, favicon: REMOTE_FAVICONS[2] },
+  ]);
+
   const scrollRef = useRef(null);
 
   const scrollElementIntoView = (el, opts = { inline: "center" }) => {
@@ -99,7 +106,10 @@ export default function NavbarTabs({
     favicon = REMOTE_FAVICONS[nextId % REMOTE_FAVICONS.length]
   ) => {
     const newId = `tab-${nextId}`;
-    handleTabChange(null, tabs.length, `/${title.toLowerCase().replace(/\s+/g, "-")}`);
+    setTabs((prev) => [
+      ...prev.map((t) => ({ ...t, active: false })),
+      { id: newId, title, favicon, active: true },
+    ]);
     requestAnimationFrame(() => {
       const el = scrollRef.current;
       if (!el) return;
@@ -108,12 +118,34 @@ export default function NavbarTabs({
     });
   };
 
+  const onTabActive = (id) => {
+    setTabs((prev) => prev.map((t) => ({ ...t, active: t.id === id })));
+    requestAnimationFrame(() => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const activeTab = el.querySelector(".chrome-tab.chrome-tab-active");
+      if (activeTab) scrollElementIntoView(activeTab, { inline: "center" });
+    });
+  };
+
+  const onTabClose = (id) => {
+    setTabs((prev) => {
+      const idx = prev.findIndex((t) => t.id === id);
+      const filtered = prev.filter((t) => t.id !== id);
+      if (prev[idx]?.active && filtered.length) {
+        const neighbor = filtered[Math.max(0, idx - 1)];
+        return filtered.map((t) => ({ ...t, active: t.id === neighbor.id }));
+      }
+      return filtered;
+    });
+  };
+
   return (
     <>
       <style>{styles}</style>
       <div className="navbar-container">
-        {/* Left Logo toggles sidebar */}
-        <div className="navbar-logo" onClick={() => setSidebarPinned(!sidebarPinned)}>
+        {/* Left Logo (static now) */}
+        <div className="navbar-logo">
           <img
             src="https://www.bing.com/sa/simg/favicon-2x.ico"
             alt="Logo"
@@ -126,31 +158,26 @@ export default function NavbarTabs({
           <div ref={scrollRef} className="ctn-scroll">
             <Tabs
               darkMode={darkMode}
-              onTabClose={handleTabClose}
-              onTabReorder={handleTabReorder}
-              onTabActive={(id) => {
-                const index = tabs.findIndex((t) => t.id === id);
-                if (index >= 0) handleTabChange(null, index, tabs[index].path);
-              }}
-              tabs={tabs.map((tab, idx) => ({
-                id: tab.path,
-                title: tab.label,
-                active: idx === tabIndex,
-                favicon: REMOTE_FAVICONS[idx % REMOTE_FAVICONS.length],
-              }))}
+              onTabClose={onTabClose}
+              onTabActive={onTabActive}
+              tabs={tabs}
             />
           </div>
         </div>
 
-        {/* Right Icons (hide some on mobile) */}
+        {/* Right Icons */}
         <div className="navbar-icons">
           <AddIcon
             onClick={() => addTab()}
             style={{ cursor: "pointer", fontSize: 28, fontWeight: "bold" }}
           />
-          {!isMobile && <SearchIcon style={{ cursor: "pointer" }} />}
-          {!isMobile && <NotificationsIcon style={{ cursor: "pointer" }} />}
-          {!isMobile && <AccountCircleIcon style={{ cursor: "pointer" }} />}
+          {!isMobile && (
+            <>
+              <SearchIcon style={{ cursor: "pointer" }} />
+              <NotificationsIcon style={{ cursor: "pointer" }} />
+              <AccountCircleIcon style={{ cursor: "pointer" }} />
+            </>
+          )}
         </div>
       </div>
     </>
