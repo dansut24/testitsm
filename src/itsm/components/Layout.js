@@ -41,6 +41,9 @@ const Layout = () => {
     return storedIndex ? parseInt(storedIndex, 10) : 0;
   });
 
+  // Sidebar state
+  const [sidebarPinned, setSidebarPinned] = useState(true);
+
   // Mobile drawer state
   const [drawerType, setDrawerType] = useState(null);
 
@@ -102,8 +105,33 @@ const Layout = () => {
     }
   };
 
+  const sidebarWidth = sidebarPinned ? EXPANDED_WIDTH : COLLAPSED_WIDTH;
+
   return (
     <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
+      {/* Sidebar + NavbarTabs wrapper */}
+      <Box
+        sx={{
+          width: sidebarWidth,
+          transition: "width 0.3s ease",
+          flexShrink: 0,
+          display: { xs: "none", sm: "flex" }, // hide sidebar completely on mobile
+          flexDirection: "column",
+        }}
+      >
+        <NavbarTabs
+          tabs={tabs}
+          tabIndex={tabIndex}
+          handleTabChange={handleTabChange}
+          handleTabClose={handleTabClose}
+          handleTabReorder={handleTabReorder}
+          isMobile={isMobile}
+          activateOrAddTab={activateOrAddTab}
+          sidebarPinned={sidebarPinned}
+          setSidebarPinned={setSidebarPinned}
+        />
+      </Box>
+
       {/* Main area */}
       <Box
         sx={{
@@ -112,29 +140,9 @@ const Layout = () => {
           flexDirection: "column",
           minWidth: 0,
           height: "100vh",
-          position: "relative",
+          transition: "margin-left 0.3s ease",
         }}
       >
-        {/* Sticky Navbar + Tabs (now also contains sidebar/left-nav) */}
-        <Box
-          sx={{
-            position: "sticky",
-            top: 0,
-            zIndex: 1200,
-            backgroundColor: theme.palette.background.paper,
-          }}
-        >
-          <NavbarTabs
-            tabs={tabs}
-            tabIndex={tabIndex}
-            handleTabChange={handleTabChange}
-            handleTabClose={handleTabClose}
-            handleTabReorder={handleTabReorder}
-            isMobile={isMobile}
-            activateOrAddTab={activateOrAddTab}
-          />
-        </Box>
-
         {/* Content */}
         <Box
           component="main"
