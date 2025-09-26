@@ -48,6 +48,9 @@ import NotFound from "./pages/NotFound";
 // Magic link verification & password setup
 import SetPassword from "./pages/SetPassword";
 
+// New Tab Page
+import NewTab from "./pages/NewTab";
+
 function AppRoutes() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -114,6 +117,9 @@ function AppRoutes() {
           <Route path="knowledge-base/:id" element={<ArticleDetail />} />
           <Route path="announcements" element={<Announcements />} />
           <Route path="work-scheduler" element={<WorkScheduler />} />
+
+          {/* New Tab Route */}
+          <Route path="new-tab/:id" element={<NewTab />} />
         </Route>
       )}
 
