@@ -1,17 +1,16 @@
 // src/itsm/components/NavbarTabs.js
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import MenuIcon from "@mui/icons-material/Menu";
+import React, { useEffect, useState, useRef } from "react";
+import { Tabs } from "@sinm/react-chrome-tabs";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 
 const NAVBAR_HEIGHT = 44;
 const DEFAULT_TAB_W = 120;
-const SAFE_ICON_SPACE = 24; // px reserved so favicon is always visible
-const GAP_X = 0;
-const PAD_X = 8;
+const MIN_TAB_W = 60;
 
 export default function NavbarTabs({
   tabs = [],
@@ -21,50 +20,33 @@ export default function NavbarTabs({
   isMobile = false,
   onLogoClick = () => {},
 }) {
-  const ensuredTabs = useMemo(
-    () => [
-      { label: "Dashboard", path: "/dashboard", pinned: true, favicon: "📊" },
-      ...tabs.filter((t) => t.path !== "/dashboard"),
-    ],
-    [tabs]
-  );
+  // Force a pinned Dashboard tab at the front
+  const ensuredTabs = [
+    { id: "dashboard", title: "Dashboard", favicon: "📊", pinned: true },
+    ...tabs.filter((t) => t.id !== "dashboard"),
+  ];
 
-  const stripRef = useRef(null);
   const [stripW, setStripW] = useState(0);
+  const stripRef = useRef(null);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!stripRef.current) return;
     const ro = new ResizeObserver(([entry]) => {
-      const w =
-        entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
+      const w = entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
       setStripW(Math.max(0, Math.floor(w)));
     });
     ro.observe(stripRef.current);
     return () => ro.disconnect();
   }, []);
 
-  useEffect(() => {
-    if (stripRef.current) setStripW(stripRef.current.clientWidth);
-  }, [ensuredTabs.length]);
-
+  // Dynamic tab width calc
   const tabCount = ensuredTabs.length || 1;
-  const totalGaps = GAP_X * Math.max(0, tabCount - 1);
+  const computed =
+    stripW > 0 ? Math.max(MIN_TAB_W, Math.floor(stripW / tabCount)) : DEFAULT_TAB_W;
 
-  let computed = DEFAULT_TAB_W;
-  if (stripW > 0) {
-    const maxPossible = (stripW - totalGaps) / tabCount;
-    computed = Math.floor(maxPossible);
-
-    if (computed < SAFE_ICON_SPACE + 8) {
-      computed = SAFE_ICON_SPACE + 8; // favicon always visible
-    }
-  }
-  if (tabCount === 1) computed = DEFAULT_TAB_W;
-
-  const labelFontSize = computed < 70 ? 10 : 12;
-
+  // Add new tab
   const onNewTab = () => {
-    const newId = Date.now();
+    const newId = Date.now().toString();
     handleTabChange(null, ensuredTabs.length, `/new-tab/${newId}`);
   };
 
@@ -84,7 +66,7 @@ export default function NavbarTabs({
         borderBottom: "1px solid rgba(0,0,0,0.15)",
       }}
     >
-      {/* Left menu */}
+      {/* Left logo/menu */}
       <button
         type="button"
         aria-label="Menu"
@@ -103,7 +85,7 @@ export default function NavbarTabs({
         <MenuIcon />
       </button>
 
-      {/* Tab strip */}
+      {/* Chrome Tabs container */}
       <div
         ref={stripRef}
         style={{
@@ -112,124 +94,91 @@ export default function NavbarTabs({
           height: "100%",
           display: "flex",
           alignItems: "flex-end",
-          overflow: "hidden",
         }}
       >
-        {ensuredTabs.map((tab, idx) => {
-          const isActive = idx === tabIndex;
-          return (
-            <div
-              key={tab.path || idx}
-              title={tab.label} // 👈 tooltip on hover
-              onClick={() => handleTabChange(null, idx, tab.path)}
-              style={{
-                flex: "0 0 auto",
-                width: `${computed}px`,
-                height: "88%",
-                marginRight: "-10px",
-                padding: `0 ${PAD_X}px`,
-                background: isActive ? "#fff" : "#e5e7eb",
-                border: "1px solid rgba(0,0,0,0.2)",
-                borderBottom: isActive
-                  ? "2px solid #2BD3C6"
-                  : "1px solid rgba(0,0,0,0.15)",
-                borderTopLeftRadius: 12,
-                borderTopRightRadius: 12,
-                clipPath:
-                  "polygon(10px 0, calc(100% - 10px) 0, 100% 100%, 0% 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                boxSizing: "border-box",
-                cursor: "pointer",
-                transition: "background 0.15s ease",
-                zIndex: isActive ? 2 : 1,
-                position: "relative",
-              }}
-              onMouseEnter={(e) => {
-                const btn = e.currentTarget.querySelector(".tab-close-btn");
-                if (btn) btn.style.opacity = "1";
-              }}
-              onMouseLeave={(e) => {
-                const btn = e.currentTarget.querySelector(".tab-close-btn");
-                if (btn) btn.style.opacity = "0";
-              }}
-            >
-              {/* Divider */}
-              {!isActive && idx > 0 && (
-                <div
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    top: 6,
-                    bottom: 6,
-                    width: 1,
-                    background: "rgba(0,0,0,0.1)",
-                  }}
-                />
-              )}
-
-              {/* Favicon + label */}
+        <Tabs
+          tabs={ensuredTabs.map((t, idx) => ({
+            id: t.id,
+            title: t.title,
+            favicon: t.favicon,
+            active: idx === tabIndex,
+            // Our custom render per tab
+            render: ({ tab, onClose }) => (
               <div
+                title={tab.title} // tooltip on hover
                 style={{
+                  flex: "0 0 auto",
+                  width: `${computed}px`,
                   display: "flex",
                   alignItems: "center",
-                  gap: 6,
-                  overflow: "hidden",
+                  justifyContent: "space-between",
+                  padding: "0 8px",
+                  cursor: "pointer",
+                  borderTopLeftRadius: 12,
+                  borderTopRightRadius: 12,
+                  background: tab.active ? "#fff" : "#e5e7eb",
+                  border: "1px solid rgba(0,0,0,0.2)",
+                  borderBottom: tab.active
+                    ? "2px solid #2BD3C6"
+                    : "1px solid rgba(0,0,0,0.15)",
+                  clipPath:
+                    "polygon(10px 0, calc(100% - 10px) 0, 100% 100%, 0% 100%)",
+                  fontSize: computed < 70 ? 10 : 12,
+                  position: "relative",
                 }}
+                onClick={() => handleTabChange(null, idx, t.path || t.id)}
               >
-                <span style={{ fontSize: 14, flexShrink: 0 }}>
-                  {tab.favicon || "📄"}
+                <span style={{ marginRight: 6 }}>{tab.favicon || "📄"}</span>
+                <span
+                  style={{
+                    flex: 1,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {tab.title}
                 </span>
-                {computed > SAFE_ICON_SPACE + 30 && (
+                {!t.pinned && (
                   <span
+                    className="tab-close-btn"
                     style={{
-                      fontSize: labelFontSize,
-                      fontWeight: tab.pinned ? 600 : 500,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
+                      flexShrink: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 16,
+                      height: 16,
+                      marginLeft: 4,
+                      borderRadius: "50%",
+                      cursor: "pointer",
+                      opacity: 0,
+                      transition: "opacity 0.2s ease",
                     }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClose?.();
+                      handleTabClose(t.path || t.id);
+                    }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.opacity = "1")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.opacity = "0")
+                    }
                   >
-                    {tab.label}
+                    <CloseIcon style={{ fontSize: 12 }} />
                   </span>
                 )}
               </div>
-
-              {/* Close button */}
-              {!tab.pinned && (
-                <div
-                  className="tab-close-btn"
-                  style={{
-                    flexShrink: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 16,
-                    height: 16,
-                    marginLeft: 4,
-                    borderRadius: "50%",
-                    cursor: "pointer",
-                    opacity: 0,
-                    transition: "opacity 0.2s ease, background 0.2s ease",
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleTabClose(tab.path);
-                  }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = "rgba(0,0,0,0.1)")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "transparent")
-                  }
-                >
-                  <CloseIcon style={{ fontSize: 12, pointerEvents: "none" }} />
-                </div>
-              )}
-            </div>
-          );
-        })}
+            ),
+          }))}
+          onTabClose={(tab) => handleTabClose(tab.id)}
+          onTabSelect={(tab) =>
+            handleTabChange(null, ensuredTabs.findIndex((t) => t.id === tab.id), tab.id)
+          }
+          onTabAdd={onNewTab}
+        />
       </div>
 
       {/* Right side icons */}
