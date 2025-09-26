@@ -9,6 +9,7 @@ import {
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
+import Sidebar from "./Sidebar";
 
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
@@ -16,6 +17,8 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
 const NAVBAR_HEIGHT = 34;
 const NAVBAR_PADDING_TOP = 6;
+const EXPANDED_WIDTH = 260;
+const COLLAPSED_WIDTH = 48;
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -37,16 +40,21 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Tabs state
   const [tabs, setTabs] = useState(() => {
     const stored = sessionStorage.getItem("tabs");
     return stored ? JSON.parse(stored) : [{ label: "Dashboard", path: "/dashboard" }];
   });
-
   const [tabIndex, setTabIndex] = useState(() => {
     const storedIndex = sessionStorage.getItem("tabIndex");
     return storedIndex ? parseInt(storedIndex, 10) : 0;
   });
 
+  // Sidebar state
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarPinned, setSidebarPinned] = useState(false);
+
+  // Mobile drawer state
   const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile"
 
   // Update tabs on route change
@@ -71,6 +79,7 @@ const Layout = () => {
     sessionStorage.setItem("tabIndex", tabIndex.toString());
   }, [tabs, tabIndex]);
 
+  // Handlers
   const handleTabChange = (ev, newIndex, path) => {
     setTabIndex(newIndex);
     if (path) navigate(path);
@@ -92,9 +101,42 @@ const Layout = () => {
     setTabs(tabsReordered);
   };
 
+  const handleLogoClick = () => {
+    if (isMobile) {
+      setSidebarOpen((prev) => !prev);
+    } else {
+      setSidebarPinned((prev) => !prev);
+    }
+  };
+
+  const activateOrAddTab = (label, faviconIndex) => {
+    const existing = tabs.find((t) => t.label === label);
+    if (existing) {
+      setTabs((prev) => prev.map((t) => ({ ...t, active: t.label === label })));
+      setTabIndex(tabs.findIndex((t) => t.label === label));
+    } else {
+      const newTab = { label, path: `/${label.toLowerCase().replace(/\s+/g, "-")}` };
+      const newTabs = [...tabs.map((t) => ({ ...t, active: false })), newTab];
+      setTabs(newTabs);
+      setTabIndex(newTabs.length - 1);
+      navigate(newTab.path);
+    }
+  };
+
+  const sidebarWidth = sidebarPinned ? EXPANDED_WIDTH : COLLAPSED_WIDTH;
+
   return (
     <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
-      {/* Main area only (no sidebar) */}
+      {/* Sidebar (desktop or toggleable on mobile) */}
+      {!isMobile && (
+        <Sidebar
+          sidebarOpen={sidebarOpen}
+          sidebarPinned={sidebarPinned}
+          activateOrAddTab={activateOrAddTab}
+        />
+      )}
+
+      {/* Main area */}
       <Box
         sx={{
           flex: 1,
@@ -103,6 +145,8 @@ const Layout = () => {
           minWidth: 0,
           height: "100vh",
           position: "relative",
+          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
+          transition: "margin-left 0.3s ease",
         }}
       >
         {/* Sticky Navbar + Tabs */}
@@ -121,6 +165,7 @@ const Layout = () => {
             handleTabClose={handleTabClose}
             handleTabReorder={handleTabReorder}
             isMobile={isMobile}
+            onLogoClick={handleLogoClick}
           />
         </Box>
 
@@ -172,15 +217,11 @@ const Layout = () => {
           sx: { height: "50%", p: 2, borderTopLeftRadius: 12, borderTopRightRadius: 12 },
         }}
       >
-        {drawerType === "search" && (
-          <Typography variant="h6">Search (mobile drawer)</Typography>
-        )}
+        {drawerType === "search" && <Typography variant="h6">Search (mobile drawer)</Typography>}
         {drawerType === "notifications" && (
           <Typography variant="h6">Notifications (mobile drawer)</Typography>
         )}
-        {drawerType === "profile" && (
-          <Typography variant="h6">Profile (mobile drawer)</Typography>
-        )}
+        {drawerType === "profile" && <Typography variant="h6">Profile (mobile drawer)</Typography>}
       </SwipeableDrawer>
     </Box>
   );
