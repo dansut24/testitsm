@@ -7,6 +7,11 @@ import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import SettingsIcon from "@mui/icons-material/Settings";
+import PersonIcon from "@mui/icons-material/Person";
+import HelpIcon from "@mui/icons-material/Help";
+import { Tooltip } from "@mui/material";
 
 const REMOTE_FAVICONS = [
   "https://www.google.com/favicon.ico",
@@ -16,205 +21,145 @@ const REMOTE_FAVICONS = [
 ];
 
 const NAVBAR_HEIGHT = 48;
+const COLLAPSED_WIDTH = 48;
+const EXPANDED_WIDTH = 260;
 
 const styles = `
-  .navbar-container {
-    width: 100%;
-    position: relative;
-    background: #f8f9fa;
+  .navbar-wrapper {
     display: flex;
-    align-items: center;
+    width: 100%;
     height: ${NAVBAR_HEIGHT}px;
+    border-bottom: 1px solid #ddd;
+    background: #f8f9fa;
   }
 
-  .navbar-container::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 4px;
-    background: #ffffff;
-    pointer-events: none;
-    z-index: 999;
-  }
-
-  .chrome-tabs-bottom-bar { display: none !important; }
-
-  .ctn-bar { 
-    display:flex; 
-    align-items:center; 
-    width:100%; 
-    position:relative; 
-    background:transparent !important; 
-    height:100%; 
-  }
-
-  .ctn-scroll { 
-    flex:1; 
-    overflow-x:auto; 
-    overflow-y:hidden; 
-    background:transparent !important; 
-    height:100%; 
-  }
-  .ctn-scroll::-webkit-scrollbar { height:6px; }
-
-  .chrome-tabs { background:transparent !important; height:100%; }
-  .chrome-tab { background:transparent !important; height:100%; }
-
-  .navbar-icons {
-    position:absolute;
-    right:8px;
-    top:0;
-    bottom:0;
-    display:flex;
-    align-items:center;
-    gap:12px;
-    padding:0 8px;
-    pointer-events:auto;
-    z-index:5;
-    background:#f8f9fa;
+  .navbar-left {
+    display: flex;
+    flex-direction: column;
+    width: var(--sidebar-width);
+    background: #f8f9fa;
+    border-right: 1px solid #ddd;
+    transition: width 0.3s ease;
+    height: 100vh; /* full vertical */
   }
 
   .navbar-logo {
-    position:absolute;
-    left:8px;
-    top:0;
-    bottom:0;
-    display:flex;
-    align-items:center;
-    padding:0 8px;
-    z-index:6;
-    background:#f8f9fa;
+    height: ${NAVBAR_HEIGHT}px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid #ddd;
+    cursor: pointer;
   }
 
-  .ctn-scroll { padding-right:160px; padding-left:60px; }
+  .navbar-menu {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding-top: 8px;
+  }
 
-  /* Mobile tweaks */
-  @media (max-width: 600px) {
-    .ctn-scroll { 
-      overflow-x:hidden; 
-      padding-right:60px; 
-      padding-left:50px; 
-      display:flex; 
-      justify-content:space-between; 
-    }
+  .navbar-menu-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    cursor: pointer;
+  }
+  .navbar-menu-item:hover {
+    background: #eee;
+  }
 
-    /* Force tabs to grow equally */
-    .chrome-tabs { 
-      display:flex !important; 
-      flex:1; 
-    }
+  .navbar-right {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    position: relative;
+  }
 
-    .chrome-tab { 
-      flex:1 1 auto !important; 
-      max-width:none !important; 
-    }
+  .ctn-bar { flex: 1; display: flex; align-items: center; height:100%; }
+  .ctn-scroll { flex: 1; overflow-x: auto; }
+  .chrome-tabs { background: transparent !important; height:100%; }
+  .chrome-tab { background: transparent !important; height:100%; }
 
-    .chrome-tab-title { 
-      font-size: 12px; 
-      overflow:hidden; 
-      text-overflow:ellipsis; 
-      text-align:center; 
-    }
+  .navbar-icons {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 8px;
   }
 `;
 
 let nextId = 1;
 
-export default function ChromeTabsNavbar({ isMobile }) {
+export default function NavbarTabs({ tabs, tabIndex, handleTabChange, handleTabClose, handleTabReorder }) {
   const [darkMode] = useState(false);
-  const [tabs, setTabs] = useState([
-    { id: "t-welcome", title: "Welcome", active: true, favicon: REMOTE_FAVICONS[0] },
-    { id: "t-docs", title: "Docs", favicon: REMOTE_FAVICONS[1] },
-    { id: "t-pinned", title: "Pinned", isCloseIconVisible: false, favicon: REMOTE_FAVICONS[2] },
-  ]);
-
+  const [sidebarPinned, setSidebarPinned] = useState(true);
   const scrollRef = useRef(null);
 
-  const scrollElementIntoView = (el, opts = { inline: "center" }) => {
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "nearest", ...opts });
-    }
+  const addTab = (title = `New Tab ${++nextId}`, favicon = REMOTE_FAVICONS[nextId % REMOTE_FAVICONS.length]) => {
+    // call handler from Layout
+    handleTabChange(null, tabs.length, `/${title.toLowerCase()}`);
   };
 
-  const addTab = (
-    title = `New Tab ${++nextId}`,
-    favicon = REMOTE_FAVICONS[nextId % REMOTE_FAVICONS.length]
-  ) => {
-    const newId = `tab-${nextId}`;
-    setTabs((prev) => [
-      ...prev.map((t) => ({ ...t, active: false })),
-      { id: newId, title, favicon, active: true },
-    ]);
-    requestAnimationFrame(() => {
-      const el = scrollRef.current;
-      if (!el) return;
-      const newTab = el.querySelector(".chrome-tab.chrome-tab-active");
-      scrollElementIntoView(newTab, { inline: "center" });
-    });
-  };
-
-  const onTabActive = (id) => {
-    setTabs((prev) => prev.map((t) => ({ ...t, active: t.id === id })));
-    requestAnimationFrame(() => {
-      const el = scrollRef.current;
-      if (!el) return;
-      const activeTab = el.querySelector(".chrome-tab.chrome-tab-active");
-      scrollElementIntoView(activeTab, { inline: "center" });
-    });
-  };
-
-  const onTabClose = (id) => {
-    setTabs((prev) => {
-      const idx = prev.findIndex((t) => t.id === id);
-      const filtered = prev.filter((t) => t.id !== id);
-      if (prev[idx]?.active && filtered.length) {
-        const neighbor = filtered[Math.max(0, idx - 1)];
-        return filtered.map((t) => ({ ...t, active: t.id === neighbor.id }));
-      }
-      return filtered;
-    });
+  const onMenuClick = (label) => {
+    handleTabChange(null, tabs.length, `/${label.toLowerCase()}`);
   };
 
   return (
     <>
       <style>{styles}</style>
-      <div className="navbar-container">
-        {/* Left Logo */}
-        <div className="navbar-logo">
-          <img
-            src="https://www.bing.com/sa/simg/favicon-2x.ico"
-            alt="Logo"
-            style={{ width: 28, height: 28 }}
-          />
-        </div>
-
-        {/* Tabs */}
-        <div className={"ctn-bar" + (darkMode ? " dark" : "")} style={{ flex: 1 }}>
-          <div ref={scrollRef} className="ctn-scroll">
-            <Tabs
-              darkMode={darkMode}
-              onTabClose={onTabClose}
-              onTabActive={onTabActive}
-              tabs={tabs}
-            />
+      <div className="navbar-wrapper" style={{ "--sidebar-width": sidebarPinned ? `${EXPANDED_WIDTH}px` : `${COLLAPSED_WIDTH}px` }}>
+        {/* Left vertical bar */}
+        <div className="navbar-left">
+          <div className="navbar-logo" onClick={() => setSidebarPinned(!sidebarPinned)}>
+            <img src="https://www.bing.com/sa/simg/favicon-2x.ico" alt="Logo" style={{ width: 28, height: 28 }} />
+          </div>
+          <div className="navbar-menu">
+            <Tooltip title="Dashboard" placement="right" disableHoverListener={sidebarPinned}>
+              <div className="navbar-menu-item" onClick={() => onMenuClick("Dashboard")}>
+                <DashboardIcon fontSize="small" /> {sidebarPinned && <span>Dashboard</span>}
+              </div>
+            </Tooltip>
+            <Tooltip title="Profile" placement="right" disableHoverListener={sidebarPinned}>
+              <div className="navbar-menu-item" onClick={() => onMenuClick("Profile")}>
+                <PersonIcon fontSize="small" /> {sidebarPinned && <span>Profile</span>}
+              </div>
+            </Tooltip>
+            <Tooltip title="Settings" placement="right" disableHoverListener={sidebarPinned}>
+              <div className="navbar-menu-item" onClick={() => onMenuClick("Settings")}>
+                <SettingsIcon fontSize="small" /> {sidebarPinned && <span>Settings</span>}
+              </div>
+            </Tooltip>
+            <Tooltip title="Help" placement="right" disableHoverListener={sidebarPinned}>
+              <div className="navbar-menu-item" onClick={() => onMenuClick("Help")}>
+                <HelpIcon fontSize="small" /> {sidebarPinned && <span>Help</span>}
+              </div>
+            </Tooltip>
           </div>
         </div>
 
-        {/* Right Icons */}
-        <div className="navbar-icons">
-          <AddIcon
-            onClick={() => addTab()}
-            style={{ cursor: "pointer", fontSize: 28, fontWeight: "bold" }}
-          />
-          {!isMobile && (
-            <>
-              <SearchIcon style={{ cursor: "pointer" }} />
-              <NotificationsIcon style={{ cursor: "pointer" }} />
-              <AccountCircleIcon style={{ cursor: "pointer" }} />
-            </>
-          )}
+        {/* Right horizontal bar */}
+        <div className="navbar-right">
+          <div className={"ctn-bar" + (darkMode ? " dark" : "")}>
+            <div ref={scrollRef} className="ctn-scroll">
+              <Tabs
+                darkMode={darkMode}
+                tabs={tabs}
+                onTabClose={handleTabClose}
+                onTabActive={(id) => {
+                  const idx = tabs.findIndex((t) => t.id === id);
+                  if (idx !== -1) handleTabChange(null, idx, tabs[idx].path);
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="navbar-icons">
+            <AddIcon onClick={() => addTab()} style={{ cursor: "pointer", fontSize: 24 }} />
+            <SearchIcon style={{ cursor: "pointer" }} />
+            <NotificationsIcon style={{ cursor: "pointer" }} />
+            <AccountCircleIcon style={{ cursor: "pointer" }} />
+          </div>
         </div>
       </div>
     </>
