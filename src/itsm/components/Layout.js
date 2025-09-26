@@ -1,22 +1,14 @@
 // Layout.js
 import React, { useState, useEffect } from "react";
-import {
-  Box,
-  useTheme,
-  useMediaQuery,
-  SwipeableDrawer,
-  Typography,
-} from "@mui/material";
+import { Box, useTheme, useMediaQuery, SwipeableDrawer, Typography } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
+import LeftNav from "./LeftNav"; // new combined sidebar+logo component
 import NavbarTabs from "./NavbarTabs";
-import Sidebar from "./Sidebar";
 
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
-const NAVBAR_HEIGHT = 34;
-const NAVBAR_PADDING_TOP = 6;
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 48;
 
@@ -52,10 +44,9 @@ const Layout = () => {
 
   // Sidebar state
   const [sidebarPinned, setSidebarPinned] = useState(true);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Mobile drawer state
-  const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile"
+  const [drawerType, setDrawerType] = useState(null);
 
   // Update tabs on route change
   useEffect(() => {
@@ -101,14 +92,6 @@ const Layout = () => {
     setTabs(tabsReordered);
   };
 
-  const handleLogoClick = () => {
-    if (isMobile) {
-      setMobileSidebarOpen((prev) => !prev);
-    } else {
-      setSidebarPinned((prev) => !prev);
-    }
-  };
-
   const activateOrAddTab = (label) => {
     const existing = tabs.find((t) => t.label === label);
     if (existing) {
@@ -127,34 +110,13 @@ const Layout = () => {
 
   return (
     <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
-      {/* Sidebar (desktop) */}
+      {/* Sidebar with logo */}
       {!isMobile && (
-        <Sidebar
-          sidebarPinned={sidebarPinned}
+        <LeftNav
+          pinned={sidebarPinned}
+          setPinned={setSidebarPinned}
           activateOrAddTab={activateOrAddTab}
-          onLogoClick={handleLogoClick}
         />
-      )}
-
-      {/* Sidebar (mobile) */}
-      {isMobile && (
-        <SwipeableDrawer
-          anchor="left"
-          open={mobileSidebarOpen}
-          onClose={() => setMobileSidebarOpen(false)}
-          PaperProps={{
-            sx: {
-              width: EXPANDED_WIDTH,
-              backgroundColor: theme.palette.background.paper,
-            },
-          }}
-        >
-          <Sidebar
-            sidebarPinned={true} // always expanded on mobile drawer
-            activateOrAddTab={activateOrAddTab}
-            onLogoClick={() => setMobileSidebarOpen(false)}
-          />
-        </SwipeableDrawer>
       )}
 
       {/* Main area */}
@@ -165,7 +127,6 @@ const Layout = () => {
           flexDirection: "column",
           minWidth: 0,
           height: "100vh",
-          position: "relative",
           marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
           transition: "margin-left 0.3s ease",
         }}
@@ -186,7 +147,6 @@ const Layout = () => {
             handleTabClose={handleTabClose}
             handleTabReorder={handleTabReorder}
             isMobile={isMobile}
-            onLogoClick={handleLogoClick}
           />
         </Box>
 
@@ -228,7 +188,7 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Mobile action drawers */}
+      {/* Mobile drawers */}
       <SwipeableDrawer
         anchor="bottom"
         open={Boolean(drawerType)}
@@ -238,9 +198,9 @@ const Layout = () => {
           sx: { height: "50%", p: 2, borderTopLeftRadius: 12, borderTopRightRadius: 12 },
         }}
       >
-        {drawerType === "search" && <Typography variant="h6">Search</Typography>}
-        {drawerType === "notifications" && <Typography variant="h6">Notifications</Typography>}
-        {drawerType === "profile" && <Typography variant="h6">Profile</Typography>}
+        {drawerType === "search" && <Typography variant="h6">Search (mobile drawer)</Typography>}
+        {drawerType === "notifications" && <Typography variant="h6">Notifications (mobile drawer)</Typography>}
+        {drawerType === "profile" && <Typography variant="h6">Profile (mobile drawer)</Typography>}
       </SwipeableDrawer>
     </Box>
   );
