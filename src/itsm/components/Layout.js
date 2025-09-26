@@ -1,4 +1,3 @@
-// Layout.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -9,6 +8,7 @@ import {
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
+import Sidebar from "./Sidebar";
 
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
@@ -38,25 +38,24 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Tabs
+  // Tabs state (Dashboard only at start)
   const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
 
-  // Desktop sidebar
+  // Desktop sidebar state
   const [sidebarPinned, setSidebarPinned] = useState(true);
   const sidebarWidth = sidebarPinned ? EXPANDED_WIDTH : COLLAPSED_WIDTH;
 
-  // Mobile drawer
+  // Mobile sidebar drawer
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  // Bottom action drawer
+  // Bottom action drawer (mobile)
   const [drawerType, setDrawerType] = useState(null);
 
-  // Update tabs on route change
+  // Route -> tabs sync
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
-
     if (!tabExists) {
       const label = routeLabels[currentPath] || "Unknown";
       const newTabs = [...tabs, { label, path: currentPath }];
@@ -65,23 +64,26 @@ const Layout = () => {
     } else {
       setTabIndex(tabs.findIndex((t) => t.path === currentPath));
     }
-  }, [location.pathname]); // eslint-disable-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
-  // Persist tabs
+  // Persist
   useEffect(() => {
     sessionStorage.setItem("tabs", JSON.stringify(tabs));
     sessionStorage.setItem("tabIndex", tabIndex.toString());
   }, [tabs, tabIndex]);
 
-  // Tab handlers
+  // Handlers
   const handleTabChange = (ev, newIndex, path) => {
     setTabIndex(newIndex);
     if (path) navigate(path);
   };
 
   const handleTabClose = (tabId) => {
+    // Prevent closing the first tab (Dashboard)
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return; // first tab cannot close
+    if (closingIndex === 0) return;
+
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
 
@@ -94,84 +96,38 @@ const Layout = () => {
   const handleTabReorder = (tabsReordered) => setTabs(tabsReordered);
 
   const activateOrAddTab = (label) => {
-    const existing = tabs.find((t) => t.label === label);
+    const path = `/${label.toLowerCase().replace(/\s+/g, "-")}`;
+    const existing = tabs.find((t) => t.path === path);
     if (existing) {
-      setTabIndex(tabs.findIndex((t) => t.label === label));
+      const idx = tabs.findIndex((t) => t.path === path);
+      setTabIndex(idx);
       navigate(existing.path);
     } else {
-      const newTab = { label, path: `/${label.toLowerCase().replace(/\s+/g, "-")}` };
-      const newTabs = [...tabs, newTab];
+      const newTabs = [...tabs, { label, path }];
       setTabs(newTabs);
       setTabIndex(newTabs.length - 1);
-      navigate(newTab.path);
+      navigate(path);
     }
   };
 
-  // Sidebar content
-  const sidebarContent = (
-    <Box
-      sx={{
-        width: sidebarPinned ? EXPANDED_WIDTH : COLLAPSED_WIDTH,
-        transition: "width 0.3s ease",
-        backgroundColor: theme.palette.background.paper,
-        borderRight: `1px solid ${theme.palette.divider}`,
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-      }}
-    >
-      {/* Logo */}
-      <Box
-        sx={{
-          height: 48,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          cursor: "pointer",
-          borderBottom: `1px solid ${theme.palette.divider}`,
-        }}
-        onClick={() => !isMobile && setSidebarPinned((prev) => !prev)}
-      >
-        <img
-          src="https://www.bing.com/sa/simg/favicon-2x.ico"
-          alt="Logo"
-          style={{ width: 28, height: 28 }}
-        />
-      </Box>
-
-      {/* Items */}
-      <Box sx={{ flex: 1, p: 1 }}>
-        {Object.values(routeLabels).map((label) => (
-          <Box
-            key={label}
-            sx={{
-              py: 1,
-              px: sidebarPinned ? 2 : 1,
-              cursor: "pointer",
-              fontSize: 14,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              "&:hover": { backgroundColor: theme.palette.action.hover },
-            }}
-            onClick={() => {
-              activateOrAddTab(label);
-              if (isMobile) setMobileSidebarOpen(false);
-            }}
-          >
-            {label}
-          </Box>
-        ))}
-      </Box>
-    </Box>
-  );
+  const sidebarItems = Object.values(routeLabels);
 
   return (
-    <Box sx={{ display: "flex", height: "100vh", width: "100%" }}>
-      {/* Sidebar (desktop only) */}
-      {!isMobile && sidebarContent}
+    <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
+      {/* Desktop Sidebar (pushes content right) */}
+      {!isMobile && (
+        <Sidebar
+          pinned={sidebarPinned}
+          onToggle={() => setSidebarPinned((p) => !p)}
+          items={sidebarItems}
+          onItemClick={activateOrAddTab}
+          widthExpanded={EXPANDED_WIDTH}
+          widthCollapsed={COLLAPSED_WIDTH}
+          isMobile={false}
+        />
+      )}
 
-      {/* Main area */}
+      {/* Main Column */}
       <Box
         sx={{
           flex: 1,
@@ -179,11 +135,32 @@ const Layout = () => {
           flexDirection: "column",
           minWidth: 0,
           height: "100vh",
+          // Push by sidebar on desktop
           marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
           transition: "margin-left 0.3s ease",
         }}
       >
-        {/* Navbar + Tabs */}
+        {/* Mobile: Full-width logo bar on top */}
+        {isMobile && (
+          <Box
+            sx={{
+              height: 48,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderBottom: `1px solid ${theme.palette.divider}`,
+              backgroundColor: theme.palette.background.paper,
+            }}
+          >
+            <img
+              src="https://www.bing.com/sa/simg/favicon-2x.ico"
+              alt="Logo"
+              style={{ width: 28, height: 28 }}
+            />
+          </Box>
+        )}
+
+        {/* Navbar Tabs (no logo inside) */}
         <NavbarTabs
           tabs={tabs}
           tabIndex={tabIndex}
@@ -193,7 +170,7 @@ const Layout = () => {
           isMobile={isMobile}
         />
 
-        {/* Content */}
+        {/* Main Content */}
         <Box
           component="main"
           sx={{
@@ -201,13 +178,13 @@ const Layout = () => {
             overflowY: "auto",
             overflowX: "hidden",
             px: 2,
-            pb: isMobile ? 7 : 0,
+            pb: isMobile ? 7 : 0, // leave room for bottom bar on mobile
           }}
         >
           <Outlet />
         </Box>
 
-        {/* Mobile bottom bar */}
+        {/* Mobile bottom bar (kept) */}
         {isMobile && (
           <Box
             sx={{
@@ -232,7 +209,7 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Mobile sidebar drawer */}
+      {/* Mobile Sidebar Drawer (hamburger) */}
       <SwipeableDrawer
         anchor="left"
         open={mobileSidebarOpen}
@@ -241,7 +218,18 @@ const Layout = () => {
           sx: { width: EXPANDED_WIDTH, backgroundColor: theme.palette.background.paper },
         }}
       >
-        {sidebarContent}
+        <Sidebar
+          pinned
+          onToggle={() => {}}
+          items={sidebarItems}
+          onItemClick={(label) => {
+            activateOrAddTab(label);
+            setMobileSidebarOpen(false);
+          }}
+          widthExpanded={EXPANDED_WIDTH}
+          widthCollapsed={COLLAPSED_WIDTH}
+          isMobile
+        />
       </SwipeableDrawer>
 
       {/* Mobile action drawers */}
@@ -254,9 +242,7 @@ const Layout = () => {
         }}
       >
         {drawerType === "search" && <Typography variant="h6">Search (mobile)</Typography>}
-        {drawerType === "notifications" && (
-          <Typography variant="h6">Notifications (mobile)</Typography>
-        )}
+        {drawerType === "notifications" && <Typography variant="h6">Notifications (mobile)</Typography>}
         {drawerType === "profile" && <Typography variant="h6">Profile (mobile)</Typography>}
       </SwipeableDrawer>
     </Box>
