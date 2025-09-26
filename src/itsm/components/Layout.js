@@ -178,7 +178,7 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Mobile Sidebar Drawer */}
+      {/* Mobile Sidebar Drawer → only renders in mobile */}
       {isMobile && (
         <SwipeableDrawer
           anchor="left"
@@ -201,16 +201,18 @@ const Layout = () => {
       )}
 
       {/* Mobile Action Drawer */}
-      <SwipeableDrawer
-        anchor="bottom"
-        open={Boolean(drawerType)}
-        onClose={() => setDrawerType(null)}
-        PaperProps={{ sx: { height: "50%", p: 2, borderTopLeftRadius: 12, borderTopRightRadius: 12 } }}
-      >
-        {drawerType === "search" && <Typography variant="h6">Search</Typography>}
-        {drawerType === "notifications" && <Typography variant="h6">Notifications</Typography>}
-        {drawerType === "profile" && <Typography variant="h6">Profile</Typography>}
-      </SwipeableDrawer>
+      {isMobile && (
+        <SwipeableDrawer
+          anchor="bottom"
+          open={Boolean(drawerType)}
+          onClose={() => setDrawerType(null)}
+          PaperProps={{ sx: { height: "50%", p: 2, borderTopLeftRadius: 12, borderTopRightRadius: 12 } }}
+        >
+          {drawerType === "search" && <Typography variant="h6">Search</Typography>}
+          {drawerType === "notifications" && <Typography variant="h6">Notifications</Typography>}
+          {drawerType === "profile" && <Typography variant="h6">Profile</Typography>}
+        </SwipeableDrawer>
+      )}
     </Box>
   );
 };
