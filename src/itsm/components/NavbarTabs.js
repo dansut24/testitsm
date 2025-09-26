@@ -1,78 +1,70 @@
-// NavbarTabs.js
+// NavbarTabs.js (Halo-style implementation)
 import React from "react";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
+import MenuIcon from "@mui/icons-material/Menu";
 
-const NAVBAR_HEIGHT = 34;
-const NAVBAR_PADDING_TOP = 6;
-
-// Reserve space for Add button + 3 icons
-const RIGHT_SECTION_WIDTH = 150;
+const NAVBAR_HEIGHT = 44; // a bit taller like in your snippet
 
 const NavbarTabs = ({
   tabs = [],
   tabIndex = 0,
   handleTabChange = () => {},
   handleTabClose = () => {},
-  sidebarOpen = true,
-  sidebarWidth = 240,
-  collapsedWidth = 60,
   isMobile = false,
   onLogoClick = () => {},
 }) => {
-  // Ensure Dashboard is always the first tab
+  // Ensure Dashboard is pinned
   const ensuredTabs = [
     { label: "Dashboard", path: "/dashboard", pinned: true },
     ...tabs.filter((t) => t.path !== "/dashboard"),
   ];
 
-  const leftOffset = isMobile ? 0 : sidebarOpen ? sidebarWidth : collapsedWidth;
-  const widthCalc = isMobile
-    ? "100%"
-    : `calc(100% - ${leftOffset}px - ${RIGHT_SECTION_WIDTH}px)`;
-
   return (
     <div
+      className="halo-nav"
       style={{
-        position: "fixed",
-        top: NAVBAR_PADDING_TOP,
-        left: leftOffset,
-        right: 0,
-        zIndex: 1500,
-        height: NAVBAR_HEIGHT,
         display: "flex",
         alignItems: "center",
-        backgroundColor: "#f1f3f4",
-        borderBottom: "1px solid rgba(0,0,0,0.1)",
+        height: NAVBAR_HEIGHT,
+        borderBottom: "1px solid rgba(0,0,0,0.15)",
+        backgroundColor: "#f8f9fa",
+        padding: "0 8px",
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1500,
       }}
     >
-      {/* Logo */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          marginRight: 8,
-          cursor: isMobile ? "pointer" : "default",
-          height: "100%",
-          padding: "0 6px",
-        }}
+      {/* Left Menu Button */}
+      <button
+        type="button"
+        title="Menu"
+        aria-label="Menu"
         onClick={isMobile ? onLogoClick : undefined}
-      >
-        <img src="/logo192.png" alt="Logo" style={{ height: 24 }} />
-      </div>
-
-      {/* Tabs */}
-      <div
         style={{
-          flex: 1,
+          border: "none",
+          background: "transparent",
+          cursor: "pointer",
+          marginRight: 12,
+        }}
+      >
+        <MenuIcon />
+      </button>
+
+      {/* Tabs strip */}
+      <div
+        className="tab-container"
+        style={{
           display: "flex",
+          flex: 1,
           alignItems: "center",
           height: "100%",
           minWidth: 0,
-          width: widthCalc,
           overflow: "hidden",
         }}
       >
@@ -80,39 +72,34 @@ const NavbarTabs = ({
           <div
             key={tab.path || index}
             onClick={() => handleTabChange(null, index, tab.path)}
+            className={`tab ${index === tabIndex ? "tabactive" : ""}`}
             style={{
               flex: "1 1 0",
-              minWidth: 60, // 🚀 minimum width per tab
-              margin: "0 2px",
-              height: "100%",
+              minWidth: 80,
+              maxWidth: 200,
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              padding: "0 8px",
-              borderRadius: "6px 6px 0 0",
-              backgroundColor:
-                index === tabIndex ? "#ffffff" : "transparent",
-              border: index === tabIndex
-                ? "1px solid rgba(0,0,0,0.2)"
-                : "1px solid transparent",
-              borderBottom:
-                index === tabIndex
-                  ? "none"
-                  : "1px solid rgba(0,0,0,0.1)",
-              fontSize: "13px",
-              fontWeight: tab.pinned ? "bold" : "normal",
+              padding: "0 12px",
+              height: "100%",
+              cursor: "pointer",
+              backgroundColor: index === tabIndex ? "#fff" : "transparent",
+              borderTop: index === tabIndex
+                ? "2px solid #2BD3C6"
+                : "2px solid transparent",
+              borderLeft: "1px solid rgba(0,0,0,0.1)",
+              borderRight: "1px solid rgba(0,0,0,0.1)",
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
-              cursor: "pointer",
-              transition: "background-color 0.2s ease",
+              fontWeight: tab.pinned ? "bold" : "normal",
             }}
           >
             <span
               style={{
+                flex: 1,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
-                flex: 1,
               }}
             >
               {tab.label}
@@ -120,56 +107,51 @@ const NavbarTabs = ({
             {!tab.pinned && (
               <CloseIcon
                 fontSize="small"
-                style={{
-                  marginLeft: 6,
-                  cursor: "pointer",
-                  opacity: 0.6,
-                  transition: "opacity 0.2s",
-                }}
+                style={{ marginLeft: 6, cursor: "pointer" }}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleTabClose(tab.path);
                 }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.opacity = "1")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.opacity = "0.6")
-                }
               />
             )}
           </div>
         ))}
       </div>
 
-      {/* Right section */}
-      <div
+      {/* New Tab button */}
+      <button
+        type="button"
+        title="New Tab"
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "flex-end",
-          minWidth: RIGHT_SECTION_WIDTH,
+          border: "none",
+          background: "transparent",
+          cursor: "pointer",
+          marginLeft: 8,
+          marginRight: 12,
+        }}
+        onClick={() => {
+          const newId = Date.now();
+          handleTabChange(null, ensuredTabs.length, `/new-tab/${newId}`);
         }}
       >
-        <AddIcon
+        <AddIcon />
+      </button>
+
+      {/* Right section (icons) */}
+      {!isMobile && (
+        <div
+          className="nhd-nav-rightAlign"
           style={{
-            cursor: "pointer",
-            marginRight: 12,
-            color: "#444",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
           }}
-          onClick={() => {
-            const newId = Date.now();
-            handleTabChange(null, ensuredTabs.length, `/new-tab/${newId}`);
-          }}
-        />
-        {!isMobile && (
-          <>
-            <SearchIcon style={{ cursor: "pointer", color: "#444", marginRight: 12 }} />
-            <NotificationsIcon style={{ cursor: "pointer", color: "#444", marginRight: 12 }} />
-            <AccountCircleIcon style={{ cursor: "pointer", color: "#444", marginRight: 12 }} />
-          </>
-        )}
-      </div>
+        >
+          <SearchIcon style={{ cursor: "pointer" }} />
+          <NotificationsIcon style={{ cursor: "pointer" }} />
+          <AccountCircleIcon style={{ cursor: "pointer" }} />
+        </div>
+      )}
     </div>
   );
 };
