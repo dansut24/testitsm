@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
-import Sidebar from "./Sidebar"; // <-- add Sidebar back
+import Sidebar from "./Sidebar";
 
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
@@ -17,6 +17,9 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
 const NAVBAR_HEIGHT = 34;
 const NAVBAR_PADDING_TOP = 6;
+
+const expandedWidth = 260; // updated
+const collapsedWidth = 48; // updated
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -49,8 +52,6 @@ const Layout = () => {
   });
 
   const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile"
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [sidebarPinned, setSidebarPinned] = useState(false);
 
   // Update tabs on route change
   useEffect(() => {
@@ -97,19 +98,8 @@ const Layout = () => {
 
   return (
     <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
-      {/* Sidebar */}
-      <Sidebar
-        sidebarOpen={sidebarOpen}
-        sidebarPinned={sidebarPinned}
-        setSidebarOpen={setSidebarOpen}
-        setSidebarPinned={setSidebarPinned}
-        onActivateTab={(title, favicon) =>
-          setTabs((prev) => [
-            ...prev.map((t) => ({ ...t, active: false })),
-            { id: `tab-${Date.now()}`, label: title, path: `/${title.toLowerCase()}`, active: true, favicon },
-          ])
-        }
-      />
+      {/* Sidebar (hidden on mobile, pinned on desktop) */}
+      {!isMobile && <Sidebar />}
 
       {/* Main area */}
       <Box
@@ -120,6 +110,8 @@ const Layout = () => {
           minWidth: 0,
           height: "100vh",
           position: "relative",
+          marginLeft: !isMobile ? `${collapsedWidth}px` : 0, // base offset for collapsed sidebar
+          transition: "margin-left 0.3s ease",
         }}
       >
         {/* Navbar + Tabs */}
@@ -130,7 +122,6 @@ const Layout = () => {
           handleTabClose={handleTabClose}
           handleTabReorder={handleTabReorder}
           isMobile={isMobile}
-          onLogoClick={() => setSidebarOpen((prev) => !prev)} // logo toggles sidebar
         />
 
         {/* Content */}
@@ -142,7 +133,7 @@ const Layout = () => {
             overflowY: "auto",
             overflowX: "hidden",
             px: 1,
-            pb: isMobile ? 7 : 0,
+            pb: isMobile ? 7 : 0, // leave room for bottom bar on mobile
           }}
         >
           <Outlet />
