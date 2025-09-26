@@ -10,6 +10,8 @@ import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
 const NAVBAR_HEIGHT = 44;
+const DEFAULT_TAB_W = 120;
+const MIN_TAB_W = 70;
 
 export default function NavbarTabs({
   tabs = [],
@@ -20,7 +22,7 @@ export default function NavbarTabs({
   isMobile = false,
   onLogoClick = () => {},
 }) {
-  // Always keep Dashboard pinned
+  // Insert Dashboard tab as the first item, but let it behave like the others
   const ensuredTabs = useMemo(() => {
     const rest = tabs.filter((t) => t.id !== "dashboard" && t.path !== "/dashboard");
     return [
@@ -28,7 +30,7 @@ export default function NavbarTabs({
         id: "dashboard",
         path: "/dashboard",
         title: "Dashboard",
-        pinned: true,
+        pinned: true, // can’t be closed
         favicon: "/favicon.ico",
       },
       ...rest,
@@ -63,8 +65,10 @@ export default function NavbarTabs({
         borderBottom: "1px solid rgba(0,0,0,0.15)",
       }}
     >
-      {/* Menu/Logo */}
+      {/* Left logo/menu */}
       <button
+        type="button"
+        aria-label="Menu"
         onClick={onLogoClick}
         style={{
           border: "none",
@@ -90,39 +94,68 @@ export default function NavbarTabs({
             handleTabChange(null, idx, ensuredTabs[idx]?.path || id);
           }}
           onTabClose={(id) => {
-            if (id === "dashboard") return;
+            if (id === "dashboard") return; // Dashboard can’t be closed
             const idx = sinmTabs.findIndex((t) => t.id === id);
             handleTabClose(ensuredTabs[idx]?.path || id);
           }}
           onTabReorder={(from, to) => handleTabReorder(from, to)}
         />
         <style>{`
-          /* Let the library position tabs inline */
+          /* Let library do positioning, but control widths */
+          .chrome-tabs {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: flex-end;
+            height: 100%;
+          }
+
           .chrome-tabs .chrome-tab {
-            width: 120px; /* default width */
+            width: ${DEFAULT_TAB_W}px;
+            min-width: ${MIN_TAB_W}px;
+            height: 88%;
+            margin-right: -10px;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 100%, 0% 100%);
+            box-sizing: border-box;
           }
-          /* Dashboard pinned width */
-          .chrome-tabs .chrome-tab:first-child {
-            width: 120px !important;
+
+          /* Divider line */
+          .chrome-tabs .chrome-tab:not(.chrome-tab-active)::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 6px;
+            bottom: 6px;
+            width: 1px;
+            background: rgba(0,0,0,0.1);
+            pointer-events: none;
           }
-          /* Other tabs shrink gracefully */
-          .chrome-tabs .chrome-tab:not(:first-child) {
-            min-width: 70px;
-          }
-          /* Hover close button small */
+
+          /* Close button hover */
           .chrome-tabs .chrome-tab .chrome-tab-close {
             width: 14px;
             height: 14px;
             opacity: 0;
             transition: opacity .2s ease;
+            border-radius: 50%;
           }
           .chrome-tabs .chrome-tab:hover .chrome-tab-close {
             opacity: 1;
           }
+          .chrome-tabs .chrome-tab .chrome-tab-close svg {
+            width: 12px; height: 12px;
+          }
+
+          /* Active tab highlight */
+          .chrome-tabs .chrome-tab.chrome-tab-active {
+            background: #fff;
+            border-bottom: 2px solid #2BD3C6;
+          }
         `}</style>
       </div>
 
-      {/* Right icons */}
+      {/* Right side icons */}
       <div
         style={{
           display: "flex",
