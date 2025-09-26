@@ -1,22 +1,17 @@
 // Layout.js
 import React, { useState, useEffect } from "react";
-import {
-  Box,
-  useTheme,
-  useMediaQuery,
-  SwipeableDrawer,
-  Typography,
-} from "@mui/material";
+import { Box, useTheme, useMediaQuery, SwipeableDrawer, Typography } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
+import Sidebar from "./Sidebar";
 
 import MenuIcon from "@mui/icons-material/Menu";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
-const NAVBAR_HEIGHT = 34;
-const NAVBAR_PADDING_TOP = 6;
+const EXPANDED_WIDTH = 260;
+const COLLAPSED_WIDTH = 48;
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -38,7 +33,6 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Tabs state
   const [tabs, setTabs] = useState(() => {
     const stored = sessionStorage.getItem("tabs");
     return stored ? JSON.parse(stored) : [{ label: "Dashboard", path: "/dashboard" }];
@@ -48,52 +42,40 @@ const Layout = () => {
     return storedIndex ? parseInt(storedIndex, 10) : 0;
   });
 
-  // Mobile drawer state
-  const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile"
-  const [mobileSidebar, setMobileSidebar] = useState(false); // left sidebar on mobile
+  const [drawerType, setDrawerType] = useState(null);
+  const [mobileSidebar, setMobileSidebar] = useState(false);
+  const [sidebarPinned, setSidebarPinned] = useState(true);
 
-  // Update tabs on route change
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
-
     if (!tabExists) {
       const label = routeLabels[currentPath] || "Unknown";
       const newTabs = [...tabs, { label, path: currentPath }];
       setTabs(newTabs);
       setTabIndex(newTabs.length - 1);
     } else {
-      const index = tabs.findIndex((t) => t.path === currentPath);
-      setTabIndex(index);
+      setTabIndex(tabs.findIndex((t) => t.path === currentPath));
     }
   }, [location.pathname]); // eslint-disable-line
 
-  // Persist tabs
   useEffect(() => {
     sessionStorage.setItem("tabs", JSON.stringify(tabs));
     sessionStorage.setItem("tabIndex", tabIndex.toString());
   }, [tabs, tabIndex]);
 
-  // Handlers
   const handleTabChange = (ev, newIndex, path) => {
     setTabIndex(newIndex);
     if (path) navigate(path);
   };
 
   const handleTabClose = (tabId) => {
-    const closingIndex = tabs.findIndex((t) => t.path === tabId);
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
-
     if (location.pathname === tabId) {
-      const fallbackIndex = closingIndex === 0 ? 0 : closingIndex - 1;
-      const fallbackTab = newTabs[fallbackIndex] || { path: "/dashboard" };
+      const fallbackTab = newTabs[0] || { path: "/dashboard" };
       navigate(fallbackTab.path);
     }
-  };
-
-  const handleTabReorder = (tabsReordered) => {
-    setTabs(tabsReordered);
   };
 
   const activateOrAddTab = (label) => {
@@ -110,9 +92,16 @@ const Layout = () => {
     }
   };
 
+  const sidebarWidth = sidebarPinned ? EXPANDED_WIDTH : COLLAPSED_WIDTH;
+
   return (
-    <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
-      {/* Main area only */}
+    <Box sx={{ display: "flex", height: "100vh", width: "100%" }}>
+      {/* Desktop sidebar */}
+      {!isMobile && (
+        <Sidebar pinned={sidebarPinned} activateOrAddTab={activateOrAddTab} />
+      )}
+
+      {/* Main area */}
       <Box
         sx={{
           flex: 1,
@@ -120,10 +109,11 @@ const Layout = () => {
           flexDirection: "column",
           minWidth: 0,
           height: "100vh",
-          position: "relative",
+          ml: !isMobile ? `${sidebarWidth}px` : 0,
+          transition: "margin-left 0.3s ease",
         }}
       >
-        {/* Sticky Navbar + Tabs */}
+        {/* Navbar */}
         <Box
           sx={{
             position: "sticky",
@@ -137,22 +127,13 @@ const Layout = () => {
             tabIndex={tabIndex}
             handleTabChange={handleTabChange}
             handleTabClose={handleTabClose}
-            handleTabReorder={handleTabReorder}
             isMobile={isMobile}
+            onLogoClick={() => setSidebarPinned((p) => !p)}
           />
         </Box>
 
-        {/* Content */}
-        <Box
-          component="main"
-          sx={{
-            flex: 1,
-            overflowY: "auto",
-            overflowX: "hidden",
-            px: 1,
-            pb: isMobile ? 7 : 0, // leave room for bottom bar on mobile
-          }}
-        >
+        {/* Main content */}
+        <Box component="main" sx={{ flex: 1, overflowY: "auto", px: 2, pb: isMobile ? 7 : 0 }}>
           <Outlet />
         </Box>
 
@@ -173,7 +154,7 @@ const Layout = () => {
               height: 56,
             }}
           >
-            <MenuIcon onClick={() => setMobileSidebar(true)} /> {/* Hamburger */}
+            <MenuIcon onClick={() => setMobileSidebar(true)} />
             <SearchIcon onClick={() => setDrawerType("search")} />
             <NotificationsIcon onClick={() => setDrawerType("notifications")} />
             <AccountCircleIcon onClick={() => setDrawerType("profile")} />
@@ -181,20 +162,14 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Swipeable Drawers */}
-      {/* Mobile sidebar (left) */}
+      {/* Mobile sidebar drawer */}
       <SwipeableDrawer
         anchor="left"
         open={mobileSidebar}
         onClose={() => setMobileSidebar(false)}
-        onOpen={() => {}}
-        PaperProps={{
-          sx: { width: 240, p: 2 },
-        }}
+        PaperProps={{ sx: { width: 240, p: 2 } }}
       >
-        <Typography variant="h6" gutterBottom>
-          Menu
-        </Typography>
+        <Typography variant="h6">Menu</Typography>
         {Object.values(routeLabels).map((label) => (
           <Typography
             key={label}
@@ -207,23 +182,6 @@ const Layout = () => {
             {label}
           </Typography>
         ))}
-      </SwipeableDrawer>
-
-      {/* Bottom actions (search, notifications, profile) */}
-      <SwipeableDrawer
-        anchor="bottom"
-        open={Boolean(drawerType)}
-        onClose={() => setDrawerType(null)}
-        onOpen={() => {}}
-        PaperProps={{
-          sx: { height: "50%", p: 2, borderTopLeftRadius: 12, borderTopRightRadius: 12 },
-        }}
-      >
-        {drawerType === "search" && <Typography variant="h6">Search (mobile drawer)</Typography>}
-        {drawerType === "notifications" && (
-          <Typography variant="h6">Notifications (mobile drawer)</Typography>
-        )}
-        {drawerType === "profile" && <Typography variant="h6">Profile (mobile drawer)</Typography>}
       </SwipeableDrawer>
     </Box>
   );
