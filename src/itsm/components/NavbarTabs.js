@@ -40,6 +40,7 @@ const NavbarTabs = ({
   };
 
   const onTabClose = (tabId) => handleTabClose(tabId);
+
   const onTabReorder = (tabsReordered) => {
     if (isMobile) return;
     handleTabReorder(
@@ -59,22 +60,32 @@ const NavbarTabs = ({
             border-bottom: none !important;
             box-shadow: none !important;
             height: ${NAVBAR_HEIGHT}px !important;
+            margin-top: 0 !important;
           }
+
           .chrome-tabs .chrome-tabs-content {
             height: ${NAVBAR_HEIGHT}px !important;
             align-items: center;
           }
+
           .chrome-tabs .chrome-tab {
             flex: 1 1 auto;
             min-width: ${isMobile ? 60 : 90}px;
             max-width: ${isMobile ? 120 : 180}px;
             transition: flex-basis .2s ease;
+            height: ${TAB_DRAW_HEIGHT}px !important;
           }
+
           .chrome-tab .chrome-tab-title {
             font-size: ${isMobile ? "12px" : "13px"};
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            line-height: ${TAB_DRAW_HEIGHT}px !important;
+          }
+
+          .chrome-tab .chrome-tab-favicon {
+            display: none !important;
           }
         `}
       </style>
@@ -89,7 +100,6 @@ const NavbarTabs = ({
           height: NAVBAR_HEIGHT,
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
           backgroundColor: "transparent",
         }}
       >
@@ -108,7 +118,15 @@ const NavbarTabs = ({
         </div>
 
         {/* Tabs */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            height: "100%",
+            minWidth: 0,
+          }}
+        >
           <Tabs
             tabs={chromeTabs}
             onTabActive={onTabActive}
@@ -116,16 +134,17 @@ const NavbarTabs = ({
             onTabReorder={!isMobile ? onTabReorder : undefined}
             draggable={!isMobile}
             className="chrome-tabs"
-            style={{ width: "100%" }}
+            style={{ width: "100%", height: "100%" }}
           />
         </div>
 
         {/* New Tab Button */}
         <AddIcon
           style={{ cursor: "pointer", marginRight: 12 }}
-          onClick={() =>
-            handleTabChange(null, tabs.length, `/new-tab-${Date.now()}`)
-          }
+          onClick={() => {
+            const newId = Date.now();
+            handleTabChange(null, tabs.length, `/new-tab/${newId}`);
+          }}
         />
 
         {/* Right-hand icons (desktop only) */}
