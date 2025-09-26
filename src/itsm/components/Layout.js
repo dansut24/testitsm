@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import { Box, useTheme, useMediaQuery, SwipeableDrawer, Typography } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
-import LeftNav from "./LeftNav"; // new combined sidebar+logo component
 import NavbarTabs from "./NavbarTabs";
 
 import SearchIcon from "@mui/icons-material/Search";
@@ -41,9 +40,6 @@ const Layout = () => {
     const storedIndex = sessionStorage.getItem("tabIndex");
     return storedIndex ? parseInt(storedIndex, 10) : 0;
   });
-
-  // Sidebar state
-  const [sidebarPinned, setSidebarPinned] = useState(true);
 
   // Mobile drawer state
   const [drawerType, setDrawerType] = useState(null);
@@ -106,19 +102,8 @@ const Layout = () => {
     }
   };
 
-  const sidebarWidth = sidebarPinned ? EXPANDED_WIDTH : COLLAPSED_WIDTH;
-
   return (
     <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
-      {/* Sidebar with logo */}
-      {!isMobile && (
-        <LeftNav
-          pinned={sidebarPinned}
-          setPinned={setSidebarPinned}
-          activateOrAddTab={activateOrAddTab}
-        />
-      )}
-
       {/* Main area */}
       <Box
         sx={{
@@ -127,11 +112,10 @@ const Layout = () => {
           flexDirection: "column",
           minWidth: 0,
           height: "100vh",
-          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
-          transition: "margin-left 0.3s ease",
+          position: "relative",
         }}
       >
-        {/* Sticky Navbar + Tabs */}
+        {/* Sticky Navbar + Tabs (now also contains sidebar/left-nav) */}
         <Box
           sx={{
             position: "sticky",
@@ -147,6 +131,7 @@ const Layout = () => {
             handleTabClose={handleTabClose}
             handleTabReorder={handleTabReorder}
             isMobile={isMobile}
+            activateOrAddTab={activateOrAddTab}
           />
         </Box>
 
