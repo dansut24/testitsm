@@ -8,7 +8,8 @@ import CloseIcon from "@mui/icons-material/Close";
 
 const NAVBAR_HEIGHT = 44;
 const DEFAULT_TAB_W = 120;
-const GAP_X = 0; // no gap, flicks handle spacing
+const MIN_TAB_W = 56; // ensures favicon always visible
+const GAP_X = 0;
 const PAD_X = 8;
 
 export default function NavbarTabs({
@@ -20,7 +21,10 @@ export default function NavbarTabs({
   onLogoClick = () => {},
 }) {
   const ensuredTabs = useMemo(
-    () => [{ label: "Dashboard", path: "/dashboard", pinned: true, favicon: "📊" }, ...tabs.filter(t => t.path !== "/dashboard")],
+    () => [
+      { label: "Dashboard", path: "/dashboard", pinned: true, favicon: "📊" },
+      ...tabs.filter((t) => t.path !== "/dashboard"),
+    ],
     [tabs]
   );
 
@@ -30,7 +34,8 @@ export default function NavbarTabs({
   useLayoutEffect(() => {
     if (!stripRef.current) return;
     const ro = new ResizeObserver(([entry]) => {
-      const w = entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
+      const w =
+        entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
       setStripW(Math.max(0, Math.floor(w)));
     });
     ro.observe(stripRef.current);
@@ -43,16 +48,16 @@ export default function NavbarTabs({
 
   const tabCount = ensuredTabs.length || 1;
   const totalGaps = GAP_X * Math.max(0, tabCount - 1);
+
+  // ✅ Tabs shrink only until MIN_TAB_W, never smaller
   let computed = DEFAULT_TAB_W;
   if (stripW > 0) {
     const maxPossible = (stripW - totalGaps) / tabCount;
-    if (maxPossible < DEFAULT_TAB_W) {
-      computed = Math.floor(maxPossible);
-    }
+    computed = Math.max(MIN_TAB_W, Math.min(DEFAULT_TAB_W, Math.floor(maxPossible)));
   }
   if (tabCount === 1) computed = DEFAULT_TAB_W;
 
-  const labelFontSize = computed < 70 ? 10 : 12;
+  const labelFontSize = computed < 80 ? 11 : 12;
 
   const onNewTab = () => {
     const newId = Date.now();
@@ -115,15 +120,18 @@ export default function NavbarTabs({
               style={{
                 flex: "0 0 auto",
                 width: `${computed}px`,
-                height: "90%", // a bit shorter for flick illusion
-                marginRight: "-12px", // overlap for angled edges
+                height: "88%",
+                marginRight: "-10px", // overlap effect
                 padding: `0 ${PAD_X}px`,
-                background: isActive ? "#fff" : "#e9ecef",
+                background: isActive ? "#fff" : "#e5e7eb",
                 border: "1px solid rgba(0,0,0,0.2)",
-                borderBottom: isActive ? "2px solid #2BD3C6" : "1px solid rgba(0,0,0,0.2)",
-                borderRadius: "8px 8px 0 0",
+                borderBottom: isActive
+                  ? "2px solid #2BD3C6"
+                  : "1px solid rgba(0,0,0,0.15)",
+                borderTopLeftRadius: 12,
+                borderTopRightRadius: 12,
                 clipPath:
-                  "polygon(12px 0, calc(100% - 12px) 0, 100% 100%, 0% 100%)", // angled flicks
+                  "polygon(10px 0, calc(100% - 10px) 0, 100% 100%, 0% 100%)", // angled flicks top + bottom
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -131,8 +139,23 @@ export default function NavbarTabs({
                 cursor: "pointer",
                 transition: "background 0.15s ease",
                 zIndex: isActive ? 2 : 1,
+                position: "relative",
               }}
             >
+              {/* Divider between tabs */}
+              {!isActive && idx > 0 && (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 6,
+                    bottom: 6,
+                    width: 1,
+                    background: "rgba(0,0,0,0.1)",
+                  }}
+                />
+              )}
+
               {/* Favicon + label */}
               <div
                 style={{
@@ -166,8 +189,12 @@ export default function NavbarTabs({
                     e.stopPropagation();
                     handleTabClose(tab.path);
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                  onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.opacity = "1")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.opacity = "0.7")
+                  }
                 />
               )}
             </div>
