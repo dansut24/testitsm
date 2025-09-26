@@ -179,24 +179,26 @@ const Layout = () => {
       </Box>
 
       {/* Mobile Sidebar Drawer */}
-      <SwipeableDrawer
-        anchor="left"
-        open={mobileSidebarOpen}
-        onClose={() => setMobileSidebarOpen(false)}
-        PaperProps={{ sx: { width: EXPANDED_WIDTH, backgroundColor: theme.palette.background.paper } }}
-      >
-        <Sidebar
-          pinned
-          onToggle={() => {}}
-          items={sidebarItems}
-          onItemClick={(label) => {
-            activateOrAddTab(label);
-            setMobileSidebarOpen(false);
-          }}
-          widthExpanded={EXPANDED_WIDTH}
-          widthCollapsed={COLLAPSED_WIDTH}
-        />
-      </SwipeableDrawer>
+      {isMobile && (
+        <SwipeableDrawer
+          anchor="left"
+          open={mobileSidebarOpen}
+          onClose={() => setMobileSidebarOpen(false)}
+          PaperProps={{ sx: { width: EXPANDED_WIDTH, backgroundColor: theme.palette.background.paper } }}
+        >
+          <Sidebar
+            pinned
+            onToggle={() => {}}
+            items={sidebarItems}
+            onItemClick={(label) => {
+              activateOrAddTab(label);
+              setMobileSidebarOpen(false);
+            }}
+            widthExpanded={EXPANDED_WIDTH}
+            widthCollapsed={COLLAPSED_WIDTH}
+          />
+        </SwipeableDrawer>
+      )}
 
       {/* Mobile Action Drawer */}
       <SwipeableDrawer
