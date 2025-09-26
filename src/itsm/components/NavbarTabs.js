@@ -8,10 +8,6 @@ import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
-/**
- * ChromeTabsNavbar with Sidebar
- */
-
 const REMOTE_FAVICONS = [
   "https://www.google.com/favicon.ico",
   "https://static.xx.fbcdn.net/rsrc.php/yo/r/iRmz9lCMBD2.ico",
@@ -79,55 +75,17 @@ const styles = `
     cursor: pointer;
   }
 
-  .sidebar {
-    position: fixed;
-    top: ${NAVBAR_HEIGHT}px;
-    left: 0;
-    bottom: 0;
-    width: 220px;
-    background: #ffffff;
-    border-right: 1px solid rgba(0,0,0,0.12);
-    transform: translateX(-100%);
-    transition: transform 0.3s ease, width 0.3s ease;
-    z-index: 2000;
-    overflow: hidden;
-  }
-  .sidebar.open { transform: translateX(0); }
-  .sidebar.pinned { transform: translateX(0); width: 48px; }
-  .sidebar.pinned:hover { width: 220px; }
-
-  .sidebar .nav-item {
-    padding: 12px 16px;
-    cursor: pointer;
-    border-bottom: 1px solid rgba(0,0,0,0.08);
-    white-space: nowrap;
-  }
-  .sidebar .nav-item:hover { background: #f0f0f0; }
-
-  .sidebar.pinned .nav-item span {
-    display: none;
-  }
-  .sidebar.pinned:hover .nav-item span {
-    display: inline;
-  }
-
   .ctn-scroll { padding-right:160px; padding-left:60px; }
 
   .main-content {
     margin-top: ${NAVBAR_HEIGHT}px;
     padding: 20px;
-    transition: margin-left 0.3s ease;
   }
-  .main-content.pushed { margin-left: 220px; }
-  .main-content.pushed-collapsed { margin-left: 48px; }
 
   @media (max-width: 600px) {
     .ctn-bar { padding: 0 4px; }
     .ctn-scroll { -webkit-overflow-scrolling: touch; }
     .chrome-tab-title { font-size: 12px; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
-    .sidebar { width: 180px; }
-    .sidebar.pinned:hover { width: 180px; }
-    .main-content.pushed { margin-left: 180px; }
   }
 `;
 
@@ -140,12 +98,8 @@ export default function ChromeTabsNavbar() {
     { id: "t-docs", title: "Docs", favicon: REMOTE_FAVICONS[1] },
     { id: "t-pinned", title: "Pinned", isCloseIconVisible: false, favicon: REMOTE_FAVICONS[2] },
   ]);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarPinned, setSidebarPinned] = useState(false);
 
   const scrollRef = useRef(null);
-
-  const toggleSidebar = () => setSidebarOpen((prev) => !prev);
 
   const scrollElementIntoView = (el, opts = { inline: "center" }) => {
     if (el) {
@@ -153,7 +107,10 @@ export default function ChromeTabsNavbar() {
     }
   };
 
-  const addTab = (title = `New Tab ${++nextId}`, favicon = REMOTE_FAVICONS[nextId % REMOTE_FAVICONS.length]) => {
+  const addTab = (
+    title = `New Tab ${++nextId}`,
+    favicon = REMOTE_FAVICONS[nextId % REMOTE_FAVICONS.length]
+  ) => {
     const newId = `tab-${nextId}`;
     setTabs((prev) => [
       ...prev.map((t) => ({ ...t, active: false })),
@@ -167,44 +124,13 @@ export default function ChromeTabsNavbar() {
     });
   };
 
-  const activateOrAddTab = (title, favicon) => {
-    setTabs((prev) => {
-      const existing = prev.find((t) => t.title === title);
-      if (existing) {
-        return prev.map((t) => ({ ...t, active: t.title === title }));
-      } else {
-        const newId = `tab-${++nextId}`;
-        return [
-          ...prev.map((t) => ({ ...t, active: false })),
-          { id: newId, title, favicon, active: true },
-        ];
-      }
-    });
-    requestAnimationFrame(() => {
-      const el = scrollRef.current;
-      if (!el) return;
-      const activeTab = el.querySelector(".chrome-tab.chrome-tab-active");
-      if (activeTab) scrollElementIntoView(activeTab, { inline: "center" });
-    });
-  };
-
   const onTabActive = (id) => {
     setTabs((prev) => prev.map((t) => ({ ...t, active: t.id === id })));
     requestAnimationFrame(() => {
       const el = scrollRef.current;
       if (!el) return;
       const activeTab = el.querySelector(".chrome-tab.chrome-tab-active");
-      if (activeTab) {
-        const rect = activeTab.getBoundingClientRect();
-        const containerRect = el.getBoundingClientRect();
-        if (rect.left < containerRect.left + 50) {
-          el.scrollBy({ left: -150, behavior: "smooth" });
-        } else if (rect.right > containerRect.right - 50) {
-          el.scrollBy({ left: 150, behavior: "smooth" });
-        } else {
-          scrollElementIntoView(activeTab, { inline: "center" });
-        }
-      }
+      if (activeTab) scrollElementIntoView(activeTab, { inline: "center" });
     });
   };
 
@@ -235,13 +161,17 @@ export default function ChromeTabsNavbar() {
     <>
       <style>{styles}</style>
       <div className="navbar-container">
-        {/* Left Logo (acts as sidebar toggle) */}
-        <div className="navbar-logo" onClick={toggleSidebar}>
-          <img src="https://www.bing.com/sa/simg/favicon-2x.ico" alt="Logo" style={{ width: 28, height: 28 }} />
+        {/* Left Logo */}
+        <div className="navbar-logo">
+          <img
+            src="https://www.bing.com/sa/simg/favicon-2x.ico"
+            alt="Logo"
+            style={{ width: 28, height: 28 }}
+          />
         </div>
 
         {/* Tabs */}
-        <div className={"ctn-bar" + (darkMode ? " dark" : "")} style={{ flex: 1 }}>        
+        <div className={"ctn-bar" + (darkMode ? " dark" : "")} style={{ flex: 1 }}>
           <div ref={scrollRef} className="ctn-scroll">
             <Tabs
               darkMode={darkMode}
@@ -256,36 +186,20 @@ export default function ChromeTabsNavbar() {
 
         {/* Right Icons */}
         <div className="navbar-icons">
-          <AddIcon onClick={() => addTab()} style={{ cursor: "pointer", fontSize: 28, fontWeight: "bold" }} />
+          <AddIcon
+            onClick={() => addTab()}
+            style={{ cursor: "pointer", fontSize: 28, fontWeight: "bold" }}
+          />
           <SearchIcon style={{ cursor: "pointer" }} />
           <NotificationsIcon style={{ cursor: "pointer" }} />
           <AccountCircleIcon style={{ cursor: "pointer" }} />
         </div>
       </div>
 
-      {/* Sidebar */}
-      <div className={`sidebar${sidebarOpen || sidebarPinned ? " open" : ""}${sidebarPinned ? " pinned" : ""}`}>
-        <div>
-          <div className="nav-item" onClick={() => activateOrAddTab("Home", REMOTE_FAVICONS[0])}>🏠 <span>Home</span></div>
-          <div className="nav-item" onClick={() => activateOrAddTab("Profile", REMOTE_FAVICONS[1])}>👤 <span>Profile</span></div>
-          <div className="nav-item" onClick={() => activateOrAddTab("Settings", REMOTE_FAVICONS[2])}>⚙️ <span>Settings</span></div>
-          <div className="nav-item" onClick={() => activateOrAddTab("Help", REMOTE_FAVICONS[3])}>❓ <span>Help</span></div>
-        </div>
-      </div>
-
-      {/* Test toggle for always-visible sidebar */}
-      <div style={{ marginTop: NAVBAR_HEIGHT + 10, padding: "0 20px" }}>
-        <label>
-          <input type="checkbox" checked={sidebarPinned} onChange={(e) => setSidebarPinned(e.target.checked)} />
-          Always show sidebar (collapsed to 48px, expand on hover)
-        </label>
-      </div>
-
       {/* Main Content */}
-      <div className={`main-content${sidebarPinned ? " pushed-collapsed" : sidebarOpen ? " pushed" : ""}`}>
+      <div className="main-content">
         <h1>Main Content Area</h1>
-        <p>This is some placeholder content to demonstrate how the sidebar interacts with the main view.</p>
-        <p>Open the sidebar with the logo or pin it using the checkbox above. When pinned, it collapses to 48px and expands on hover.</p>
+        <p>This is some placeholder content to demonstrate layout without a sidebar.</p>
       </div>
     </>
   );
