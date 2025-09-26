@@ -25,10 +25,10 @@ const styles = `
     left: 0;
     right: 0;
     bottom: 0;
-    height: 8px; /* increased to cut into curve */
+    height: 8px; /* cuts into curve */
     background: #ffffff;
     pointer-events: none;
-    z-index: 9999; /* ensure it sits above the tab curves */
+    z-index: 9999;
   }
 
   .chrome-tabs-bottom-bar { display: none !important; }
@@ -40,10 +40,17 @@ const styles = `
   .chrome-tabs { background:transparent !important; height:100%; }
   .chrome-tab { 
     background:transparent !important; 
-    height:48px !important; /* match navbar height */
+    height:48px !important;
     margin-top:0 !important; 
     box-shadow:none !important; 
     border-top:none !important;
+  }
+
+  /* Tab dividers: shorten them so they don’t clash with underline */
+  .chrome-tab-divider {
+    top: 8px !important;   /* move divider down slightly */
+    bottom: 8px !important; /* make it shorter */
+    opacity: 0.6;          /* optional: soften it a bit */
   }
 
   .navbar-icons {
