@@ -38,6 +38,7 @@ const styles = `
   .ctn-scroll::-webkit-scrollbar { height:6px; }
 
   .chrome-tabs { background:transparent !important; height:100%; }
+
   .chrome-tab { 
     background:transparent !important; 
     height:48px !important; /* match navbar height */
@@ -46,9 +47,14 @@ const styles = `
     border-top:none !important;
   }
 
-  .chrome-tab-background { 
-    box-shadow:none !important; 
-    border-top:none !important; 
+  /* flatten edges completely */
+  .chrome-tab-shape,
+  .chrome-tab-background {
+    clip-path: none !important;
+    border-radius: 0 !important;
+    background: #f8f9fa !important;
+    box-shadow: none !important;
+    border: none !important;
   }
 
   .navbar-icons {
@@ -79,6 +85,7 @@ const styles = `
     .chrome-tab-title { font-size: 12px; text-align:center; overflow:hidden; text-overflow:ellipsis; }
   }
 `;
+
 export default function NavbarTabs({
   tabs,
   tabIndex,
