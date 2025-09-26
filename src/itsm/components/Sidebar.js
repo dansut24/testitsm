@@ -20,15 +20,17 @@ const Sidebar = ({ pinned, onToggle, items, onItemClick, widthExpanded, widthCol
         transition: "width 0.3s ease",
         backgroundColor: "#fff",
       }}
-    >
-      {/* Logo toggle */}
+    >      {/* Logo toggle */}
       <Box
         sx={{
           display: "flex",
           alignItems: "center",
           justifyContent: pinned ? "space-between" : "center",
-          p: 1,
-          borderBottom: "1px solid rgba(0,0,0,0.12)",
+          height: "48px", // match navbar height
+          px: 1,
+          backgroundColor: "#f8f9fa", // match Navbar background
+          borderBottom: "1px solid rgba(0,0,0,0.12)", // keep only bottom border
+          borderRight: "none", // remove right border so it blends with navbar
         }}
       >
         <IconButton onClick={onToggle}>
