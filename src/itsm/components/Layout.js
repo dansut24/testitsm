@@ -1,13 +1,22 @@
 // Layout.js
 import React, { useState, useEffect } from "react";
-import { Box, useTheme, useMediaQuery, SwipeableDrawer, Typography } from "@mui/material";
+import {
+  Box,
+  useTheme,
+  useMediaQuery,
+  SwipeableDrawer,
+  Typography,
+} from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
+import Sidebar from "./Sidebar";
 
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
+const NAVBAR_HEIGHT = 34;
+const NAVBAR_PADDING_TOP = 6;
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 48;
 
@@ -42,10 +51,11 @@ const Layout = () => {
   });
 
   // Sidebar state
-  const [sidebarPinned, setSidebarPinned] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarPinned, setSidebarPinned] = useState(false);
 
   // Mobile drawer state
-  const [drawerType, setDrawerType] = useState(null);
+  const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile"
 
   // Update tabs on route change
   useEffect(() => {
@@ -91,14 +101,22 @@ const Layout = () => {
     setTabs(tabsReordered);
   };
 
-  const activateOrAddTab = (label) => {
+  const handleLogoClick = () => {
+    if (isMobile) {
+      setSidebarOpen((prev) => !prev);
+    } else {
+      setSidebarPinned((prev) => !prev);
+    }
+  };
+
+  const activateOrAddTab = (label, faviconIndex) => {
     const existing = tabs.find((t) => t.label === label);
     if (existing) {
+      setTabs((prev) => prev.map((t) => ({ ...t, active: t.label === label })));
       setTabIndex(tabs.findIndex((t) => t.label === label));
-      navigate(existing.path);
     } else {
       const newTab = { label, path: `/${label.toLowerCase().replace(/\s+/g, "-")}` };
-      const newTabs = [...tabs, newTab];
+      const newTabs = [...tabs.map((t) => ({ ...t, active: false })), newTab];
       setTabs(newTabs);
       setTabIndex(newTabs.length - 1);
       navigate(newTab.path);
@@ -109,28 +127,14 @@ const Layout = () => {
 
   return (
     <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
-      {/* Sidebar + NavbarTabs wrapper */}
-      <Box
-        sx={{
-          width: sidebarWidth,
-          transition: "width 0.3s ease",
-          flexShrink: 0,
-          display: { xs: "none", sm: "flex" }, // hide sidebar completely on mobile
-          flexDirection: "column",
-        }}
-      >
-        <NavbarTabs
-          tabs={tabs}
-          tabIndex={tabIndex}
-          handleTabChange={handleTabChange}
-          handleTabClose={handleTabClose}
-          handleTabReorder={handleTabReorder}
-          isMobile={isMobile}
-          activateOrAddTab={activateOrAddTab}
+      {/* Sidebar (desktop or toggleable on mobile) */}
+      {!isMobile && (
+        <Sidebar
+          sidebarOpen={sidebarOpen}
           sidebarPinned={sidebarPinned}
-          setSidebarPinned={setSidebarPinned}
+          activateOrAddTab={activateOrAddTab}
         />
-      </Box>
+      )}
 
       {/* Main area */}
       <Box
@@ -140,9 +144,31 @@ const Layout = () => {
           flexDirection: "column",
           minWidth: 0,
           height: "100vh",
+          position: "relative",
+          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
           transition: "margin-left 0.3s ease",
         }}
       >
+        {/* Sticky Navbar + Tabs */}
+        <Box
+          sx={{
+            position: "sticky",
+            top: 0,
+            zIndex: 1200,
+            backgroundColor: theme.palette.background.paper,
+          }}
+        >
+          <NavbarTabs
+            tabs={tabs}
+            tabIndex={tabIndex}
+            handleTabChange={handleTabChange}
+            handleTabClose={handleTabClose}
+            handleTabReorder={handleTabReorder}
+            isMobile={isMobile}
+            onLogoClick={handleLogoClick}
+          />
+        </Box>
+
         {/* Content */}
         <Box
           component="main"
@@ -151,7 +177,7 @@ const Layout = () => {
             overflowY: "auto",
             overflowX: "hidden",
             px: 1,
-            pb: isMobile ? 7 : 0,
+            pb: isMobile ? 7 : 0, // leave room for bottom bar on mobile
           }}
         >
           <Outlet />
@@ -181,7 +207,7 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Mobile drawers */}
+      {/* Swipeable Drawers for mobile actions */}
       <SwipeableDrawer
         anchor="bottom"
         open={Boolean(drawerType)}
@@ -192,7 +218,9 @@ const Layout = () => {
         }}
       >
         {drawerType === "search" && <Typography variant="h6">Search (mobile drawer)</Typography>}
-        {drawerType === "notifications" && <Typography variant="h6">Notifications (mobile drawer)</Typography>}
+        {drawerType === "notifications" && (
+          <Typography variant="h6">Notifications (mobile drawer)</Typography>
+        )}
         {drawerType === "profile" && <Typography variant="h6">Profile (mobile drawer)</Typography>}
       </SwipeableDrawer>
     </Box>
