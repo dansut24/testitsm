@@ -11,7 +11,7 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
 const NAVBAR_HEIGHT = 44;
 const DEFAULT_TAB_W = 120;
-const MIN_TAB_W = 90; // keep enough room for favicon + text
+const MIN_TAB_W = 90;
 
 export default function NavbarTabs({
   tabs = [],
@@ -21,20 +21,27 @@ export default function NavbarTabs({
   handleTabReorder = () => {},
   isMobile = false,
   onLogoClick = () => {},
+  setTabs = () => {},
 }) {
-  // Always keep Dashboard at front, but shrink with others
+  // Ensure one tab is always pinned
   const ensuredTabs = useMemo(() => {
-    const rest = tabs.filter((t) => t.id !== "dashboard" && t.path !== "/dashboard");
-    return [
-      {
-        id: "dashboard",
-        path: "/dashboard",
-        title: "Dashboard",
-        pinned: true, // can’t be closed
-        favicon: "/favicon.ico",
-      },
-      ...rest,
-    ];
+    if (!tabs.length) {
+      return [
+        {
+          id: "dashboard",
+          path: "/dashboard",
+          title: "Dashboard",
+          pinned: true,
+          favicon: "/favicon.ico",
+        },
+      ];
+    }
+
+    // Ensure first tab is pinned (dashboard if present, otherwise first tab)
+    return tabs.map((t, i) => ({
+      ...t,
+      pinned: i === 0,
+    }));
   }, [tabs]);
 
   const sinmTabs = ensuredTabs.map((t, i) => ({
@@ -62,7 +69,7 @@ export default function NavbarTabs({
     if (stripRef.current) setStripW(stripRef.current.clientWidth);
   }, [sinmTabs.length]);
 
-  // Dynamic width calc
+  // Dynamic tab width
   const count = sinmTabs.length || 1;
   let computed = DEFAULT_TAB_W;
   if (stripW > 0) {
@@ -92,7 +99,7 @@ export default function NavbarTabs({
         borderBottom: "1px solid rgba(0,0,0,0.15)",
       }}
     >
-      {/* Logo/menu */}
+      {/* Logo/Menu */}
       <button
         onClick={onLogoClick}
         style={{
@@ -109,7 +116,7 @@ export default function NavbarTabs({
         <MenuIcon />
       </button>
 
-      {/* Tab strip */}
+      {/* Tab Strip */}
       <div
         ref={stripRef}
         style={{
@@ -118,7 +125,6 @@ export default function NavbarTabs({
           height: "100%",
           display: "flex",
           alignItems: "flex-end",
-          position: "relative",
           ["--tabWidth"]: `${computed}px`,
         }}
       >
@@ -130,8 +136,17 @@ export default function NavbarTabs({
             handleTabChange(null, idx, ensuredTabs[idx]?.path || id);
           }}
           onTabClose={(id) => {
-            if (id === "dashboard") return;
             const idx = sinmTabs.findIndex((t) => t.id === id);
+
+            if (idx === 0) {
+              // If first (pinned) tab is closed, repin the next one
+              const updated = [...ensuredTabs];
+              updated.splice(idx, 1);
+              if (updated.length > 0) updated[0].pinned = true;
+              setTabs(updated);
+              return;
+            }
+
             handleTabClose(ensuredTabs[idx]?.path || id);
           }}
           onTabReorder={(from, to) => handleTabReorder(from, to)}
@@ -144,8 +159,6 @@ export default function NavbarTabs({
             align-items: flex-end;
             height: 100%;
           }
-
-          /* Tabs: fixed equal width */
           .chrome-tabs .chrome-tab {
             flex: 0 0 var(--tabWidth) !important;
             max-width: var(--tabWidth) !important;
@@ -157,22 +170,21 @@ export default function NavbarTabs({
             clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 100%, 0% 100%);
             box-sizing: border-box;
           }
-
-          /* Title centered properly */
           .chrome-tabs .chrome-tab .chrome-tab-title {
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 12px;
-            height: 100%;
             line-height: 1.2;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             padding: 0 6px;
           }
-
-          /* Divider */
+          .chrome-tabs .chrome-tab .chrome-tab-favicon {
+            margin-right: 6px;
+            flex-shrink: 0;
+          }
           .chrome-tabs .chrome-tab:not(.chrome-tab-active)::before {
             content: "";
             position: absolute;
@@ -183,8 +195,6 @@ export default function NavbarTabs({
             background: rgba(0,0,0,0.1);
             pointer-events: none;
           }
-
-          /* Close button hover */
           .chrome-tabs .chrome-tab .chrome-tab-close {
             width: 14px;
             height: 14px;
@@ -199,8 +209,6 @@ export default function NavbarTabs({
           .chrome-tabs .chrome-tab .chrome-tab-close svg {
             width: 10px; height: 10px;
           }
-
-          /* Active tab highlight */
           .chrome-tabs .chrome-tab.chrome-tab-active {
             background: #fff;
             border-bottom: 2px solid #2BD3C6;
@@ -208,7 +216,7 @@ export default function NavbarTabs({
         `}</style>
       </div>
 
-      {/* Right icons */}
+      {/* Right Icons */}
       <div
         style={{
           display: "flex",
