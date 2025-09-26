@@ -25,10 +25,10 @@ const styles = `
     left: 0;
     right: 0;
     bottom: 0;
-    height: 4px;
+    height: 8px; /* increased to cut into curve */
     background: #ffffff;
     pointer-events: none;
-    z-index: 999;
+    z-index: 9999; /* ensure it sits above the tab curves */
   }
 
   .chrome-tabs-bottom-bar { display: none !important; }
@@ -38,30 +38,12 @@ const styles = `
   .ctn-scroll::-webkit-scrollbar { height:6px; }
 
   .chrome-tabs { background:transparent !important; height:100%; }
-
   .chrome-tab { 
-    background:#f8f9fa !important; 
+    background:transparent !important; 
     height:48px !important; /* match navbar height */
     margin-top:0 !important; 
     box-shadow:none !important; 
     border-top:none !important;
-    border-bottom-left-radius: 8px !important;
-    border-bottom-right-radius: 8px !important;
-    overflow: visible !important; /* allow pseudo to extend */
-    position: relative;
-  }
-
-  /* fake dip into underline */
-  .chrome-tab::after {
-    content: "";
-    position: absolute;
-    bottom: -4px; /* overlap into underline */
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: #f8f9fa; /* same as navbar background */
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
   }
 
   .navbar-icons {
@@ -78,7 +60,7 @@ const styles = `
   }
 
   .ctn-scroll { padding-right:160px; }
-  
+
   @media (max-width: 600px) {
     .ctn-scroll { 
       overflow-x:hidden; 
