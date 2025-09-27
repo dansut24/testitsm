@@ -24,12 +24,12 @@ import { useNavigate } from "react-router-dom";
 import { getSlaDueDate, getSlaStatus } from "../../common/utils/slaUtils";
 import { supabase } from "../../common/utils/supabaseClient";
 
-// 🔹 Generate 40 test teams with fake members
-const TEAMS = Array.from({ length: 40 }, (_, i) => ({
+// 🔹 Generate 10 test teams with fake members (keep smaller for visual clarity)
+const TEAMS = Array.from({ length: 10 }, (_, i) => ({
   name: `Team ${i + 1}`,
   members: Array.from({ length: 3 }, (__, j) => ({
     name: `User${i + 1}-${j + 1}`,
-    incidents: Math.floor(Math.random() * 6) + 1, // random 1–6
+    incidents: Math.floor(Math.random() * 6) + 1,
   })),
 }));
 
@@ -70,16 +70,6 @@ const Incidents = () => {
     setPreviewOpen(false);
   };
 
-  const applyTeamFilter = (teamName) => {
-    setFilterContext(`${teamName} Incidents`);
-    setFilteredIncidents(incidents.filter((i) => i.team === teamName));
-  };
-
-  const applyUserFilter = (userName) => {
-    setFilterContext(`${userName}'s Incidents`);
-    setFilteredIncidents(incidents.filter((i) => i.assigned_to === userName));
-  };
-
   const applyStatusFilter = (status) => {
     setActiveFilter(status);
     if (status === "all") {
@@ -115,16 +105,26 @@ const Incidents = () => {
   };
 
   return (
-    <Box sx={{ display: "flex", width: "100%", height: "100%" }}>
+    <Box
+      sx={{
+        display: "flex",
+        width: "100%",
+        height: "100%",
+        bgcolor: "background.default",
+        p: 2,
+        gap: 2,
+      }}
+    >
       {/* Teams Sidebar */}
       {teamsOpen && (
-        <Box
+        <Paper
+          elevation={2}
           sx={{
             width: 260,
-            bgcolor: "background.paper",
-            borderRight: "1px solid #ddd",
+            borderRadius: 3,
             display: "flex",
             flexDirection: "column",
+            overflow: "hidden",
           }}
         >
           <Box
@@ -134,6 +134,7 @@ const Incidents = () => {
               alignItems: "center",
               p: 2,
               borderBottom: "1px solid #eee",
+              bgcolor: "background.paper",
             }}
           >
             <Typography variant="subtitle1" fontWeight="bold">
@@ -152,7 +153,12 @@ const Incidents = () => {
               return (
                 <Paper
                   key={team.name}
-                  sx={{ mb: 2, borderRadius: 2, border: "1px solid #eee" }}
+                  sx={{
+                    mb: 2,
+                    borderRadius: 2,
+                    border: "1px solid #eee",
+                    bgcolor: "background.default",
+                  }}
                 >
                   <Box
                     sx={{
@@ -185,9 +191,8 @@ const Incidents = () => {
                             justifyContent: "space-between",
                             mb: 1,
                             cursor: "pointer",
-                            "&:hover": { bgcolor: "action.hover" },
+                            "&:hover": { bgcolor: "action.hover", borderRadius: 1 },
                           }}
-                          onClick={() => applyUserFilter(m.name)}
                         >
                           <Stack direction="row" spacing={1} alignItems="center">
                             <Avatar sx={{ width: 28, height: 28 }}>{m.name.charAt(0)}</Avatar>
@@ -202,11 +207,20 @@ const Incidents = () => {
               );
             })}
           </Box>
-        </Box>
+        </Paper>
       )}
 
-      {/* Main Content */}
-      <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+      {/* Incidents Panel */}
+      <Paper
+        elevation={2}
+        sx={{
+          flex: 1,
+          borderRadius: 3,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+      >
         {/* Header row */}
         <Box
           sx={{
@@ -215,7 +229,7 @@ const Incidents = () => {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            borderBottom: "1px solid #ccc",
+            borderBottom: "1px solid #eee",
             bgcolor: "background.paper",
           }}
         >
@@ -244,34 +258,20 @@ const Incidents = () => {
 
         {/* Status Filters */}
         <Stack direction="row" spacing={1} sx={{ p: 2 }}>
-          <Button
-            size="small"
-            variant={activeFilter === "all" ? "contained" : "outlined"}
-            onClick={() => applyStatusFilter("all")}
-          >
-            All
-          </Button>
-          <Button
-            size="small"
-            variant={activeFilter === "open" ? "contained" : "outlined"}
-            onClick={() => applyStatusFilter("open")}
-          >
-            Open
-          </Button>
-          <Button
-            size="small"
-            variant={activeFilter === "closed" ? "contained" : "outlined"}
-            onClick={() => applyStatusFilter("closed")}
-          >
-            Closed
-          </Button>
-          <Button
-            size="small"
-            variant={activeFilter === "onhold" ? "contained" : "outlined"}
-            onClick={() => applyStatusFilter("onhold")}
-          >
-            On Hold
-          </Button>
+          {["all", "open", "closed", "onhold"].map((s) => (
+            <Button
+              key={s}
+              size="small"
+              variant={activeFilter === s ? "contained" : "outlined"}
+              onClick={() => applyStatusFilter(s)}
+            >
+              {s === "all"
+                ? "All"
+                : s === "onhold"
+                ? "On Hold"
+                : s.charAt(0).toUpperCase() + s.slice(1)}
+            </Button>
+          ))}
         </Stack>
 
         {/* Incidents List */}
@@ -282,9 +282,10 @@ const Incidents = () => {
               sx={{
                 mb: 2,
                 p: 1.5,
-                borderRadius: 1.5,
+                borderRadius: 2,
                 boxShadow: "0 1px 4px rgba(20,40,80,0.05)",
                 cursor: "pointer",
+                bgcolor: "background.default",
               }}
               onClick={() => navigate(`/incidents/${incident.id}`)}
             >
@@ -314,7 +315,7 @@ const Incidents = () => {
             </Paper>
           ))}
         </Box>
-      </Box>
+      </Paper>
 
       <ExportPreviewModal
         open={previewOpen}
