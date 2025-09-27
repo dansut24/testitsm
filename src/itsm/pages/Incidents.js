@@ -9,13 +9,14 @@ import {
   Menu,
   MenuItem,
   Avatar,
-  Badge,
   Stack,
-  Divider,
   Button,
+  Collapse,
+  Divider,
 } from "@mui/material";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
 import MenuIcon from "@mui/icons-material/Menu";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import { exportToCSV, exportToXLSX, exportToPDF } from "../../common/utils/exportUtils";
 import ExportPreviewModal from "../components/ExportPreviewModal";
@@ -23,24 +24,14 @@ import { useNavigate } from "react-router-dom";
 import { getSlaDueDate, getSlaStatus } from "../../common/utils/slaUtils";
 import { supabase } from "../../common/utils/supabaseClient";
 
-// Mock teams with members
-const TEAMS = [
-  {
-    name: "Network Ops",
-    members: [
-      { name: "Alice", incidents: 3 },
-      { name: "Bob", incidents: 2 },
-      { name: "Charlie", incidents: 1 },
-    ],
-  },
-  {
-    name: "Service Desk",
-    members: [
-      { name: "David", incidents: 5 },
-      { name: "Ella", incidents: 2 },
-    ],
-  },
-];
+// 🔹 Generate 40 test teams with fake members
+const TEAMS = Array.from({ length: 40 }, (_, i) => ({
+  name: `Team ${i + 1}`,
+  members: Array.from({ length: 3 }, (__, j) => ({
+    name: `User${i + 1}-${j + 1}`,
+    incidents: Math.floor(Math.random() * 6) + 1, // random 1–6
+  })),
+}));
 
 const Incidents = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -52,8 +43,10 @@ const Incidents = () => {
   const [incidents, setIncidents] = useState([]);
   const [filteredIncidents, setFilteredIncidents] = useState([]);
   const [teamsOpen, setTeamsOpen] = useState(true);
-  const [activeFilter, setActiveFilter] = useState("all"); // open | closed | onhold
+  const [activeFilter, setActiveFilter] = useState("all");
   const [filterContext, setFilterContext] = useState("All Incidents");
+
+  const [expandedTeams, setExpandedTeams] = useState({});
 
   const navigate = useNavigate();
 
@@ -114,6 +107,13 @@ const Incidents = () => {
     fetchIncidents();
   }, []);
 
+  const toggleTeamExpand = (teamName) => {
+    setExpandedTeams((prev) => ({
+      ...prev,
+      [teamName]: !prev[teamName],
+    }));
+  };
+
   return (
     <Box sx={{ display: "flex", width: "100%", height: "100%" }}>
       {/* Teams Sidebar */}
@@ -145,40 +145,62 @@ const Incidents = () => {
           </Box>
 
           <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
-            {TEAMS.map((team) => (
-              <Paper
-                key={team.name}
-                sx={{ mb: 2, p: 1.5, borderRadius: 2, border: "1px solid #eee" }}
-              >
-                <Box
-                  sx={{ display: "flex", justifyContent: "space-between", mb: 1, cursor: "pointer" }}
-                  onClick={() => applyTeamFilter(team.name)}
-                >
-                  <Typography variant="body1" fontWeight="bold">
-                    {team.name}
-                  </Typography>
-                  <Chip
-                    label={team.members.reduce((a, m) => a + m.incidents, 0)}
-                    size="small"
-                    color="primary"
-                  />
-                </Box>
+            {TEAMS.map((team) => {
+              const totalIncidents = team.members.reduce((a, m) => a + m.incidents, 0);
+              const expanded = expandedTeams[team.name] || false;
 
-                {/* Avatars */}
-                <Stack direction="row" spacing={1}>
-                  {team.members.map((m) => (
-                    <Badge key={m.name} badgeContent={m.incidents} color="secondary" overlap="circular">
-                      <Avatar
-                        sx={{ width: 32, height: 32, cursor: "pointer" }}
-                        onClick={() => applyUserFilter(m.name)}
-                      >
-                        {m.name.charAt(0)}
-                      </Avatar>
-                    </Badge>
-                  ))}
-                </Stack>
-              </Paper>
-            ))}
+              return (
+                <Paper
+                  key={team.name}
+                  sx={{ mb: 2, borderRadius: 2, border: "1px solid #eee" }}
+                >
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => toggleTeamExpand(team.name)}
+                  >
+                    <Typography variant="body1" fontWeight="bold">
+                      {team.name}
+                    </Typography>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Chip label={totalIncidents} size="small" color="primary" />
+                      {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                    </Box>
+                  </Box>
+
+                  <Collapse in={expanded}>
+                    <Divider />
+                    <Box sx={{ p: 1.5 }}>
+                      {team.members.map((m) => (
+                        <Box
+                          key={m.name}
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            mb: 1,
+                            cursor: "pointer",
+                            "&:hover": { bgcolor: "action.hover" },
+                          }}
+                          onClick={() => applyUserFilter(m.name)}
+                        >
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Avatar sx={{ width: 28, height: 28 }}>{m.name.charAt(0)}</Avatar>
+                            <Typography variant="body2">{m.name}</Typography>
+                          </Stack>
+                          <Chip label={m.incidents} size="small" color="secondary" />
+                        </Box>
+                      ))}
+                    </Box>
+                  </Collapse>
+                </Paper>
+              );
+            })}
           </Box>
         </Box>
       )}
@@ -268,17 +290,12 @@ const Incidents = () => {
             >
               <Typography sx={{ fontSize: "0.9rem", color: "text.secondary", mb: 1 }}>
                 <strong>#{incident.id}</strong> • {incident.category}
-                <Chip
-                  label={incident.status}
-                  size="small"
-                  sx={{ ml: 1, fontSize: "0.75em", height: 20 }}
-                />
+                <Chip label={incident.status} size="small" sx={{ ml: 1, height: 20 }} />
                 <Chip
                   label={getSlaStatus(incident.slaDueDate)}
                   size="small"
                   sx={{
                     ml: 1,
-                    fontSize: "0.7em",
                     height: 20,
                     bgcolor:
                       getSlaStatus(incident.slaDueDate) === "Overdue" ? "#ffe0e0" : "#e7f7ed",
