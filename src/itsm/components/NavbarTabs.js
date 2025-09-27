@@ -58,15 +58,22 @@ export default function NavbarTabs({
       box-shadow:none !important; 
       border-top:none !important; 
     }
-
-    /* Move the tab divider line upward so it isn’t hidden under the white bar */
+    
+    /* Keep the nice thin dividers */
     .chrome-tab-divider {
-      top: 2px !important;       /* lift it higher */
-      bottom: auto !important;   /* stop it from stretching to bottom */
-      height: calc(100% - 10px) !important; /* shorter so it clears the white ::after */
+      top: 4px !important;
+      bottom: 4px !important;
       opacity: 0.6;
     }
-
+    
+    /* Remove the thick seams that overlap with the white bottom bar */
+    .chrome-tab-background::before,
+    .chrome-tab-background::after {
+      background: transparent !important; /* kill the thick edges */
+      border: none !important;
+      box-shadow: none !important;
+    }
+    
     .navbar-icons {
       position:absolute;
       right:8px;
