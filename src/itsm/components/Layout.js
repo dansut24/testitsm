@@ -36,20 +36,21 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Tabs
   const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
 
-  // Sidebar settings
-  const [sidebarPinned, setSidebarPinned] = useState(true);
+  // Sidebar mode & state
   const [sidebarMode, setSidebarMode] = useState(
-    localStorage.getItem("sidebarMode") || "pinned"
+    localStorage.getItem("sidebarMode") || "pinned" // "pinned" | "collapsible" | "hidden"
   );
+  const [sidebarPinned, setSidebarPinned] = useState(true); // used only in "collapsible"
 
   // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null);
 
-  // Route sync
+  // Sync tabs with route
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -61,7 +62,8 @@ const Layout = () => {
     } else {
       setTabIndex(tabs.findIndex((t) => t.path === currentPath));
     }
-  }, [location.pathname]); // eslint-disable-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   useEffect(() => {
     sessionStorage.setItem("tabs", JSON.stringify(tabs));
@@ -75,10 +77,9 @@ const Layout = () => {
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return; // Dashboard cannot be closed
+    if (closingIndex === 0) return; // keep Dashboard
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
-
     if (location.pathname === tabId) {
       const fallbackIndex = Math.max(0, closingIndex - 1);
       navigate(newTabs[fallbackIndex]?.path || "/dashboard");
@@ -109,6 +110,14 @@ const Layout = () => {
     { label: "Settings", icon: <SettingsIcon /> },
   ];
 
+  // Sidebar width used by the Sidebar component (not by margins)
+  const currentSidebarWidth =
+    sidebarMode === "pinned"
+      ? EXPANDED_WIDTH
+      : sidebarMode === "collapsible"
+      ? sidebarPinned ? EXPANDED_WIDTH : COLLAPSED_WIDTH
+      : 0;
+
   return (
     <Box
       sx={{
@@ -119,11 +128,13 @@ const Layout = () => {
         bgcolor: theme.palette.background.default,
       }}
     >
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar (in-flow). Only one sidebar is ever rendered in desktop. */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
-          pinned={sidebarPinned}
-          onToggle={() => setSidebarPinned((p) => !p)}
+          pinned={sidebarMode === "pinned" ? true : sidebarPinned}
+          onToggle={() => {
+            if (sidebarMode === "collapsible") setSidebarPinned((p) => !p);
+          }}
           items={sidebarItems}
           onItemClick={activateOrAddTab}
           widthExpanded={EXPANDED_WIDTH}
@@ -131,7 +142,8 @@ const Layout = () => {
         />
       )}
 
-      {/* Main Area */}
+      {/* Main Area — NO margin-left here (prevents the double whitespace). 
+          The Sidebar sits in the same flex row and naturally pushes this over. */}
       <Box
         sx={{
           flex: 1,
@@ -139,16 +151,9 @@ const Layout = () => {
           flexDirection: "column",
           minWidth: 0,
           height: "100vh",
-          transition: "margin-left 0.3s ease",
-          ml:
-            !isMobile && sidebarMode === "pinned"
-              ? `${EXPANDED_WIDTH}px`
-              : !isMobile && sidebarMode === "collapsible"
-              ? `${sidebarPinned ? EXPANDED_WIDTH : COLLAPSED_WIDTH}px`
-              : 0,
+          transition: "width 0.3s ease", // smooth reflow when sidebar width changes
         }}
       >
-        {/* Navbar Tabs */}
         <NavbarTabs
           tabs={tabs}
           tabIndex={tabIndex}
@@ -158,7 +163,6 @@ const Layout = () => {
           isMobile={isMobile}
         />
 
-        {/* Main Content */}
         <Box
           component="main"
           sx={{
@@ -166,7 +170,7 @@ const Layout = () => {
             overflowY: "auto",
             overflowX: "hidden",
             px: 2,
-            pb: isMobile ? 7 : 0,
+            pb: isMobile ? 7 : 0, // room for bottom bar on mobile
           }}
         >
           <Outlet />
@@ -197,7 +201,7 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Mobile Sidebar Drawer */}
+      {/* Mobile Sidebar Drawer (overlay) */}
       {isMobile && (
         <SwipeableDrawer
           anchor="left"
@@ -240,9 +244,7 @@ const Layout = () => {
           }}
         >
           {drawerType === "search" && <Typography variant="h6">Search</Typography>}
-          {drawerType === "notifications" && (
-            <Typography variant="h6">Notifications</Typography>
-          )}
+          {drawerType === "notifications" && <Typography variant="h6">Notifications</Typography>}
           {drawerType === "profile" && <Typography variant="h6">Profile</Typography>}
         </SwipeableDrawer>
       )}
