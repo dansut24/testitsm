@@ -41,12 +41,12 @@ const Layout = () => {
   const [tabIndex, setTabIndex] = useState(0);
 
   // Sidebar mode & state
-  const [sidebarMode, setSidebarMode] = useState(
+  const [sidebarMode] = useState(
     localStorage.getItem("sidebarMode") || "pinned" // "pinned" | "collapsible" | "hidden"
   );
-  const [sidebarPinned, setSidebarPinned] = useState(true); // used only in "collapsible"
+  const [sidebarPinned, setSidebarPinned] = useState(true);
 
-  // Mobile
+  // Mobile & hidden sidebar drawer
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null);
 
@@ -77,7 +77,7 @@ const Layout = () => {
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return; // keep Dashboard
+    if (closingIndex === 0) return;
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
     if (location.pathname === tabId) {
@@ -110,14 +110,6 @@ const Layout = () => {
     { label: "Settings", icon: <SettingsIcon /> },
   ];
 
-  // Sidebar width used by the Sidebar component (not by margins)
-  const currentSidebarWidth =
-    sidebarMode === "pinned"
-      ? EXPANDED_WIDTH
-      : sidebarMode === "collapsible"
-      ? sidebarPinned ? EXPANDED_WIDTH : COLLAPSED_WIDTH
-      : 0;
-
   return (
     <Box
       sx={{
@@ -128,7 +120,7 @@ const Layout = () => {
         bgcolor: theme.palette.background.default,
       }}
     >
-      {/* Desktop Sidebar (in-flow). Only one sidebar is ever rendered in desktop. */}
+      {/* Desktop Sidebar */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -142,8 +134,7 @@ const Layout = () => {
         />
       )}
 
-      {/* Main Area — NO margin-left here (prevents the double whitespace). 
-          The Sidebar sits in the same flex row and naturally pushes this over. */}
+      {/* Main Area */}
       <Box
         sx={{
           flex: 1,
@@ -151,7 +142,6 @@ const Layout = () => {
           flexDirection: "column",
           minWidth: 0,
           height: "100vh",
-          transition: "width 0.3s ease", // smooth reflow when sidebar width changes
         }}
       >
         <NavbarTabs
@@ -161,6 +151,14 @@ const Layout = () => {
           handleTabClose={handleTabClose}
           handleTabReorder={handleTabReorder}
           isMobile={isMobile}
+          navTrigger={
+            !isMobile && sidebarMode === "hidden" ? (
+              <MenuIcon
+                onClick={() => setMobileSidebarOpen(true)}
+                style={{ cursor: "pointer", marginLeft: 12 }}
+              />
+            ) : null
+          }
         />
 
         <Box
@@ -170,7 +168,7 @@ const Layout = () => {
             overflowY: "auto",
             overflowX: "hidden",
             px: 2,
-            pb: isMobile ? 7 : 0, // room for bottom bar on mobile
+            pb: isMobile ? 7 : 0,
           }}
         >
           <Outlet />
@@ -201,8 +199,8 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Mobile Sidebar Drawer (overlay) */}
-      {isMobile && (
+      {/* Drawer used for both mobile and hidden-sidebar desktop */}
+      {(isMobile || sidebarMode === "hidden") && (
         <SwipeableDrawer
           anchor="left"
           open={mobileSidebarOpen}
