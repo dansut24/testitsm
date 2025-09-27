@@ -6,6 +6,7 @@ import {
   useMediaQuery,
   SwipeableDrawer,
   Typography,
+  IconButton,
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
@@ -22,6 +23,8 @@ import SettingsIcon from "@mui/icons-material/Settings";
 
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 48;
+const NAVBAR_HEIGHT = 48;
+const BOTTOM_NAV_HEIGHT = 56;
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -43,12 +46,12 @@ const Layout = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null);
 
-  // Sidebar mode from settings
+  // Sidebar mode
   const [sidebarMode, setSidebarMode] = useState(
     localStorage.getItem("sidebarMode") || "pinned"
   );
 
-  // keep tabs in sync with routes
+  // Sync tabs with route
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -100,7 +103,6 @@ const Layout = () => {
     }
   };
 
-  // Sidebar width logic
   const sidebarWidth =
     sidebarMode === "hidden"
       ? 0
@@ -116,15 +118,7 @@ const Layout = () => {
   ];
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        height: "100vh",
-        width: "100%",
-        overflow: "hidden",
-        bgcolor: theme.palette.background.default,
-      }}
-    >
+    <Box sx={{ display: "flex", height: "100vh", width: "100%", bgcolor: theme.palette.background.default }}>
       {/* Desktop Sidebar */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
@@ -138,26 +132,42 @@ const Layout = () => {
       )}
 
       {/* Main area */}
-      <Box
-        sx={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          minWidth: 0,
-          height: "100vh",
-          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
-          transition: "margin-left 0.3s ease",
-        }}
-      >
-        <NavbarTabs
-          tabs={tabs}
-          tabIndex={tabIndex}
-          handleTabChange={handleTabChange}
-          handleTabClose={handleTabClose}
-          handleTabReorder={handleTabReorder}
-          isMobile={isMobile}
-        />
+      <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, height: "100vh" }}>
+        {/* Fixed Navbar */}
+        <Box
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: sidebarMode !== "hidden" && !isMobile ? `${sidebarWidth}px` : 0,
+            right: 0,
+            height: `${NAVBAR_HEIGHT}px`,
+            zIndex: 1200,
+            bgcolor: theme.palette.background.paper,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
+            {/* Show logo in navbar if sidebar hidden */}
+            {sidebarMode === "hidden" && !isMobile && (
+              <IconButton onClick={() => navigate("/dashboard")} sx={{ ml: 1 }}>
+                <img
+                  src="https://www.bing.com/sa/simg/favicon-2x.ico"
+                  alt="Logo"
+                  style={{ width: 28, height: 28 }}
+                />
+              </IconButton>
+            )}
+            <NavbarTabs
+              tabs={tabs}
+              tabIndex={tabIndex}
+              handleTabChange={handleTabChange}
+              handleTabClose={handleTabClose}
+              handleTabReorder={handleTabReorder}
+              isMobile={isMobile}
+            />
+          </Box>
+        </Box>
 
+        {/* Content */}
         <Box
           component="main"
           sx={{
@@ -165,7 +175,8 @@ const Layout = () => {
             overflowY: "auto",
             overflowX: "hidden",
             px: 2,
-            pb: isMobile ? 7 : 0,
+            pt: `${NAVBAR_HEIGHT}px`,
+            pb: isMobile ? `${BOTTOM_NAV_HEIGHT}px` : 0,
           }}
         >
           <Outlet />
@@ -185,7 +196,7 @@ const Layout = () => {
               borderTop: `1px solid ${theme.palette.divider}`,
               backgroundColor: theme.palette.background.paper,
               zIndex: 1500,
-              height: 56,
+              height: `${BOTTOM_NAV_HEIGHT}px`,
             }}
           >
             <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
@@ -202,12 +213,7 @@ const Layout = () => {
           anchor="left"
           open={mobileSidebarOpen}
           onClose={() => setMobileSidebarOpen(false)}
-          PaperProps={{
-            sx: {
-              width: EXPANDED_WIDTH,
-              backgroundColor: theme.palette.background.paper,
-            },
-          }}
+          PaperProps={{ sx: { width: EXPANDED_WIDTH, backgroundColor: theme.palette.background.paper } }}
         >
           <Sidebar
             pinned
@@ -229,14 +235,7 @@ const Layout = () => {
           anchor="bottom"
           open={Boolean(drawerType)}
           onClose={() => setDrawerType(null)}
-          PaperProps={{
-            sx: {
-              height: "50%",
-              p: 2,
-              borderTopLeftRadius: 12,
-              borderTopRightRadius: 12,
-            },
-          }}
+          PaperProps={{ sx: { height: "50%", p: 2, borderTopLeftRadius: 12, borderTopRightRadius: 12 } }}
         >
           {drawerType === "search" && <Typography variant="h6">Search</Typography>}
           {drawerType === "notifications" && <Typography variant="h6">Notifications</Typography>}
