@@ -51,6 +51,9 @@ const Layout = () => {
     localStorage.getItem("sidebarMode") || "pinned"
   );
 
+  // New overlay sidebar for hidden mode
+  const [overlaySidebarOpen, setOverlaySidebarOpen] = useState(false);
+
   // Sync tabs with route
   useEffect(() => {
     const currentPath = location.pathname;
@@ -148,7 +151,7 @@ const Layout = () => {
           <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
             {/* Show logo in navbar if sidebar hidden */}
             {sidebarMode === "hidden" && !isMobile && (
-              <IconButton onClick={() => navigate("/dashboard")} sx={{ ml: 1 }}>
+              <IconButton onClick={() => setOverlaySidebarOpen(true)} sx={{ ml: 1 }}>
                 <img
                   src="https://www.bing.com/sa/simg/favicon-2x.ico"
                   alt="Logo"
@@ -222,6 +225,33 @@ const Layout = () => {
             onItemClick={(label) => {
               activateOrAddTab(label);
               setMobileSidebarOpen(false);
+            }}
+            widthExpanded={EXPANDED_WIDTH}
+            widthCollapsed={COLLAPSED_WIDTH}
+          />
+        </SwipeableDrawer>
+      )}
+
+      {/* Overlay Sidebar for hidden mode */}
+      {!isMobile && sidebarMode === "hidden" && (
+        <SwipeableDrawer
+          anchor="left"
+          open={overlaySidebarOpen}
+          onClose={() => setOverlaySidebarOpen(false)}
+          PaperProps={{
+            sx: {
+              width: EXPANDED_WIDTH,
+              backgroundColor: theme.palette.background.paper,
+            },
+          }}
+        >
+          <Sidebar
+            pinned
+            onToggle={() => {}}
+            items={sidebarItems}
+            onItemClick={(label) => {
+              activateOrAddTab(label);
+              setOverlaySidebarOpen(false);
             }}
             widthExpanded={EXPANDED_WIDTH}
             widthCollapsed={COLLAPSED_WIDTH}
