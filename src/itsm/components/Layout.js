@@ -22,6 +22,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 48;
+const BOTTOM_BAR_HEIGHT = 56; // shared height for mobile bottom nav
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -154,7 +155,7 @@ const Layout = () => {
             overflowY: "auto",
             overflowX: "hidden",
             px: 2,
-            pb: isMobile ? 7 : 0,
+            pb: isMobile ? `${BOTTOM_BAR_HEIGHT}px` : 0, // push content above bottom nav
           }}
         >
           <Outlet />
@@ -174,7 +175,7 @@ const Layout = () => {
               borderTop: `1px solid ${theme.palette.divider}`,
               backgroundColor: theme.palette.background.paper,
               zIndex: 1500,
-              height: 56,
+              height: BOTTOM_BAR_HEIGHT,
             }}
           >
             <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
@@ -195,6 +196,8 @@ const Layout = () => {
             sx: {
               width: EXPANDED_WIDTH,
               backgroundColor: theme.palette.background.paper,
+              height: `calc(100% - ${BOTTOM_BAR_HEIGHT}px)`, // leave room for bottom nav
+              marginBottom: `${BOTTOM_BAR_HEIGHT}px`,
             },
           }}
         >
@@ -220,7 +223,8 @@ const Layout = () => {
           onClose={() => setDrawerType(null)}
           PaperProps={{
             sx: {
-              height: "50%",
+              height: `calc(50% - ${BOTTOM_BAR_HEIGHT}px)`, // leave space for bottom nav
+              marginBottom: `${BOTTOM_BAR_HEIGHT}px`,
               p: 2,
               borderTopLeftRadius: 12,
               borderTopRightRadius: 12,
