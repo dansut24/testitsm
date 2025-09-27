@@ -1,4 +1,4 @@
-// Layout.js (fixed Navbar at top, scroll-safe bottom nav)
+// Layout.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -6,7 +6,6 @@ import {
   useMediaQuery,
   SwipeableDrawer,
   Typography,
-  IconButton,
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
@@ -23,8 +22,6 @@ import SettingsIcon from "@mui/icons-material/Settings";
 
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 48;
-const NAVBAR_HEIGHT = 48;
-const BOTTOM_BAR_HEIGHT = 56;
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -43,10 +40,14 @@ const Layout = () => {
   const [tabIndex, setTabIndex] = useState(0);
 
   const [sidebarPinned, setSidebarPinned] = useState(true);
+  const [sidebarHidden, setSidebarHidden] = useState(
+    localStorage.getItem("sidebarHidden") === "true"
+  );
+
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null);
 
-  // sync tabs with routes
+  // keep tabs in sync with routes
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -64,6 +65,10 @@ const Layout = () => {
     sessionStorage.setItem("tabs", JSON.stringify(tabs));
     sessionStorage.setItem("tabIndex", tabIndex.toString());
   }, [tabs, tabIndex]);
+
+  useEffect(() => {
+    localStorage.setItem("sidebarHidden", sidebarHidden);
+  }, [sidebarHidden]);
 
   const handleTabChange = (ev, newIndex, path) => {
     setTabIndex(newIndex);
@@ -107,21 +112,18 @@ const Layout = () => {
     { label: "Settings", icon: <SettingsIcon /> },
   ];
 
-  const handleDrawerToggle = (type) => {
-    setDrawerType((prev) => (prev === type ? null : type));
-  };
-
   return (
     <Box
       sx={{
         display: "flex",
-        minHeight: "100vh",
+        height: "100vh",
         width: "100%",
+        overflow: "hidden",
         bgcolor: theme.palette.background.default,
       }}
     >
-      {/* Desktop Sidebar */}
-      {!isMobile && (
+      {/* Desktop Sidebar (hidden if sidebarHidden = true) */}
+      {!isMobile && !sidebarHidden && (
         <Sidebar
           pinned={sidebarPinned}
           onToggle={() => setSidebarPinned((p) => !p)}
@@ -133,42 +135,38 @@ const Layout = () => {
       )}
 
       {/* Main area */}
-      <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        {/* Fixed Navbar */}
-        <Box
-          sx={{
-            position: "fixed",
-            top: 0,
-            left: !isMobile ? sidebarWidth : 0,
-            right: 0,
-            height: NAVBAR_HEIGHT,
-            zIndex: 1400,
-          }}
-        >
-          <NavbarTabs
-            tabs={tabs}
-            tabIndex={tabIndex}
-            handleTabChange={handleTabChange}
-            handleTabClose={handleTabClose}
-            handleTabReorder={handleTabReorder}
-            isMobile={isMobile}
-          />
-        </Box>
+      <Box
+        sx={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          minWidth: 0,
+          height: "100vh",
+          transition: "margin-left 0.3s ease",
+          marginLeft: !isMobile && !sidebarHidden ? `${sidebarWidth}px` : 0,
+        }}
+      >
+        <NavbarTabs
+          tabs={tabs}
+          tabIndex={tabIndex}
+          handleTabChange={handleTabChange}
+          handleTabClose={handleTabClose}
+          handleTabReorder={handleTabReorder}
+          isMobile={isMobile}
+          showLogo={sidebarHidden || isMobile}
+        />
 
-        {/* Scrollable content */}
         <Box
           component="main"
           sx={{
             flex: 1,
-            overflowX: "hidden",
             overflowY: "auto",
+            overflowX: "hidden",
             px: 2,
-            pt: `${NAVBAR_HEIGHT + 8}px`, // push below navbar
-            pb: isMobile ? `${BOTTOM_BAR_HEIGHT + 8}px` : 2,
-            WebkitOverflowScrolling: "touch",
+            pb: isMobile ? 7 : 0,
           }}
         >
-          <Outlet />
+          <Outlet context={{ sidebarHidden, setSidebarHidden }} />
         </Box>
 
         {/* Mobile bottom bar */}
@@ -185,28 +183,13 @@ const Layout = () => {
               borderTop: `1px solid ${theme.palette.divider}`,
               backgroundColor: theme.palette.background.paper,
               zIndex: 1500,
-              height: `${BOTTOM_BAR_HEIGHT}px`,
+              height: 56,
             }}
           >
             <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
-            <IconButton
-              onClick={() => handleDrawerToggle("search")}
-              color={drawerType === "search" ? "primary" : "default"}
-            >
-              <SearchIcon />
-            </IconButton>
-            <IconButton
-              onClick={() => handleDrawerToggle("notifications")}
-              color={drawerType === "notifications" ? "primary" : "default"}
-            >
-              <NotificationsIcon />
-            </IconButton>
-            <IconButton
-              onClick={() => handleDrawerToggle("profile")}
-              color={drawerType === "profile" ? "primary" : "default"}
-            >
-              <AccountCircleIcon />
-            </IconButton>
+            <SearchIcon onClick={() => setDrawerType("search")} />
+            <NotificationsIcon onClick={() => setDrawerType("notifications")} />
+            <AccountCircleIcon onClick={() => setDrawerType("profile")} />
           </Box>
         )}
       </Box>
@@ -217,9 +200,11 @@ const Layout = () => {
           anchor="left"
           open={mobileSidebarOpen}
           onClose={() => setMobileSidebarOpen(false)}
-          onOpen={() => setMobileSidebarOpen(true)}
           PaperProps={{
-            sx: { width: EXPANDED_WIDTH, backgroundColor: theme.palette.background.paper },
+            sx: {
+              width: EXPANDED_WIDTH,
+              backgroundColor: theme.palette.background.paper,
+            },
           }}
         >
           <Sidebar
@@ -242,19 +227,13 @@ const Layout = () => {
           anchor="bottom"
           open={Boolean(drawerType)}
           onClose={() => setDrawerType(null)}
-          onOpen={() => {}}
-          hideBackdrop
-          disableSwipeToOpen={false}
           PaperProps={{
             sx: {
-              position: "fixed",
-              bottom: `${BOTTOM_BAR_HEIGHT}px`,
               height: "50%",
               p: 2,
               borderTopLeftRadius: 12,
               borderTopRightRadius: 12,
-              width: "100%",
-              boxSizing: "border-box",
+              marginBottom: "56px", // respect bottom nav height
             },
           }}
         >
