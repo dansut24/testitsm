@@ -14,7 +14,6 @@ import Sidebar from "./Sidebar";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import MenuIcon from "@mui/icons-material/Menu";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import StorageIcon from "@mui/icons-material/Storage";
@@ -77,7 +76,7 @@ const Layout = () => {
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return;
+    if (closingIndex === 0) return; // keep Dashboard
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
     if (location.pathname === tabId) {
@@ -152,10 +151,12 @@ const Layout = () => {
           handleTabReorder={handleTabReorder}
           isMobile={isMobile}
           navTrigger={
-            !isMobile && sidebarMode === "hidden" ? (
-              <MenuIcon
+            (!isMobile && sidebarMode === "hidden") ? (
+              <img
+                src="https://www.bing.com/sa/simg/favicon-2x.ico"
+                alt="Logo"
+                style={{ width: 28, height: 28, cursor: "pointer", marginLeft: 12 }}
                 onClick={() => setMobileSidebarOpen(true)}
-                style={{ cursor: "pointer", marginLeft: 12 }}
               />
             ) : null
           }
@@ -191,7 +192,12 @@ const Layout = () => {
               height: 56,
             }}
           >
-            <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
+            <img
+              src="https://www.bing.com/sa/simg/favicon-2x.ico"
+              alt="Logo"
+              style={{ width: 28, height: 28, cursor: "pointer" }}
+              onClick={() => setMobileSidebarOpen(true)}
+            />
             <SearchIcon onClick={() => setDrawerType("search")} />
             <NotificationsIcon onClick={() => setDrawerType("notifications")} />
             <AccountCircleIcon onClick={() => setDrawerType("profile")} />
