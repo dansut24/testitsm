@@ -11,12 +11,12 @@ import {
   Avatar,
   Stack,
   Button,
-  Collapse,
   Divider,
+  useMediaQuery,
+  SwipeableDrawer,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import MenuIcon from "@mui/icons-material/Menu";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import { exportToCSV, exportToXLSX, exportToPDF } from "../../common/utils/exportUtils";
 import ExportPreviewModal from "../components/ExportPreviewModal";
@@ -24,8 +24,8 @@ import { useNavigate } from "react-router-dom";
 import { getSlaDueDate, getSlaStatus } from "../../common/utils/slaUtils";
 import { supabase } from "../../common/utils/supabaseClient";
 
-// 🔹 Generate 10 test teams with fake members (keep smaller for visual clarity)
-const TEAMS = Array.from({ length: 10 }, (_, i) => ({
+// 🔹 Generate 40 test teams with fake members
+const TEAMS = Array.from({ length: 40 }, (_, i) => ({
   name: `Team ${i + 1}`,
   members: Array.from({ length: 3 }, (__, j) => ({
     name: `User${i + 1}-${j + 1}`,
@@ -34,6 +34,9 @@ const TEAMS = Array.from({ length: 10 }, (_, i) => ({
 }));
 
 const Incidents = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
 
@@ -42,11 +45,9 @@ const Incidents = () => {
   const [exportTitle, setExportTitle] = useState("Incidents Export");
   const [incidents, setIncidents] = useState([]);
   const [filteredIncidents, setFilteredIncidents] = useState([]);
-  const [teamsOpen, setTeamsOpen] = useState(true);
+  const [teamsOpen, setTeamsOpen] = useState(!isMobile);
   const [activeFilter, setActiveFilter] = useState("all");
   const [filterContext, setFilterContext] = useState("All Incidents");
-
-  const [expandedTeams, setExpandedTeams] = useState({});
 
   const navigate = useNavigate();
 
@@ -97,17 +98,89 @@ const Incidents = () => {
     fetchIncidents();
   }, []);
 
-  const toggleTeamExpand = (teamName) => {
-    setExpandedTeams((prev) => ({
-      ...prev,
-      [teamName]: !prev[teamName],
-    }));
-  };
+  // 🔹 Compact team list component
+  const TeamList = () => (
+    <Paper
+      elevation={2}
+      sx={{
+        width: isMobile ? "100%" : 260,
+        borderRadius: 3,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        maxHeight: "100%",
+      }}
+    >
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          p: 1.5,
+          borderBottom: "1px solid #eee",
+          bgcolor: "background.paper",
+        }}
+      >
+        <Typography variant="subtitle1" fontWeight="bold">
+          Teams
+        </Typography>
+        {!isMobile && (
+          <IconButton size="small" onClick={() => setTeamsOpen(false)}>
+            <MenuIcon />
+          </IconButton>
+        )}
+      </Box>
+
+      <Box sx={{ flex: 1, overflowY: "auto", p: 1.5 }}>
+        {TEAMS.map((team) => {
+          const totalIncidents = team.members.reduce((a, m) => a + m.incidents, 0);
+
+          return (
+            <Paper
+              key={team.name}
+              sx={{
+                mb: 1,
+                borderRadius: 2,
+                border: "1px solid #eee",
+                bgcolor: "background.default",
+                p: 1,
+              }}
+            >
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" fontWeight="bold">
+                  {team.name}
+                </Typography>
+                <Chip label={totalIncidents} size="small" color="primary" />
+              </Stack>
+              <Divider sx={{ my: 1 }} />
+              {team.members.map((m) => (
+                <Stack
+                  key={m.name}
+                  direction="row"
+                  spacing={1}
+                  alignItems="center"
+                  justifyContent="space-between"
+                  sx={{ mb: 0.5 }}
+                >
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Avatar sx={{ width: 22, height: 22 }}>{m.name.charAt(0)}</Avatar>
+                    <Typography variant="caption">{m.name}</Typography>
+                  </Stack>
+                  <Chip label={m.incidents} size="small" color="secondary" />
+                </Stack>
+              ))}
+            </Paper>
+          );
+        })}
+      </Box>
+    </Paper>
+  );
 
   return (
     <Box
       sx={{
         display: "flex",
+        flexDirection: isMobile ? "column" : "row",
         width: "100%",
         height: "100%",
         bgcolor: "background.default",
@@ -115,99 +188,21 @@ const Incidents = () => {
         gap: 2,
       }}
     >
-      {/* Teams Sidebar */}
-      {teamsOpen && (
-        <Paper
-          elevation={2}
-          sx={{
-            width: 260,
-            borderRadius: 3,
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
+      {/* Teams Sidebar (desktop inline / mobile drawer) */}
+      {!isMobile ? (
+        teamsOpen && <TeamList />
+      ) : (
+        <SwipeableDrawer
+          anchor="left"
+          open={teamsOpen}
+          onClose={() => setTeamsOpen(false)}
+          onOpen={() => setTeamsOpen(true)}
+          PaperProps={{
+            sx: { width: "80%", maxWidth: 300, borderTopRightRadius: 12, borderBottomRightRadius: 12 },
           }}
         >
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              p: 2,
-              borderBottom: "1px solid #eee",
-              bgcolor: "background.paper",
-            }}
-          >
-            <Typography variant="subtitle1" fontWeight="bold">
-              Teams
-            </Typography>
-            <IconButton size="small" onClick={() => setTeamsOpen(false)}>
-              <MenuIcon />
-            </IconButton>
-          </Box>
-
-          <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
-            {TEAMS.map((team) => {
-              const totalIncidents = team.members.reduce((a, m) => a + m.incidents, 0);
-              const expanded = expandedTeams[team.name] || false;
-
-              return (
-                <Paper
-                  key={team.name}
-                  sx={{
-                    mb: 2,
-                    borderRadius: 2,
-                    border: "1px solid #eee",
-                    bgcolor: "background.default",
-                  }}
-                >
-                  <Box
-                    sx={{
-                      p: 1.5,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => toggleTeamExpand(team.name)}
-                  >
-                    <Typography variant="body1" fontWeight="bold">
-                      {team.name}
-                    </Typography>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Chip label={totalIncidents} size="small" color="primary" />
-                      {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                    </Box>
-                  </Box>
-
-                  <Collapse in={expanded}>
-                    <Divider />
-                    <Box sx={{ p: 1.5 }}>
-                      {team.members.map((m) => (
-                        <Box
-                          key={m.name}
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            mb: 1,
-                            cursor: "pointer",
-                            "&:hover": { bgcolor: "action.hover", borderRadius: 1 },
-                          }}
-                        >
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            <Avatar sx={{ width: 28, height: 28 }}>{m.name.charAt(0)}</Avatar>
-                            <Typography variant="body2">{m.name}</Typography>
-                          </Stack>
-                          <Chip label={m.incidents} size="small" color="secondary" />
-                        </Box>
-                      ))}
-                    </Box>
-                  </Collapse>
-                </Paper>
-              );
-            })}
-          </Box>
-        </Paper>
+          <TeamList />
+        </SwipeableDrawer>
       )}
 
       {/* Incidents Panel */}
@@ -234,7 +229,7 @@ const Incidents = () => {
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            {!teamsOpen && (
+            {(!teamsOpen || isMobile) && (
               <IconButton size="small" onClick={() => setTeamsOpen(true)}>
                 <MenuIcon />
               </IconButton>
@@ -257,7 +252,15 @@ const Incidents = () => {
         </Box>
 
         {/* Status Filters */}
-        <Stack direction="row" spacing={1} sx={{ p: 2 }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            p: 1.5,
+            flexWrap: "wrap",
+            justifyContent: isMobile ? "center" : "flex-start",
+          }}
+        >
           {["all", "open", "closed", "onhold"].map((s) => (
             <Button
               key={s}
@@ -289,15 +292,16 @@ const Incidents = () => {
               }}
               onClick={() => navigate(`/incidents/${incident.id}`)}
             >
-              <Typography sx={{ fontSize: "0.9rem", color: "text.secondary", mb: 1 }}>
+              <Typography sx={{ fontSize: "0.85rem", color: "text.secondary", mb: 1 }}>
                 <strong>#{incident.id}</strong> • {incident.category}
-                <Chip label={incident.status} size="small" sx={{ ml: 1, height: 20 }} />
+                <Chip label={incident.status} size="small" sx={{ ml: 1, height: 18, fontSize: "0.7rem" }} />
                 <Chip
                   label={getSlaStatus(incident.slaDueDate)}
                   size="small"
                   sx={{
                     ml: 1,
-                    height: 20,
+                    height: 18,
+                    fontSize: "0.7rem",
                     bgcolor:
                       getSlaStatus(incident.slaDueDate) === "Overdue" ? "#ffe0e0" : "#e7f7ed",
                     color:
@@ -305,11 +309,11 @@ const Incidents = () => {
                   }}
                 />
               </Typography>
-              <Typography variant="subtitle1" fontWeight="bold">
+              <Typography variant="subtitle2" fontWeight="bold">
                 {incident.title}
               </Typography>
               <Typography variant="body2">{incident.description}</Typography>
-              <Typography sx={{ fontSize: "0.8em", color: "text.disabled", mt: 1 }}>
+              <Typography sx={{ fontSize: "0.75em", color: "text.disabled", mt: 1 }}>
                 Created: {new Date(incident.created).toLocaleString()}
               </Typography>
             </Paper>
