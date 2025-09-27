@@ -25,7 +25,7 @@ export default function NavbarTabs({
     .navbar-container {
       width: 100%;
       position: relative;
-      background: #f8f9fa; 
+      background: ${theme.palette.background.paper};
       display: flex;
       align-items: center;
       height: 48px;
@@ -50,8 +50,15 @@ export default function NavbarTabs({
     .ctn-scroll::-webkit-scrollbar { height:6px; }
 
     .chrome-tabs { background:transparent !important; height:100%; }
-    .chrome-tab { background:transparent !important; height:48px !important; margin-top:0 !important; box-shadow:none !important; border-top:none !important; }
+    .chrome-tab { 
+      background:transparent !important; 
+      height:48px !important; 
+      margin-top:0 !important; 
+      box-shadow:none !important; 
+      border-top:none !important; 
+    }
 
+    /* Tab dividers shortened */
     .chrome-tab-divider {
       top: 4px !important;
       bottom: 4px !important;
@@ -68,11 +75,11 @@ export default function NavbarTabs({
       gap:12px;
       padding:0 8px;
       z-index:5;
-      background: #f8f9fa; 
+      background: ${theme.palette.background.paper};
     }
 
     .ctn-scroll { padding-right:160px; }
-    
+
     @media (max-width: 600px) {
       .ctn-scroll { 
         overflow-x:hidden; 
@@ -114,6 +121,7 @@ export default function NavbarTabs({
     <>
       <style>{styles}</style>
       <div className="navbar-container">
+        {/* Tabs */}
         <div className="ctn-bar" style={{ flex: 1 }}>
           <div ref={scrollRef} className="ctn-scroll">
             <Tabs
@@ -125,22 +133,23 @@ export default function NavbarTabs({
                 title: t.label,
                 favicon: t.favicon || "https://www.google.com/favicon.ico",
                 active: idx === tabIndex,
-                isCloseIconVisible: idx !== 0,
+                isCloseIconVisible: idx !== 0, // prevent closing first tab
               }))}
             />
           </div>
         </div>
 
+        {/* Right Icons */}
         <div className="navbar-icons">
           <AddIcon
-  onClick={() =>
-    handleTabReorder([
-      ...tabs,
-      { label: "New Tab", path: `/new-tab/${tabs.length + 1}` },
-    ])
-  }
-  style={{ cursor: "pointer", fontSize: 28, fontWeight: "bold" }}
-/>
+            onClick={() =>
+              handleTabReorder([
+                ...tabs,
+                { label: "New Tab", path: `/new-tab/${tabs.length + 1}` },
+              ])
+            }
+            style={{ cursor: "pointer", fontSize: 28, fontWeight: "bold" }}
+          />
           {!isMobile && (
             <>
               <SearchIcon style={{ cursor: "pointer" }} />
