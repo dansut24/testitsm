@@ -1,4 +1,4 @@
-// Layout.js
+// Layout.js (fixed scroll on mobile)
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -46,7 +46,7 @@ const Layout = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null);
 
-  // keep tabs in sync with routes
+  // --- Tab sync with routes ---
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -115,9 +115,8 @@ const Layout = () => {
     <Box
       sx={{
         display: "flex",
-        height: "100vh",
+        minHeight: "100vh", // use minHeight to avoid jumps
         width: "100%",
-        overflow: "hidden",
         bgcolor: theme.palette.background.default,
       }}
     >
@@ -140,8 +139,6 @@ const Layout = () => {
           display: "flex",
           flexDirection: "column",
           minWidth: 0,
-          height: "100vh",
-          transition: "margin-left 0.3s ease",
         }}
       >
         <NavbarTabs
@@ -157,10 +154,11 @@ const Layout = () => {
           component="main"
           sx={{
             flex: 1,
-            overflowY: "auto",
             overflowX: "hidden",
+            overflowY: "auto",
             px: 2,
-            pb: isMobile ? `${BOTTOM_BAR_HEIGHT}px` : 0,
+            pb: isMobile ? `${BOTTOM_BAR_HEIGHT + 8}px` : 0, // extra breathing room
+            WebkitOverflowScrolling: "touch", // smooth on iOS
           }}
         >
           <Outlet />
