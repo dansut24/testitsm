@@ -4,9 +4,9 @@ import {
   Box,
   useTheme,
   useMediaQuery,
-  Drawer,
+  SwipeableDrawer,
   Typography,
-  Fade,
+  IconButton,
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
@@ -107,6 +107,10 @@ const Layout = () => {
     { label: "Settings", icon: <SettingsIcon /> },
   ];
 
+  const handleDrawerToggle = (type) => {
+    setDrawerType((prev) => (prev === type ? null : type));
+  };
+
   return (
     <Box
       sx={{
@@ -180,21 +184,38 @@ const Layout = () => {
             }}
           >
             <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
-            <SearchIcon onClick={() => setDrawerType("search")} />
-            <NotificationsIcon onClick={() => setDrawerType("notifications")} />
-            <AccountCircleIcon onClick={() => setDrawerType("profile")} />
+
+            <IconButton
+              onClick={() => handleDrawerToggle("search")}
+              color={drawerType === "search" ? "primary" : "default"}
+            >
+              <SearchIcon />
+            </IconButton>
+
+            <IconButton
+              onClick={() => handleDrawerToggle("notifications")}
+              color={drawerType === "notifications" ? "primary" : "default"}
+            >
+              <NotificationsIcon />
+            </IconButton>
+
+            <IconButton
+              onClick={() => handleDrawerToggle("profile")}
+              color={drawerType === "profile" ? "primary" : "default"}
+            >
+              <AccountCircleIcon />
+            </IconButton>
           </Box>
         )}
       </Box>
 
       {/* Mobile Sidebar Drawer */}
       {isMobile && (
-        <Drawer
-          variant="temporary"
+        <SwipeableDrawer
           anchor="left"
           open={mobileSidebarOpen}
           onClose={() => setMobileSidebarOpen(false)}
-          ModalProps={{ keepMounted: true }}
+          onOpen={() => setMobileSidebarOpen(true)}
           PaperProps={{
             sx: {
               width: EXPANDED_WIDTH,
@@ -213,17 +234,18 @@ const Layout = () => {
             widthExpanded={EXPANDED_WIDTH}
             widthCollapsed={COLLAPSED_WIDTH}
           />
-        </Drawer>
+        </SwipeableDrawer>
       )}
 
-      {/* Mobile Action Drawer — persistent & backdrop-free */}
+      {/* Mobile Action Drawer */}
       {isMobile && (
-        <Drawer
+        <SwipeableDrawer
           anchor="bottom"
           open={Boolean(drawerType)}
-          variant="persistent"
+          onClose={() => setDrawerType(null)}
+          onOpen={() => {}}
           hideBackdrop
-          ModalProps={{ keepMounted: true }}
+          disableSwipeToOpen={false}
           PaperProps={{
             sx: {
               position: "fixed",
@@ -237,22 +259,12 @@ const Layout = () => {
             },
           }}
         >
-          <Fade in={drawerType === "search"} mountOnEnter unmountOnExit>
-            <Box>
-              <Typography variant="h6">Search</Typography>
-            </Box>
-          </Fade>
-          <Fade in={drawerType === "notifications"} mountOnEnter unmountOnExit>
-            <Box>
-              <Typography variant="h6">Notifications</Typography>
-            </Box>
-          </Fade>
-          <Fade in={drawerType === "profile"} mountOnEnter unmountOnExit>
-            <Box>
-              <Typography variant="h6">Profile</Typography>
-            </Box>
-          </Fade>
-        </Drawer>
+          {drawerType === "search" && <Typography variant="h6">Search</Typography>}
+          {drawerType === "notifications" && (
+            <Typography variant="h6">Notifications</Typography>
+          )}
+          {drawerType === "profile" && <Typography variant="h6">Profile</Typography>}
+        </SwipeableDrawer>
       )}
     </Box>
   );
