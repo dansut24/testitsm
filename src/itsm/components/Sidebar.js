@@ -51,7 +51,7 @@ const Sidebar = ({ pinned, onToggle, items, onItemClick, widthExpanded, widthCol
           />
         </IconButton>
         {pinned && (
-          <span style={{ fontWeight: "bold", color: theme.palette.text.primary }}>
+          <span style={{ fontWeight: "bold", color: "#f8f9fa" }}>
             MyApp
           </span>
         )}
