@@ -6,7 +6,6 @@ import {
   useMediaQuery,
   SwipeableDrawer,
   Typography,
-  IconButton,
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
@@ -23,8 +22,6 @@ import SettingsIcon from "@mui/icons-material/Settings";
 
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 48;
-const NAVBAR_HEIGHT = 48;
-const BOTTOM_NAV_HEIGHT = 56;
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -39,22 +36,20 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Tabs state
   const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
 
-  const [sidebarPinned, setSidebarPinned] = useState(true);
+  // Sidebar mode: "expanded" | "collapsed" | "hidden"
+  const [sidebarMode, setSidebarMode] = useState(
+    localStorage.getItem("sidebarMode") || "expanded"
+  );
+
+  // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null);
 
-  // Sidebar mode
-  const [sidebarMode, setSidebarMode] = useState(
-    localStorage.getItem("sidebarMode") || "pinned"
-  );
-
-  // New overlay sidebar for hidden mode
-  const [overlaySidebarOpen, setOverlaySidebarOpen] = useState(false);
-
-  // Sync tabs with route
+  // Route sync
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -68,6 +63,7 @@ const Layout = () => {
     }
   }, [location.pathname]); // eslint-disable-line
 
+  // Persist
   useEffect(() => {
     sessionStorage.setItem("tabs", JSON.stringify(tabs));
     sessionStorage.setItem("tabIndex", tabIndex.toString());
@@ -80,7 +76,7 @@ const Layout = () => {
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return;
+    if (closingIndex === 0) return; // dashboard cannot be closed
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
     if (location.pathname === tabId) {
@@ -109,7 +105,7 @@ const Layout = () => {
   const sidebarWidth =
     sidebarMode === "hidden"
       ? 0
-      : sidebarPinned
+      : sidebarMode === "expanded"
       ? EXPANDED_WIDTH
       : COLLAPSED_WIDTH;
 
@@ -120,13 +116,31 @@ const Layout = () => {
     { label: "Settings", icon: <SettingsIcon /> },
   ];
 
+  const toggleSidebarMode = () => {
+    if (sidebarMode === "expanded") {
+      setSidebarMode("collapsed");
+      localStorage.setItem("sidebarMode", "collapsed");
+    } else if (sidebarMode === "collapsed") {
+      setSidebarMode("expanded");
+      localStorage.setItem("sidebarMode", "expanded");
+    }
+  };
+
   return (
-    <Box sx={{ display: "flex", height: "100vh", width: "100%", bgcolor: theme.palette.background.default }}>
+    <Box
+      sx={{
+        display: "flex",
+        height: "100vh",
+        width: "100%",
+        overflow: "hidden",
+        bgcolor: theme.palette.background.default,
+      }}
+    >
       {/* Desktop Sidebar */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
-          pinned={sidebarPinned}
-          onToggle={() => setSidebarPinned((p) => !p)}
+          pinned={sidebarMode === "expanded"}
+          onToggle={toggleSidebarMode}
           items={sidebarItems}
           onItemClick={activateOrAddTab}
           widthExpanded={EXPANDED_WIDTH}
@@ -135,42 +149,26 @@ const Layout = () => {
       )}
 
       {/* Main area */}
-      <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, height: "100vh" }}>
-        {/* Fixed Navbar */}
-        <Box
-          sx={{
-            position: "fixed",
-            top: 0,
-            left: sidebarMode !== "hidden" && !isMobile ? `${sidebarWidth}px` : 0,
-            right: 0,
-            height: `${NAVBAR_HEIGHT}px`,
-            zIndex: 1200,
-            bgcolor: theme.palette.background.paper,
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
-            {/* Show logo in navbar if sidebar hidden */}
-            {sidebarMode === "hidden" && !isMobile && (
-              <IconButton onClick={() => setOverlaySidebarOpen(true)} sx={{ ml: 1 }}>
-                <img
-                  src="https://www.bing.com/sa/simg/favicon-2x.ico"
-                  alt="Logo"
-                  style={{ width: 28, height: 28 }}
-                />
-              </IconButton>
-            )}
-            <NavbarTabs
-              tabs={tabs}
-              tabIndex={tabIndex}
-              handleTabChange={handleTabChange}
-              handleTabClose={handleTabClose}
-              handleTabReorder={handleTabReorder}
-              isMobile={isMobile}
-            />
-          </Box>
-        </Box>
+      <Box
+        sx={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          minWidth: 0,
+          height: "100vh",
+          transition: "margin-left 0.3s ease",
+          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
+        }}
+      >
+        <NavbarTabs
+          tabs={tabs}
+          tabIndex={tabIndex}
+          handleTabChange={handleTabChange}
+          handleTabClose={handleTabClose}
+          handleTabReorder={handleTabReorder}
+          isMobile={isMobile}
+        />
 
-        {/* Content */}
         <Box
           component="main"
           sx={{
@@ -178,8 +176,7 @@ const Layout = () => {
             overflowY: "auto",
             overflowX: "hidden",
             px: 2,
-            pt: `${NAVBAR_HEIGHT}px`,
-            pb: isMobile ? `${BOTTOM_NAV_HEIGHT}px` : 0,
+            pb: isMobile ? 7 : 0,
           }}
         >
           <Outlet />
@@ -199,7 +196,7 @@ const Layout = () => {
               borderTop: `1px solid ${theme.palette.divider}`,
               backgroundColor: theme.palette.background.paper,
               zIndex: 1500,
-              height: `${BOTTOM_NAV_HEIGHT}px`,
+              height: 56,
             }}
           >
             <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
@@ -216,7 +213,12 @@ const Layout = () => {
           anchor="left"
           open={mobileSidebarOpen}
           onClose={() => setMobileSidebarOpen(false)}
-          PaperProps={{ sx: { width: EXPANDED_WIDTH, backgroundColor: theme.palette.background.paper } }}
+          PaperProps={{
+            sx: {
+              width: EXPANDED_WIDTH,
+              backgroundColor: theme.palette.background.paper,
+            },
+          }}
         >
           <Sidebar
             pinned
@@ -232,40 +234,21 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Overlay Sidebar for hidden mode */}
-      {!isMobile && sidebarMode === "hidden" && (
-        <SwipeableDrawer
-          anchor="left"
-          open={overlaySidebarOpen}
-          onClose={() => setOverlaySidebarOpen(false)}
-          PaperProps={{
-            sx: {
-              width: EXPANDED_WIDTH,
-              backgroundColor: theme.palette.background.paper,
-            },
-          }}
-        >
-          <Sidebar
-            pinned
-            onToggle={() => {}}
-            items={sidebarItems}
-            onItemClick={(label) => {
-              activateOrAddTab(label);
-              setOverlaySidebarOpen(false);
-            }}
-            widthExpanded={EXPANDED_WIDTH}
-            widthCollapsed={COLLAPSED_WIDTH}
-          />
-        </SwipeableDrawer>
-      )}
-
       {/* Mobile Action Drawer */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
           open={Boolean(drawerType)}
           onClose={() => setDrawerType(null)}
-          PaperProps={{ sx: { height: "50%", p: 2, borderTopLeftRadius: 12, borderTopRightRadius: 12 } }}
+          PaperProps={{
+            sx: {
+              height: "50%",
+              p: 2,
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+              marginBottom: "56px", // respect bottom nav
+            },
+          }}
         >
           {drawerType === "search" && <Typography variant="h6">Search</Typography>}
           {drawerType === "notifications" && <Typography variant="h6">Notifications</Typography>}
