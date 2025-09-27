@@ -38,7 +38,7 @@ export default function NavbarTabs({
       left: 0;
       right: 0;
       bottom: 0;
-      height: 4px;
+      height: 8px;
       background: ${theme.palette.background.default};
       pointer-events: none;
       z-index: 9999;
