@@ -1,4 +1,4 @@
-// Layout.js (fixed scroll on mobile)
+// Layout.js (fixed Navbar at top, scroll-safe bottom nav)
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -23,6 +23,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 48;
+const NAVBAR_HEIGHT = 48;
 const BOTTOM_BAR_HEIGHT = 56;
 
 const routeLabels = {
@@ -42,11 +43,10 @@ const Layout = () => {
   const [tabIndex, setTabIndex] = useState(0);
 
   const [sidebarPinned, setSidebarPinned] = useState(true);
-
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null);
 
-  // --- Tab sync with routes ---
+  // sync tabs with routes
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -115,7 +115,7 @@ const Layout = () => {
     <Box
       sx={{
         display: "flex",
-        minHeight: "100vh", // use minHeight to avoid jumps
+        minHeight: "100vh",
         width: "100%",
         bgcolor: theme.palette.background.default,
       }}
@@ -133,23 +133,29 @@ const Layout = () => {
       )}
 
       {/* Main area */}
-      <Box
-        sx={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          minWidth: 0,
-        }}
-      >
-        <NavbarTabs
-          tabs={tabs}
-          tabIndex={tabIndex}
-          handleTabChange={handleTabChange}
-          handleTabClose={handleTabClose}
-          handleTabReorder={handleTabReorder}
-          isMobile={isMobile}
-        />
+      <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        {/* Fixed Navbar */}
+        <Box
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: !isMobile ? sidebarWidth : 0,
+            right: 0,
+            height: NAVBAR_HEIGHT,
+            zIndex: 1400,
+          }}
+        >
+          <NavbarTabs
+            tabs={tabs}
+            tabIndex={tabIndex}
+            handleTabChange={handleTabChange}
+            handleTabClose={handleTabClose}
+            handleTabReorder={handleTabReorder}
+            isMobile={isMobile}
+          />
+        </Box>
 
+        {/* Scrollable content */}
         <Box
           component="main"
           sx={{
@@ -157,8 +163,9 @@ const Layout = () => {
             overflowX: "hidden",
             overflowY: "auto",
             px: 2,
-            pb: isMobile ? `${BOTTOM_BAR_HEIGHT + 8}px` : 0, // extra breathing room
-            WebkitOverflowScrolling: "touch", // smooth on iOS
+            pt: `${NAVBAR_HEIGHT + 8}px`, // push below navbar
+            pb: isMobile ? `${BOTTOM_BAR_HEIGHT + 8}px` : 2,
+            WebkitOverflowScrolling: "touch",
           }}
         >
           <Outlet />
@@ -182,21 +189,18 @@ const Layout = () => {
             }}
           >
             <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
-
             <IconButton
               onClick={() => handleDrawerToggle("search")}
               color={drawerType === "search" ? "primary" : "default"}
             >
               <SearchIcon />
             </IconButton>
-
             <IconButton
               onClick={() => handleDrawerToggle("notifications")}
               color={drawerType === "notifications" ? "primary" : "default"}
             >
               <NotificationsIcon />
             </IconButton>
-
             <IconButton
               onClick={() => handleDrawerToggle("profile")}
               color={drawerType === "profile" ? "primary" : "default"}
@@ -215,10 +219,7 @@ const Layout = () => {
           onClose={() => setMobileSidebarOpen(false)}
           onOpen={() => setMobileSidebarOpen(true)}
           PaperProps={{
-            sx: {
-              width: EXPANDED_WIDTH,
-              backgroundColor: theme.palette.background.paper,
-            },
+            sx: { width: EXPANDED_WIDTH, backgroundColor: theme.palette.background.paper },
           }}
         >
           <Sidebar
@@ -258,9 +259,7 @@ const Layout = () => {
           }}
         >
           {drawerType === "search" && <Typography variant="h6">Search</Typography>}
-          {drawerType === "notifications" && (
-            <Typography variant="h6">Notifications</Typography>
-          )}
+          {drawerType === "notifications" && <Typography variant="h6">Notifications</Typography>}
           {drawerType === "profile" && <Typography variant="h6">Profile</Typography>}
         </SwipeableDrawer>
       )}
