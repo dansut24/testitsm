@@ -38,7 +38,7 @@ const Sidebar = ({ pinned, onToggle, items, onItemClick, widthExpanded, widthCol
           justifyContent: pinned ? "space-between" : "center",
           height: "48px",
           px: 1,
-          backgroundColor: theme.palette.background.paper,
+          backgroundColor: "#f8f9fa",
           borderBottom: `4px solid ${theme.palette.background.default}`,
           borderRight: "none",
         }}
