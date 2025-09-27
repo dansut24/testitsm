@@ -15,7 +15,9 @@ import {
   DialogContent,
   DialogActions,
   Stack,
-  TextField,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
 } from "@mui/material";
 import { supabase } from "../../common/utils/supabaseClient";
 import { useAuth } from "../../common/context/AuthContext";
@@ -35,6 +37,11 @@ const Settings = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [providerToUnlink, setProviderToUnlink] = useState(null);
   const [addUserOpen, setAddUserOpen] = useState(false);
+
+  // Sidebar preferences
+  const [sidebarMode, setSidebarMode] = useState(
+    localStorage.getItem("sidebarMode") || "pinned"
+  );
 
   const availableProviders = ["google", "github", "azure"];
 
@@ -207,6 +214,28 @@ const Settings = () => {
           )}
 
           <Divider sx={{ my: 4 }} />
+
+          <Typography variant="h6">Sidebar Preferences</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Choose how the sidebar behaves in desktop view.
+          </Typography>
+
+          <RadioGroup
+            value={sidebarMode}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSidebarMode(value);
+              localStorage.setItem("sidebarMode", value);
+              window.location.reload(); // reload to apply layout change
+            }}
+          >
+            <FormControlLabel value="pinned" control={<Radio />} label="Pinned Sidebar (default)" />
+            <FormControlLabel value="collapsible" control={<Radio />} label="Collapsible Sidebar (toggle with logo)" />
+            <FormControlLabel value="hidden" control={<Radio />} label="Hidden Sidebar (logo moves into Navbar)" />
+          </RadioGroup>
+
+          <Divider sx={{ my: 4 }} />
+
           <Typography variant="h6">Manage Users</Typography>
           <Button
             variant="contained"
