@@ -4,7 +4,7 @@ import {
   Box,
   useTheme,
   useMediaQuery,
-  SwipeableDrawer,
+  Drawer,
   Typography,
   Fade,
 } from "@mui/material";
@@ -189,10 +189,12 @@ const Layout = () => {
 
       {/* Mobile Sidebar Drawer */}
       {isMobile && (
-        <SwipeableDrawer
+        <Drawer
+          variant="temporary"
           anchor="left"
           open={mobileSidebarOpen}
           onClose={() => setMobileSidebarOpen(false)}
+          ModalProps={{ keepMounted: true }}
           PaperProps={{
             sx: {
               width: EXPANDED_WIDTH,
@@ -211,25 +213,27 @@ const Layout = () => {
             widthExpanded={EXPANDED_WIDTH}
             widthCollapsed={COLLAPSED_WIDTH}
           />
-        </SwipeableDrawer>
+        </Drawer>
       )}
 
-      {/* Mobile Action Drawer with smooth content switching */}
+      {/* Mobile Action Drawer — persistent & backdrop-free */}
       {isMobile && (
-        <SwipeableDrawer
+        <Drawer
           anchor="bottom"
           open={Boolean(drawerType)}
-          onClose={() => setDrawerType(null)}
-          onOpen={() => {}}
-          disableSwipeToOpen
+          variant="persistent"
+          hideBackdrop
+          ModalProps={{ keepMounted: true }}
           PaperProps={{
             sx: {
-              height: `calc(50% - ${BOTTOM_BAR_HEIGHT}px)`,
-              mb: `${BOTTOM_BAR_HEIGHT}px`,
+              position: "fixed",
+              bottom: `${BOTTOM_BAR_HEIGHT}px`,
+              height: "50%",
               p: 2,
               borderTopLeftRadius: 12,
               borderTopRightRadius: 12,
-              overflow: "hidden", // prevent double scrollbars
+              width: "100%",
+              boxSizing: "border-box",
             },
           }}
         >
@@ -248,7 +252,7 @@ const Layout = () => {
               <Typography variant="h6">Profile</Typography>
             </Box>
           </Fade>
-        </SwipeableDrawer>
+        </Drawer>
       )}
     </Box>
   );
