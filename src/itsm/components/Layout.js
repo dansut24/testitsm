@@ -6,6 +6,7 @@ import {
   useMediaQuery,
   SwipeableDrawer,
   Typography,
+  Fade,
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
@@ -22,7 +23,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 48;
-const BOTTOM_BAR_HEIGHT = 56; // shared height for mobile bottom nav
+const BOTTOM_BAR_HEIGHT = 56;
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -155,7 +156,7 @@ const Layout = () => {
             overflowY: "auto",
             overflowX: "hidden",
             px: 2,
-            pb: isMobile ? `${BOTTOM_BAR_HEIGHT}px` : 0, // push content above bottom nav
+            pb: isMobile ? `${BOTTOM_BAR_HEIGHT}px` : 0,
           }}
         >
           <Outlet />
@@ -175,7 +176,7 @@ const Layout = () => {
               borderTop: `1px solid ${theme.palette.divider}`,
               backgroundColor: theme.palette.background.paper,
               zIndex: 1500,
-              height: BOTTOM_BAR_HEIGHT,
+              height: `${BOTTOM_BAR_HEIGHT}px`,
             }}
           >
             <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
@@ -196,8 +197,6 @@ const Layout = () => {
             sx: {
               width: EXPANDED_WIDTH,
               backgroundColor: theme.palette.background.paper,
-              height: `calc(100% - ${BOTTOM_BAR_HEIGHT}px)`, // leave room for bottom nav
-              marginBottom: `${BOTTOM_BAR_HEIGHT}px`,
             },
           }}
         >
@@ -215,25 +214,40 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Mobile Action Drawer */}
+      {/* Mobile Action Drawer with smooth content switching */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
           open={Boolean(drawerType)}
           onClose={() => setDrawerType(null)}
+          onOpen={() => {}}
+          disableSwipeToOpen
           PaperProps={{
             sx: {
-              height: `calc(50% - ${BOTTOM_BAR_HEIGHT}px)`, // leave space for bottom nav
-              marginBottom: `${BOTTOM_BAR_HEIGHT}px`,
+              height: `calc(50% - ${BOTTOM_BAR_HEIGHT}px)`,
+              mb: `${BOTTOM_BAR_HEIGHT}px`,
               p: 2,
               borderTopLeftRadius: 12,
               borderTopRightRadius: 12,
+              overflow: "hidden", // prevent double scrollbars
             },
           }}
         >
-          {drawerType === "search" && <Typography variant="h6">Search</Typography>}
-          {drawerType === "notifications" && <Typography variant="h6">Notifications</Typography>}
-          {drawerType === "profile" && <Typography variant="h6">Profile</Typography>}
+          <Fade in={drawerType === "search"} mountOnEnter unmountOnExit>
+            <Box>
+              <Typography variant="h6">Search</Typography>
+            </Box>
+          </Fade>
+          <Fade in={drawerType === "notifications"} mountOnEnter unmountOnExit>
+            <Box>
+              <Typography variant="h6">Notifications</Typography>
+            </Box>
+          </Fade>
+          <Fade in={drawerType === "profile"} mountOnEnter unmountOnExit>
+            <Box>
+              <Typography variant="h6">Profile</Typography>
+            </Box>
+          </Fade>
         </SwipeableDrawer>
       )}
     </Box>
