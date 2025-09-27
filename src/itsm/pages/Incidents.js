@@ -8,54 +8,37 @@ import {
   IconButton,
   Menu,
   MenuItem,
-  Stack,
   Avatar,
   Badge,
+  Stack,
+  Divider,
+  Button,
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import MenuIcon from "@mui/icons-material/Menu";
-import {
-  exportToCSV,
-  exportToXLSX,
-  exportToPDF,
-} from "../../common/utils/exportUtils";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import { exportToCSV, exportToXLSX, exportToPDF } from "../../common/utils/exportUtils";
 import ExportPreviewModal from "../components/ExportPreviewModal";
 import { useNavigate } from "react-router-dom";
 import { getSlaDueDate, getSlaStatus } from "../../common/utils/slaUtils";
 import { supabase } from "../../common/utils/supabaseClient";
 
+// Mock teams with members
 const TEAMS = [
-  {
-    name: "IT Support",
-    members: [
-      { name: "Alice", incidents: 3 },
-      { name: "Bob", incidents: 1 },
-    ],
-    total: 4,
-  },
   {
     name: "Network Ops",
     members: [
-      { name: "Charlie", incidents: 2 },
-      { name: "Dana", incidents: 5 },
+      { name: "Alice", incidents: 3 },
+      { name: "Bob", incidents: 2 },
+      { name: "Charlie", incidents: 1 },
     ],
-    total: 7,
   },
   {
-    name: "Dev Team",
+    name: "Service Desk",
     members: [
-      { name: "Eve", incidents: 2 },
-      { name: "Frank", incidents: 2 },
+      { name: "David", incidents: 5 },
+      { name: "Ella", incidents: 2 },
     ],
-    total: 4,
-  },
-  {
-    name: "HR Support",
-    members: [
-      { name: "Grace", incidents: 1 },
-      { name: "Henry", incidents: 0 },
-    ],
-    total: 1,
   },
 ];
 
@@ -68,10 +51,9 @@ const Incidents = () => {
   const [exportTitle, setExportTitle] = useState("Incidents Export");
   const [incidents, setIncidents] = useState([]);
   const [filteredIncidents, setFilteredIncidents] = useState([]);
-  const [filter, setFilter] = useState("All");
-
-  const [teamsOpen, setTeamsOpen] = useState(true); // sidebar state
-  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned");
+  const [teamsOpen, setTeamsOpen] = useState(true);
+  const [activeFilter, setActiveFilter] = useState("all"); // open | closed | onhold
+  const [filterContext, setFilterContext] = useState("All Incidents");
 
   const navigate = useNavigate();
 
@@ -95,16 +77,25 @@ const Incidents = () => {
     setPreviewOpen(false);
   };
 
-  const applyFilter = (selectedFilter, list = incidents) => {
-    setFilter(selectedFilter);
-    if (selectedFilter === "All") {
-      setFilteredIncidents(list);
-    } else if (selectedFilter === "Overdue") {
-      setFilteredIncidents(
-        list.filter((i) => getSlaStatus(i.slaDueDate) === "Overdue")
-      );
+  const applyTeamFilter = (teamName) => {
+    setFilterContext(`${teamName} Incidents`);
+    setFilteredIncidents(incidents.filter((i) => i.team === teamName));
+  };
+
+  const applyUserFilter = (userName) => {
+    setFilterContext(`${userName}'s Incidents`);
+    setFilteredIncidents(incidents.filter((i) => i.assigned_to === userName));
+  };
+
+  const applyStatusFilter = (status) => {
+    setActiveFilter(status);
+    if (status === "all") {
+      setFilteredIncidents(incidents);
+      setFilterContext("All Incidents");
     } else {
-      setFilteredIncidents(list.filter((i) => i.status === selectedFilter));
+      const map = { open: "Open", closed: "Closed", onhold: "On Hold" };
+      setFilteredIncidents(incidents.filter((i) => i.status === map[status]));
+      setFilterContext(`${map[status]} Incidents`);
     }
   };
 
@@ -114,62 +105,37 @@ const Incidents = () => {
       if (data) {
         const enriched = data.map((incident) => ({
           ...incident,
-          slaDueDate: getSlaDueDate(
-            incident.created,
-            incident.priority || "Medium"
-          ),
+          slaDueDate: getSlaDueDate(incident.created, incident.priority || "Medium"),
         }));
         setIncidents(enriched);
-        applyFilter(filter, enriched);
+        setFilteredIncidents(enriched);
       }
     };
-
     fetchIncidents();
-    const channel = supabase
-      .channel("incidents-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "incidents" },
-        () => fetchIncidents()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-    // eslint-disable-next-line
   }, []);
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case "Critical":
-        return "#f44336";
-      case "High":
-        return "#ff9800";
-      case "Medium":
-        return "#2196f3";
-      case "Low":
-        return "#4caf50";
-      default:
-        return "#9e9e9e";
-    }
-  };
-
   return (
-    <Box sx={{ display: "flex", width: "100%", height: "100%", overflow: "hidden" }}>
+    <Box sx={{ display: "flex", width: "100%", height: "100%" }}>
       {/* Teams Sidebar */}
-      {teamsOpen ? (
+      {teamsOpen && (
         <Box
           sx={{
-            width: 240,
+            width: 260,
             bgcolor: "background.paper",
             borderRight: "1px solid #ddd",
-            p: 2,
             display: "flex",
             flexDirection: "column",
           }}
         >
-          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              p: 2,
+              borderBottom: "1px solid #eee",
+            }}
+          >
             <Typography variant="subtitle1" fontWeight="bold">
               Teams
             </Typography>
@@ -178,52 +144,34 @@ const Incidents = () => {
             </IconButton>
           </Box>
 
-          <Stack spacing={2}>
+          <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
             {TEAMS.map((team) => (
               <Paper
                 key={team.name}
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2,
-                  border: "1px solid #eee",
-                  cursor: "pointer",
-                  "&:hover": { boxShadow: "0 2px 6px rgba(20,40,80,0.15)" },
-                }}
+                sx={{ mb: 2, p: 1.5, borderRadius: 2, border: "1px solid #eee" }}
               >
                 <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    mb: 1,
-                  }}
+                  sx={{ display: "flex", justifyContent: "space-between", mb: 1, cursor: "pointer" }}
+                  onClick={() => applyTeamFilter(team.name)}
                 >
                   <Typography variant="body1" fontWeight="bold">
                     {team.name}
                   </Typography>
                   <Chip
-                    label={team.total}
+                    label={team.members.reduce((a, m) => a + m.incidents, 0)}
                     size="small"
                     color="primary"
-                    sx={{ fontSize: "0.75rem", height: 20 }}
                   />
                 </Box>
+
+                {/* Avatars */}
                 <Stack direction="row" spacing={1}>
                   {team.members.map((m) => (
-                    <Badge
-                      key={m.name}
-                      badgeContent={m.incidents}
-                      color="secondary"
-                      overlap="circular"
-                      sx={{
-                        "& .MuiBadge-badge": {
-                          fontSize: "0.65rem",
-                          minWidth: 16,
-                          height: 16,
-                        },
-                      }}
-                    >
-                      <Avatar sx={{ width: 32, height: 32 }}>
+                    <Badge key={m.name} badgeContent={m.incidents} color="secondary" overlap="circular">
+                      <Avatar
+                        sx={{ width: 32, height: 32, cursor: "pointer" }}
+                        onClick={() => applyUserFilter(m.name)}
+                      >
                         {m.name.charAt(0)}
                       </Avatar>
                     </Badge>
@@ -231,30 +179,13 @@ const Incidents = () => {
                 </Stack>
               </Paper>
             ))}
-          </Stack>
+          </Box>
         </Box>
-      ) : (
-        sidebarMode === "hidden" && (
-          <IconButton
-            size="small"
-            sx={{
-              position: "absolute",
-              top: 70,
-              left: 8,
-              zIndex: 20,
-              bgcolor: "background.paper",
-              border: "1px solid #ddd",
-            }}
-            onClick={() => setTeamsOpen(true)}
-          >
-            <MenuIcon fontSize="small" />
-          </IconButton>
-        )
       )}
 
       {/* Main Content */}
-      <Box sx={{ flex: 1, overflowY: "auto" }}>
-        {/* Header Row */}
+      <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        {/* Header row */}
         <Box
           sx={{
             px: 2,
@@ -264,101 +195,103 @@ const Incidents = () => {
             justifyContent: "space-between",
             borderBottom: "1px solid #ccc",
             bgcolor: "background.paper",
-            flexWrap: "wrap",
-            gap: 1,
           }}
         >
-          <Typography variant="h6" fontWeight="bold">
-            {filter === "All" ? "My Incidents" : `${filter} Incidents`}
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            {!teamsOpen && (
+              <IconButton size="small" onClick={() => setTeamsOpen(true)}>
+                <MenuIcon />
+              </IconButton>
+            )}
+            <Typography variant="h6" fontWeight="bold">
+              {filterContext}
+            </Typography>
+          </Box>
 
-          <IconButton onClick={handleMenuClick}>
-            <MoreVertIcon />
-          </IconButton>
-          <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose}>
-            <MenuItem onClick={() => handleMenuAction("new")}>New Incident</MenuItem>
-            <MenuItem onClick={() => handleMenuAction("csv")}>Export to CSV</MenuItem>
-            <MenuItem onClick={() => handleMenuAction("xlsx")}>Export to Excel</MenuItem>
-            <MenuItem onClick={() => handleMenuAction("pdf")}>Export to PDF</MenuItem>
-          </Menu>
+          <Box>
+            <IconButton onClick={handleMenuClick}>
+              <FileDownloadIcon />
+            </IconButton>
+            <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose}>
+              <MenuItem onClick={() => handleMenuAction("csv")}>Export to CSV</MenuItem>
+              <MenuItem onClick={() => handleMenuAction("xlsx")}>Export to Excel</MenuItem>
+              <MenuItem onClick={() => handleMenuAction("pdf")}>Export to PDF</MenuItem>
+            </Menu>
+          </Box>
         </Box>
 
+        {/* Status Filters */}
+        <Stack direction="row" spacing={1} sx={{ p: 2 }}>
+          <Button
+            size="small"
+            variant={activeFilter === "all" ? "contained" : "outlined"}
+            onClick={() => applyStatusFilter("all")}
+          >
+            All
+          </Button>
+          <Button
+            size="small"
+            variant={activeFilter === "open" ? "contained" : "outlined"}
+            onClick={() => applyStatusFilter("open")}
+          >
+            Open
+          </Button>
+          <Button
+            size="small"
+            variant={activeFilter === "closed" ? "contained" : "outlined"}
+            onClick={() => applyStatusFilter("closed")}
+          >
+            Closed
+          </Button>
+          <Button
+            size="small"
+            variant={activeFilter === "onhold" ? "contained" : "outlined"}
+            onClick={() => applyStatusFilter("onhold")}
+          >
+            On Hold
+          </Button>
+        </Stack>
+
         {/* Incidents List */}
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 1.5,
-            px: { xs: 1, md: 2 },
-            py: 2,
-          }}
-        >
+        <Box sx={{ flex: 1, overflowY: "auto", px: 2, pb: 2 }}>
           {filteredIncidents.map((incident) => (
             <Paper
               key={incident.id}
               sx={{
-                background: "background.paper",
-                borderLeft: `6px solid ${getPriorityColor(
-                  incident.priority || "Medium"
-                )}`,
+                mb: 2,
                 p: 1.5,
                 borderRadius: 1.5,
+                boxShadow: "0 1px 4px rgba(20,40,80,0.05)",
                 cursor: "pointer",
-                boxShadow: "0 1px 4px rgba(20,40,80,0.08)",
-                "&:hover": { boxShadow: "0 2px 6px rgba(20,40,80,0.15)" },
               }}
               onClick={() => navigate(`/incidents/${incident.id}`)}
             >
-              <Typography
-                sx={{ fontSize: "0.9rem", color: "text.secondary", mb: 0.5 }}
-              >
+              <Typography sx={{ fontSize: "0.9rem", color: "text.secondary", mb: 1 }}>
                 <strong>#{incident.id}</strong> • {incident.category}
                 <Chip
                   label={incident.status}
                   size="small"
-                  sx={{
-                    ml: 1,
-                    bgcolor: "grey.200",
-                    fontSize: "0.75em",
-                    height: 20,
-                    fontWeight: 500,
-                    borderRadius: "10px",
-                  }}
+                  sx={{ ml: 1, fontSize: "0.75em", height: 20 }}
                 />
                 <Chip
                   label={getSlaStatus(incident.slaDueDate)}
                   size="small"
                   sx={{
                     ml: 1,
-                    bgcolor:
-                      getSlaStatus(incident.slaDueDate) === "Overdue"
-                        ? "#ffe0e0"
-                        : "#e7f7ed",
-                    color:
-                      getSlaStatus(incident.slaDueDate) === "Overdue"
-                        ? "#d32f2f"
-                        : "#2e7d32",
                     fontSize: "0.7em",
                     height: 20,
-                    fontWeight: 500,
-                    borderRadius: "10px",
+                    bgcolor:
+                      getSlaStatus(incident.slaDueDate) === "Overdue" ? "#ffe0e0" : "#e7f7ed",
+                    color:
+                      getSlaStatus(incident.slaDueDate) === "Overdue" ? "#d32f2f" : "#2e7d32",
                   }}
                 />
               </Typography>
               <Typography variant="subtitle1" fontWeight="bold">
                 {incident.title}
               </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mt: 0.5 }}
-                noWrap
-              >
-                {incident.description}
-              </Typography>
-              <Typography
-                sx={{ fontSize: "0.8em", color: "text.disabled", mt: 0.5 }}
-              >
+              <Typography variant="body2">{incident.description}</Typography>
+              <Typography sx={{ fontSize: "0.8em", color: "text.disabled", mt: 1 }}>
                 Created: {new Date(incident.created).toLocaleString()}
               </Typography>
             </Paper>
