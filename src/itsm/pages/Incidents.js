@@ -10,8 +10,10 @@ import {
   Menu,
   MenuItem,
   Stack,
+  Drawer,
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import MenuIcon from "@mui/icons-material/Menu";
 import {
   exportToCSV,
   exportToXLSX,
@@ -32,6 +34,8 @@ const Incidents = () => {
   const [incidents, setIncidents] = useState([]);
   const [filteredIncidents, setFilteredIncidents] = useState([]);
   const [filter, setFilter] = useState("All");
+
+  const [teamsOpen, setTeamsOpen] = useState(true); // sidebar state
 
   const navigate = useNavigate();
 
@@ -123,129 +127,176 @@ const Incidents = () => {
   };
 
   return (
-    <Box sx={{ width: "100%", p: { xs: 1, md: 2 } }}>
-      {/* Header Row */}
-      <Box
-        sx={{
-          px: 2,
-          py: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          borderBottom: "1px solid #ccc",
-          bgcolor: "background.paper",
-          flexWrap: "wrap",
-          gap: 1,
-        }}
-      >
-        <Typography variant="h6" fontWeight="bold">
-          {filter === "All" ? "My Incidents" : `${filter} Incidents`}
-        </Typography>
-
-        <IconButton onClick={handleMenuClick}>
-          <MoreVertIcon />
-        </IconButton>
-        <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose}>
-          <MenuItem onClick={() => handleMenuAction("new")}>New Incident</MenuItem>
-          <MenuItem onClick={() => handleMenuAction("csv")}>Export to CSV</MenuItem>
-          <MenuItem onClick={() => handleMenuAction("xlsx")}>Export to Excel</MenuItem>
-          <MenuItem onClick={() => handleMenuAction("pdf")}>Export to PDF</MenuItem>
-        </Menu>
-      </Box>
-
-      {/* Quick Filters */}
-      <Stack direction="row" spacing={1} sx={{ px: 2, py: 1, flexWrap: "wrap" }}>
-        {["All", "Open", "Closed", "Pending", "Overdue"].map((f) => (
-          <Chip
-            key={f}
-            label={f}
-            color={filter === f ? "primary" : "default"}
-            onClick={() => applyFilter(f)}
-            clickable
-          />
-        ))}
-      </Stack>
-
-      {/* Incidents List */}
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 1.5,
-          px: { xs: 1, md: 2 },
-          py: 2,
-        }}
-      >
-        {filteredIncidents.map((incident) => (
-          <Paper
-            key={incident.id}
-            sx={{
-              background: "background.paper",
-              borderLeft: `6px solid ${getPriorityColor(
-                incident.priority || "Medium"
-              )}`,
-              p: 1.5,
-              borderRadius: 1.5,
-              cursor: "pointer",
-              boxShadow: "0 1px 4px rgba(20,40,80,0.08)",
-              "&:hover": { boxShadow: "0 2px 6px rgba(20,40,80,0.15)" },
-            }}
-            onClick={() => navigate(`/incidents/${incident.id}`)}
-          >
-            <Typography
-              sx={{ fontSize: "0.9rem", color: "text.secondary", mb: 0.5 }}
-            >
-              <strong>#{incident.id}</strong> • {incident.category}
-              <Chip
-                label={incident.status}
-                size="small"
-                sx={{
-                  ml: 1,
-                  bgcolor: "grey.200",
-                  fontSize: "0.75em",
-                  height: 20,
-                  fontWeight: 500,
-                  borderRadius: "10px",
-                }}
-              />
-              <Chip
-                label={getSlaStatus(incident.slaDueDate)}
-                size="small"
-                sx={{
-                  ml: 1,
-                  bgcolor:
-                    getSlaStatus(incident.slaDueDate) === "Overdue"
-                      ? "#ffe0e0"
-                      : "#e7f7ed",
-                  color:
-                    getSlaStatus(incident.slaDueDate) === "Overdue"
-                      ? "#d32f2f"
-                      : "#2e7d32",
-                  fontSize: "0.7em",
-                  height: 20,
-                  fontWeight: 500,
-                  borderRadius: "10px",
-                }}
-              />
-            </Typography>
+    <Box sx={{ display: "flex", width: "100%", height: "100%", overflow: "hidden" }}>
+      {/* Teams Sidebar */}
+      {teamsOpen ? (
+        <Box
+          sx={{
+            width: 200,
+            bgcolor: "background.paper",
+            borderRight: "1px solid #ddd",
+            p: 2,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
             <Typography variant="subtitle1" fontWeight="bold">
-              {incident.title}
+              Teams
             </Typography>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ mt: 0.5 }}
-              noWrap
+            <IconButton size="small" onClick={() => setTeamsOpen(false)}>
+              <MenuIcon />
+            </IconButton>
+          </Box>
+          <Stack spacing={1}>
+            <Chip label="IT Support" clickable />
+            <Chip label="Network Ops" clickable />
+            <Chip label="Dev Team" clickable />
+            <Chip label="HR Support" clickable />
+          </Stack>
+        </Box>
+      ) : (
+        <IconButton
+          size="small"
+          sx={{
+            position: "absolute",
+            top: 70,
+            left: 8,
+            zIndex: 20,
+            bgcolor: "background.paper",
+            border: "1px solid #ddd",
+          }}
+          onClick={() => setTeamsOpen(true)}
+        >
+          <MenuIcon fontSize="small" />
+        </IconButton>
+      )}
+
+      {/* Main Content */}
+      <Box sx={{ flex: 1, overflowY: "auto" }}>
+        {/* Header Row */}
+        <Box
+          sx={{
+            px: 2,
+            py: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderBottom: "1px solid #ccc",
+            bgcolor: "background.paper",
+            flexWrap: "wrap",
+            gap: 1,
+          }}
+        >
+          <Typography variant="h6" fontWeight="bold">
+            {filter === "All" ? "My Incidents" : `${filter} Incidents`}
+          </Typography>
+
+          <IconButton onClick={handleMenuClick}>
+            <MoreVertIcon />
+          </IconButton>
+          <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose}>
+            <MenuItem onClick={() => handleMenuAction("new")}>New Incident</MenuItem>
+            <MenuItem onClick={() => handleMenuAction("csv")}>Export to CSV</MenuItem>
+            <MenuItem onClick={() => handleMenuAction("xlsx")}>Export to Excel</MenuItem>
+            <MenuItem onClick={() => handleMenuAction("pdf")}>Export to PDF</MenuItem>
+          </Menu>
+        </Box>
+
+        {/* Quick Filters */}
+        <Stack direction="row" spacing={1} sx={{ px: 2, py: 1, flexWrap: "wrap" }}>
+          {["All", "Open", "Closed", "Pending", "Overdue"].map((f) => (
+            <Chip
+              key={f}
+              label={f}
+              color={filter === f ? "primary" : "default"}
+              onClick={() => applyFilter(f)}
+              clickable
+            />
+          ))}
+        </Stack>
+
+        {/* Incidents List */}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 1.5,
+            px: { xs: 1, md: 2 },
+            py: 2,
+          }}
+        >
+          {filteredIncidents.map((incident) => (
+            <Paper
+              key={incident.id}
+              sx={{
+                background: "background.paper",
+                borderLeft: `6px solid ${getPriorityColor(
+                  incident.priority || "Medium"
+                )}`,
+                p: 1.5,
+                borderRadius: 1.5,
+                cursor: "pointer",
+                boxShadow: "0 1px 4px rgba(20,40,80,0.08)",
+                "&:hover": { boxShadow: "0 2px 6px rgba(20,40,80,0.15)" },
+              }}
+              onClick={() => navigate(`/incidents/${incident.id}`)}
             >
-              {incident.description}
-            </Typography>
-            <Typography
-              sx={{ fontSize: "0.8em", color: "text.disabled", mt: 0.5 }}
-            >
-              Created: {new Date(incident.created).toLocaleString()}
-            </Typography>
-          </Paper>
-        ))}
+              <Typography
+                sx={{ fontSize: "0.9rem", color: "text.secondary", mb: 0.5 }}
+              >
+                <strong>#{incident.id}</strong> • {incident.category}
+                <Chip
+                  label={incident.status}
+                  size="small"
+                  sx={{
+                    ml: 1,
+                    bgcolor: "grey.200",
+                    fontSize: "0.75em",
+                    height: 20,
+                    fontWeight: 500,
+                    borderRadius: "10px",
+                  }}
+                />
+                <Chip
+                  label={getSlaStatus(incident.slaDueDate)}
+                  size="small"
+                  sx={{
+                    ml: 1,
+                    bgcolor:
+                      getSlaStatus(incident.slaDueDate) === "Overdue"
+                        ? "#ffe0e0"
+                        : "#e7f7ed",
+                    color:
+                      getSlaStatus(incident.slaDueDate) === "Overdue"
+                        ? "#d32f2f"
+                        : "#2e7d32",
+                    fontSize: "0.7em",
+                    height: 20,
+                    fontWeight: 500,
+                    borderRadius: "10px",
+                  }}
+                />
+              </Typography>
+              <Typography variant="subtitle1" fontWeight="bold">
+                {incident.title}
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 0.5 }}
+                noWrap
+              >
+                {incident.description}
+              </Typography>
+              <Typography
+                sx={{ fontSize: "0.8em", color: "text.disabled", mt: 0.5 }}
+              >
+                Created: {new Date(incident.created).toLocaleString()}
+              </Typography>
+            </Paper>
+          ))}
+        </Box>
       </Box>
 
       <ExportPreviewModal
