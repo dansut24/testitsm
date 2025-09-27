@@ -26,7 +26,7 @@ export default function NavbarTabs({
     .navbar-container {
       width: 100%;
       position: relative;
-      background: "#f8f9fa";
+      background: #f8f9fa;
       display: flex;
       align-items: center;
       height: 48px;
@@ -75,7 +75,7 @@ export default function NavbarTabs({
       gap:12px;
       padding:0 8px;
       z-index:5;
-      background: ${theme.palette.background.paper};
+      background: "#f8f9fa";
     }
 
     .ctn-scroll { padding-right:160px; }
