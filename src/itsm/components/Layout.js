@@ -1,4 +1,4 @@
-// Layout.js
+// src/itsm/components/Layout.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -6,6 +6,7 @@ import {
   useMediaQuery,
   SwipeableDrawer,
   Typography,
+  IconButton,
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
@@ -36,20 +37,22 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Tabs state
-  const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
+  const [tabs, setTabs] = useState([
+    { label: "Dashboard", path: "/dashboard" },
+  ]);
   const [tabIndex, setTabIndex] = useState(0);
 
-  // Sidebar mode: "expanded" | "collapsed" | "hidden"
-  const [sidebarMode, setSidebarMode] = useState(
-    localStorage.getItem("sidebarMode") || "expanded"
-  );
-
-  // Mobile
+  // Sidebar state
+  const [sidebarPinned, setSidebarPinned] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null);
 
-  // Route sync
+  // Sidebar mode (from settings)
+  const [sidebarMode, setSidebarMode] = useState(
+    localStorage.getItem("sidebarMode") || "pinned"
+  );
+
+  // Tabs sync with routes
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -63,7 +66,7 @@ const Layout = () => {
     }
   }, [location.pathname]); // eslint-disable-line
 
-  // Persist
+  // Persist tabs
   useEffect(() => {
     sessionStorage.setItem("tabs", JSON.stringify(tabs));
     sessionStorage.setItem("tabIndex", tabIndex.toString());
@@ -102,12 +105,7 @@ const Layout = () => {
     }
   };
 
-  const sidebarWidth =
-    sidebarMode === "hidden"
-      ? 0
-      : sidebarMode === "expanded"
-      ? EXPANDED_WIDTH
-      : COLLAPSED_WIDTH;
+  const sidebarWidth = sidebarPinned ? EXPANDED_WIDTH : COLLAPSED_WIDTH;
 
   const sidebarItems = [
     { label: "Dashboard", icon: <DashboardIcon /> },
@@ -116,14 +114,20 @@ const Layout = () => {
     { label: "Settings", icon: <SettingsIcon /> },
   ];
 
-  const toggleSidebarMode = () => {
-    if (sidebarMode === "expanded") {
-      setSidebarMode("collapsed");
-      localStorage.setItem("sidebarMode", "collapsed");
-    } else if (sidebarMode === "collapsed") {
-      setSidebarMode("expanded");
-      localStorage.setItem("sidebarMode", "expanded");
-    }
+  const renderSidebar = () => {
+    if (isMobile) return null; // handled separately
+    if (sidebarMode === "hidden") return null; // logo moves to navbar
+
+    return (
+      <Sidebar
+        pinned={sidebarMode === "pinned" ? true : sidebarPinned}
+        onToggle={() => setSidebarPinned((p) => !p)}
+        items={sidebarItems}
+        onItemClick={activateOrAddTab}
+        widthExpanded={EXPANDED_WIDTH}
+        widthCollapsed={COLLAPSED_WIDTH}
+      />
+    );
   };
 
   return (
@@ -137,16 +141,7 @@ const Layout = () => {
       }}
     >
       {/* Desktop Sidebar */}
-      {!isMobile && sidebarMode !== "hidden" && (
-        <Sidebar
-          pinned={sidebarMode === "expanded"}
-          onToggle={toggleSidebarMode}
-          items={sidebarItems}
-          onItemClick={activateOrAddTab}
-          widthExpanded={EXPANDED_WIDTH}
-          widthCollapsed={COLLAPSED_WIDTH}
-        />
-      )}
+      {renderSidebar()}
 
       {/* Main area */}
       <Box
@@ -157,7 +152,10 @@ const Layout = () => {
           minWidth: 0,
           height: "100vh",
           transition: "margin-left 0.3s ease",
-          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
+          ml:
+            !isMobile && sidebarMode !== "hidden"
+              ? `${sidebarWidth}px`
+              : 0,
         }}
       >
         <NavbarTabs
@@ -167,6 +165,7 @@ const Layout = () => {
           handleTabClose={handleTabClose}
           handleTabReorder={handleTabReorder}
           isMobile={isMobile}
+          showLogo={sidebarMode === "hidden"} // show logo in navbar if sidebar hidden
         />
 
         <Box
@@ -246,13 +245,18 @@ const Layout = () => {
               p: 2,
               borderTopLeftRadius: 12,
               borderTopRightRadius: 12,
-              marginBottom: "56px", // respect bottom nav
             },
           }}
         >
-          {drawerType === "search" && <Typography variant="h6">Search</Typography>}
-          {drawerType === "notifications" && <Typography variant="h6">Notifications</Typography>}
-          {drawerType === "profile" && <Typography variant="h6">Profile</Typography>}
+          {drawerType === "search" && (
+            <Typography variant="h6">Search</Typography>
+          )}
+          {drawerType === "notifications" && (
+            <Typography variant="h6">Notifications</Typography>
+          )}
+          {drawerType === "profile" && (
+            <Typography variant="h6">Profile</Typography>
+          )}
         </SwipeableDrawer>
       )}
     </Box>
