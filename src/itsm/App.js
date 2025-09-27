@@ -1,9 +1,15 @@
 // src/itsm/App.js
-
 import React, { useEffect, useState } from "react";
-import { CssBaseline, Box } from "@mui/material";
-import { Routes, Route } from "react-router-dom";
+import {
+  CssBaseline,
+  Box,
+} from "@mui/material";
+import {
+  Routes,
+  Route,
+} from "react-router-dom";
 import { supabase } from "../common/utils/supabaseClient";
+import { CssVarsProvider } from "@mui/material/styles"; // ✅ import provider
 
 // Layout & Auth
 import Layout from "./components/Layout";
@@ -131,7 +137,7 @@ function AppRoutes() {
 
 function App() {
   return (
-    <>
+    <CssVarsProvider defaultMode="light">   {/* ✅ wrap everything */}
       <CssBaseline />
       <Box
         sx={{
@@ -145,7 +151,7 @@ function App() {
       >
         <AppRoutes />
       </Box>
-    </>
+    </CssVarsProvider>
   );
 }
 
