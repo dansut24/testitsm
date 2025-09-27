@@ -40,12 +40,13 @@ const Layout = () => {
   const [tabIndex, setTabIndex] = useState(0);
 
   const [sidebarPinned, setSidebarPinned] = useState(true);
-  const [sidebarHidden, setSidebarHidden] = useState(
-    localStorage.getItem("sidebarHidden") === "true"
-  );
-
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null);
+
+  // Sidebar mode from settings
+  const [sidebarMode, setSidebarMode] = useState(
+    localStorage.getItem("sidebarMode") || "pinned"
+  );
 
   // keep tabs in sync with routes
   useEffect(() => {
@@ -65,10 +66,6 @@ const Layout = () => {
     sessionStorage.setItem("tabs", JSON.stringify(tabs));
     sessionStorage.setItem("tabIndex", tabIndex.toString());
   }, [tabs, tabIndex]);
-
-  useEffect(() => {
-    localStorage.setItem("sidebarHidden", sidebarHidden);
-  }, [sidebarHidden]);
 
   const handleTabChange = (ev, newIndex, path) => {
     setTabIndex(newIndex);
@@ -103,7 +100,13 @@ const Layout = () => {
     }
   };
 
-  const sidebarWidth = sidebarPinned ? EXPANDED_WIDTH : COLLAPSED_WIDTH;
+  // Sidebar width logic
+  const sidebarWidth =
+    sidebarMode === "hidden"
+      ? 0
+      : sidebarPinned
+      ? EXPANDED_WIDTH
+      : COLLAPSED_WIDTH;
 
   const sidebarItems = [
     { label: "Dashboard", icon: <DashboardIcon /> },
@@ -122,8 +125,8 @@ const Layout = () => {
         bgcolor: theme.palette.background.default,
       }}
     >
-      {/* Desktop Sidebar (hidden if sidebarHidden = true) */}
-      {!isMobile && !sidebarHidden && (
+      {/* Desktop Sidebar */}
+      {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarPinned}
           onToggle={() => setSidebarPinned((p) => !p)}
@@ -142,8 +145,8 @@ const Layout = () => {
           flexDirection: "column",
           minWidth: 0,
           height: "100vh",
+          marginLeft: !isMobile ? `${sidebarWidth}px` : 0,
           transition: "margin-left 0.3s ease",
-          marginLeft: !isMobile && !sidebarHidden ? `${sidebarWidth}px` : 0,
         }}
       >
         <NavbarTabs
@@ -153,7 +156,6 @@ const Layout = () => {
           handleTabClose={handleTabClose}
           handleTabReorder={handleTabReorder}
           isMobile={isMobile}
-          showLogo={sidebarHidden || isMobile}
         />
 
         <Box
@@ -166,7 +168,7 @@ const Layout = () => {
             pb: isMobile ? 7 : 0,
           }}
         >
-          <Outlet context={{ sidebarHidden, setSidebarHidden }} />
+          <Outlet />
         </Box>
 
         {/* Mobile bottom bar */}
@@ -233,7 +235,6 @@ const Layout = () => {
               p: 2,
               borderTopLeftRadius: 12,
               borderTopRightRadius: 12,
-              marginBottom: "56px", // respect bottom nav height
             },
           }}
         >
