@@ -1,10 +1,21 @@
 // Sidebar.js
 import React from "react";
-import { Box, IconButton, List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
+import {
+  Box,
+  IconButton,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Switch,
+  FormControlLabel,
+} from "@mui/material";
 import { useTheme } from "@mui/material/styles";
+import { useColorScheme } from "@mui/material/styles"; // for theme toggle
 
 const Sidebar = ({ pinned, onToggle, items, onItemClick, widthExpanded, widthCollapsed }) => {
   const theme = useTheme();
+  const { mode, setMode } = useColorScheme(); // MUI v5.13+ built-in hook
   const width = pinned ? widthExpanded : widthCollapsed;
 
   return (
@@ -72,6 +83,21 @@ const Sidebar = ({ pinned, onToggle, items, onItemClick, widthExpanded, widthCol
             {pinned && <ListItemText primary={label} />}
           </ListItem>
         ))}
+
+        {/* Theme Switch */}
+        {pinned && (
+          <ListItem>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={mode === "dark"}
+                  onChange={() => setMode(mode === "light" ? "dark" : "light")}
+                />
+              }
+              label={mode === "dark" ? "Dark Mode" : "Light Mode"}
+            />
+          </ListItem>
+        )}
       </List>
     </Box>
   );
