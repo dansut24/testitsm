@@ -36,18 +36,15 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Tabs state
   const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
 
-  // Sidebar
   const [sidebarPinned, setSidebarPinned] = useState(true);
 
-  // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null);
 
-  // Route sync
+  // keep tabs in sync with routes
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -61,7 +58,6 @@ const Layout = () => {
     }
   }, [location.pathname]); // eslint-disable-line
 
-  // Persist
   useEffect(() => {
     sessionStorage.setItem("tabs", JSON.stringify(tabs));
     sessionStorage.setItem("tabIndex", tabIndex.toString());
@@ -74,7 +70,7 @@ const Layout = () => {
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return; // dashboard cannot be closed
+    if (closingIndex === 0) return;
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
     if (location.pathname === tabId) {
@@ -110,7 +106,15 @@ const Layout = () => {
   ];
 
   return (
-    <Box sx={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
+    <Box
+      sx={{
+        display: "flex",
+        height: "100vh",
+        width: "100%",
+        overflow: "hidden",
+        bgcolor: theme.palette.background.default,
+      }}
+    >
       {/* Desktop Sidebar */}
       {!isMobile && (
         <Sidebar
@@ -125,16 +129,15 @@ const Layout = () => {
 
       {/* Main area */}
       <Box
-  sx={{
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    minWidth: 0,
-    height: "100vh",
-    transition: "margin-left 0.3s ease",
-  }}
->
-        {/* Navbar Tabs */}
+        sx={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          minWidth: 0,
+          height: "100vh",
+          transition: "margin-left 0.3s ease",
+        }}
+      >
         <NavbarTabs
           tabs={tabs}
           tabIndex={tabIndex}
@@ -144,10 +147,15 @@ const Layout = () => {
           isMobile={isMobile}
         />
 
-        {/* Content */}
         <Box
           component="main"
-          sx={{ flex: 1, overflowY: "auto", overflowX: "hidden", px: 2, pb: isMobile ? 7 : 0 }}
+          sx={{
+            flex: 1,
+            overflowY: "auto",
+            overflowX: "hidden",
+            px: 2,
+            pb: isMobile ? 7 : 0,
+          }}
         >
           <Outlet />
         </Box>
@@ -177,13 +185,18 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Mobile Sidebar Drawer → only renders in mobile */}
+      {/* Mobile Sidebar Drawer */}
       {isMobile && (
         <SwipeableDrawer
           anchor="left"
           open={mobileSidebarOpen}
           onClose={() => setMobileSidebarOpen(false)}
-          PaperProps={{ sx: { width: EXPANDED_WIDTH, backgroundColor: theme.palette.background.paper } }}
+          PaperProps={{
+            sx: {
+              width: EXPANDED_WIDTH,
+              backgroundColor: theme.palette.background.paper,
+            },
+          }}
         >
           <Sidebar
             pinned
@@ -205,7 +218,14 @@ const Layout = () => {
           anchor="bottom"
           open={Boolean(drawerType)}
           onClose={() => setDrawerType(null)}
-          PaperProps={{ sx: { height: "50%", p: 2, borderTopLeftRadius: 12, borderTopRightRadius: 12 } }}
+          PaperProps={{
+            sx: {
+              height: "50%",
+              p: 2,
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+            },
+          }}
         >
           {drawerType === "search" && <Typography variant="h6">Search</Typography>}
           {drawerType === "notifications" && <Typography variant="h6">Notifications</Typography>}
