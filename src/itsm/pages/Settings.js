@@ -1,3 +1,4 @@
+// src/itsm/pages/Settings.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -73,9 +74,15 @@ const Settings = () => {
 
     if (error) {
       console.error("❌ Supabase insert error:", error);
-      setStatus({ type: "error", message: "❌ Failed to create dashboard layout." });
+      setStatus({
+        type: "error",
+        message: "❌ Failed to create dashboard layout.",
+      });
     } else {
-      setStatus({ type: "success", message: "✅ Dashboard layout created successfully!" });
+      setStatus({
+        type: "success",
+        message: "✅ Dashboard layout created successfully!",
+      });
     }
 
     setLoading(false);
@@ -108,8 +115,13 @@ const Settings = () => {
       console.error("Failed to unlink identity:", error);
       alert(`Failed to unlink ${providerToUnlink}: ${error.message}`);
     } else {
-      setLinkedProviders((prev) => prev.filter((id) => id.provider !== providerToUnlink));
-      setStatus({ type: "success", message: `✅ Unlinked ${providerToUnlink} successfully.` });
+      setLinkedProviders((prev) =>
+        prev.filter((id) => id.provider !== providerToUnlink)
+      );
+      setStatus({
+        type: "success",
+        message: `✅ Unlinked ${providerToUnlink} successfully.`,
+      });
     }
   };
 
@@ -129,28 +141,45 @@ const Settings = () => {
 
   const getProviderIcon = (provider) => {
     switch (provider) {
-      case "google": return <GoogleIcon sx={{ mr: 1 }} />;
-      case "github": return <GitHubIcon sx={{ mr: 1 }} />;
-      case "azure": return <BusinessIcon sx={{ mr: 1 }} />;
-      case "email": return <EmailIcon sx={{ mr: 1 }} />;
-      default: return null;
+      case "google":
+        return <GoogleIcon sx={{ mr: 1 }} />;
+      case "github":
+        return <GitHubIcon sx={{ mr: 1 }} />;
+      case "azure":
+        return <BusinessIcon sx={{ mr: 1 }} />;
+      case "email":
+        return <EmailIcon sx={{ mr: 1 }} />;
+      default:
+        return null;
     }
   };
 
   const linkedProviderKeys = linkedProviders.map((p) => p.provider);
-  const unlinkedProviders = availableProviders.filter((p) => !linkedProviderKeys.includes(p));
+  const unlinkedProviders = availableProviders.filter(
+    (p) => !linkedProviderKeys.includes(p)
+  );
 
   return (
     <Box sx={{ p: 4 }}>
-      <Typography variant="h5" gutterBottom>Dashboard Settings</Typography>
+      <Typography variant="h5" gutterBottom>
+        Dashboard Settings
+      </Typography>
 
       <Typography variant="body1" sx={{ mb: 2 }}>
         Use the button below to create your personal dashboard layout.
       </Typography>
-      <Button variant="contained" onClick={handleCreateDashboard} disabled={loading}>
+      <Button
+        variant="contained"
+        onClick={handleCreateDashboard}
+        disabled={loading}
+      >
         {loading ? "Creating..." : "Create Dashboard Layout"}
       </Button>
-      {status && <Alert severity={status.type} sx={{ mt: 2 }}>{status.message}</Alert>}
+      {status && (
+        <Alert severity={status.type} sx={{ mt: 2 }}>
+          {status.message}
+        </Alert>
+      )}
 
       <Divider sx={{ my: 4 }} />
 
@@ -166,7 +195,12 @@ const Settings = () => {
           {linkedProviders.map((identity) => (
             <ListItem key={identity.provider} divider>
               {getProviderIcon(identity.provider)}
-              <ListItemText primary={identity.provider.charAt(0).toUpperCase() + identity.provider.slice(1)} />
+              <ListItemText
+                primary={
+                  identity.provider.charAt(0).toUpperCase() +
+                  identity.provider.slice(1)
+                }
+              />
               <ListItemSecondaryAction>
                 {identity.provider !== "email" && (
                   <IconButton onClick={() => confirmUnlink(identity.provider)}>
@@ -191,7 +225,8 @@ const Settings = () => {
                 startIcon={getProviderIcon(provider)}
                 onClick={() => handleLink(provider)}
               >
-                Link {provider.charAt(0).toUpperCase() + provider.slice(1)}
+                Link{" "}
+                {provider.charAt(0).toUpperCase() + provider.slice(1)}
               </Button>
             ))}
           </Stack>
@@ -200,6 +235,7 @@ const Settings = () => {
 
       <Divider sx={{ my: 4 }} />
 
+      {/* Sidebar Preferences */}
       <Typography variant="h6">Sidebar Preferences</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         Choose how the sidebar behaves in desktop view.
@@ -211,12 +247,24 @@ const Settings = () => {
           const value = e.target.value;
           setSidebarMode(value);
           localStorage.setItem("sidebarMode", value);
-          window.location.reload();
+          window.location.reload(); // refresh layout to apply change
         }}
       >
-        <FormControlLabel value="pinned" control={<Radio />} label="Pinned Sidebar (default)" />
-        <FormControlLabel value="collapsible" control={<Radio />} label="Collapsible Sidebar (toggle with logo)" />
-        <FormControlLabel value="hidden" control={<Radio />} label="Hidden Sidebar (logo in Navbar)" />
+        <FormControlLabel
+          value="pinned"
+          control={<Radio />}
+          label="Pinned Sidebar (full width with labels)"
+        />
+        <FormControlLabel
+          value="collapsible"
+          control={<Radio />}
+          label="Collapsible Sidebar (toggle with logo)"
+        />
+        <FormControlLabel
+          value="hidden"
+          control={<Radio />}
+          label="Hidden Sidebar (logo in Navbar only)"
+        />
       </RadioGroup>
 
       <Divider sx={{ my: 4 }} />
@@ -229,16 +277,28 @@ const Settings = () => {
       >
         Add User
       </Button>
-      <AddUserModal open={addUserOpen} onClose={() => setAddUserOpen(false)} tenantId={"demo-tenant"} />
+      <AddUserModal
+        open={addUserOpen}
+        onClose={() => setAddUserOpen(false)}
+        tenantId={"demo-tenant"}
+      />
 
+      {/* Confirm unlink dialog */}
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
         <DialogTitle>Confirm Unlink</DialogTitle>
         <DialogContent>
-          Are you sure you want to unlink <strong>{providerToUnlink}</strong>?
+          Are you sure you want to unlink{" "}
+          <strong>{providerToUnlink}</strong>?
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
-          <Button onClick={handleUnlinkConfirmed} color="error" variant="contained">Unlink</Button>
+          <Button
+            onClick={handleUnlinkConfirmed}
+            color="error"
+            variant="contained"
+          >
+            Unlink
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
