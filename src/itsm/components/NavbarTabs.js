@@ -25,7 +25,7 @@ export default function NavbarTabs({
     .navbar-container {
       width: 100%;
       position: relative;
-      background: ${theme.palette.background.paper};
+      background: #f8f9fa; 
       display: flex;
       align-items: center;
       height: 48px;
