@@ -5,12 +5,12 @@ import {
   Typography,
   Paper,
   Chip,
-  Divider,
   IconButton,
   Menu,
   MenuItem,
   Stack,
-  Drawer,
+  Avatar,
+  Badge,
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -24,6 +24,41 @@ import { useNavigate } from "react-router-dom";
 import { getSlaDueDate, getSlaStatus } from "../../common/utils/slaUtils";
 import { supabase } from "../../common/utils/supabaseClient";
 
+const TEAMS = [
+  {
+    name: "IT Support",
+    members: [
+      { name: "Alice", incidents: 3 },
+      { name: "Bob", incidents: 1 },
+    ],
+    total: 4,
+  },
+  {
+    name: "Network Ops",
+    members: [
+      { name: "Charlie", incidents: 2 },
+      { name: "Dana", incidents: 5 },
+    ],
+    total: 7,
+  },
+  {
+    name: "Dev Team",
+    members: [
+      { name: "Eve", incidents: 2 },
+      { name: "Frank", incidents: 2 },
+    ],
+    total: 4,
+  },
+  {
+    name: "HR Support",
+    members: [
+      { name: "Grace", incidents: 1 },
+      { name: "Henry", incidents: 0 },
+    ],
+    total: 1,
+  },
+];
+
 const Incidents = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
@@ -36,6 +71,7 @@ const Incidents = () => {
   const [filter, setFilter] = useState("All");
 
   const [teamsOpen, setTeamsOpen] = useState(true); // sidebar state
+  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned");
 
   const navigate = useNavigate();
 
@@ -59,7 +95,6 @@ const Incidents = () => {
     setPreviewOpen(false);
   };
 
-  // Apply quick filter chips
   const applyFilter = (selectedFilter, list = incidents) => {
     setFilter(selectedFilter);
     if (selectedFilter === "All") {
@@ -73,7 +108,6 @@ const Incidents = () => {
     }
   };
 
-  // Initial + live updates from Supabase
   useEffect(() => {
     const fetchIncidents = async () => {
       const { data } = await supabase.from("incidents").select("*");
@@ -91,16 +125,12 @@ const Incidents = () => {
     };
 
     fetchIncidents();
-
-    // Realtime subscription for live updates
     const channel = supabase
       .channel("incidents-changes")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "incidents" },
-        () => {
-          fetchIncidents();
-        }
+        () => fetchIncidents()
       )
       .subscribe();
 
@@ -110,19 +140,18 @@ const Incidents = () => {
     // eslint-disable-next-line
   }, []);
 
-  // Priority-based color coding
   const getPriorityColor = (priority) => {
     switch (priority) {
       case "Critical":
-        return "#f44336"; // red
+        return "#f44336";
       case "High":
-        return "#ff9800"; // orange
+        return "#ff9800";
       case "Medium":
-        return "#2196f3"; // blue
+        return "#2196f3";
       case "Low":
-        return "#4caf50"; // green
+        return "#4caf50";
       default:
-        return "#9e9e9e"; // grey
+        return "#9e9e9e";
     }
   };
 
@@ -132,7 +161,7 @@ const Incidents = () => {
       {teamsOpen ? (
         <Box
           sx={{
-            width: 200,
+            width: 240,
             bgcolor: "background.paper",
             borderRight: "1px solid #ddd",
             p: 2,
@@ -148,28 +177,79 @@ const Incidents = () => {
               <MenuIcon />
             </IconButton>
           </Box>
-          <Stack spacing={1}>
-            <Chip label="IT Support" clickable />
-            <Chip label="Network Ops" clickable />
-            <Chip label="Dev Team" clickable />
-            <Chip label="HR Support" clickable />
+
+          <Stack spacing={2}>
+            {TEAMS.map((team) => (
+              <Paper
+                key={team.name}
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  border: "1px solid #eee",
+                  cursor: "pointer",
+                  "&:hover": { boxShadow: "0 2px 6px rgba(20,40,80,0.15)" },
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 1,
+                  }}
+                >
+                  <Typography variant="body1" fontWeight="bold">
+                    {team.name}
+                  </Typography>
+                  <Chip
+                    label={team.total}
+                    size="small"
+                    color="primary"
+                    sx={{ fontSize: "0.75rem", height: 20 }}
+                  />
+                </Box>
+                <Stack direction="row" spacing={1}>
+                  {team.members.map((m) => (
+                    <Badge
+                      key={m.name}
+                      badgeContent={m.incidents}
+                      color="secondary"
+                      overlap="circular"
+                      sx={{
+                        "& .MuiBadge-badge": {
+                          fontSize: "0.65rem",
+                          minWidth: 16,
+                          height: 16,
+                        },
+                      }}
+                    >
+                      <Avatar sx={{ width: 32, height: 32 }}>
+                        {m.name.charAt(0)}
+                      </Avatar>
+                    </Badge>
+                  ))}
+                </Stack>
+              </Paper>
+            ))}
           </Stack>
         </Box>
       ) : (
-        <IconButton
-          size="small"
-          sx={{
-            position: "absolute",
-            top: 70,
-            left: 8,
-            zIndex: 20,
-            bgcolor: "background.paper",
-            border: "1px solid #ddd",
-          }}
-          onClick={() => setTeamsOpen(true)}
-        >
-          <MenuIcon fontSize="small" />
-        </IconButton>
+        sidebarMode === "hidden" && (
+          <IconButton
+            size="small"
+            sx={{
+              position: "absolute",
+              top: 70,
+              left: 8,
+              zIndex: 20,
+              bgcolor: "background.paper",
+              border: "1px solid #ddd",
+            }}
+            onClick={() => setTeamsOpen(true)}
+          >
+            <MenuIcon fontSize="small" />
+          </IconButton>
+        )
       )}
 
       {/* Main Content */}
@@ -202,19 +282,6 @@ const Incidents = () => {
             <MenuItem onClick={() => handleMenuAction("pdf")}>Export to PDF</MenuItem>
           </Menu>
         </Box>
-
-        {/* Quick Filters */}
-        <Stack direction="row" spacing={1} sx={{ px: 2, py: 1, flexWrap: "wrap" }}>
-          {["All", "Open", "Closed", "Pending", "Overdue"].map((f) => (
-            <Chip
-              key={f}
-              label={f}
-              color={filter === f ? "primary" : "default"}
-              onClick={() => applyFilter(f)}
-              clickable
-            />
-          ))}
-        </Stack>
 
         {/* Incidents List */}
         <Box
