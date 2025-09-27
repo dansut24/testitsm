@@ -17,6 +17,7 @@ export default function NavbarTabs({
   handleTabClose,
   handleTabReorder,
   isMobile,
+  navTrigger, // 👈 new
 }) {
   const theme = useTheme();
   const scrollRef = useRef(null);
@@ -58,7 +59,6 @@ export default function NavbarTabs({
       border-top:none !important; 
     }
 
-    /* Tab dividers shortened */
     .chrome-tab-divider {
       top: 4px !important;
       bottom: 4px !important;
@@ -121,6 +121,13 @@ export default function NavbarTabs({
     <>
       <style>{styles}</style>
       <div className="navbar-container">
+        {/* Nav trigger (for hidden sidebar mode) */}
+        {navTrigger && (
+          <div style={{ display: "flex", alignItems: "center", paddingLeft: 8 }}>
+            {navTrigger}
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="ctn-bar" style={{ flex: 1 }}>
           <div ref={scrollRef} className="ctn-scroll">
@@ -133,7 +140,7 @@ export default function NavbarTabs({
                 title: t.label,
                 favicon: t.favicon || "https://www.google.com/favicon.ico",
                 active: idx === tabIndex,
-                isCloseIconVisible: idx !== 0, // prevent closing first tab
+                isCloseIconVisible: idx !== 0,
               }))}
             />
           </div>
