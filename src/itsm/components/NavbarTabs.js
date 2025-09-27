@@ -59,9 +59,11 @@ export default function NavbarTabs({
       border-top:none !important; 
     }
 
+    /* Move the tab divider line upward so it isn’t hidden under the white bar */
     .chrome-tab-divider {
-      top: 4px !important;
-      bottom: 4px !important;
+      top: 2px !important;       /* lift it higher */
+      bottom: auto !important;   /* stop it from stretching to bottom */
+      height: calc(100% - 10px) !important; /* shorter so it clears the white ::after */
       opacity: 0.6;
     }
 
