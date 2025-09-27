@@ -1,4 +1,4 @@
-// src/itsm/components/Layout.js
+// Layout.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -6,7 +6,6 @@ import {
   useMediaQuery,
   SwipeableDrawer,
   Typography,
-  IconButton,
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
@@ -37,22 +36,20 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [tabs, setTabs] = useState([
-    { label: "Dashboard", path: "/dashboard" },
-  ]);
+  const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
 
-  // Sidebar state
+  // Sidebar settings
   const [sidebarPinned, setSidebarPinned] = useState(true);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState(null);
-
-  // Sidebar mode (from settings)
   const [sidebarMode, setSidebarMode] = useState(
     localStorage.getItem("sidebarMode") || "pinned"
   );
 
-  // Tabs sync with routes
+  // Mobile
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [drawerType, setDrawerType] = useState(null);
+
+  // Route sync
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -66,7 +63,6 @@ const Layout = () => {
     }
   }, [location.pathname]); // eslint-disable-line
 
-  // Persist tabs
   useEffect(() => {
     sessionStorage.setItem("tabs", JSON.stringify(tabs));
     sessionStorage.setItem("tabIndex", tabIndex.toString());
@@ -79,9 +75,10 @@ const Layout = () => {
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return; // dashboard cannot be closed
+    if (closingIndex === 0) return; // Dashboard cannot be closed
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
+
     if (location.pathname === tabId) {
       const fallbackIndex = Math.max(0, closingIndex - 1);
       navigate(newTabs[fallbackIndex]?.path || "/dashboard");
@@ -105,30 +102,12 @@ const Layout = () => {
     }
   };
 
-  const sidebarWidth = sidebarPinned ? EXPANDED_WIDTH : COLLAPSED_WIDTH;
-
   const sidebarItems = [
     { label: "Dashboard", icon: <DashboardIcon /> },
     { label: "Incidents", icon: <ListAltIcon /> },
     { label: "Assets", icon: <StorageIcon /> },
     { label: "Settings", icon: <SettingsIcon /> },
   ];
-
-  const renderSidebar = () => {
-    if (isMobile) return null; // handled separately
-    if (sidebarMode === "hidden") return null; // logo moves to navbar
-
-    return (
-      <Sidebar
-        pinned={sidebarMode === "pinned" ? true : sidebarPinned}
-        onToggle={() => setSidebarPinned((p) => !p)}
-        items={sidebarItems}
-        onItemClick={activateOrAddTab}
-        widthExpanded={EXPANDED_WIDTH}
-        widthCollapsed={COLLAPSED_WIDTH}
-      />
-    );
-  };
 
   return (
     <Box
@@ -141,9 +120,18 @@ const Layout = () => {
       }}
     >
       {/* Desktop Sidebar */}
-      {renderSidebar()}
+      {!isMobile && sidebarMode !== "hidden" && (
+        <Sidebar
+          pinned={sidebarPinned}
+          onToggle={() => setSidebarPinned((p) => !p)}
+          items={sidebarItems}
+          onItemClick={activateOrAddTab}
+          widthExpanded={EXPANDED_WIDTH}
+          widthCollapsed={COLLAPSED_WIDTH}
+        />
+      )}
 
-      {/* Main area */}
+      {/* Main Area */}
       <Box
         sx={{
           flex: 1,
@@ -153,11 +141,14 @@ const Layout = () => {
           height: "100vh",
           transition: "margin-left 0.3s ease",
           ml:
-            !isMobile && sidebarMode !== "hidden"
-              ? `${sidebarWidth}px`
+            !isMobile && sidebarMode === "pinned"
+              ? `${EXPANDED_WIDTH}px`
+              : !isMobile && sidebarMode === "collapsible"
+              ? `${sidebarPinned ? EXPANDED_WIDTH : COLLAPSED_WIDTH}px`
               : 0,
         }}
       >
+        {/* Navbar Tabs */}
         <NavbarTabs
           tabs={tabs}
           tabIndex={tabIndex}
@@ -165,9 +156,9 @@ const Layout = () => {
           handleTabClose={handleTabClose}
           handleTabReorder={handleTabReorder}
           isMobile={isMobile}
-          showLogo={sidebarMode === "hidden"} // show logo in navbar if sidebar hidden
         />
 
+        {/* Main Content */}
         <Box
           component="main"
           sx={{
@@ -181,7 +172,7 @@ const Layout = () => {
           <Outlet />
         </Box>
 
-        {/* Mobile bottom bar */}
+        {/* Mobile bottom nav */}
         {isMobile && (
           <Box
             sx={{
@@ -248,15 +239,11 @@ const Layout = () => {
             },
           }}
         >
-          {drawerType === "search" && (
-            <Typography variant="h6">Search</Typography>
-          )}
+          {drawerType === "search" && <Typography variant="h6">Search</Typography>}
           {drawerType === "notifications" && (
             <Typography variant="h6">Notifications</Typography>
           )}
-          {drawerType === "profile" && (
-            <Typography variant="h6">Profile</Typography>
-          )}
+          {drawerType === "profile" && <Typography variant="h6">Profile</Typography>}
         </SwipeableDrawer>
       )}
     </Box>
