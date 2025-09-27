@@ -20,7 +20,6 @@ import {
   Radio,
 } from "@mui/material";
 import { supabase } from "../../common/utils/supabaseClient";
-import { useAuth } from "../../common/context/AuthContext";
 import { widgetRegistry } from "../../itsm/components/widgetRegistry";
 import LinkOffIcon from "@mui/icons-material/LinkOff";
 import GoogleIcon from "@mui/icons-material/Google";
@@ -30,7 +29,6 @@ import EmailIcon from "@mui/icons-material/Email";
 import AddUserModal from "../components/AddUserModal";
 
 const Settings = () => {
-  const { user, authLoading } = useAuth();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [linkedProviders, setLinkedProviders] = useState([]);
@@ -60,11 +58,6 @@ const Settings = () => {
   }, []);
 
   const handleCreateDashboard = async () => {
-    if (!user?.id) {
-      setStatus({ type: "error", message: "⚠️ User not authenticated." });
-      return;
-    }
-
     setLoading(true);
     setStatus(null);
 
@@ -73,7 +66,7 @@ const Settings = () => {
     const { error } = await supabase
       .from("dashboard_layouts")
       .upsert({
-        user_id: user.id,
+        user_id: "demo-user", // placeholder if not authenticated
         layout: defaultLayout,
         updated_at: new Date().toISOString(),
       });
@@ -147,112 +140,96 @@ const Settings = () => {
   const linkedProviderKeys = linkedProviders.map((p) => p.provider);
   const unlinkedProviders = availableProviders.filter((p) => !linkedProviderKeys.includes(p));
 
-  if (authLoading) {
-    return <Box sx={{ p: 4 }}><Typography>Loading session...</Typography></Box>;
-  }
-
   return (
     <Box sx={{ p: 4 }}>
       <Typography variant="h5" gutterBottom>Dashboard Settings</Typography>
 
-      {!user?.id ? (
-        <Alert severity="warning" sx={{ mt: 2 }}>User is not authenticated.</Alert>
+      <Typography variant="body1" sx={{ mb: 2 }}>
+        Use the button below to create your personal dashboard layout.
+      </Typography>
+      <Button variant="contained" onClick={handleCreateDashboard} disabled={loading}>
+        {loading ? "Creating..." : "Create Dashboard Layout"}
+      </Button>
+      {status && <Alert severity={status.type} sx={{ mt: 2 }}>{status.message}</Alert>}
+
+      <Divider sx={{ my: 4 }} />
+
+      <Typography variant="h6">Linked Accounts</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        Identity providers linked to your account.
+      </Typography>
+
+      {linkedProviders.length === 0 ? (
+        <Alert severity="info">No linked accounts found.</Alert>
       ) : (
+        <List>
+          {linkedProviders.map((identity) => (
+            <ListItem key={identity.provider} divider>
+              {getProviderIcon(identity.provider)}
+              <ListItemText primary={identity.provider.charAt(0).toUpperCase() + identity.provider.slice(1)} />
+              <ListItemSecondaryAction>
+                {identity.provider !== "email" && (
+                  <IconButton onClick={() => confirmUnlink(identity.provider)}>
+                    <LinkOffIcon />
+                  </IconButton>
+                )}
+              </ListItemSecondaryAction>
+            </ListItem>
+          ))}
+        </List>
+      )}
+
+      {unlinkedProviders.length > 0 && (
         <>
-          <Typography variant="body1" sx={{ mb: 2 }}>
-            Use the button below to create your personal dashboard layout.
-          </Typography>
-          <Button variant="contained" onClick={handleCreateDashboard} disabled={loading}>
-            {loading ? "Creating..." : "Create Dashboard Layout"}
-          </Button>
-          {status && <Alert severity={status.type} sx={{ mt: 2 }}>{status.message}</Alert>}
-
           <Divider sx={{ my: 4 }} />
-
-          <Typography variant="h6">Linked Accounts</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Identity providers linked to your account.
-          </Typography>
-
-          {linkedProviders.length === 0 ? (
-            <Alert severity="info">No linked accounts found.</Alert>
-          ) : (
-            <List>
-              {linkedProviders.map((identity) => (
-                <ListItem key={identity.provider} divider>
-                  {getProviderIcon(identity.provider)}
-                  <ListItemText primary={identity.provider.charAt(0).toUpperCase() + identity.provider.slice(1)} />
-                  <ListItemSecondaryAction>
-                    {identity.provider !== "email" && (
-                      <IconButton onClick={() => confirmUnlink(identity.provider)}>
-                        <LinkOffIcon />
-                      </IconButton>
-                    )}
-                  </ListItemSecondaryAction>
-                </ListItem>
-              ))}
-            </List>
-          )}
-
-          {unlinkedProviders.length > 0 && (
-            <>
-              <Divider sx={{ my: 4 }} />
-              <Typography variant="h6">Link New Accounts</Typography>
-              <Stack direction="column" spacing={1} sx={{ mt: 2 }}>
-                {unlinkedProviders.map((provider) => (
-                  <Button
-                    key={provider}
-                    variant="outlined"
-                    startIcon={getProviderIcon(provider)}
-                    onClick={() => handleLink(provider)}
-                  >
-                    Link {provider.charAt(0).toUpperCase() + provider.slice(1)}
-                  </Button>
-                ))}
-              </Stack>
-            </>
-          )}
-
-          <Divider sx={{ my: 4 }} />
-
-          <Typography variant="h6">Sidebar Preferences</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Choose how the sidebar behaves in desktop view.
-          </Typography>
-
-          <RadioGroup
-            value={sidebarMode}
-            onChange={(e) => {
-              const value = e.target.value;
-              setSidebarMode(value);
-              localStorage.setItem("sidebarMode", value);
-              window.location.reload(); // reload to apply layout change
-            }}
-          >
-            <FormControlLabel value="pinned" control={<Radio />} label="Pinned Sidebar (default)" />
-            <FormControlLabel value="collapsible" control={<Radio />} label="Collapsible Sidebar (toggle with logo)" />
-            <FormControlLabel value="hidden" control={<Radio />} label="Hidden Sidebar (logo moves into Navbar)" />
-          </RadioGroup>
-
-          <Divider sx={{ my: 4 }} />
-
-          <Typography variant="h6">Manage Users</Typography>
-          <Button
-            variant="contained"
-            sx={{ mt: 2 }}
-            onClick={() => {
-              if (!user?.tenant_id) {
-                alert("User tenant not detected. Cannot assign new user.");
-                return;
-              }
-              setAddUserOpen(true);
-            }}
-          >
-            Add User
-          </Button>
-          <AddUserModal open={addUserOpen} onClose={() => setAddUserOpen(false)} tenantId={user?.tenant_id} />
+          <Typography variant="h6">Link New Accounts</Typography>
+          <Stack direction="column" spacing={1} sx={{ mt: 2 }}>
+            {unlinkedProviders.map((provider) => (
+              <Button
+                key={provider}
+                variant="outlined"
+                startIcon={getProviderIcon(provider)}
+                onClick={() => handleLink(provider)}
+              >
+                Link {provider.charAt(0).toUpperCase() + provider.slice(1)}
+              </Button>
+            ))}
+          </Stack>
         </>
       )}
+
+      <Divider sx={{ my: 4 }} />
+
+      <Typography variant="h6">Sidebar Preferences</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        Choose how the sidebar behaves in desktop view.
+      </Typography>
+
+      <RadioGroup
+        value={sidebarMode}
+        onChange={(e) => {
+          const value = e.target.value;
+          setSidebarMode(value);
+          localStorage.setItem("sidebarMode", value);
+          window.location.reload();
+        }}
+      >
+        <FormControlLabel value="pinned" control={<Radio />} label="Pinned Sidebar (default)" />
+        <FormControlLabel value="collapsible" control={<Radio />} label="Collapsible Sidebar (toggle with logo)" />
+        <FormControlLabel value="hidden" control={<Radio />} label="Hidden Sidebar (logo in Navbar)" />
+      </RadioGroup>
+
+      <Divider sx={{ my: 4 }} />
+
+      <Typography variant="h6">Manage Users</Typography>
+      <Button
+        variant="contained"
+        sx={{ mt: 2 }}
+        onClick={() => setAddUserOpen(true)}
+      >
+        Add User
+      </Button>
+      <AddUserModal open={addUserOpen} onClose={() => setAddUserOpen(false)} tenantId={"demo-tenant"} />
 
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
         <DialogTitle>Confirm Unlink</DialogTitle>
