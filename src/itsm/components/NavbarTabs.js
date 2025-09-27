@@ -133,14 +133,14 @@ export default function NavbarTabs({
 
         <div className="navbar-icons">
           <AddIcon
-            onClick={() =>
-              handleTabReorder([
-                ...tabs,
-                { label: "New Tab", path: `/tab-${tabs.length + 1}` },
-              ])
-            }
-            style={{ cursor: "pointer", fontSize: 28, fontWeight: "bold" }}
-          />
+  onClick={() =>
+    handleTabReorder([
+      ...tabs,
+      { label: "New Tab", path: `/new-tab/${tabs.length + 1}` },
+    ])
+  }
+  style={{ cursor: "pointer", fontSize: 28, fontWeight: "bold" }}
+/>
           {!isMobile && (
             <>
               <SearchIcon style={{ cursor: "pointer" }} />
