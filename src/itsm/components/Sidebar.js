@@ -1,12 +1,10 @@
 // Sidebar.js
 import React from "react";
 import { Box, IconButton, List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import ListAltIcon from "@mui/icons-material/ListAlt";
-import StorageIcon from "@mui/icons-material/Storage";
-import SettingsIcon from "@mui/icons-material/Settings";
+import { useTheme } from "@mui/material/styles";
 
 const Sidebar = ({ pinned, onToggle, items, onItemClick, widthExpanded, widthCollapsed }) => {
+  const theme = useTheme();
   const width = pinned ? widthExpanded : widthCollapsed;
 
   return (
@@ -16,21 +14,22 @@ const Sidebar = ({ pinned, onToggle, items, onItemClick, widthExpanded, widthCol
         height: "100vh",
         display: "flex",
         flexDirection: "column",
-        borderRight: "1px solid rgba(0,0,0,0.12)",
+        borderRight: `1px solid ${theme.palette.divider}`,
         transition: "width 0.3s ease",
-        backgroundColor: "#fff",
+        backgroundColor: theme.palette.background.paper,
       }}
-    >      {/* Logo toggle */}
+    >
+      {/* Logo / toggle */}
       <Box
         sx={{
           display: "flex",
           alignItems: "center",
           justifyContent: pinned ? "space-between" : "center",
-          height: "48px", // match navbar height
+          height: "48px",
           px: 1,
-          backgroundColor: "#f8f9fa", // match Navbar background
-          borderBottom: "4px solid #ffffff", // same white underline as Navbar
-          borderRight: "none",               // completely remove right outlin
+          backgroundColor: theme.palette.background.paper,
+          borderBottom: `4px solid ${theme.palette.background.default}`,
+          borderRight: "none",
         }}
       >
         <IconButton onClick={onToggle}>
@@ -40,7 +39,11 @@ const Sidebar = ({ pinned, onToggle, items, onItemClick, widthExpanded, widthCol
             style={{ width: 28, height: 28 }}
           />
         </IconButton>
-        {pinned && <span style={{ fontWeight: "bold" }}>MyApp</span>}
+        {pinned && (
+          <span style={{ fontWeight: "bold", color: theme.palette.text.primary }}>
+            MyApp
+          </span>
+        )}
       </Box>
 
       {/* Menu */}
@@ -53,9 +56,17 @@ const Sidebar = ({ pinned, onToggle, items, onItemClick, widthExpanded, widthCol
             sx={{
               px: pinned ? 2 : 1,
               justifyContent: pinned ? "flex-start" : "center",
+              color: theme.palette.text.primary,
             }}
           >
-            <ListItemIcon sx={{ minWidth: 0, mr: pinned ? 2 : "auto", justifyContent: "center" }}>
+            <ListItemIcon
+              sx={{
+                minWidth: 0,
+                mr: pinned ? 2 : "auto",
+                justifyContent: "center",
+                color: theme.palette.text.secondary,
+              }}
+            >
               {icon}
             </ListItemIcon>
             {pinned && <ListItemText primary={label} />}
