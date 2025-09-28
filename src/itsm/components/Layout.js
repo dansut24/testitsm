@@ -44,7 +44,7 @@ const Layout = () => {
 
   // Sidebar mode & state
   const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); // "pinned" | "collapsible" | "hidden"
-  const [sidebarPinned, setSidebarPinned] = useState(true); // used only in "collapsible"
+  const [sidebarPinned, setSidebarPinned] = useState(true); // only for "collapsible"
 
   // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -110,16 +110,16 @@ const Layout = () => {
     { label: "Settings", icon: <SettingsIcon /> },
   ];
 
-  // ---- LAYOUT ----
   return (
     <Box
       sx={{
+        position: "fixed",   // ✅ pin the whole app to viewport
+        inset: 0,
         display: "flex",
-        height: "100dvh", // ✅ dynamic viewport height; avoids iOS URL bar jumps
         width: "100%",
-        overflow: "hidden",
+        height: "100dvh",    // ✅ dynamic vh to avoid URL bar jumps
+        overflow: "hidden",  // no window scroll
         bgcolor: theme.palette.background.default,
-        // prevent body/parent over-scroll chaining
         overscrollBehavior: "none",
       }}
     >
@@ -137,8 +137,8 @@ const Layout = () => {
         />
       )}
 
-      {/* Main Column as a GRID:
-          Row 1: NavbarTabs (fixed height)
+      {/* Main column as a grid:
+          Row 1: Navbar (fixed height)
           Row 2: Scrollable content
           Row 3: Bottom nav (mobile only, fixed height)
        */}
@@ -150,7 +150,7 @@ const Layout = () => {
           gridTemplateRows: isMobile
             ? `${NAVBAR_HEIGHT}px 1fr ${BOTTOM_NAV_HEIGHT}px`
             : `${NAVBAR_HEIGHT}px 1fr`,
-          height: "100%", // fill 100dvh
+          height: "100%",
         }}
       >
         {/* Row 1: Navbar */}
@@ -171,14 +171,14 @@ const Layout = () => {
           />
         </Box>
 
-        {/* Row 2: Scrollable Content */}
+        {/* Row 2: Scrollable content (only this row scrolls) */}
         <Box
           component="main"
           sx={{
-            minHeight: 0,            // ✅ critical so this grid row can scroll
+            minHeight: 0,               // ✅ allows the row to actually shrink and scroll
             overflowY: "auto",
             overflowX: "hidden",
-            WebkitOverflowScrolling: "touch", // smooth iOS inertia
+            WebkitOverflowScrolling: "touch",
             px: 2,
             py: 2,
           }}
@@ -186,7 +186,7 @@ const Layout = () => {
           <Outlet />
         </Box>
 
-        {/* Row 3: Bottom nav (only mobile; *not* fixed/overlay) */}
+        {/* Row 3: Bottom nav (mobile only) */}
         {isMobile && (
           <Box
             sx={{
@@ -195,6 +195,7 @@ const Layout = () => {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-around",
+              height: BOTTOM_NAV_HEIGHT,
             }}
           >
             <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
@@ -212,9 +213,7 @@ const Layout = () => {
           open={mobileSidebarOpen}
           onClose={() => setMobileSidebarOpen(false)}
           onOpen={() => setMobileSidebarOpen(true)}
-          ModalProps={{
-            keepMounted: true,
-          }}
+          ModalProps={{ keepMounted: true }}
           PaperProps={{
             sx: {
               width: EXPANDED_WIDTH,
@@ -236,7 +235,7 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Mobile Action Drawer (bottom) — click-through backdrop so icons still work */}
+      {/* Mobile Action Drawer (bottom) — no dim, click-through backdrop, offset above bottom nav */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
@@ -246,17 +245,17 @@ const Layout = () => {
           ModalProps={{
             keepMounted: true,
             BackdropProps: {
-              sx: { backgroundColor: "transparent", pointerEvents: "none" }, // ✅ no dim, clicks pass through
+              sx: { backgroundColor: "transparent", pointerEvents: "none" }, // ✅ don't dim; allow tapping icons behind
             },
           }}
           PaperProps={{
             sx: {
-              height: `calc(50dvh - ${BOTTOM_NAV_HEIGHT}px)`, // don’t cover bottom nav
+              height: `calc(50dvh - ${BOTTOM_NAV_HEIGHT}px)`,
               bottom: `${BOTTOM_NAV_HEIGHT}px`,
               p: 2,
               borderTopLeftRadius: 12,
               borderTopRightRadius: 12,
-              pointerEvents: "auto", // Paper should still receive interactions
+              pointerEvents: "auto",
             },
           }}
         >
