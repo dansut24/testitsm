@@ -167,23 +167,20 @@ const Layout = () => {
 
         {/* Scrollable content area */}
         <Box
-          component="main"
-          sx={{
-            flex: 1,
-            minHeight: 0, // important for flex + overflow
-            overflowY: "auto",
-            overflowX: "hidden",
-            // Let content pass behind bottom nav; we add padding so nothing is obscured
-            pb: isMobile
-              ? `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))`
-              : 0,
-            px: { xs: 1, sm: 2 },
-          }}
-        >
-          {/* Your pages (e.g., Dashboard/Incidents) should render a container/card inside */}
-          <Outlet />
-        </Box>
-
+  component="main"
+  sx={{
+    flex: 1,
+    overflowY: "auto",
+    overflowX: "hidden",
+    px: 2,
+    pb: isMobile ? 7 : 0, // space for bottom nav
+    minHeight: `calc(100vh - 48px - ${isMobile ? 56 : 0}px)`,
+    // 48px = top navbar, 56px = mobile bottom nav
+    boxSizing: "border-box",
+  }}
+>
+  <Outlet />
+</Box>
         {/* Mobile bottom nav */}
         {isMobile && (
           <Box
