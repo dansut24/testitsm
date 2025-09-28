@@ -43,8 +43,8 @@ const Layout = () => {
   const [tabIndex, setTabIndex] = useState(0);
 
   // Sidebar mode & state
-  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); 
-  const [sidebarPinned, setSidebarPinned] = useState(true);
+  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); // "pinned" | "collapsible" | "hidden"
+  const [sidebarPinned, setSidebarPinned] = useState(true); // only for "collapsible"
 
   // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -52,27 +52,42 @@ const Layout = () => {
 
   // 🔹 Fix viewport height jumps on mobile (esp. rotation on iOS Safari/Chrome)
   useEffect(() => {
+    let resizeTimer;
+    let lastWidth = window.innerWidth;
+
     const setVh = () => {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty("--vh", `${vh}px`);
     };
 
     const handleResize = () => {
+      clearTimeout(resizeTimer);
+
+      // Run immediately
       setVh();
-      requestAnimationFrame(setVh);    // next paint
-      setTimeout(setVh, 300);          // small delay
-      setTimeout(setVh, 600);          // longer delay for iOS portrait bounce
+
+      // Debounced re-check (wait for viewport to settle)
+      resizeTimer = setTimeout(() => {
+        if (window.innerWidth !== lastWidth) {
+          lastWidth = window.innerWidth;
+          setVh();
+        }
+      }, 300);
+
+      // Safety delayed recheck for Safari
+      setTimeout(setVh, 600);
     };
 
-    setVh(); // run immediately
+    setVh(); // initial
+
     window.addEventListener("resize", handleResize);
     window.addEventListener("orientationchange", handleResize);
-
     if (window.visualViewport) {
       window.visualViewport.addEventListener("resize", handleResize);
     }
 
     return () => {
+      clearTimeout(resizeTimer);
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("orientationchange", handleResize);
       if (window.visualViewport) {
@@ -148,13 +163,12 @@ const Layout = () => {
         inset: 0,
         display: "flex",
         width: "100%",
-        height: "calc(var(--vh, 1vh) * 100)", // ✅ use CSS var for reliable vh
+        height: "calc(var(--vh, 1vh) * 100)", // ✅ use --vh
         overflow: "hidden",
         bgcolor: theme.palette.background.default,
         overscrollBehavior: "none",
       }}
     >
-      {/* Sidebar desktop */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -168,7 +182,6 @@ const Layout = () => {
         />
       )}
 
-      {/* Main grid */}
       <Box
         sx={{
           flex: 1,
@@ -180,7 +193,6 @@ const Layout = () => {
           height: "100%",
         }}
       >
-        {/* Navbar */}
         <Box
           sx={{
             position: "relative",
@@ -198,7 +210,6 @@ const Layout = () => {
           />
         </Box>
 
-        {/* Content */}
         <Box
           component="main"
           sx={{
@@ -214,7 +225,6 @@ const Layout = () => {
           <Outlet />
         </Box>
 
-        {/* Bottom nav */}
         {isMobile && (
           <Box
             sx={{
@@ -234,7 +244,6 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Mobile Sidebar Drawer */}
       {isMobile && (
         <SwipeableDrawer
           anchor="left"
@@ -263,7 +272,6 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Mobile Action Drawer */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
