@@ -114,26 +114,17 @@ const Dashboard = () => {
   const renderWidget = (widget) => {
     if (widget.type === "table") {
       return (
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 1.5,
-            overflowY: "auto",
-            height: "100%",
-          }}
-        >
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
           {Array.from({ length: 3 }).map((_, i) => (
             <Paper
               key={i}
               sx={{
-                background: theme.palette.grey[50],
+                background: theme.palette.background.default,
                 borderLeft: `5px solid ${theme.palette.primary.main}`,
                 p: 2,
                 borderRadius: 2,
-                boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
-                transition: "all 0.2s ease",
-                "&:hover": { boxShadow: "0 4px 12px rgba(0,0,0,0.08)" },
+                boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+                "&:hover": { boxShadow: "0 2px 8px rgba(0,0,0,0.12)" },
               }}
             >
               <Stack
@@ -149,8 +140,8 @@ const Dashboard = () => {
                   label={
                     i % 3 === 0 ? "Open" : i % 3 === 1 ? "Closed" : "Pending"
                   }
-                  sx={{ fontWeight: 500 }}
                   color={i % 3 === 0 ? "warning" : i % 3 === 1 ? "success" : "info"}
+                  sx={{ fontWeight: 500 }}
                 />
               </Stack>
               <Typography variant="body2" mt={1}>
@@ -173,10 +164,7 @@ const Dashboard = () => {
           <PieChart>
             <Pie data={samplePieData} cx="50%" cy="50%" outerRadius="80%" dataKey="value">
               {samplePieData.map((_, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={COLORS[index % COLORS.length]}
-                />
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
             <RechartTooltip />
@@ -235,130 +223,137 @@ const Dashboard = () => {
   };
 
   return (
-    <Box
-      sx={{
-        p: { xs: 1, md: 3 },
-        backgroundColor: theme.palette.background.default,
-        width: "100%",
-      }}
-    >
-      {/* Header */}
+    <Box sx={{ px: { xs: 1, sm: 2 }, py: 2 }}>
       <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={3}
+        sx={{
+          maxWidth: 1400,
+          mx: "auto",
+          bgcolor: theme.palette.background.paper,
+          borderRadius: 2,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+          p: { xs: 2, sm: 3 },
+          display: "flex",
+          flexDirection: "column",
+          gap: 3,
+        }}
       >
-        <Typography variant="h4" fontWeight="bold" color="primary">
-          Dashboard
-        </Typography>
-        {!isPreview && (
-          <Stack direction="row" spacing={1} alignItems="center">
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={useGradient}
-                  onChange={() => setUseGradient(!useGradient)}
-                />
-              }
-              label="Gradient Theme"
-            />
-            <Button
-              variant="outlined"
-              size="small"
-              color="secondary"
-              onClick={() => setWidgets([])}
-            >
-              Reset
-            </Button>
-          </Stack>
-        )}
-      </Box>
+        {/* Header */}
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          flexWrap="wrap"
+          gap={2}
+        >
+          <Typography variant="h4" fontWeight="bold" color="primary">
+            Dashboard
+          </Typography>
+          {!isPreview && (
+            <Stack direction="row" spacing={1} alignItems="center">
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={useGradient}
+                    onChange={() => setUseGradient(!useGradient)}
+                  />
+                }
+                label="Gradient Theme"
+              />
+              <Button
+                variant="outlined"
+                size="small"
+                color="secondary"
+                onClick={() => setWidgets([])}
+              >
+                Reset
+              </Button>
+            </Stack>
+          )}
+        </Box>
 
-      {/* Widgets */}
-      <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="dashboard" direction="horizontal">
-          {(provided) => (
-            <Box
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-              sx={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 2,
-                width: "100%",
-              }}
-            >
-              {widgets.map((widget, index) => (
-                <Draggable
-                  key={widget.id}
-                  draggableId={widget.id}
-                  index={index}
-                  isDragDisabled={isPreview}
-                >
-                  {(provided) => (
-                    <Box
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
-                      sx={{
-                        flex: {
-                          xs: "1 1 100%",
-                          sm: "1 1 calc(50% - 8px)",
-                          md: "1 1 calc(33.333% - 16px)",
-                        },
-                        display: "flex",
-                        minWidth: 0,
-                      }}
-                    >
-                      <Paper
-                        elevation={3}
+        {/* Widgets */}
+        <DragDropContext onDragEnd={onDragEnd}>
+          <Droppable droppableId="dashboard" direction="horizontal">
+            {(provided) => (
+              <Box
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                sx={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 2,
+                  width: "100%",
+                }}
+              >
+                {widgets.map((widget, index) => (
+                  <Draggable
+                    key={widget.id}
+                    draggableId={widget.id}
+                    index={index}
+                    isDragDisabled={isPreview}
+                  >
+                    {(provided) => (
+                      <Box
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
                         sx={{
-                          flexGrow: 1,
-                          borderRadius: 3,
-                          p: 2,
-                          position: "relative",
+                          flex: {
+                            xs: "1 1 100%",
+                            sm: "1 1 calc(50% - 8px)",
+                            md: "1 1 calc(33.333% - 16px)",
+                          },
+                          display: "flex",
                           minWidth: 0,
-                          backgroundColor: theme.palette.background.paper,
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-                          transition: "all 0.2s ease",
-                          "&:hover": { boxShadow: "0 4px 12px rgba(0,0,0,0.12)" },
                         }}
                       >
-                        {!isPreview && (
-                          <IconButton
-                            size="small"
-                            onClick={() => deleteWidget(widget.id)}
-                            sx={{
-                              position: "absolute",
-                              top: 8,
-                              right: 8,
-                              color: theme.palette.grey[600],
-                            }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        )}
-                        <Typography
-                          variant="h6"
-                          fontWeight="bold"
-                          mb={1}
-                          color="text.primary"
+                        <Paper
+                          elevation={2}
+                          sx={{
+                            flexGrow: 1,
+                            borderRadius: 3,
+                            p: 2,
+                            position: "relative",
+                            backgroundColor: theme.palette.background.paper,
+                            transition: "all 0.2s ease",
+                            "&:hover": { boxShadow: "0 4px 12px rgba(0,0,0,0.12)" },
+                          }}
                         >
-                          {widget.title}
-                        </Typography>
-                        <Divider sx={{ mb: 2 }} />
-                        {renderWidget(widget)}
-                      </Paper>
-                    </Box>
-                  )}
-                </Draggable>
-              ))}
-              {provided.placeholder}
-            </Box>
-          )}
-        </Droppable>
-      </DragDropContext>
+                          {!isPreview && (
+                            <IconButton
+                              size="small"
+                              onClick={() => deleteWidget(widget.id)}
+                              sx={{
+                                position: "absolute",
+                                top: 8,
+                                right: 8,
+                                color: theme.palette.grey[600],
+                              }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          )}
+                          <Typography
+                            variant="h6"
+                            fontWeight="bold"
+                            mb={1}
+                            color="text.primary"
+                          >
+                            {widget.title}
+                          </Typography>
+                          <Divider sx={{ mb: 2 }} />
+                          {renderWidget(widget)}
+                        </Paper>
+                      </Box>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </Box>
+            )}
+          </Droppable>
+        </DragDropContext>
+      </Box>
     </Box>
   );
 };
