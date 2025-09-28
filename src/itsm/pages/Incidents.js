@@ -188,7 +188,7 @@ const Incidents = () => {
         gap: 2,
       }}
     >
-      {/* Teams Sidebar (desktop inline / mobile drawer) */}
+      {/* Teams Sidebar */}
       {!isMobile ? (
         teamsOpen && <TeamList />
       ) : (
@@ -205,12 +205,10 @@ const Incidents = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Incidents Panel */}
-      <Paper
-        elevation={2}
+      {/* Incidents Panel — now spans full width, no outer Paper */}
+      <Box
         sx={{
           flex: 1,
-          borderRadius: 3,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -319,7 +317,7 @@ const Incidents = () => {
             </Paper>
           ))}
         </Box>
-      </Paper>
+      </Box>
 
       <ExportPreviewModal
         open={previewOpen}
