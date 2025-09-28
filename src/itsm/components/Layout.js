@@ -1,4 +1,4 @@
-// src/itsm/components/Layout.js
+// Layout.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -6,7 +6,6 @@ import {
   useMediaQuery,
   SwipeableDrawer,
   Typography,
-  Paper,
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
@@ -20,6 +19,9 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import StorageIcon from "@mui/icons-material/Storage";
 import SettingsIcon from "@mui/icons-material/Settings";
+
+const NAVBAR_HEIGHT = 48;
+const BOTTOM_NAV_HEIGHT = 56;
 
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 48;
@@ -41,25 +43,23 @@ const Layout = () => {
   const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
 
-  // Sidebar
-  const [sidebarMode, setSidebarMode] = useState(
-    localStorage.getItem("sidebarMode") || "pinned"
-  );
-  const [sidebarPinned, setSidebarPinned] = useState(true);
+  // Sidebar prefs
+  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); // pinned | collapsible | hidden
+  const [sidebarPinned, setSidebarPinned] = useState(true); // used when mode === 'collapsible'
 
-  // Mobile
+  // Mobile UI
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState(null);
+  const [drawerType, setDrawerType] = useState(null); // search | notifications | profile
 
-  // Tabs sync
+  // Keep tabs in sync with route
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
     if (!tabExists) {
       const label = routeLabels[currentPath] || "Unknown";
-      const newTabs = [...tabs, { label, path: currentPath }];
-      setTabs(newTabs);
-      setTabIndex(newTabs.length - 1);
+      const next = [...tabs, { label, path: currentPath }];
+      setTabs(next);
+      setTabIndex(next.length - 1);
     } else {
       setTabIndex(tabs.findIndex((t) => t.path === currentPath));
     }
@@ -68,22 +68,22 @@ const Layout = () => {
 
   useEffect(() => {
     sessionStorage.setItem("tabs", JSON.stringify(tabs));
-    sessionStorage.setItem("tabIndex", tabIndex.toString());
+    sessionStorage.setItem("tabIndex", String(tabIndex));
   }, [tabs, tabIndex]);
 
-  const handleTabChange = (ev, newIndex, path) => {
+  const handleTabChange = (_ev, newIndex, path) => {
     setTabIndex(newIndex);
     if (path) navigate(path);
   };
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return;
-    const newTabs = tabs.filter((t) => t.path !== tabId);
-    setTabs(newTabs);
+    if (closingIndex === 0) return; // keep Dashboard
+    const next = tabs.filter((t) => t.path !== tabId);
+    setTabs(next);
     if (location.pathname === tabId) {
       const fallbackIndex = Math.max(0, closingIndex - 1);
-      navigate(newTabs[fallbackIndex]?.path || "/dashboard");
+      navigate(next[fallbackIndex]?.path || "/dashboard");
     }
   };
 
@@ -97,9 +97,9 @@ const Layout = () => {
       setTabIndex(idx);
       navigate(existing.path);
     } else {
-      const newTabs = [...tabs, { label, path }];
-      setTabs(newTabs);
-      setTabIndex(newTabs.length - 1);
+      const next = [...tabs, { label, path }];
+      setTabs(next);
+      setTabIndex(next.length - 1);
       navigate(path);
     }
   };
@@ -111,26 +111,17 @@ const Layout = () => {
     { label: "Settings", icon: <SettingsIcon /> },
   ];
 
-  const currentSidebarWidth =
-    sidebarMode === "pinned"
-      ? EXPANDED_WIDTH
-      : sidebarMode === "collapsible"
-      ? sidebarPinned
-        ? EXPANDED_WIDTH
-        : COLLAPSED_WIDTH
-      : 0;
-
   return (
     <Box
       sx={{
         display: "flex",
-        height: "100vh",
+        height: "100dvh",               // stable viewport height on mobile
         width: "100%",
-        overflow: "hidden",
+        overflow: "hidden",             // prevent body scroll; we control scroll inside <main>
         bgcolor: theme.palette.background.default,
       }}
     >
-      {/* Sidebar (desktop) */}
+      {/* Desktop Sidebar (flow-in) */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -144,17 +135,17 @@ const Layout = () => {
         />
       )}
 
-      {/* Main content */}
+      {/* Column (not scrollable) */}
       <Box
         sx={{
           flex: 1,
           display: "flex",
           flexDirection: "column",
+          height: "100dvh",           // fill viewport
           minWidth: 0,
-          height: "100vh",
         }}
       >
-        {/* Navbar */}
+        {/* Navbar stays in place because the column itself does not scroll */}
         <NavbarTabs
           tabs={tabs}
           tabIndex={tabIndex}
@@ -164,30 +155,22 @@ const Layout = () => {
           isMobile={isMobile}
         />
 
-        {/* Shared container for all pages */}
+        {/* The ONLY scroll container */}
         <Box
+          component="main"
           sx={{
-            flex: 1,
+            height: `calc(100dvh - ${NAVBAR_HEIGHT}px)`, // don’t subtract bottom bar; it’s fixed
             overflowY: "auto",
             overflowX: "hidden",
-            px: { xs: 1, md: 3 },
-            pb: isMobile ? 7 : 0, // padding for bottom nav
+            px: 2,
+            pb: isMobile ? `${BOTTOM_NAV_HEIGHT + 8}px` : 2, // keep content clear of the fixed bottom bar
+            boxSizing: "border-box",
           }}
         >
-          <Paper
-            elevation={0}
-            sx={{
-              p: { xs: 1.5, md: 3 },
-              borderRadius: 3,
-              bgcolor: theme.palette.background.default,
-              minHeight: "100%",
-            }}
-          >
-            <Outlet />
-          </Paper>
+          <Outlet />
         </Box>
 
-        {/* Bottom nav (mobile) */}
+        {/* Mobile bottom nav (fixed overlay) */}
         {isMobile && (
           <Box
             sx={{
@@ -201,7 +184,7 @@ const Layout = () => {
               borderTop: `1px solid ${theme.palette.divider}`,
               backgroundColor: theme.palette.background.paper,
               zIndex: 1500,
-              height: 56,
+              height: BOTTOM_NAV_HEIGHT,
             }}
           >
             <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
@@ -212,7 +195,7 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Sidebar drawer (mobile) */}
+      {/* Mobile Sidebar Drawer (overlay) */}
       {isMobile && (
         <SwipeableDrawer
           anchor="left"
@@ -239,20 +222,25 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Action drawers (mobile) */}
+      {/* Mobile Action Drawer (bottom) */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
           open={Boolean(drawerType)}
           onClose={() => setDrawerType(null)}
+          disableSwipeToOpen={false}
+          ModalProps={{ keepMounted: true }}
           PaperProps={{
             sx: {
-              height: "50%",
+              // Keep visible above bottom nav without changing page height
+              height: `calc(60dvh - ${BOTTOM_NAV_HEIGHT}px)`,
+              mb: `${BOTTOM_NAV_HEIGHT}px`,
               p: 2,
               borderTopLeftRadius: 12,
               borderTopRightRadius: 12,
             },
           }}
+          hideBackdrop
         >
           {drawerType === "search" && <Typography variant="h6">Search</Typography>}
           {drawerType === "notifications" && <Typography variant="h6">Notifications</Typography>}
