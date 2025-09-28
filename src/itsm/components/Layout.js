@@ -43,27 +43,34 @@ const Layout = () => {
   const [tabIndex, setTabIndex] = useState(0);
 
   // Sidebar mode & state
-  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned");
-  const [sidebarPinned, setSidebarPinned] = useState(true);
+  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); // "pinned" | "collapsible" | "hidden"
+  const [sidebarPinned, setSidebarPinned] = useState(true); // only for "collapsible"
 
   // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState(null);
+  const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile" | null
 
-  // 🔹 Fix for viewport height (works across orientation changes)
+  // 🔹 Fix viewport height jumps on mobile (especially rotation)
   useEffect(() => {
     const setVh = () => {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty("--vh", `${vh}px`);
     };
 
-    setVh();
-    window.addEventListener("resize", setVh);
-    window.addEventListener("orientationchange", setVh);
+    setVh(); // run immediately
+
+    const handleResize = () => {
+      setVh();
+      requestAnimationFrame(setVh); // next frame
+      setTimeout(setVh, 300); // Safari delayed bounce
+    };
+
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleResize);
 
     return () => {
-      window.removeEventListener("resize", setVh);
-      window.removeEventListener("orientationchange", setVh);
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
     };
   }, []);
 
@@ -94,7 +101,7 @@ const Layout = () => {
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return;
+    if (closingIndex === 0) return; // keep Dashboard
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
     if (location.pathname === tabId) {
@@ -134,13 +141,13 @@ const Layout = () => {
         inset: 0,
         display: "flex",
         width: "100%",
-        // 🔹 Use CSS var for viewport height instead of 100vh
-        height: "calc(var(--vh, 1vh) * 100)",
+        height: "calc(var(--vh, 1vh) * 100)", // ✅ dynamic height with fallback
         overflow: "hidden",
         bgcolor: theme.palette.background.default,
         overscrollBehavior: "none",
       }}
     >
+      {/* Desktop Sidebar (inline; never duplicates) */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -154,6 +161,7 @@ const Layout = () => {
         />
       )}
 
+      {/* Main grid */}
       <Box
         sx={{
           flex: 1,
@@ -199,7 +207,7 @@ const Layout = () => {
           <Outlet />
         </Box>
 
-        {/* Mobile Bottom Nav */}
+        {/* Bottom nav (mobile only) */}
         {isMobile && (
           <Box
             sx={{
