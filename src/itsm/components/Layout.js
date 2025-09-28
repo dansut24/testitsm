@@ -22,6 +22,8 @@ import SettingsIcon from "@mui/icons-material/Settings";
 
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 48;
+const NAVBAR_HEIGHT = 48;
+const BOTTOM_NAV_HEIGHT = 56;
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -41,14 +43,12 @@ const Layout = () => {
   const [tabIndex, setTabIndex] = useState(0);
 
   // Sidebar mode & state
-  const [sidebarMode, setSidebarMode] = useState(
-    localStorage.getItem("sidebarMode") || "pinned"
-  );
-  const [sidebarPinned, setSidebarPinned] = useState(true);
+  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); // "pinned" | "collapsible" | "hidden"
+  const [sidebarPinned, setSidebarPinned] = useState(true); // used only in "collapsible"
 
   // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState(null);
+  const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile" | null
 
   // Sync tabs with route
   useEffect(() => {
@@ -62,7 +62,7 @@ const Layout = () => {
     } else {
       setTabIndex(tabs.findIndex((t) => t.path === currentPath));
     }
-    // eslint-disable-next-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
   useEffect(() => {
@@ -70,14 +70,14 @@ const Layout = () => {
     sessionStorage.setItem("tabIndex", tabIndex.toString());
   }, [tabs, tabIndex]);
 
-  const handleTabChange = (ev, newIndex, path) => {
+  const handleTabChange = (_ev, newIndex, path) => {
     setTabIndex(newIndex);
     if (path) navigate(path);
   };
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return;
+    if (closingIndex === 0) return; // keep Dashboard
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
     if (location.pathname === tabId) {
@@ -110,17 +110,20 @@ const Layout = () => {
     { label: "Settings", icon: <SettingsIcon /> },
   ];
 
+  // ---- LAYOUT ----
   return (
     <Box
       sx={{
         display: "flex",
-        height: "100vh",
+        height: "100dvh", // ✅ dynamic viewport height; avoids iOS URL bar jumps
         width: "100%",
         overflow: "hidden",
         bgcolor: theme.palette.background.default,
+        // prevent body/parent over-scroll chaining
+        overscrollBehavior: "none",
       }}
     >
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar (inline; never duplicates) */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -134,55 +137,64 @@ const Layout = () => {
         />
       )}
 
-      {/* Main Area */}
+      {/* Main Column as a GRID:
+          Row 1: NavbarTabs (fixed height)
+          Row 2: Scrollable content
+          Row 3: Bottom nav (mobile only, fixed height)
+       */}
       <Box
         sx={{
           flex: 1,
-          display: "flex",
-          flexDirection: "column",
           minWidth: 0,
-          height: "100vh",
+          display: "grid",
+          gridTemplateRows: isMobile
+            ? `${NAVBAR_HEIGHT}px 1fr ${BOTTOM_NAV_HEIGHT}px`
+            : `${NAVBAR_HEIGHT}px 1fr`,
+          height: "100%", // fill 100dvh
         }}
       >
-        <NavbarTabs
-          tabs={tabs}
-          tabIndex={tabIndex}
-          handleTabChange={handleTabChange}
-          handleTabClose={handleTabClose}
-          handleTabReorder={handleTabReorder}
-          isMobile={isMobile}
-        />
+        {/* Row 1: Navbar */}
+        <Box
+          sx={{
+            position: "relative",
+            zIndex: 1200,
+            bgcolor: theme.palette.background.paper,
+          }}
+        >
+          <NavbarTabs
+            tabs={tabs}
+            tabIndex={tabIndex}
+            handleTabChange={handleTabChange}
+            handleTabClose={handleTabClose}
+            handleTabReorder={handleTabReorder}
+            isMobile={isMobile}
+          />
+        </Box>
 
-        {/* Scrollable outlet wrapper */}
+        {/* Row 2: Scrollable Content */}
         <Box
           component="main"
           sx={{
-            flex: 1,
-            minHeight: 0, // ✅ ensures Outlet can scroll properly
+            minHeight: 0,            // ✅ critical so this grid row can scroll
             overflowY: "auto",
             overflowX: "hidden",
+            WebkitOverflowScrolling: "touch", // smooth iOS inertia
             px: 2,
-            pb: isMobile ? 7 : 0,
+            py: 2,
           }}
         >
           <Outlet />
         </Box>
 
-        {/* Mobile bottom nav */}
+        {/* Row 3: Bottom nav (only mobile; *not* fixed/overlay) */}
         {isMobile && (
           <Box
             sx={{
-              position: "fixed",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              display: "flex",
-              justifyContent: "space-around",
-              alignItems: "center",
               borderTop: `1px solid ${theme.palette.divider}`,
               backgroundColor: theme.palette.background.paper,
-              zIndex: 1500,
-              height: 56,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-around",
             }}
           >
             <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
@@ -193,12 +205,16 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Mobile Sidebar Drawer */}
+      {/* Mobile Sidebar Drawer (overlay) */}
       {isMobile && (
         <SwipeableDrawer
           anchor="left"
           open={mobileSidebarOpen}
           onClose={() => setMobileSidebarOpen(false)}
+          onOpen={() => setMobileSidebarOpen(true)}
+          ModalProps={{
+            keepMounted: true,
+          }}
           PaperProps={{
             sx: {
               width: EXPANDED_WIDTH,
@@ -220,18 +236,27 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Mobile Action Drawer */}
+      {/* Mobile Action Drawer (bottom) — click-through backdrop so icons still work */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
           open={Boolean(drawerType)}
           onClose={() => setDrawerType(null)}
+          onOpen={() => {}}
+          ModalProps={{
+            keepMounted: true,
+            BackdropProps: {
+              sx: { backgroundColor: "transparent", pointerEvents: "none" }, // ✅ no dim, clicks pass through
+            },
+          }}
           PaperProps={{
             sx: {
-              height: "50%",
+              height: `calc(50dvh - ${BOTTOM_NAV_HEIGHT}px)`, // don’t cover bottom nav
+              bottom: `${BOTTOM_NAV_HEIGHT}px`,
               p: 2,
               borderTopLeftRadius: 12,
               borderTopRightRadius: 12,
+              pointerEvents: "auto", // Paper should still receive interactions
             },
           }}
         >
