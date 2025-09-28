@@ -42,44 +42,39 @@ const Layout = () => {
   const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
 
-  // Sidebar state
-  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned");
-  const [sidebarPinned, setSidebarPinned] = useState(true);
+  // Sidebar mode & state
+  const [sidebarMode] = useState(
+    localStorage.getItem("sidebarMode") || "pinned"
+  ); // "pinned" | "collapsible" | "hidden"
+  const [sidebarPinned, setSidebarPinned] = useState(true); // only for "collapsible"
 
   // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState(null);
+  const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile" | null
 
-  // ✅ Fix viewport height issues on rotation (with visualViewport fallback)
+  // 🔹 Fix viewport height/width jumps on mobile (especially rotation)
   useEffect(() => {
-    const setVh = () => {
+    const setViewportVars = () => {
       const vh = window.innerHeight * 0.01;
+      const vw = window.innerWidth * 0.01;
       document.documentElement.style.setProperty("--vh", `${vh}px`);
+      document.documentElement.style.setProperty("--vw", `${vw}px`);
     };
-
-    setVh();
 
     const handleResize = () => {
-      setVh();
-      requestAnimationFrame(setVh);
-      setTimeout(setVh, 300); // Safari delayed bounce
+      setViewportVars();
+      requestAnimationFrame(setViewportVars);
+      setTimeout(setViewportVars, 300); // Safari delayed bounce
+      setTimeout(setViewportVars, 1000); // final correction
     };
 
+    setViewportVars(); // run immediately
     window.addEventListener("resize", handleResize);
     window.addEventListener("orientationchange", handleResize);
-
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", handleResize);
-      window.visualViewport.addEventListener("scroll", handleResize);
-    }
 
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("orientationchange", handleResize);
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener("resize", handleResize);
-        window.visualViewport.removeEventListener("scroll", handleResize);
-      }
     };
   }, []);
 
@@ -110,7 +105,7 @@ const Layout = () => {
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return;
+    if (closingIndex === 0) return; // keep Dashboard
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
     if (location.pathname === tabId) {
@@ -150,18 +145,20 @@ const Layout = () => {
         inset: 0,
         display: "flex",
         width: "100%",
-        height: "calc(var(--vh, 1vh) * 100)", // ✅ dynamic height
+        maxWidth: "100vw", // ✅ prevent horizontal overflow
+        height: "calc(var(--vh, 1vh) * 100)", // ✅ dynamic height with fallback
         overflow: "hidden",
         bgcolor: theme.palette.background.default,
         overscrollBehavior: "none",
       }}
     >
-      {/* Sidebar (desktop only) */}
+      {/* Desktop Sidebar (inline; never duplicates) */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
           onToggle={() => {
-            if (sidebarMode === "collapsible") setSidebarPinned((p) => !p);
+            if (sidebarMode === "collapsible")
+              setSidebarPinned((p) => !p);
           }}
           items={sidebarItems}
           onItemClick={activateOrAddTab}
@@ -170,7 +167,7 @@ const Layout = () => {
         />
       )}
 
-      {/* Grid: Navbar | Content | Bottom nav (mobile only) */}
+      {/* Main grid */}
       <Box
         sx={{
           flex: 1,
@@ -183,7 +180,13 @@ const Layout = () => {
         }}
       >
         {/* Navbar */}
-        <Box sx={{ zIndex: 1200, bgcolor: theme.palette.background.paper }}>
+        <Box
+          sx={{
+            position: "relative",
+            zIndex: 1200,
+            bgcolor: theme.palette.background.paper,
+          }}
+        >
           <NavbarTabs
             tabs={tabs}
             tabIndex={tabIndex}
@@ -238,7 +241,12 @@ const Layout = () => {
           onClose={() => setMobileSidebarOpen(false)}
           onOpen={() => setMobileSidebarOpen(true)}
           ModalProps={{ keepMounted: true }}
-          PaperProps={{ sx: { width: EXPANDED_WIDTH } }}
+          PaperProps={{
+            sx: {
+              width: EXPANDED_WIDTH,
+              backgroundColor: theme.palette.background.paper,
+            },
+          }}
         >
           <Sidebar
             pinned
@@ -263,7 +271,9 @@ const Layout = () => {
           onOpen={() => {}}
           ModalProps={{
             keepMounted: true,
-            BackdropProps: { sx: { backgroundColor: "transparent", pointerEvents: "none" } },
+            BackdropProps: {
+              sx: { backgroundColor: "transparent", pointerEvents: "none" },
+            },
           }}
           PaperProps={{
             sx: {
