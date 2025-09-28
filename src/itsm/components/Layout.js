@@ -43,12 +43,29 @@ const Layout = () => {
   const [tabIndex, setTabIndex] = useState(0);
 
   // Sidebar mode & state
-  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); // "pinned" | "collapsible" | "hidden"
-  const [sidebarPinned, setSidebarPinned] = useState(true); // only for "collapsible"
+  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned");
+  const [sidebarPinned, setSidebarPinned] = useState(true);
 
   // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile" | null
+  const [drawerType, setDrawerType] = useState(null);
+
+  // 🔹 Fix for viewport height (works across orientation changes)
+  useEffect(() => {
+    const setVh = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty("--vh", `${vh}px`);
+    };
+
+    setVh();
+    window.addEventListener("resize", setVh);
+    window.addEventListener("orientationchange", setVh);
+
+    return () => {
+      window.removeEventListener("resize", setVh);
+      window.removeEventListener("orientationchange", setVh);
+    };
+  }, []);
 
   // Sync tabs with route
   useEffect(() => {
@@ -77,7 +94,7 @@ const Layout = () => {
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return; // keep Dashboard
+    if (closingIndex === 0) return;
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
     if (location.pathname === tabId) {
@@ -113,17 +130,17 @@ const Layout = () => {
   return (
     <Box
       sx={{
-        position: "fixed",   // ✅ pin the whole app to viewport
+        position: "fixed",
         inset: 0,
         display: "flex",
         width: "100%",
-        height: "100dvh",    // ✅ dynamic vh to avoid URL bar jumps
-        overflow: "hidden",  // no window scroll
+        // 🔹 Use CSS var for viewport height instead of 100vh
+        height: "calc(var(--vh, 1vh) * 100)",
+        overflow: "hidden",
         bgcolor: theme.palette.background.default,
         overscrollBehavior: "none",
       }}
     >
-      {/* Desktop Sidebar (inline; never duplicates) */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -137,11 +154,6 @@ const Layout = () => {
         />
       )}
 
-      {/* Main column as a grid:
-          Row 1: Navbar (fixed height)
-          Row 2: Scrollable content
-          Row 3: Bottom nav (mobile only, fixed height)
-       */}
       <Box
         sx={{
           flex: 1,
@@ -153,7 +165,7 @@ const Layout = () => {
           height: "100%",
         }}
       >
-        {/* Row 1: Navbar */}
+        {/* Navbar */}
         <Box
           sx={{
             position: "relative",
@@ -171,22 +183,23 @@ const Layout = () => {
           />
         </Box>
 
-        {/* Row 2: Scrollable content (only this row scrolls) */}
+        {/* Scrollable content */}
         <Box
-  component="main"
-  sx={{
-    minHeight: 0,
-    overflowY: "auto",
-    overflowX: "hidden",
-    WebkitOverflowScrolling: "touch",
-    px: 2,        // keep horizontal padding
-    pt: 1,        // smaller top gap under navbar
-    pb: isMobile ? 1 : 2, // minimal gap above bottom nav
-  }}
->
-  <Outlet />
-</Box>
-        {/* Row 3: Bottom nav (mobile only) */}
+          component="main"
+          sx={{
+            minHeight: 0,
+            overflowY: "auto",
+            overflowX: "hidden",
+            WebkitOverflowScrolling: "touch",
+            px: 2,
+            pt: 1,
+            pb: isMobile ? 1 : 2,
+          }}
+        >
+          <Outlet />
+        </Box>
+
+        {/* Mobile Bottom Nav */}
         {isMobile && (
           <Box
             sx={{
@@ -206,7 +219,7 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Mobile Sidebar Drawer (overlay) */}
+      {/* Mobile Sidebar Drawer */}
       {isMobile && (
         <SwipeableDrawer
           anchor="left"
@@ -235,7 +248,7 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Mobile Action Drawer (bottom) — no dim, click-through backdrop, offset above bottom nav */}
+      {/* Mobile Action Drawer */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
@@ -245,7 +258,7 @@ const Layout = () => {
           ModalProps={{
             keepMounted: true,
             BackdropProps: {
-              sx: { backgroundColor: "transparent", pointerEvents: "none" }, // ✅ don't dim; allow tapping icons behind
+              sx: { backgroundColor: "transparent", pointerEvents: "none" },
             },
           }}
           PaperProps={{
