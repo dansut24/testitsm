@@ -14,11 +14,14 @@ import Sidebar from "./Sidebar";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import MenuIcon from "@mui/icons-material/Menu";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import StorageIcon from "@mui/icons-material/Storage";
 import SettingsIcon from "@mui/icons-material/Settings";
 
+const NAVBAR_HEIGHT = 48;
+const BOTTOM_NAV_HEIGHT = 56;
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 48;
 
@@ -39,15 +42,13 @@ const Layout = () => {
   const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
 
-  // Sidebar mode & state
-  const [sidebarMode] = useState(
-    localStorage.getItem("sidebarMode") || "pinned" // "pinned" | "collapsible" | "hidden"
-  );
-  const [sidebarPinned, setSidebarPinned] = useState(true);
+  // Sidebar mode/state (desktop)
+  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); // "pinned" | "collapsible" | "hidden"
+  const [sidebarPinned, setSidebarPinned] = useState(true); // used only when collapsible
 
-  // Mobile & hidden sidebar drawer
+  // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState(null);
+  const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile" | null
 
   // Sync tabs with route
   useEffect(() => {
@@ -69,7 +70,7 @@ const Layout = () => {
     sessionStorage.setItem("tabIndex", tabIndex.toString());
   }, [tabs, tabIndex]);
 
-  const handleTabChange = (ev, newIndex, path) => {
+  const handleTabChange = (_ev, newIndex, path) => {
     setTabIndex(newIndex);
     if (path) navigate(path);
   };
@@ -113,13 +114,15 @@ const Layout = () => {
     <Box
       sx={{
         display: "flex",
-        height: "100vh",
+        height: "100dvh", // prevents iOS toolbar jump
         width: "100%",
         overflow: "hidden",
         bgcolor: theme.palette.background.default,
+        // Avoid rubber-band reflows on iOS
+        overscrollBehaviorY: "none",
       }}
     >
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar (in-flow, never duplicated) */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -133,45 +136,51 @@ const Layout = () => {
         />
       )}
 
-      {/* Main Area */}
+      {/* Main column */}
       <Box
         sx={{
           flex: 1,
+          minWidth: 0,
+          height: "100dvh",
           display: "flex",
           flexDirection: "column",
-          minWidth: 0,
-          height: "100vh",
         }}
       >
-        <NavbarTabs
-          tabs={tabs}
-          tabIndex={tabIndex}
-          handleTabChange={handleTabChange}
-          handleTabClose={handleTabClose}
-          handleTabReorder={handleTabReorder}
-          isMobile={isMobile}
-          navTrigger={
-            (!isMobile && sidebarMode === "hidden") ? (
-              <img
-                src="https://www.bing.com/sa/simg/favicon-2x.ico"
-                alt="Logo"
-                style={{ width: 28, height: 28, cursor: "pointer", marginLeft: 12 }}
-                onClick={() => setMobileSidebarOpen(true)}
-              />
-            ) : null
-          }
-        />
+        {/* Sticky Navbar (outside the scroll container) */}
+        <Box
+          sx={{
+            position: "sticky",
+            top: "env(safe-area-inset-top, 0px)",
+            zIndex: 1200,
+            bgcolor: theme.palette.background.paper,
+          }}
+        >
+          <NavbarTabs
+            tabs={tabs}
+            tabIndex={tabIndex}
+            handleTabChange={handleTabChange}
+            handleTabClose={handleTabClose}
+            handleTabReorder={handleTabReorder}
+            isMobile={isMobile}
+          />
+        </Box>
 
+        {/* Scrollable content area */}
         <Box
           component="main"
           sx={{
             flex: 1,
+            minHeight: 0, // important for flex + overflow
             overflowY: "auto",
             overflowX: "hidden",
-            px: 2,
-            pb: isMobile ? 7 : 0,
+            // Let content pass behind bottom nav; we add padding so nothing is obscured
+            pb: isMobile
+              ? `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))`
+              : 0,
+            px: { xs: 1, sm: 2 },
           }}
         >
+          {/* Your pages (e.g., Dashboard/Incidents) should render a container/card inside */}
           <Outlet />
         </Box>
 
@@ -183,21 +192,17 @@ const Layout = () => {
               bottom: 0,
               left: 0,
               right: 0,
+              height: BOTTOM_NAV_HEIGHT,
               display: "flex",
               justifyContent: "space-around",
               alignItems: "center",
               borderTop: `1px solid ${theme.palette.divider}`,
-              backgroundColor: theme.palette.background.paper,
+              bgcolor: theme.palette.background.paper,
               zIndex: 1500,
-              height: 56,
+              WebkitTapHighlightColor: "transparent",
             }}
           >
-            <img
-              src="https://www.bing.com/sa/simg/favicon-2x.ico"
-              alt="Logo"
-              style={{ width: 28, height: 28, cursor: "pointer" }}
-              onClick={() => setMobileSidebarOpen(true)}
-            />
+            <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
             <SearchIcon onClick={() => setDrawerType("search")} />
             <NotificationsIcon onClick={() => setDrawerType("notifications")} />
             <AccountCircleIcon onClick={() => setDrawerType("profile")} />
@@ -205,8 +210,8 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Drawer used for both mobile and hidden-sidebar desktop */}
-      {(isMobile || sidebarMode === "hidden") && (
+      {/* Mobile Sidebar Drawer (overlay) */}
+      {isMobile && (
         <SwipeableDrawer
           anchor="left"
           open={mobileSidebarOpen}
@@ -214,9 +219,10 @@ const Layout = () => {
           PaperProps={{
             sx: {
               width: EXPANDED_WIDTH,
-              backgroundColor: theme.palette.background.paper,
+              bgcolor: theme.palette.background.paper,
             },
           }}
+          ModalProps={{ keepMounted: true }}
         >
           <Sidebar
             pinned
@@ -232,18 +238,27 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Mobile Action Drawer */}
+      {/* Mobile Action Drawer (no dimming, sits above bottom nav, swipeable down) */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
           open={Boolean(drawerType)}
           onClose={() => setDrawerType(null)}
+          onOpen={() => {}}
+          disableBackdropTransition
+          keepMounted
+          ModalProps={{ keepMounted: true }}
+          BackdropProps={{
+            invisible: true,
+            sx: { backgroundColor: "transparent", pointerEvents: "none" },
+          }}
           PaperProps={{
             sx: {
               height: "50%",
-              p: 2,
+              bottom: `${BOTTOM_NAV_HEIGHT}px`, // respect bottom nav
               borderTopLeftRadius: 12,
               borderTopRightRadius: 12,
+              p: 2,
             },
           }}
         >
