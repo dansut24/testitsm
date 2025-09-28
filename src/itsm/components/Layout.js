@@ -42,51 +42,52 @@ const Layout = () => {
   const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
 
-  // Sidebar
-  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); 
+  // Sidebar mode & state
+  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned");
   const [sidebarPinned, setSidebarPinned] = useState(true);
 
   // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null);
 
-  // 🔹 Hybrid viewport fix: portrait uses 100dvh, landscape uses --vh trick
+  // ✅ States for fade fix
+  const [contentVisible, setContentVisible] = useState(true);
+  const [drawerVisible, setDrawerVisible] = useState(true);
+
+  // 🔹 Fix viewport height jumps on mobile (rotation handling)
   useEffect(() => {
     const setVh = () => {
       const vh = window.innerHeight * 0.01;
-
-      if (window.matchMedia("(orientation: landscape)").matches) {
-        document.documentElement.style.setProperty("--app-height", `${vh * 100}px`);
-      } else {
-        document.documentElement.style.setProperty("--app-height", "100dvh");
-      }
+      document.documentElement.style.setProperty("--vh", `${vh}px`);
     };
 
     setVh();
 
     const handleResize = () => {
-      setVh();
-      requestAnimationFrame(setVh);
-      setTimeout(setVh, 300);
-      setTimeout(setVh, 600);
+      // fade out
+      setContentVisible(false);
+      setDrawerVisible(false);
+
+      requestAnimationFrame(() => {
+        setVh();
+        // fade back in
+        setContentVisible(true);
+        setDrawerVisible(true);
+      });
+
+      setTimeout(setVh, 300); // Safari bounce
     };
 
     window.addEventListener("resize", handleResize);
     window.addEventListener("orientationchange", handleResize);
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", handleResize);
-    }
 
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("orientationchange", handleResize);
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener("resize", handleResize);
-      }
     };
   }, []);
 
-  // 🔹 Tabs syncing
+  // Sync tabs with route
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -153,13 +154,14 @@ const Layout = () => {
         inset: 0,
         display: "flex",
         width: "100%",
-        height: "var(--app-height)", // ✅ dynamic per orientation
+        height: "calc(var(--vh, 1vh) * 100)", // ✅ dynamic viewport height
         overflow: "hidden",
         bgcolor: theme.palette.background.default,
         overscrollBehavior: "none",
+        transition: "height 0.3s ease",
       }}
     >
-      {/* Sidebar (desktop only) */}
+      {/* Desktop Sidebar */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -214,6 +216,8 @@ const Layout = () => {
             px: 2,
             pt: 1,
             pb: isMobile ? 1 : 2,
+            opacity: contentVisible ? 1 : 0,
+            transition: "opacity 0.25s ease",
           }}
         >
           <Outlet />
@@ -268,7 +272,7 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Mobile Action Drawer */}
+      {/* Mobile Action Drawer (bottom) */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
@@ -289,6 +293,8 @@ const Layout = () => {
               borderTopLeftRadius: 12,
               borderTopRightRadius: 12,
               pointerEvents: "auto",
+              opacity: drawerVisible ? 1 : 0, // ✅ fade drawers
+              transition: "opacity 0.25s ease",
             },
           }}
         >
