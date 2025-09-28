@@ -42,45 +42,44 @@ const Layout = () => {
   const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
 
-  // Sidebar mode & state
-  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); // "pinned" | "collapsible" | "hidden"
-  const [sidebarPinned, setSidebarPinned] = useState(true); // only for "collapsible"
+  // Sidebar state
+  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned");
+  const [sidebarPinned, setSidebarPinned] = useState(true);
 
   // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile" | null
+  const [drawerType, setDrawerType] = useState(null);
 
-  // ✅ Content fade (prevents visual jump during rotation/resizes)
-  const [contentVisible, setContentVisible] = useState(true);
-
-  // 🔹 Fix viewport height jumps on mobile (especially rotation)
+  // ✅ Fix viewport height issues on rotation (with visualViewport fallback)
   useEffect(() => {
     const setVh = () => {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty("--vh", `${vh}px`);
     };
 
-    setVh(); // run immediately
+    setVh();
 
     const handleResize = () => {
-      // briefly hide content to avoid mid-rotation artifacts
-      setContentVisible(false);
-
-      // update now, and again on next frame + a bit later (Safari)
       setVh();
       requestAnimationFrame(setVh);
-      setTimeout(setVh, 300);
-
-      // fade back in
-      requestAnimationFrame(() => setContentVisible(true));
+      setTimeout(setVh, 300); // Safari delayed bounce
     };
 
     window.addEventListener("resize", handleResize);
     window.addEventListener("orientationchange", handleResize);
 
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", handleResize);
+      window.visualViewport.addEventListener("scroll", handleResize);
+    }
+
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("orientationchange", handleResize);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", handleResize);
+        window.visualViewport.removeEventListener("scroll", handleResize);
+      }
     };
   }, []);
 
@@ -111,7 +110,7 @@ const Layout = () => {
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return; // keep Dashboard
+    if (closingIndex === 0) return;
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
     if (location.pathname === tabId) {
@@ -151,14 +150,13 @@ const Layout = () => {
         inset: 0,
         display: "flex",
         width: "100%",
-        height: "calc(var(--vh, 1vh) * 100)", // ✅ dynamic height with fallback
+        height: "calc(var(--vh, 1vh) * 100)", // ✅ dynamic height
         overflow: "hidden",
         bgcolor: theme.palette.background.default,
         overscrollBehavior: "none",
-        transition: "height 0.3s ease",
       }}
     >
-      {/* Desktop Sidebar (inline; never duplicates) */}
+      {/* Sidebar (desktop only) */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -172,7 +170,7 @@ const Layout = () => {
         />
       )}
 
-      {/* Main grid */}
+      {/* Grid: Navbar | Content | Bottom nav (mobile only) */}
       <Box
         sx={{
           flex: 1,
@@ -185,13 +183,7 @@ const Layout = () => {
         }}
       >
         {/* Navbar */}
-        <Box
-          sx={{
-            position: "relative",
-            zIndex: 1200,
-            bgcolor: theme.palette.background.paper,
-          }}
-        >
+        <Box sx={{ zIndex: 1200, bgcolor: theme.palette.background.paper }}>
           <NavbarTabs
             tabs={tabs}
             tabIndex={tabIndex}
@@ -202,7 +194,7 @@ const Layout = () => {
           />
         </Box>
 
-        {/* Scrollable content (only this area scrolls) */}
+        {/* Scrollable content */}
         <Box
           component="main"
           sx={{
@@ -210,11 +202,9 @@ const Layout = () => {
             overflowY: "auto",
             overflowX: "hidden",
             WebkitOverflowScrolling: "touch",
-            px: 2,             // horizontal padding
-            pt: 1,             // small gap under navbar
-            pb: isMobile ? 1 : 2, // minimal gap above bottom nav
-            opacity: contentVisible ? 1 : 0,
-            transition: "opacity 0.25s ease",
+            px: 2,
+            pt: 1,
+            pb: isMobile ? 1 : 2,
           }}
         >
           <Outlet />
@@ -240,7 +230,7 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Mobile Sidebar Drawer (overlay) */}
+      {/* Mobile Sidebar Drawer */}
       {isMobile && (
         <SwipeableDrawer
           anchor="left"
@@ -248,12 +238,7 @@ const Layout = () => {
           onClose={() => setMobileSidebarOpen(false)}
           onOpen={() => setMobileSidebarOpen(true)}
           ModalProps={{ keepMounted: true }}
-          PaperProps={{
-            sx: {
-              width: EXPANDED_WIDTH,
-              backgroundColor: theme.palette.background.paper,
-            },
-          }}
+          PaperProps={{ sx: { width: EXPANDED_WIDTH } }}
         >
           <Sidebar
             pinned
@@ -269,7 +254,7 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Mobile Action Drawer (bottom) — no dim; icons stay tappable */}
+      {/* Mobile Action Drawer */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
@@ -278,9 +263,7 @@ const Layout = () => {
           onOpen={() => {}}
           ModalProps={{
             keepMounted: true,
-            BackdropProps: {
-              sx: { backgroundColor: "transparent", pointerEvents: "none" }, // no dim; taps pass through
-            },
+            BackdropProps: { sx: { backgroundColor: "transparent", pointerEvents: "none" } },
           }}
           PaperProps={{
             sx: {
