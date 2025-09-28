@@ -1,4 +1,4 @@
-// Layout.js
+// src/itsm/components/Layout.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -20,9 +20,6 @@ import ListAltIcon from "@mui/icons-material/ListAlt";
 import StorageIcon from "@mui/icons-material/Storage";
 import SettingsIcon from "@mui/icons-material/Settings";
 
-const NAVBAR_HEIGHT = 48;
-const BOTTOM_NAV_HEIGHT = 56;
-
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 48;
 
@@ -43,47 +40,49 @@ const Layout = () => {
   const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
 
-  // Sidebar prefs
-  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); // pinned | collapsible | hidden
-  const [sidebarPinned, setSidebarPinned] = useState(true); // used when mode === 'collapsible'
+  // Sidebar mode & state
+  const [sidebarMode, setSidebarMode] = useState(
+    localStorage.getItem("sidebarMode") || "pinned"
+  );
+  const [sidebarPinned, setSidebarPinned] = useState(true);
 
-  // Mobile UI
+  // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState(null); // search | notifications | profile
+  const [drawerType, setDrawerType] = useState(null);
 
-  // Keep tabs in sync with route
+  // Sync tabs with route
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
     if (!tabExists) {
       const label = routeLabels[currentPath] || "Unknown";
-      const next = [...tabs, { label, path: currentPath }];
-      setTabs(next);
-      setTabIndex(next.length - 1);
+      const newTabs = [...tabs, { label, path: currentPath }];
+      setTabs(newTabs);
+      setTabIndex(newTabs.length - 1);
     } else {
       setTabIndex(tabs.findIndex((t) => t.path === currentPath));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line
   }, [location.pathname]);
 
   useEffect(() => {
     sessionStorage.setItem("tabs", JSON.stringify(tabs));
-    sessionStorage.setItem("tabIndex", String(tabIndex));
+    sessionStorage.setItem("tabIndex", tabIndex.toString());
   }, [tabs, tabIndex]);
 
-  const handleTabChange = (_ev, newIndex, path) => {
+  const handleTabChange = (ev, newIndex, path) => {
     setTabIndex(newIndex);
     if (path) navigate(path);
   };
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return; // keep Dashboard
-    const next = tabs.filter((t) => t.path !== tabId);
-    setTabs(next);
+    if (closingIndex === 0) return;
+    const newTabs = tabs.filter((t) => t.path !== tabId);
+    setTabs(newTabs);
     if (location.pathname === tabId) {
       const fallbackIndex = Math.max(0, closingIndex - 1);
-      navigate(next[fallbackIndex]?.path || "/dashboard");
+      navigate(newTabs[fallbackIndex]?.path || "/dashboard");
     }
   };
 
@@ -97,9 +96,9 @@ const Layout = () => {
       setTabIndex(idx);
       navigate(existing.path);
     } else {
-      const next = [...tabs, { label, path }];
-      setTabs(next);
-      setTabIndex(next.length - 1);
+      const newTabs = [...tabs, { label, path }];
+      setTabs(newTabs);
+      setTabIndex(newTabs.length - 1);
       navigate(path);
     }
   };
@@ -115,13 +114,13 @@ const Layout = () => {
     <Box
       sx={{
         display: "flex",
-        height: "100dvh",               // stable viewport height on mobile
+        height: "100vh",
         width: "100%",
-        overflow: "hidden",             // prevent body scroll; we control scroll inside <main>
+        overflow: "hidden",
         bgcolor: theme.palette.background.default,
       }}
     >
-      {/* Desktop Sidebar (flow-in) */}
+      {/* Desktop Sidebar */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -135,17 +134,16 @@ const Layout = () => {
         />
       )}
 
-      {/* Column (not scrollable) */}
+      {/* Main Area */}
       <Box
         sx={{
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          height: "100dvh",           // fill viewport
           minWidth: 0,
+          height: "100vh",
         }}
       >
-        {/* Navbar stays in place because the column itself does not scroll */}
         <NavbarTabs
           tabs={tabs}
           tabIndex={tabIndex}
@@ -155,22 +153,22 @@ const Layout = () => {
           isMobile={isMobile}
         />
 
-        {/* The ONLY scroll container */}
+        {/* Scrollable outlet wrapper */}
         <Box
           component="main"
           sx={{
-            height: `calc(100dvh - ${NAVBAR_HEIGHT}px)`, // don’t subtract bottom bar; it’s fixed
+            flex: 1,
+            minHeight: 0, // ✅ ensures Outlet can scroll properly
             overflowY: "auto",
             overflowX: "hidden",
             px: 2,
-            pb: isMobile ? `${BOTTOM_NAV_HEIGHT + 8}px` : 2, // keep content clear of the fixed bottom bar
-            boxSizing: "border-box",
+            pb: isMobile ? 7 : 0,
           }}
         >
           <Outlet />
         </Box>
 
-        {/* Mobile bottom nav (fixed overlay) */}
+        {/* Mobile bottom nav */}
         {isMobile && (
           <Box
             sx={{
@@ -184,7 +182,7 @@ const Layout = () => {
               borderTop: `1px solid ${theme.palette.divider}`,
               backgroundColor: theme.palette.background.paper,
               zIndex: 1500,
-              height: BOTTOM_NAV_HEIGHT,
+              height: 56,
             }}
           >
             <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
@@ -195,7 +193,7 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Mobile Sidebar Drawer (overlay) */}
+      {/* Mobile Sidebar Drawer */}
       {isMobile && (
         <SwipeableDrawer
           anchor="left"
@@ -222,25 +220,20 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Mobile Action Drawer (bottom) */}
+      {/* Mobile Action Drawer */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
           open={Boolean(drawerType)}
           onClose={() => setDrawerType(null)}
-          disableSwipeToOpen={false}
-          ModalProps={{ keepMounted: true }}
           PaperProps={{
             sx: {
-              // Keep visible above bottom nav without changing page height
-              height: `calc(60dvh - ${BOTTOM_NAV_HEIGHT}px)`,
-              mb: `${BOTTOM_NAV_HEIGHT}px`,
+              height: "50%",
               p: 2,
               borderTopLeftRadius: 12,
               borderTopRightRadius: 12,
             },
           }}
-          hideBackdrop
         >
           {drawerType === "search" && <Typography variant="h6">Search</Typography>}
           {drawerType === "notifications" && <Typography variant="h6">Notifications</Typography>}
