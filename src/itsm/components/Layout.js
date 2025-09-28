@@ -42,51 +42,49 @@ const Layout = () => {
   const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
 
-  // Sidebar
-  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); 
-  const [sidebarPinned, setSidebarPinned] = useState(true);
+  // Sidebar mode & state
+  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); // "pinned" | "collapsible" | "hidden"
+  const [sidebarPinned, setSidebarPinned] = useState(true); // only for "collapsible"
 
   // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState(null);
+  const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile" | null
 
-  // 🔹 Hybrid viewport fix: portrait uses 100dvh, landscape uses --vh trick
+  // ✅ Content fade (prevents visual jump during rotation/resizes)
+  const [contentVisible, setContentVisible] = useState(true);
+
+  // 🔹 Fix viewport height jumps on mobile (especially rotation)
   useEffect(() => {
     const setVh = () => {
       const vh = window.innerHeight * 0.01;
-
-      if (window.matchMedia("(orientation: landscape)").matches) {
-        document.documentElement.style.setProperty("--app-height", `${vh * 100}px`);
-      } else {
-        document.documentElement.style.setProperty("--app-height", "100dvh");
-      }
+      document.documentElement.style.setProperty("--vh", `${vh}px`);
     };
 
-    setVh();
+    setVh(); // run immediately
 
     const handleResize = () => {
+      // briefly hide content to avoid mid-rotation artifacts
+      setContentVisible(false);
+
+      // update now, and again on next frame + a bit later (Safari)
       setVh();
       requestAnimationFrame(setVh);
       setTimeout(setVh, 300);
-      setTimeout(setVh, 600);
+
+      // fade back in
+      requestAnimationFrame(() => setContentVisible(true));
     };
 
     window.addEventListener("resize", handleResize);
     window.addEventListener("orientationchange", handleResize);
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", handleResize);
-    }
 
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("orientationchange", handleResize);
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener("resize", handleResize);
-      }
     };
   }, []);
 
-  // 🔹 Tabs syncing
+  // Sync tabs with route
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -113,7 +111,7 @@ const Layout = () => {
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return;
+    if (closingIndex === 0) return; // keep Dashboard
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
     if (location.pathname === tabId) {
@@ -153,13 +151,14 @@ const Layout = () => {
         inset: 0,
         display: "flex",
         width: "100%",
-        height: "var(--app-height)", // ✅ dynamic per orientation
+        height: "calc(var(--vh, 1vh) * 100)", // ✅ dynamic height with fallback
         overflow: "hidden",
         bgcolor: theme.palette.background.default,
         overscrollBehavior: "none",
+        transition: "height 0.3s ease",
       }}
     >
-      {/* Sidebar (desktop only) */}
+      {/* Desktop Sidebar (inline; never duplicates) */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -203,7 +202,7 @@ const Layout = () => {
           />
         </Box>
 
-        {/* Scrollable content */}
+        {/* Scrollable content (only this area scrolls) */}
         <Box
           component="main"
           sx={{
@@ -211,9 +210,11 @@ const Layout = () => {
             overflowY: "auto",
             overflowX: "hidden",
             WebkitOverflowScrolling: "touch",
-            px: 2,
-            pt: 1,
-            pb: isMobile ? 1 : 2,
+            px: 2,             // horizontal padding
+            pt: 1,             // small gap under navbar
+            pb: isMobile ? 1 : 2, // minimal gap above bottom nav
+            opacity: contentVisible ? 1 : 0,
+            transition: "opacity 0.25s ease",
           }}
         >
           <Outlet />
@@ -239,7 +240,7 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Mobile Sidebar Drawer */}
+      {/* Mobile Sidebar Drawer (overlay) */}
       {isMobile && (
         <SwipeableDrawer
           anchor="left"
@@ -268,7 +269,7 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Mobile Action Drawer */}
+      {/* Mobile Action Drawer (bottom) — no dim; icons stay tappable */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
@@ -278,7 +279,7 @@ const Layout = () => {
           ModalProps={{
             keepMounted: true,
             BackdropProps: {
-              sx: { backgroundColor: "transparent", pointerEvents: "none" },
+              sx: { backgroundColor: "transparent", pointerEvents: "none" }, // no dim; taps pass through
             },
           }}
           PaperProps={{
