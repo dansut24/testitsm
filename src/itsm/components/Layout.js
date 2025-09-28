@@ -164,22 +164,27 @@ const Layout = () => {
           isMobile={isMobile}
         />
 
-        {/* Page container wrapper */}
+        {/* Shared container for all pages */}
         <Box
-          component="main"
           sx={{
             flex: 1,
             overflowY: "auto",
             overflowX: "hidden",
             px: { xs: 1, md: 3 },
-            pb: isMobile ? 7 : 0,
+            pb: isMobile ? 7 : 0, // padding for bottom nav
           }}
         >
-          <Box sx={{ py: 2, height: "100%" }}>
-            <OutletWrapper>
-              <Outlet />
-            </OutletWrapper>
-          </Box>
+          <Paper
+            elevation={0}
+            sx={{
+              p: { xs: 1.5, md: 3 },
+              borderRadius: 3,
+              bgcolor: theme.palette.background.default,
+              minHeight: "100%",
+            }}
+          >
+            <Outlet />
+          </Paper>
         </Box>
 
         {/* Bottom nav (mobile) */}
@@ -255,28 +260,6 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
     </Box>
-  );
-};
-
-// Wrapper to handle container logic
-const OutletWrapper = ({ children }) => {
-  // Check if child has "noContainer" flag
-  const element = React.Children.only(children);
-  if (element?.props?.noContainer) {
-    return element;
-  }
-  return (
-    <Paper
-      elevation={2}
-      sx={{
-        borderRadius: 3,
-        bgcolor: "background.paper",
-        p: { xs: 2, md: 3 },
-        minHeight: "100%",
-      }}
-    >
-      {children}
-    </Paper>
   );
 };
 
