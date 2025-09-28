@@ -42,43 +42,34 @@ const Layout = () => {
   const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
 
-  // Sidebar mode & state
-  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); // "pinned" | "collapsible" | "hidden"
-  const [sidebarPinned, setSidebarPinned] = useState(true); // only for "collapsible"
+  // Sidebar
+  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); 
+  const [sidebarPinned, setSidebarPinned] = useState(true);
 
   // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null);
 
-  // 🔹 Fix viewport height jumps on mobile (esp. rotation on iOS Safari/Chrome)
+  // 🔹 Hybrid viewport fix: portrait uses 100dvh, landscape uses --vh trick
   useEffect(() => {
-    let resizeTimer;
-    let lastWidth = window.innerWidth;
-
     const setVh = () => {
       const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty("--vh", `${vh}px`);
+
+      if (window.matchMedia("(orientation: landscape)").matches) {
+        document.documentElement.style.setProperty("--app-height", `${vh * 100}px`);
+      } else {
+        document.documentElement.style.setProperty("--app-height", "100dvh");
+      }
     };
+
+    setVh();
 
     const handleResize = () => {
-      clearTimeout(resizeTimer);
-
-      // Run immediately
       setVh();
-
-      // Debounced re-check (wait for viewport to settle)
-      resizeTimer = setTimeout(() => {
-        if (window.innerWidth !== lastWidth) {
-          lastWidth = window.innerWidth;
-          setVh();
-        }
-      }, 300);
-
-      // Safety delayed recheck for Safari
+      requestAnimationFrame(setVh);
+      setTimeout(setVh, 300);
       setTimeout(setVh, 600);
     };
-
-    setVh(); // initial
 
     window.addEventListener("resize", handleResize);
     window.addEventListener("orientationchange", handleResize);
@@ -87,7 +78,6 @@ const Layout = () => {
     }
 
     return () => {
-      clearTimeout(resizeTimer);
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("orientationchange", handleResize);
       if (window.visualViewport) {
@@ -96,7 +86,7 @@ const Layout = () => {
     };
   }, []);
 
-  // Sync tabs with route
+  // 🔹 Tabs syncing
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -163,12 +153,13 @@ const Layout = () => {
         inset: 0,
         display: "flex",
         width: "100%",
-        height: "calc(var(--vh, 1vh) * 100)", // ✅ use --vh
+        height: "var(--app-height)", // ✅ dynamic per orientation
         overflow: "hidden",
         bgcolor: theme.palette.background.default,
         overscrollBehavior: "none",
       }}
     >
+      {/* Sidebar (desktop only) */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -182,6 +173,7 @@ const Layout = () => {
         />
       )}
 
+      {/* Main grid */}
       <Box
         sx={{
           flex: 1,
@@ -193,6 +185,7 @@ const Layout = () => {
           height: "100%",
         }}
       >
+        {/* Navbar */}
         <Box
           sx={{
             position: "relative",
@@ -210,6 +203,7 @@ const Layout = () => {
           />
         </Box>
 
+        {/* Scrollable content */}
         <Box
           component="main"
           sx={{
@@ -225,6 +219,7 @@ const Layout = () => {
           <Outlet />
         </Box>
 
+        {/* Bottom nav (mobile only) */}
         {isMobile && (
           <Box
             sx={{
@@ -244,6 +239,7 @@ const Layout = () => {
         )}
       </Box>
 
+      {/* Mobile Sidebar Drawer */}
       {isMobile && (
         <SwipeableDrawer
           anchor="left"
@@ -272,6 +268,7 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
+      {/* Mobile Action Drawer */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
