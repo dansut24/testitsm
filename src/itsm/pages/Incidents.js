@@ -24,6 +24,7 @@ import { useNavigate } from "react-router-dom";
 import { getSlaDueDate, getSlaStatus } from "../../common/utils/slaUtils";
 import { supabase } from "../../common/utils/supabaseClient";
 
+// 🔹 Generate 40 test teams with fake members
 const TEAMS = Array.from({ length: 40 }, (_, i) => ({
   name: `Team ${i + 1}`,
   members: Array.from({ length: 3 }, (__, j) => ({
@@ -97,6 +98,7 @@ const Incidents = () => {
     fetchIncidents();
   }, []);
 
+  // 🔹 Compact team list component
   const TeamList = () => (
     <Paper
       elevation={2}
@@ -132,6 +134,7 @@ const Incidents = () => {
       <Box sx={{ flex: 1, overflowY: "auto", p: 1.5 }}>
         {TEAMS.map((team) => {
           const totalIncidents = team.members.reduce((a, m) => a + m.incidents, 0);
+
           return (
             <Paper
               key={team.name}
@@ -174,150 +177,149 @@ const Incidents = () => {
   );
 
   return (
-    <Box sx={{ p: { xs: 1, md: 2 } }}>
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: isMobile ? "column" : "row",
-          gap: 2,
-          alignItems: "stretch",
-        }}
-      >
-        {/* Teams */}
-        {!isMobile ? (
-          teamsOpen && <TeamList />
-        ) : (
-          <SwipeableDrawer
-            anchor="left"
-            open={teamsOpen}
-            onClose={() => setTeamsOpen(false)}
-            onOpen={() => setTeamsOpen(true)}
-            PaperProps={{
-              sx: {
-                width: "80%",
-                maxWidth: 300,
-                borderTopRightRadius: 12,
-                borderBottomRightRadius: 12,
-              },
-            }}
-          >
-            <TeamList />
-          </SwipeableDrawer>
-        )}
-
-        {/* Incidents */}
-        <Paper
-          elevation={2}
-          sx={{
-            flex: 1,
-            borderRadius: 3,
-            display: "flex",
-            flexDirection: "column",
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: isMobile ? "column" : "row",
+        width: "100%",
+        height: "100%",
+        bgcolor: "background.default",
+        p: 2,
+        gap: 2,
+      }}
+    >
+      {/* Teams Sidebar (desktop inline / mobile drawer) */}
+      {!isMobile ? (
+        teamsOpen && <TeamList />
+      ) : (
+        <SwipeableDrawer
+          anchor="left"
+          open={teamsOpen}
+          onClose={() => setTeamsOpen(false)}
+          onOpen={() => setTeamsOpen(true)}
+          PaperProps={{
+            sx: { width: "80%", maxWidth: 300, borderTopRightRadius: 12, borderBottomRightRadius: 12 },
           }}
         >
-          {/* Header */}
-          <Box
-            sx={{
-              px: 2,
-              py: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              borderBottom: "1px solid #eee",
-              bgcolor: "background.paper",
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              {(!teamsOpen || isMobile) && (
-                <IconButton size="small" onClick={() => setTeamsOpen(true)}>
-                  <MenuIcon />
-                </IconButton>
-              )}
-              <Typography variant="h6" fontWeight="bold">
-                {filterContext}
-              </Typography>
-            </Box>
+          <TeamList />
+        </SwipeableDrawer>
+      )}
 
+      {/* Incidents Panel */}
+      <Paper
+        elevation={2}
+        sx={{
+          flex: 1,
+          borderRadius: 3,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+      >
+        {/* Header row */}
+        <Box
+          sx={{
+            px: 2,
+            py: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderBottom: "1px solid #eee",
+            bgcolor: "background.paper",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            {(!teamsOpen || isMobile) && (
+              <IconButton size="small" onClick={() => setTeamsOpen(true)}>
+                <MenuIcon />
+              </IconButton>
+            )}
+            <Typography variant="h6" fontWeight="bold">
+              {filterContext}
+            </Typography>
+          </Box>
+
+          <Box>
             <IconButton onClick={handleMenuClick}>
               <FileDownloadIcon />
             </IconButton>
             <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose}>
-              <MenuItem onClick={() => handleMenuAction("csv")}>Export CSV</MenuItem>
-              <MenuItem onClick={() => handleMenuAction("xlsx")}>Export Excel</MenuItem>
-              <MenuItem onClick={() => handleMenuAction("pdf")}>Export PDF</MenuItem>
+              <MenuItem onClick={() => handleMenuAction("csv")}>Export to CSV</MenuItem>
+              <MenuItem onClick={() => handleMenuAction("xlsx")}>Export to Excel</MenuItem>
+              <MenuItem onClick={() => handleMenuAction("pdf")}>Export to PDF</MenuItem>
             </Menu>
           </Box>
+        </Box>
 
-          {/* Filters */}
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{
-              p: 1.5,
-              flexWrap: "wrap",
-              justifyContent: isMobile ? "center" : "flex-start",
-            }}
-          >
-            {["all", "open", "closed", "onhold"].map((s) => (
-              <Button
-                key={s}
-                size="small"
-                variant={activeFilter === s ? "contained" : "outlined"}
-                onClick={() => applyStatusFilter(s)}
-              >
-                {s === "all"
-                  ? "All"
-                  : s === "onhold"
-                  ? "On Hold"
-                  : s.charAt(0).toUpperCase() + s.slice(1)}
-              </Button>
-            ))}
-          </Stack>
+        {/* Status Filters */}
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            p: 1.5,
+            flexWrap: "wrap",
+            justifyContent: isMobile ? "center" : "flex-start",
+          }}
+        >
+          {["all", "open", "closed", "onhold"].map((s) => (
+            <Button
+              key={s}
+              size="small"
+              variant={activeFilter === s ? "contained" : "outlined"}
+              onClick={() => applyStatusFilter(s)}
+            >
+              {s === "all"
+                ? "All"
+                : s === "onhold"
+                ? "On Hold"
+                : s.charAt(0).toUpperCase() + s.slice(1)}
+            </Button>
+          ))}
+        </Stack>
 
-          {/* List */}
-          <Box sx={{ flex: 1, px: 2, pb: 2 }}>
-            {filteredIncidents.map((incident) => (
-              <Paper
-                key={incident.id}
-                sx={{
-                  mb: 2,
-                  p: 1.5,
-                  borderRadius: 2,
-                  boxShadow: "0 1px 4px rgba(20,40,80,0.05)",
-                  cursor: "pointer",
-                  bgcolor: "background.default",
-                }}
-                onClick={() => navigate(`/incidents/${incident.id}`)}
-              >
-                <Typography sx={{ fontSize: "0.85rem", color: "text.secondary", mb: 1 }}>
-                  <strong>#{incident.id}</strong> • {incident.category}
-                  <Chip label={incident.status} size="small" sx={{ ml: 1, height: 18, fontSize: "0.7rem" }} />
-                  <Chip
-                    label={getSlaStatus(incident.slaDueDate)}
-                    size="small"
-                    sx={{
-                      ml: 1,
-                      height: 18,
-                      fontSize: "0.7rem",
-                      bgcolor:
-                        getSlaStatus(incident.slaDueDate) === "Overdue" ? "#ffe0e0" : "#e7f7ed",
-                      color:
-                        getSlaStatus(incident.slaDueDate) === "Overdue" ? "#d32f2f" : "#2e7d32",
-                    }}
-                  />
-                </Typography>
-                <Typography variant="subtitle2" fontWeight="bold">
-                  {incident.title}
-                </Typography>
-                <Typography variant="body2">{incident.description}</Typography>
-                <Typography sx={{ fontSize: "0.75em", color: "text.disabled", mt: 1 }}>
-                  Created: {new Date(incident.created).toLocaleString()}
-                </Typography>
-              </Paper>
-            ))}
-          </Box>
-        </Paper>
-      </Box>
+        {/* Incidents List */}
+        <Box sx={{ flex: 1, overflowY: "auto", px: 2, pb: 2 }}>
+          {filteredIncidents.map((incident) => (
+            <Paper
+              key={incident.id}
+              sx={{
+                mb: 2,
+                p: 1.5,
+                borderRadius: 2,
+                boxShadow: "0 1px 4px rgba(20,40,80,0.05)",
+                cursor: "pointer",
+                bgcolor: "background.default",
+              }}
+              onClick={() => navigate(`/incidents/${incident.id}`)}
+            >
+              <Typography sx={{ fontSize: "0.85rem", color: "text.secondary", mb: 1 }}>
+                <strong>#{incident.id}</strong> • {incident.category}
+                <Chip label={incident.status} size="small" sx={{ ml: 1, height: 18, fontSize: "0.7rem" }} />
+                <Chip
+                  label={getSlaStatus(incident.slaDueDate)}
+                  size="small"
+                  sx={{
+                    ml: 1,
+                    height: 18,
+                    fontSize: "0.7rem",
+                    bgcolor:
+                      getSlaStatus(incident.slaDueDate) === "Overdue" ? "#ffe0e0" : "#e7f7ed",
+                    color:
+                      getSlaStatus(incident.slaDueDate) === "Overdue" ? "#d32f2f" : "#2e7d32",
+                  }}
+                />
+              </Typography>
+              <Typography variant="subtitle2" fontWeight="bold">
+                {incident.title}
+              </Typography>
+              <Typography variant="body2">{incident.description}</Typography>
+              <Typography sx={{ fontSize: "0.75em", color: "text.disabled", mt: 1 }}>
+                Created: {new Date(incident.created).toLocaleString()}
+              </Typography>
+            </Paper>
+          ))}
+        </Box>
+      </Paper>
 
       <ExportPreviewModal
         open={previewOpen}
