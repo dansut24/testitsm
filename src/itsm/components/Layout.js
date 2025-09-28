@@ -173,19 +173,19 @@ const Layout = () => {
 
         {/* Row 2: Scrollable content (only this row scrolls) */}
         <Box
-          component="main"
-          sx={{
-            minHeight: 0,               // ✅ allows the row to actually shrink and scroll
-            overflowY: "auto",
-            overflowX: "hidden",
-            WebkitOverflowScrolling: "touch",
-            px: 2,
-            py: 2,
-          }}
-        >
-          <Outlet />
-        </Box>
-
+  component="main"
+  sx={{
+    minHeight: 0,
+    overflowY: "auto",
+    overflowX: "hidden",
+    WebkitOverflowScrolling: "touch",
+    px: 2,        // keep horizontal padding
+    pt: 1,        // smaller top gap under navbar
+    pb: isMobile ? 1 : 2, // minimal gap above bottom nav
+  }}
+>
+  <Outlet />
+</Box>
         {/* Row 3: Bottom nav (mobile only) */}
         {isMobile && (
           <Box
