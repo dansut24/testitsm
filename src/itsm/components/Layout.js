@@ -43,34 +43,41 @@ const Layout = () => {
   const [tabIndex, setTabIndex] = useState(0);
 
   // Sidebar mode & state
-  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); // "pinned" | "collapsible" | "hidden"
-  const [sidebarPinned, setSidebarPinned] = useState(true); // only for "collapsible"
+  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); 
+  const [sidebarPinned, setSidebarPinned] = useState(true);
 
   // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile" | null
+  const [drawerType, setDrawerType] = useState(null);
 
-  // 🔹 Fix viewport height jumps on mobile (especially rotation)
+  // 🔹 Fix viewport height jumps on mobile (esp. rotation on iOS Safari/Chrome)
   useEffect(() => {
     const setVh = () => {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty("--vh", `${vh}px`);
     };
 
-    setVh(); // run immediately
-
     const handleResize = () => {
       setVh();
-      requestAnimationFrame(setVh); // next frame
-      setTimeout(setVh, 300); // Safari delayed bounce
+      requestAnimationFrame(setVh);    // next paint
+      setTimeout(setVh, 300);          // small delay
+      setTimeout(setVh, 600);          // longer delay for iOS portrait bounce
     };
 
+    setVh(); // run immediately
     window.addEventListener("resize", handleResize);
     window.addEventListener("orientationchange", handleResize);
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", handleResize);
+    }
 
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("orientationchange", handleResize);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", handleResize);
+      }
     };
   }, []);
 
@@ -101,7 +108,7 @@ const Layout = () => {
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return; // keep Dashboard
+    if (closingIndex === 0) return;
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
     if (location.pathname === tabId) {
@@ -141,13 +148,13 @@ const Layout = () => {
         inset: 0,
         display: "flex",
         width: "100%",
-        height: "calc(var(--vh, 1vh) * 100)", // ✅ dynamic height with fallback
+        height: "calc(var(--vh, 1vh) * 100)", // ✅ use CSS var for reliable vh
         overflow: "hidden",
         bgcolor: theme.palette.background.default,
         overscrollBehavior: "none",
       }}
     >
-      {/* Desktop Sidebar (inline; never duplicates) */}
+      {/* Sidebar desktop */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -191,7 +198,7 @@ const Layout = () => {
           />
         </Box>
 
-        {/* Scrollable content */}
+        {/* Content */}
         <Box
           component="main"
           sx={{
@@ -207,7 +214,7 @@ const Layout = () => {
           <Outlet />
         </Box>
 
-        {/* Bottom nav (mobile only) */}
+        {/* Bottom nav */}
         {isMobile && (
           <Box
             sx={{
