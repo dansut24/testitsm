@@ -21,7 +21,7 @@ const Sidebar = ({
   items,
   onItemClick,
   widthExpanded = 260,
-  widthCollapsed = 56,
+  widthCollapsed = 60, // 🔹 now 60px
 }) => {
   const isCollapsed = !pinned;
   const width = isCollapsed ? widthCollapsed : widthExpanded;
@@ -138,7 +138,7 @@ const Sidebar = ({
                 justifyContent: "center",
                 alignItems: "center",
                 textAlign: "center",
-                gap: isCollapsed ? 0.5 : 0,
+                gap: isCollapsed ? 0.25 : 0,
               }}
             >
               <ListItemIcon
@@ -150,7 +150,7 @@ const Sidebar = ({
                 }}
               >
                 {React.cloneElement(icon, {
-                  fontSize: isCollapsed ? "small" : "medium", // 🔹 shrink icon in collapsed mode
+                  fontSize: isCollapsed ? "small" : "medium",
                   sx: { mx: "auto" },
                 })}
               </ListItemIcon>
@@ -159,13 +159,13 @@ const Sidebar = ({
                 <Typography
                   variant="caption"
                   sx={{
-                    fontSize: "0.6rem", // 🔹 smaller
-                    lineHeight: 1.1,   // tighter line height
+                    fontSize: "0.6rem", // 🔹 smaller text
+                    lineHeight: 1.1,
                     mt: 0.25,
                     wordBreak: "break-word",
                     whiteSpace: "normal",
                     textAlign: "center",
-                    maxWidth: widthCollapsed - 6, // fit within 56px
+                    maxWidth: widthCollapsed - 6, // 🔹 ensures fit in 60px
                   }}
                 >
                   {label}
