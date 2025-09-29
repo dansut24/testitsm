@@ -1,4 +1,3 @@
-// src/itsm/pages/Settings.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -29,6 +28,8 @@ import BusinessIcon from "@mui/icons-material/Business";
 import EmailIcon from "@mui/icons-material/Email";
 import AddUserModal from "../components/AddUserModal";
 
+import { useThemeMode } from "../theme/ThemeContext"; // ✅ hook
+
 const Settings = () => {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -42,17 +43,13 @@ const Settings = () => {
     localStorage.getItem("sidebarMode") || "pinned"
   );
 
-  // Theme preferences
-  const [themeMode, setThemeMode] = useState(
-    localStorage.getItem("themeMode") || "light"
-  );
+  const { mode, setMode } = useThemeMode(); // ✅ theme mode from context
 
   const availableProviders = ["google", "github", "azure"];
 
   useEffect(() => {
     const fetchLinkedAccounts = async () => {
-      const { data: identitiesData, error } =
-        await supabase.auth.getUserIdentities();
+      const { data: identitiesData, error } = await supabase.auth.getUserIdentities();
       if (!error) {
         setLinkedProviders(identitiesData.identities || []);
       } else {
@@ -71,13 +68,12 @@ const Settings = () => {
     const defaultLayout = Object.keys(widgetRegistry);
 
     const { error } = await supabase.from("dashboard_layouts").upsert({
-      user_id: "demo-user", // placeholder if not authenticated
+      user_id: "demo-user", // placeholder
       layout: defaultLayout,
       updated_at: new Date().toISOString(),
     });
 
     if (error) {
-      console.error("❌ Supabase insert error:", error);
       setStatus({
         type: "error",
         message: "❌ Failed to create dashboard layout.",
@@ -108,9 +104,7 @@ const Settings = () => {
       return;
     }
 
-    const identity = allIdentities.find(
-      (id) => id.provider === providerToUnlink
-    );
+    const identity = allIdentities.find((id) => id.provider === providerToUnlink);
     if (!identity) {
       alert("Provider not linked.");
       return;
@@ -118,7 +112,6 @@ const Settings = () => {
 
     const { error } = await supabase.auth.unlinkIdentity(identity);
     if (error) {
-      console.error("Failed to unlink identity:", error);
       alert(`Failed to unlink ${providerToUnlink}: ${error.message}`);
     } else {
       setLinkedProviders((prev) =>
@@ -140,7 +133,6 @@ const Settings = () => {
         alert(`✅ Linked ${provider} successfully.`);
       }
     } catch (err) {
-      console.error("Linking error:", err);
       alert("❌ Unexpected error occurred while linking.");
     }
   };
@@ -171,9 +163,6 @@ const Settings = () => {
         Dashboard Settings
       </Typography>
 
-      <Typography variant="body1" sx={{ mb: 2 }}>
-        Use the button below to create your personal dashboard layout.
-      </Typography>
       <Button
         variant="contained"
         onClick={handleCreateDashboard}
@@ -189,11 +178,46 @@ const Settings = () => {
 
       <Divider sx={{ my: 4 }} />
 
-      <Typography variant="h6">Linked Accounts</Typography>
+      {/* Theme Preferences */}
+      <Typography variant="h6">Theme Preferences</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Identity providers linked to your account.
+        Choose how the site looks.
       </Typography>
 
+      <RadioGroup
+        value={mode}
+        onChange={(e) => setMode(e.target.value)} // ✅ no reload
+      >
+        <FormControlLabel value="light" control={<Radio />} label="Light Theme" />
+        <FormControlLabel value="dark" control={<Radio />} label="Dark Theme" />
+        <FormControlLabel value="vibrant" control={<Radio />} label="Vibrant Theme" />
+      </RadioGroup>
+
+      <Divider sx={{ my: 4 }} />
+
+      {/* Sidebar Preferences */}
+      <Typography variant="h6">Sidebar Preferences</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        Choose how the sidebar behaves in desktop view.
+      </Typography>
+
+      <RadioGroup
+        value={sidebarMode}
+        onChange={(e) => {
+          const value = e.target.value;
+          setSidebarMode(value);
+          localStorage.setItem("sidebarMode", value);
+          window.location.reload(); // refresh to apply change
+        }}
+      >
+        <FormControlLabel value="pinned" control={<Radio />} label="Pinned Sidebar" />
+        <FormControlLabel value="collapsible" control={<Radio />} label="Collapsible Sidebar" />
+        <FormControlLabel value="hidden" control={<Radio />} label="Hidden Sidebar" />
+      </RadioGroup>
+
+      <Divider sx={{ my: 4 }} />
+
+      <Typography variant="h6">Linked Accounts</Typography>
       {linkedProviders.length === 0 ? (
         <Alert severity="info">No linked accounts found.</Alert>
       ) : (
@@ -238,68 +262,8 @@ const Settings = () => {
         </>
       )}
 
+      {/* Add user */}
       <Divider sx={{ my: 4 }} />
-
-      {/* Sidebar Preferences */}
-      <Typography variant="h6">Sidebar Preferences</Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Choose how the sidebar behaves in desktop view.
-      </Typography>
-
-      <RadioGroup
-        value={sidebarMode}
-        onChange={(e) => {
-          const value = e.target.value;
-          setSidebarMode(value);
-          localStorage.setItem("sidebarMode", value);
-          window.location.reload(); // refresh layout to apply change
-        }}
-      >
-        <FormControlLabel
-          value="pinned"
-          control={<Radio />}
-          label="Pinned Sidebar (full width with labels)"
-        />
-        <FormControlLabel
-          value="collapsible"
-          control={<Radio />}
-          label="Collapsible Sidebar (toggle with logo)"
-        />
-        <FormControlLabel
-          value="hidden"
-          control={<Radio />}
-          label="Hidden Sidebar (logo in Navbar only)"
-        />
-      </RadioGroup>
-
-      <Divider sx={{ my: 4 }} />
-
-      {/* Theme Preferences */}
-      <Typography variant="h6">Theme Preferences</Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Switch between light, dark, and vibrant themes.
-      </Typography>
-
-      <RadioGroup
-        value={themeMode}
-        onChange={(e) => {
-          const value = e.target.value;
-          setThemeMode(value);
-          localStorage.setItem("themeMode", value);
-          window.location.reload(); // reload to apply theme
-        }}
-      >
-        <FormControlLabel value="light" control={<Radio />} label="Light Theme" />
-        <FormControlLabel value="dark" control={<Radio />} label="Dark Theme" />
-        <FormControlLabel
-          value="vibrant"
-          control={<Radio />}
-          label="Vibrant Theme"
-        />
-      </RadioGroup>
-
-      <Divider sx={{ my: 4 }} />
-
       <Typography variant="h6">Manage Users</Typography>
       <Button
         variant="contained"
@@ -318,7 +282,8 @@ const Settings = () => {
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
         <DialogTitle>Confirm Unlink</DialogTitle>
         <DialogContent>
-          Are you sure you want to unlink <strong>{providerToUnlink}</strong>?
+          Are you sure you want to unlink{" "}
+          <strong>{providerToUnlink}</strong>?
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
