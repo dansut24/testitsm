@@ -1,15 +1,12 @@
 // src/itsm/App.js
-import React, { useEffect, useState } from "react";
-import {
-  CssBaseline,
-  Box,
-} from "@mui/material";
+import React, { useEffect, useState, useMemo } from "react";
+import { CssBaseline, Box } from "@mui/material";
 import {
   Routes,
   Route,
 } from "react-router-dom";
 import { supabase } from "../common/utils/supabaseClient";
-import { CssVarsProvider } from "@mui/material/styles"; // ✅ import provider
+import { ThemeProvider, createTheme } from "@mui/material/styles"; // ✅ switch to ThemeProvider
 
 // Layout & Auth
 import Layout from "./components/Layout";
@@ -57,6 +54,35 @@ import SetPassword from "./pages/SetPassword";
 // New Tab Page
 import NewTab from "./pages/NewTab";
 
+// 🔹 Define themes
+const lightTheme = createTheme({
+  palette: {
+    mode: "light",
+    primary: { main: "#1976d2" },
+    background: { default: "#f4f6f8", paper: "#ffffff" },
+  },
+});
+
+const darkTheme = createTheme({
+  palette: {
+    mode: "dark",
+    primary: { main: "#90caf9" },
+    background: { default: "#121212", paper: "#1e1e1e" },
+  },
+});
+
+const vibrantTheme = createTheme({
+  palette: {
+    mode: "light",
+    primary: { main: "#e91e63" }, // pink
+    secondary: { main: "#9c27b0" }, // purple
+    background: { default: "#fff0f6", paper: "#ffffff" },
+  },
+  typography: {
+    fontFamily: "'Inter', sans-serif",
+  },
+});
+
 function AppRoutes() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -67,9 +93,11 @@ function AppRoutes() {
       setLoading(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+      }
+    );
 
     return () => {
       listener.subscription.unsubscribe();
@@ -116,7 +144,10 @@ function AppRoutes() {
           <Route path="new-problem" element={<NewProblem />} />
           <Route path="new-asset" element={<NewAsset />} />
           <Route path="incidents/:id" element={<IncidentDetail />} />
-          <Route path="service-requests/:id" element={<ServiceRequestDetail />} />
+          <Route
+            path="service-requests/:id"
+            element={<ServiceRequestDetail />}
+          />
           <Route path="changes/:id" element={<ChangeDetail />} />
           <Route path="problems/:id" element={<ProblemDetail />} />
           <Route path="assets/:id" element={<AssetDetail />} />
@@ -136,8 +167,19 @@ function AppRoutes() {
 }
 
 function App() {
+  const [themeMode, setThemeMode] = useState(
+    localStorage.getItem("themeMode") || "light"
+  );
+
+  // 🔹 Select theme object
+  const theme = useMemo(() => {
+    if (themeMode === "dark") return darkTheme;
+    if (themeMode === "vibrant") return vibrantTheme;
+    return lightTheme;
+  }, [themeMode]);
+
   return (
-    <CssVarsProvider defaultMode="light">   {/* ✅ wrap everything */}
+    <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box
         sx={{
@@ -151,7 +193,7 @@ function App() {
       >
         <AppRoutes />
       </Box>
-    </CssVarsProvider>
+    </ThemeProvider>
   );
 }
 
