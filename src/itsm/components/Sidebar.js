@@ -13,14 +13,6 @@ import {
 
 const COLLAPSED_BG = "#f8f9fa"; // same as navbar grey
 
-const shortLabelMap = {
-  "Service Requests": "SR",
-  "Knowledge Base": "KB",
-  // add more abbreviations if you want:
-  // "Dashboard": "Dash",
-  // "Settings": "Prefs",
-};
-
 const Sidebar = ({
   pinned,                // true = expanded, false = collapsed
   onToggle,              // click on logo to toggle
@@ -31,8 +23,6 @@ const Sidebar = ({
 }) => {
   const isCollapsed = !pinned;
   const width = isCollapsed ? widthCollapsed : widthExpanded;
-
-  const renderCollapsedText = (label) => shortLabelMap[label] || label;
 
   return (
     <Box
@@ -48,7 +38,7 @@ const Sidebar = ({
         transition: "width 0.3s ease",
       }}
     >
-      {/* Top logo/header bar (matches navbar styling) */}
+      {/* Top logo/header bar */}
       <Box
         sx={{
           height: 48,
@@ -59,8 +49,6 @@ const Sidebar = ({
           px: 1,
           bgcolor: COLLAPSED_BG,
           borderBottom: "4px solid #ffffff",
-          // ensure the thin right outline doesn't show on the header strip
-          // while keeping the overall sidebar's right border
         }}
       >
         <IconButton onClick={onToggle} size="small">
@@ -86,7 +74,7 @@ const Sidebar = ({
           flex: 1,
           py: 1,
           px: isCollapsed ? 0 : 1,
-          overflowY: "auto",
+          overflowY: isCollapsed ? "hidden" : "auto", // no scrollbars when collapsed
         }}
       >
         {items.map(({ label, icon }) => {
@@ -95,11 +83,12 @@ const Sidebar = ({
               key={label}
               onClick={() => onItemClick(label)}
               sx={{
-                minHeight: 52,
+                minHeight: 56,
                 px: isCollapsed ? 0 : 2,
                 flexDirection: isCollapsed ? "column" : "row",
-                justifyContent: isCollapsed ? "center" : "flex-start",
+                justifyContent: "center",
                 alignItems: "center",
+                textAlign: isCollapsed ? "center" : "left",
                 gap: isCollapsed ? 0.25 : 0,
               }}
             >
@@ -118,15 +107,15 @@ const Sidebar = ({
                   variant="caption"
                   sx={{
                     fontSize: "0.65rem",
+                    lineHeight: 1.1,
                     mt: 0.25,
+                    wordBreak: "break-word",  // allow splitting into multiple lines
+                    whiteSpace: "normal",
                     textAlign: "center",
-                    maxWidth: widthCollapsed - 6, // avoid overflow
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
+                    maxWidth: widthCollapsed - 4,
                   }}
                 >
-                  {renderCollapsedText(label)}
+                  {label}
                 </Typography>
               ) : (
                 <ListItemText primary={label} />
@@ -134,7 +123,6 @@ const Sidebar = ({
             </ListItemButton>
           );
 
-          // Helpful tooltip in collapsed mode
           return isCollapsed ? (
             <Tooltip key={label} title={label} placement="right">
               <Box>{content}</Box>
