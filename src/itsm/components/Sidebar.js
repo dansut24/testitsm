@@ -21,7 +21,7 @@ const Sidebar = ({
   items,
   onItemClick,
   widthExpanded = 260,
-  widthCollapsed = 60, // collapsed sidebar width
+  widthCollapsed = 60, // collapsed sidebar now 60px
 }) => {
   const isCollapsed = !pinned;
   const width = isCollapsed ? widthCollapsed : widthExpanded;
@@ -70,37 +70,36 @@ const Sidebar = ({
       }}
     >
       {/* Top logo/header bar */}
-<Box
-  sx={{
-    height: 48, // match NAVBAR_HEIGHT
-    flexShrink: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: isCollapsed ? "center" : "space-between",
-    px: 1,
-    bgcolor: "background.paper", // ✅ match navbar background
-    borderBottom: "1px solid",
-    borderColor: "divider", // ✅ same divider line as navbar
-  }}
->
-  <IconButton onClick={onToggle} size="small">
-    <img
-      src="https://www.bing.com/sa/simg/favicon-2x.ico"
-      alt="Logo"
-      style={{ width: 24, height: 24 }}
-    />
-  </IconButton>
-  {!isCollapsed && (
-    <Typography
-      variant="subtitle2"
-      sx={{ fontWeight: 700, mr: 0.5, whiteSpace: "nowrap" }}
-    >
-      MyApp
-    </Typography>
-  )}
-</Box>
+      <Box
+        sx={{
+          height: 48, // match NAVBAR_HEIGHT exactly
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: isCollapsed ? "center" : "space-between",
+          px: 1,
+          bgcolor: COLLAPSED_BG,
+          // ❌ removed borderBottom so it aligns perfectly with navbar
+        }}
+      >
+        <IconButton onClick={onToggle} size="small">
+          <img
+            src="https://www.bing.com/sa/simg/favicon-2x.ico"
+            alt="Logo"
+            style={{ width: 28, height: 28 }}
+          />
+        </IconButton>
+        {!isCollapsed && (
+          <Typography
+            variant="subtitle2"
+            sx={{ fontWeight: 700, mr: 0.5, whiteSpace: "nowrap" }}
+          >
+            MyApp
+          </Typography>
+        )}
+      </Box>
 
-      {/* Scroll up button (only if overflow) */}
+      {/* Scroll up button */}
       {isCollapsed && canScrollUp && (
         <IconButton
           size="small"
@@ -187,7 +186,7 @@ const Sidebar = ({
         })}
       </List>
 
-      {/* Scroll down button (only if overflow) */}
+      {/* Scroll down button */}
       {isCollapsed && canScrollDown && (
         <IconButton
           size="small"
