@@ -21,7 +21,7 @@ const Sidebar = ({
   items,
   onItemClick,
   widthExpanded = 260,
-  widthCollapsed = 60, // 🔹 now 60px
+  widthCollapsed = 60, // collapsed sidebar now 60px
 }) => {
   const isCollapsed = !pinned;
   const width = isCollapsed ? widthCollapsed : widthExpanded;
@@ -106,7 +106,7 @@ const Sidebar = ({
           onClick={() => handleScroll("up")}
           sx={{
             alignSelf: "center",
-            mb: 1,
+            mb: 0.5,
             color: "text.secondary",
           }}
         >
@@ -119,7 +119,7 @@ const Sidebar = ({
         ref={listRef}
         sx={{
           flex: 1,
-          py: 1,
+          py: 0.5,
           px: isCollapsed ? 0 : 1,
           overflowY: "auto",
           scrollbarWidth: "none",
@@ -132,7 +132,7 @@ const Sidebar = ({
               key={label}
               onClick={() => onItemClick(label)}
               sx={{
-                minHeight: 64,
+                minHeight: isCollapsed ? 52 : 64, // 🔹 tighter spacing when collapsed
                 px: isCollapsed ? 0 : 2,
                 flexDirection: isCollapsed ? "column" : "row",
                 justifyContent: "center",
@@ -159,13 +159,13 @@ const Sidebar = ({
                 <Typography
                   variant="caption"
                   sx={{
-                    fontSize: "0.6rem", // 🔹 smaller text
+                    fontSize: "0.6rem", // smaller text
                     lineHeight: 1.1,
                     mt: 0.25,
                     wordBreak: "break-word",
                     whiteSpace: "normal",
                     textAlign: "center",
-                    maxWidth: widthCollapsed - 6, // 🔹 ensures fit in 60px
+                    maxWidth: widthCollapsed - 6,
                   }}
                 >
                   {label}
@@ -193,8 +193,8 @@ const Sidebar = ({
           onClick={() => handleScroll("down")}
           sx={{
             alignSelf: "center",
-            mt: 1,
-            mb: 1,
+            mt: 0.5,
+            mb: 0.5,
             color: "text.secondary",
           }}
         >
