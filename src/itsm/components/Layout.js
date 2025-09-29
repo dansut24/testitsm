@@ -1,4 +1,3 @@
-// src/itsm/components/Layout.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -6,23 +5,25 @@ import {
   useMediaQuery,
   SwipeableDrawer,
   Typography,
+  IconButton,
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
 import Sidebar from "./Sidebar";
 
-// Icons
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import MenuIcon from "@mui/icons-material/Menu";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import ListAltIcon from "@mui/icons-material/ListAlt";
-import ChangeCircleIcon from "@mui/icons-material/ChangeCircle";
-import AssignmentIcon from "@mui/icons-material/Assignment";
-import ArticleIcon from "@mui/icons-material/Article";
-import SettingsIcon from "@mui/icons-material/Settings";
 import StorageIcon from "@mui/icons-material/Storage";
+import SettingsIcon from "@mui/icons-material/Settings";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+import ChangeCircleIcon from "@mui/icons-material/ChangeCircle";
+import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
+import PersonIcon from "@mui/icons-material/Person";
+import ArticleIcon from "@mui/icons-material/Article";
 
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 60;
@@ -47,39 +48,31 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Tabs
   const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
 
-  // Sidebar mode & state
   const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned");
   const [sidebarPinned, setSidebarPinned] = useState(true);
 
-  // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null);
 
-  // Fix viewport height jumps on mobile (esp. rotation)
+  // ✅ Fix viewport height for mobile + orientation changes
   useEffect(() => {
     const setVh = () => {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty("--vh", `${vh}px`);
     };
     setVh();
-    const handleResize = () => {
-      setVh();
-      requestAnimationFrame(setVh);
-      setTimeout(setVh, 300);
-    };
-    window.addEventListener("resize", handleResize);
-    window.addEventListener("orientationchange", handleResize);
+    window.addEventListener("resize", setVh);
+    window.addEventListener("orientationchange", setVh);
     return () => {
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("orientationchange", handleResize);
+      window.removeEventListener("resize", setVh);
+      window.removeEventListener("orientationchange", setVh);
     };
   }, []);
 
-  // Sync tabs with route
+  // Sync tabs with current route
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -106,7 +99,7 @@ const Layout = () => {
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return; // keep Dashboard
+    if (closingIndex === 0) return;
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
     if (location.pathname === tabId) {
@@ -135,10 +128,10 @@ const Layout = () => {
   const sidebarItems = [
     { label: "Dashboard", icon: <DashboardIcon /> },
     { label: "Incidents", icon: <ListAltIcon /> },
-    { label: "Service Requests", icon: <ListAltIcon /> },
+    { label: "Service Requests", icon: <AssignmentIcon /> },
     { label: "Changes", icon: <ChangeCircleIcon /> },
-    { label: "Tasks", icon: <AssignmentIcon /> },
-    { label: "Profile", icon: <AccountCircleIcon /> },
+    { label: "Tasks", icon: <AssignmentTurnedInIcon /> },
+    { label: "Profile", icon: <PersonIcon /> },
     { label: "Knowledge Base", icon: <ArticleIcon /> },
     { label: "Settings", icon: <SettingsIcon /> },
     { label: "Assets", icon: <StorageIcon /> },
@@ -157,7 +150,7 @@ const Layout = () => {
         overscrollBehavior: "none",
       }}
     >
-      {/* Sidebar (desktop only) */}
+      {/* Sidebar (desktop) */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -188,20 +181,43 @@ const Layout = () => {
           sx={{
             position: "relative",
             zIndex: 1200,
-            bgcolor: theme.palette.background.paper,
+            bgcolor: "background.paper",
+            display: "flex",
+            alignItems: "center",
+            height: NAVBAR_HEIGHT,
+            borderBottom: "1px solid",
+            borderColor: "divider",
           }}
         >
-          <NavbarTabs
-            tabs={tabs}
-            tabIndex={tabIndex}
-            handleTabChange={handleTabChange}
-            handleTabClose={handleTabClose}
-            handleTabReorder={handleTabReorder}
-            isMobile={isMobile}
-          />
+          {/* 🔹 Show menu/logo if sidebar hidden on desktop */}
+          {!isMobile && sidebarMode === "hidden" && (
+            <IconButton
+              onClick={() => setMobileSidebarOpen(true)}
+              size="small"
+              sx={{ ml: 1 }}
+            >
+              <img
+                src="https://www.bing.com/sa/simg/favicon-2x.ico"
+                alt="Logo"
+                style={{ width: 24, height: 24 }}
+              />
+            </IconButton>
+          )}
+
+          {/* Tabs */}
+          <Box sx={{ flex: 1, overflow: "hidden" }}>
+            <NavbarTabs
+              tabs={tabs}
+              tabIndex={tabIndex}
+              handleTabChange={handleTabChange}
+              handleTabClose={handleTabClose}
+              handleTabReorder={handleTabReorder}
+              isMobile={isMobile}
+            />
+          </Box>
         </Box>
 
-        {/* Scrollable content */}
+        {/* Main content */}
         <Box
           component="main"
           sx={{
@@ -237,8 +253,8 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Mobile Sidebar Drawer */}
-      {isMobile && (
+      {/* Sidebar Drawer (mobile & hidden desktop) */}
+      {(isMobile || sidebarMode === "hidden") && (
         <SwipeableDrawer
           anchor="left"
           open={mobileSidebarOpen}
@@ -266,7 +282,7 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Mobile Action Drawer */}
+      {/* Bottom action drawer */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
