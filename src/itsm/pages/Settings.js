@@ -42,11 +42,17 @@ const Settings = () => {
     localStorage.getItem("sidebarMode") || "pinned"
   );
 
+  // Theme preferences
+  const [themeMode, setThemeMode] = useState(
+    localStorage.getItem("themeMode") || "light"
+  );
+
   const availableProviders = ["google", "github", "azure"];
 
   useEffect(() => {
     const fetchLinkedAccounts = async () => {
-      const { data: identitiesData, error } = await supabase.auth.getUserIdentities();
+      const { data: identitiesData, error } =
+        await supabase.auth.getUserIdentities();
       if (!error) {
         setLinkedProviders(identitiesData.identities || []);
       } else {
@@ -64,13 +70,11 @@ const Settings = () => {
 
     const defaultLayout = Object.keys(widgetRegistry);
 
-    const { error } = await supabase
-      .from("dashboard_layouts")
-      .upsert({
-        user_id: "demo-user", // placeholder if not authenticated
-        layout: defaultLayout,
-        updated_at: new Date().toISOString(),
-      });
+    const { error } = await supabase.from("dashboard_layouts").upsert({
+      user_id: "demo-user", // placeholder if not authenticated
+      layout: defaultLayout,
+      updated_at: new Date().toISOString(),
+    });
 
     if (error) {
       console.error("❌ Supabase insert error:", error);
@@ -104,7 +108,9 @@ const Settings = () => {
       return;
     }
 
-    const identity = allIdentities.find((id) => id.provider === providerToUnlink);
+    const identity = allIdentities.find(
+      (id) => id.provider === providerToUnlink
+    );
     if (!identity) {
       alert("Provider not linked.");
       return;
@@ -225,8 +231,7 @@ const Settings = () => {
                 startIcon={getProviderIcon(provider)}
                 onClick={() => handleLink(provider)}
               >
-                Link{" "}
-                {provider.charAt(0).toUpperCase() + provider.slice(1)}
+                Link {provider.charAt(0).toUpperCase() + provider.slice(1)}
               </Button>
             ))}
           </Stack>
@@ -269,6 +274,32 @@ const Settings = () => {
 
       <Divider sx={{ my: 4 }} />
 
+      {/* Theme Preferences */}
+      <Typography variant="h6">Theme Preferences</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        Switch between light, dark, and vibrant themes.
+      </Typography>
+
+      <RadioGroup
+        value={themeMode}
+        onChange={(e) => {
+          const value = e.target.value;
+          setThemeMode(value);
+          localStorage.setItem("themeMode", value);
+          window.location.reload(); // reload to apply theme
+        }}
+      >
+        <FormControlLabel value="light" control={<Radio />} label="Light Theme" />
+        <FormControlLabel value="dark" control={<Radio />} label="Dark Theme" />
+        <FormControlLabel
+          value="vibrant"
+          control={<Radio />}
+          label="Vibrant Theme"
+        />
+      </RadioGroup>
+
+      <Divider sx={{ my: 4 }} />
+
       <Typography variant="h6">Manage Users</Typography>
       <Button
         variant="contained"
@@ -287,8 +318,7 @@ const Settings = () => {
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
         <DialogTitle>Confirm Unlink</DialogTitle>
         <DialogContent>
-          Are you sure you want to unlink{" "}
-          <strong>{providerToUnlink}</strong>?
+          Are you sure you want to unlink <strong>{providerToUnlink}</strong>?
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
