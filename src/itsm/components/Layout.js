@@ -43,27 +43,36 @@ const Layout = () => {
   const [tabIndex, setTabIndex] = useState(0);
 
   // Sidebar mode & state
-  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned");
-  const [sidebarPinned, setSidebarPinned] = useState(true);
+  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); // "pinned" | "collapsible" | "hidden"
+  const [sidebarPinned, setSidebarPinned] = useState(true); // only for "collapsible"
 
-  // Mobile
+  // Mobile drawers
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState(null);
+  const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile" | null
 
-  // ✅ Fix viewport jumps on mobile (portrait ↔ landscape)
+  // --- Stable mobile viewport fix (prevents jump & off-screen on rotate) ---
   useEffect(() => {
+    let raf;
     const setVh = () => {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty("--vh", `${vh}px`);
     };
-    setVh();
-    window.addEventListener("resize", setVh);
-    window.addEventListener("orientationchange", setVh);
+    const update = () => {
+      setVh();                    // now
+      raf = requestAnimationFrame(setVh); // next frame
+      setTimeout(setVh, 250);     // after resize settles
+      setTimeout(setVh, 750);     // iOS Safari delayed toolbar
+    };
+    update();
+    window.addEventListener("resize", update, { passive: true });
+    window.addEventListener("orientationchange", update);
     return () => {
-      window.removeEventListener("resize", setVh);
-      window.removeEventListener("orientationchange", setVh);
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+      if (raf) cancelAnimationFrame(raf);
     };
   }, []);
+  // ------------------------------------------------------------------------
 
   // Sync tabs with route
   useEffect(() => {
@@ -92,7 +101,7 @@ const Layout = () => {
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return;
+    if (closingIndex === 0) return; // keep Dashboard
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
     if (location.pathname === tabId) {
@@ -138,7 +147,7 @@ const Layout = () => {
         overscrollBehavior: "none",
       }}
     >
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar (inline; never duplicates) */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -152,7 +161,7 @@ const Layout = () => {
         />
       )}
 
-      {/* Main grid */}
+      {/* Main grid: Navbar (fixed height) / Content (scroll) / Bottom nav (mobile) */}
       <Box
         sx={{
           flex: 1,
@@ -164,54 +173,41 @@ const Layout = () => {
           height: "100%",
         }}
       >
-        {/* Navbar */}
+        {/* Row 1: Navbar */}
         <Box
           sx={{
             position: "relative",
             zIndex: 1200,
             bgcolor: theme.palette.background.paper,
-            display: "flex",
-            alignItems: "center",
-            px: 1,
           }}
         >
-          {/* Show favicon when sidebar is hidden */}
-          {sidebarMode === "hidden" && !isMobile && (
-            <img
-              src="https://www.bing.com/sa/simg/favicon-trans-bg-blue-mg-png.png"
-              alt="Logo"
-              style={{ height: 24, width: 24, marginRight: 8 }}
-            />
-          )}
-          <Box sx={{ flex: 1 }}>
-            <NavbarTabs
-              tabs={tabs}
-              tabIndex={tabIndex}
-              handleTabChange={handleTabChange}
-              handleTabClose={handleTabClose}
-              handleTabReorder={handleTabReorder}
-              isMobile={isMobile}
-            />
-          </Box>
+          <NavbarTabs
+            tabs={tabs}
+            tabIndex={tabIndex}
+            handleTabChange={handleTabChange}
+            handleTabClose={handleTabClose}
+            handleTabReorder={handleTabReorder}
+            isMobile={isMobile}
+          />
         </Box>
 
-        {/* Content */}
+        {/* Row 2: Scrollable content ONLY */}
         <Box
           component="main"
           sx={{
-            minHeight: 0,
+            minHeight: 0,               // required so the grid row can shrink and scroll
             overflowY: "auto",
             overflowX: "hidden",
             WebkitOverflowScrolling: "touch",
             px: 2,
-            pt: 1,
-            pb: isMobile ? 1 : 2,
+            pt: 1,                      // small gap under navbar
+            pb: isMobile ? 1 : 2,       // small gap above bottom nav on mobile
           }}
         >
           <Outlet />
         </Box>
 
-        {/* Bottom nav (mobile only) */}
+        {/* Row 3: Bottom nav (mobile only) */}
         {isMobile && (
           <Box
             sx={{
@@ -231,7 +227,7 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Mobile Sidebar Drawer */}
+      {/* Mobile Sidebar Drawer (overlay) */}
       {isMobile && (
         <SwipeableDrawer
           anchor="left"
@@ -257,7 +253,7 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Mobile Action Drawer */}
+      {/* Mobile Action Drawer (bottom) — no dim; taps pass through backdrop */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
