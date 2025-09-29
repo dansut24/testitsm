@@ -16,12 +16,12 @@ import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 const COLLAPSED_BG = "#f8f9fa";
 
 const Sidebar = ({
-  pinned,                // true = expanded, false = collapsed
-  onToggle,              // click logo to toggle
-  items,                 // [{ label, icon }]
-  onItemClick,           // (label) => void
+  pinned,
+  onToggle,
+  items,
+  onItemClick,
   widthExpanded = 260,
-  widthCollapsed = 56,   // 🔹 wider collapsed sidebar
+  widthCollapsed = 56,
 }) => {
   const isCollapsed = !pinned;
   const width = isCollapsed ? widthCollapsed : widthExpanded;
@@ -99,7 +99,7 @@ const Sidebar = ({
         )}
       </Box>
 
-      {/* Scroll up button (collapsed only, appears under logo) */}
+      {/* Scroll up button */}
       {isCollapsed && canScrollUp && (
         <IconButton
           size="small"
@@ -121,9 +121,9 @@ const Sidebar = ({
           flex: 1,
           py: 1,
           px: isCollapsed ? 0 : 1,
-          overflowY: isCollapsed ? "auto" : "auto",
-          scrollbarWidth: "none", // Firefox
-          "&::-webkit-scrollbar": { display: "none" }, // Chrome
+          overflowY: "auto",
+          scrollbarWidth: "none",
+          "&::-webkit-scrollbar": { display: "none" },
         }}
       >
         {items.map(({ label, icon }) => {
@@ -155,13 +155,13 @@ const Sidebar = ({
                 <Typography
                   variant="caption"
                   sx={{
-                    fontSize: "0.65rem",
-                    lineHeight: 1.1,
+                    fontSize: "0.6rem",   // 🔹 smaller text
+                    lineHeight: 1.05,     // tighter line height
                     mt: 0.25,
                     wordBreak: "break-word",
                     whiteSpace: "normal",
                     textAlign: "center",
-                    maxWidth: widthCollapsed - 4,
+                    maxWidth: widthCollapsed - 6, // fit within 56px
                   }}
                 >
                   {label}
@@ -182,7 +182,7 @@ const Sidebar = ({
         })}
       </List>
 
-      {/* Scroll down button (collapsed only, at bottom) */}
+      {/* Scroll down button */}
       {isCollapsed && canScrollDown && (
         <IconButton
           size="small"
