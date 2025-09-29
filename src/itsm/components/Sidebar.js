@@ -21,7 +21,7 @@ const Sidebar = ({
   items,
   onItemClick,
   widthExpanded = 260,
-  widthCollapsed = 60, // collapsed sidebar now 60px
+  widthCollapsed = 60, // collapsed sidebar width
 }) => {
   const isCollapsed = !pinned;
   const width = isCollapsed ? widthCollapsed : widthExpanded;
@@ -99,7 +99,7 @@ const Sidebar = ({
         )}
       </Box>
 
-      {/* Scroll up button */}
+      {/* Scroll up button (only if overflow) */}
       {isCollapsed && canScrollUp && (
         <IconButton
           size="small"
@@ -132,7 +132,7 @@ const Sidebar = ({
               key={label}
               onClick={() => onItemClick(label)}
               sx={{
-                minHeight: isCollapsed ? 52 : 64, // 🔹 tighter spacing when collapsed
+                minHeight: isCollapsed ? 52 : 64,
                 px: isCollapsed ? 0 : 2,
                 flexDirection: isCollapsed ? "column" : "row",
                 justifyContent: "center",
@@ -159,7 +159,7 @@ const Sidebar = ({
                 <Typography
                   variant="caption"
                   sx={{
-                    fontSize: "0.6rem", // smaller text
+                    fontSize: "0.6rem",
                     lineHeight: 1.1,
                     mt: 0.25,
                     wordBreak: "break-word",
@@ -186,7 +186,7 @@ const Sidebar = ({
         })}
       </List>
 
-      {/* Scroll down button */}
+      {/* Scroll down button (only if overflow) */}
       {isCollapsed && canScrollDown && (
         <IconButton
           size="small"
