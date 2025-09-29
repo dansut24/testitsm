@@ -43,35 +43,25 @@ const Layout = () => {
   const [tabIndex, setTabIndex] = useState(0);
 
   // Sidebar mode & state
-  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); // "pinned" | "collapsible" | "hidden"
-  const [sidebarPinned, setSidebarPinned] = useState(true); // only for "collapsible"
+  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned");
+  const [sidebarPinned, setSidebarPinned] = useState(true);
 
   // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile" | null
+  const [drawerType, setDrawerType] = useState(null);
 
-  // 🔹 Fix viewport jumps on mobile (handles rotation aggressively)
+  // ✅ Fix viewport jumps on mobile (portrait ↔ landscape)
   useEffect(() => {
-    const setViewportVars = () => {
+    const setVh = () => {
       const vh = window.innerHeight * 0.01;
-      const vw = window.innerWidth * 0.01;
       document.documentElement.style.setProperty("--vh", `${vh}px`);
-      document.documentElement.style.setProperty("--vw", `${vw}px`);
     };
-    const bump = () => {
-      setViewportVars();
-      requestAnimationFrame(setViewportVars);
-      setTimeout(setViewportVars, 250);
-      setTimeout(setViewportVars, 750);
-    };
-    setViewportVars();
-    window.addEventListener("resize", bump);
-    window.addEventListener("orientationchange", bump);
-    window.addEventListener("visibilitychange", bump);
+    setVh();
+    window.addEventListener("resize", setVh);
+    window.addEventListener("orientationchange", setVh);
     return () => {
-      window.removeEventListener("resize", bump);
-      window.removeEventListener("orientationchange", bump);
-      window.removeEventListener("visibilitychange", bump);
+      window.removeEventListener("resize", setVh);
+      window.removeEventListener("orientationchange", setVh);
     };
   }, []);
 
@@ -102,7 +92,7 @@ const Layout = () => {
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return; // keep Dashboard
+    if (closingIndex === 0) return;
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
     if (location.pathname === tabId) {
@@ -142,14 +132,13 @@ const Layout = () => {
         inset: 0,
         display: "flex",
         width: "100%",
-        maxWidth: "100vw", // prevent horizontal overflow after rotation
         height: "calc(var(--vh, 1vh) * 100)",
         overflow: "hidden",
         bgcolor: theme.palette.background.default,
         overscrollBehavior: "none",
       }}
     >
-      {/* Desktop Sidebar (inline; never duplicates) */}
+      {/* Desktop Sidebar */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -175,48 +164,38 @@ const Layout = () => {
           height: "100%",
         }}
       >
-        {/* Navbar row */}
+        {/* Navbar */}
         <Box
           sx={{
             position: "relative",
             zIndex: 1200,
             bgcolor: theme.palette.background.paper,
-            // leave space for favicon if sidebar is hidden
-            pl: sidebarMode === "hidden" ? 5 : 0, // ~40px
+            display: "flex",
+            alignItems: "center",
+            px: 1,
           }}
         >
-          {/* ✅ Bing favicon as logo (only when sidebar is hidden) */}
-          {sidebarMode === "hidden" && (
-            <Box
-              component="img"
-              src="https://www.bing.com/sa/simg/favicon-2x.ico"
+          {/* Show favicon when sidebar is hidden */}
+          {sidebarMode === "hidden" && !isMobile && (
+            <img
+              src="https://www.bing.com/sa/simg/favicon-trans-bg-blue-mg-png.png"
               alt="Logo"
-              onClick={() => navigate("/dashboard")}
-              sx={{
-                position: "absolute",
-                left: 8,
-                top: "50%",
-                transform: "translateY(-50%)",
-                width: 24,
-                height: 24,
-                borderRadius: 2,
-                cursor: "pointer",
-                zIndex: 1300,
-              }}
+              style={{ height: 24, width: 24, marginRight: 8 }}
             />
           )}
-
-          <NavbarTabs
-            tabs={tabs}
-            tabIndex={tabIndex}
-            handleTabChange={handleTabChange}
-            handleTabClose={handleTabClose}
-            handleTabReorder={handleTabReorder}
-            isMobile={isMobile}
-          />
+          <Box sx={{ flex: 1 }}>
+            <NavbarTabs
+              tabs={tabs}
+              tabIndex={tabIndex}
+              handleTabChange={handleTabChange}
+              handleTabClose={handleTabClose}
+              handleTabReorder={handleTabReorder}
+              isMobile={isMobile}
+            />
+          </Box>
         </Box>
 
-        {/* Scrollable content row */}
+        {/* Content */}
         <Box
           component="main"
           sx={{
@@ -232,7 +211,7 @@ const Layout = () => {
           <Outlet />
         </Box>
 
-        {/* Bottom nav row (mobile only) */}
+        {/* Bottom nav (mobile only) */}
         {isMobile && (
           <Box
             sx={{
@@ -261,10 +240,7 @@ const Layout = () => {
           onOpen={() => setMobileSidebarOpen(true)}
           ModalProps={{ keepMounted: true }}
           PaperProps={{
-            sx: {
-              width: EXPANDED_WIDTH,
-              backgroundColor: theme.palette.background.paper,
-            },
+            sx: { width: EXPANDED_WIDTH, backgroundColor: theme.palette.background.paper },
           }}
         >
           <Sidebar
@@ -281,7 +257,7 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Mobile Action Drawer (no dim; offset above bottom nav) */}
+      {/* Mobile Action Drawer */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
