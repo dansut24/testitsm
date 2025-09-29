@@ -11,14 +11,18 @@ import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
 import Sidebar from "./Sidebar";
 
+// Icons
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import MenuIcon from "@mui/icons-material/Menu";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import ListAltIcon from "@mui/icons-material/ListAlt";
-import StorageIcon from "@mui/icons-material/Storage";
+import ChangeCircleIcon from "@mui/icons-material/ChangeCircle";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+import ArticleIcon from "@mui/icons-material/Article";
 import SettingsIcon from "@mui/icons-material/Settings";
+import StorageIcon from "@mui/icons-material/Storage";
 
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 48;
@@ -28,8 +32,13 @@ const BOTTOM_NAV_HEIGHT = 56;
 const routeLabels = {
   "/dashboard": "Dashboard",
   "/incidents": "Incidents",
-  "/assets": "Assets",
+  "/service-requests": "Service Requests",
+  "/changes": "Changes",
+  "/tasks": "Tasks",
+  "/profile": "Profile",
+  "/knowledge-base": "Knowledge Base",
   "/settings": "Settings",
+  "/assets": "Assets",
 };
 
 const Layout = () => {
@@ -43,36 +52,32 @@ const Layout = () => {
   const [tabIndex, setTabIndex] = useState(0);
 
   // Sidebar mode & state
-  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned"); // "pinned" | "collapsible" | "hidden"
-  const [sidebarPinned, setSidebarPinned] = useState(true); // only for "collapsible"
+  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned");
+  const [sidebarPinned, setSidebarPinned] = useState(true);
 
-  // Mobile drawers
+  // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile" | null
+  const [drawerType, setDrawerType] = useState(null);
 
-  // --- Stable mobile viewport fix (prevents jump & off-screen on rotate) ---
+  // Fix viewport height jumps on mobile (esp. rotation)
   useEffect(() => {
-    let raf;
     const setVh = () => {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty("--vh", `${vh}px`);
     };
-    const update = () => {
-      setVh();                    // now
-      raf = requestAnimationFrame(setVh); // next frame
-      setTimeout(setVh, 250);     // after resize settles
-      setTimeout(setVh, 750);     // iOS Safari delayed toolbar
+    setVh();
+    const handleResize = () => {
+      setVh();
+      requestAnimationFrame(setVh);
+      setTimeout(setVh, 300);
     };
-    update();
-    window.addEventListener("resize", update, { passive: true });
-    window.addEventListener("orientationchange", update);
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleResize);
     return () => {
-      window.removeEventListener("resize", update);
-      window.removeEventListener("orientationchange", update);
-      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
     };
   }, []);
-  // ------------------------------------------------------------------------
 
   // Sync tabs with route
   useEffect(() => {
@@ -130,8 +135,13 @@ const Layout = () => {
   const sidebarItems = [
     { label: "Dashboard", icon: <DashboardIcon /> },
     { label: "Incidents", icon: <ListAltIcon /> },
-    { label: "Assets", icon: <StorageIcon /> },
+    { label: "Service Requests", icon: <ListAltIcon /> },
+    { label: "Changes", icon: <ChangeCircleIcon /> },
+    { label: "Tasks", icon: <AssignmentIcon /> },
+    { label: "Profile", icon: <AccountCircleIcon /> },
+    { label: "Knowledge Base", icon: <ArticleIcon /> },
     { label: "Settings", icon: <SettingsIcon /> },
+    { label: "Assets", icon: <StorageIcon /> },
   ];
 
   return (
@@ -147,7 +157,7 @@ const Layout = () => {
         overscrollBehavior: "none",
       }}
     >
-      {/* Desktop Sidebar (inline; never duplicates) */}
+      {/* Sidebar (desktop only) */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -161,7 +171,7 @@ const Layout = () => {
         />
       )}
 
-      {/* Main grid: Navbar (fixed height) / Content (scroll) / Bottom nav (mobile) */}
+      {/* Main grid */}
       <Box
         sx={{
           flex: 1,
@@ -173,7 +183,7 @@ const Layout = () => {
           height: "100%",
         }}
       >
-        {/* Row 1: Navbar */}
+        {/* Navbar */}
         <Box
           sx={{
             position: "relative",
@@ -191,23 +201,23 @@ const Layout = () => {
           />
         </Box>
 
-        {/* Row 2: Scrollable content ONLY */}
+        {/* Scrollable content */}
         <Box
           component="main"
           sx={{
-            minHeight: 0,               // required so the grid row can shrink and scroll
+            minHeight: 0,
             overflowY: "auto",
             overflowX: "hidden",
             WebkitOverflowScrolling: "touch",
             px: 2,
-            pt: 1,                      // small gap under navbar
-            pb: isMobile ? 1 : 2,       // small gap above bottom nav on mobile
+            pt: 1,
+            pb: isMobile ? 1 : 2,
           }}
         >
           <Outlet />
         </Box>
 
-        {/* Row 3: Bottom nav (mobile only) */}
+        {/* Bottom nav (mobile only) */}
         {isMobile && (
           <Box
             sx={{
@@ -227,7 +237,7 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Mobile Sidebar Drawer (overlay) */}
+      {/* Mobile Sidebar Drawer */}
       {isMobile && (
         <SwipeableDrawer
           anchor="left"
@@ -236,7 +246,10 @@ const Layout = () => {
           onOpen={() => setMobileSidebarOpen(true)}
           ModalProps={{ keepMounted: true }}
           PaperProps={{
-            sx: { width: EXPANDED_WIDTH, backgroundColor: theme.palette.background.paper },
+            sx: {
+              width: EXPANDED_WIDTH,
+              backgroundColor: theme.palette.background.paper,
+            },
           }}
         >
           <Sidebar
@@ -253,7 +266,7 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Mobile Action Drawer (bottom) — no dim; taps pass through backdrop */}
+      {/* Mobile Action Drawer */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
@@ -278,7 +291,9 @@ const Layout = () => {
           }}
         >
           {drawerType === "search" && <Typography variant="h6">Search</Typography>}
-          {drawerType === "notifications" && <Typography variant="h6">Notifications</Typography>}
+          {drawerType === "notifications" && (
+            <Typography variant="h6">Notifications</Typography>
+          )}
           {drawerType === "profile" && <Typography variant="h6">Profile</Typography>}
         </SwipeableDrawer>
       )}
