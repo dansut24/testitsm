@@ -1,5 +1,5 @@
 // src/itsm/components/Sidebar.js
-import React from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   Box,
   IconButton,
@@ -10,19 +10,51 @@ import {
   Typography,
   Tooltip,
 } from "@mui/material";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 
-const COLLAPSED_BG = "#f8f9fa"; // same as navbar grey
+const COLLAPSED_BG = "#f8f9fa";
 
 const Sidebar = ({
   pinned,                // true = expanded, false = collapsed
-  onToggle,              // click on logo to toggle
+  onToggle,              // click logo to toggle
   items,                 // [{ label, icon }]
   onItemClick,           // (label) => void
   widthExpanded = 260,
-  widthCollapsed = 48,
+  widthCollapsed = 56,   // 🔹 wider collapsed sidebar
 }) => {
   const isCollapsed = !pinned;
   const width = isCollapsed ? widthCollapsed : widthExpanded;
+
+  const listRef = useRef(null);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+
+  const updateScrollState = () => {
+    const el = listRef.current;
+    if (!el) return;
+    setCanScrollUp(el.scrollTop > 0);
+    setCanScrollDown(el.scrollHeight > el.clientHeight + el.scrollTop + 2);
+  };
+
+  useEffect(() => {
+    updateScrollState();
+    const el = listRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", updateScrollState);
+    window.addEventListener("resize", updateScrollState);
+    return () => {
+      el.removeEventListener("scroll", updateScrollState);
+      window.removeEventListener("resize", updateScrollState);
+    };
+  }, []);
+
+  const handleScroll = (dir) => {
+    const el = listRef.current;
+    if (!el) return;
+    const offset = dir === "down" ? 100 : -100;
+    el.scrollBy({ top: offset, behavior: "smooth" });
+  };
 
   return (
     <Box
@@ -31,7 +63,6 @@ const Sidebar = ({
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        overflow: "hidden",
         borderRight: "1px solid",
         borderColor: "divider",
         bgcolor: "background.paper",
@@ -41,7 +72,7 @@ const Sidebar = ({
       {/* Top logo/header bar */}
       <Box
         sx={{
-          height: 48,
+          height: 56,
           flexShrink: 0,
           display: "flex",
           alignItems: "center",
@@ -68,13 +99,31 @@ const Sidebar = ({
         )}
       </Box>
 
+      {/* Scroll up button (collapsed only, appears under logo) */}
+      {isCollapsed && canScrollUp && (
+        <IconButton
+          size="small"
+          onClick={() => handleScroll("up")}
+          sx={{
+            alignSelf: "center",
+            mb: 1,
+            color: "text.secondary",
+          }}
+        >
+          <ArrowUpwardIcon fontSize="small" />
+        </IconButton>
+      )}
+
       {/* Menu list */}
       <List
+        ref={listRef}
         sx={{
           flex: 1,
           py: 1,
           px: isCollapsed ? 0 : 1,
-          overflowY: isCollapsed ? "hidden" : "auto", // no scrollbars when collapsed
+          overflowY: isCollapsed ? "auto" : "auto",
+          scrollbarWidth: "none", // Firefox
+          "&::-webkit-scrollbar": { display: "none" }, // Chrome
         }}
       >
         {items.map(({ label, icon }) => {
@@ -83,7 +132,7 @@ const Sidebar = ({
               key={label}
               onClick={() => onItemClick(label)}
               sx={{
-                minHeight: 56,
+                minHeight: 64,
                 px: isCollapsed ? 0 : 2,
                 flexDirection: isCollapsed ? "column" : "row",
                 justifyContent: "center",
@@ -109,7 +158,7 @@ const Sidebar = ({
                     fontSize: "0.65rem",
                     lineHeight: 1.1,
                     mt: 0.25,
-                    wordBreak: "break-word",  // allow splitting into multiple lines
+                    wordBreak: "break-word",
                     whiteSpace: "normal",
                     textAlign: "center",
                     maxWidth: widthCollapsed - 4,
@@ -132,6 +181,22 @@ const Sidebar = ({
           );
         })}
       </List>
+
+      {/* Scroll down button (collapsed only, at bottom) */}
+      {isCollapsed && canScrollDown && (
+        <IconButton
+          size="small"
+          onClick={() => handleScroll("down")}
+          sx={{
+            alignSelf: "center",
+            mt: 1,
+            mb: 1,
+            color: "text.secondary",
+          }}
+        >
+          <ArrowDownwardIcon fontSize="small" />
+        </IconButton>
+      )}
     </Box>
   );
 };
