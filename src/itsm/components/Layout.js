@@ -20,6 +20,8 @@ import ListAltIcon from "@mui/icons-material/ListAlt";
 import StorageIcon from "@mui/icons-material/Storage";
 import SettingsIcon from "@mui/icons-material/Settings";
 
+import Logo from "../assets/logo.png"; // ✅ adjust path to your logo file
+
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 48;
 const NAVBAR_HEIGHT = 48;
@@ -46,11 +48,11 @@ const Layout = () => {
   const [sidebarMode] = useState(
     localStorage.getItem("sidebarMode") || "pinned"
   ); // "pinned" | "collapsible" | "hidden"
-  const [sidebarPinned, setSidebarPinned] = useState(true); // only for "collapsible"
+  const [sidebarPinned, setSidebarPinned] = useState(true);
 
   // Mobile
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState(null); // "search" | "notifications" | "profile" | null
+  const [drawerType, setDrawerType] = useState(null);
 
   // 🔹 Fix viewport height/width jumps on mobile (especially rotation)
   useEffect(() => {
@@ -64,17 +66,19 @@ const Layout = () => {
     const handleResize = () => {
       setViewportVars();
       requestAnimationFrame(setViewportVars);
-      setTimeout(setViewportVars, 300); // Safari delayed bounce
-      setTimeout(setViewportVars, 1000); // final correction
+      setTimeout(setViewportVars, 250);
+      setTimeout(setViewportVars, 750);
     };
 
     setViewportVars(); // run immediately
     window.addEventListener("resize", handleResize);
     window.addEventListener("orientationchange", handleResize);
+    window.addEventListener("visibilitychange", handleResize);
 
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("orientationchange", handleResize);
+      window.removeEventListener("visibilitychange", handleResize);
     };
   }, []);
 
@@ -105,7 +109,7 @@ const Layout = () => {
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return; // keep Dashboard
+    if (closingIndex === 0) return;
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
     if (location.pathname === tabId) {
@@ -146,13 +150,13 @@ const Layout = () => {
         display: "flex",
         width: "100%",
         maxWidth: "100vw", // ✅ prevent horizontal overflow
-        height: "calc(var(--vh, 1vh) * 100)", // ✅ dynamic height with fallback
+        height: "calc(var(--vh, 1vh) * 100)",
         overflow: "hidden",
         bgcolor: theme.palette.background.default,
         overscrollBehavior: "none",
       }}
     >
-      {/* Desktop Sidebar (inline; never duplicates) */}
+      {/* Desktop Sidebar */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -185,8 +189,26 @@ const Layout = () => {
             position: "relative",
             zIndex: 1200,
             bgcolor: theme.palette.background.paper,
+            display: "flex",
+            alignItems: "center",
+            px: 1,
           }}
         >
+          {/* ✅ Show logo when sidebar is hidden */}
+          {sidebarMode === "hidden" && (
+            <Box
+              component="img"
+              src={Logo}
+              alt="Logo"
+              sx={{
+                height: 28,
+                mr: 2,
+                cursor: "pointer",
+              }}
+              onClick={() => navigate("/dashboard")}
+            />
+          )}
+
           <NavbarTabs
             tabs={tabs}
             tabIndex={tabIndex}
