@@ -137,26 +137,30 @@ const Sidebar = ({
                 flexDirection: isCollapsed ? "column" : "row",
                 justifyContent: "center",
                 alignItems: "center",
-                textAlign: isCollapsed ? "center" : "left",
-                gap: isCollapsed ? 0.25 : 0,
+                textAlign: "center",
+                gap: isCollapsed ? 0.5 : 0,
               }}
             >
               <ListItemIcon
                 sx={{
                   minWidth: 0,
-                  mr: isCollapsed ? 0 : 2,
                   justifyContent: "center",
+                  display: "flex",
+                  alignItems: "center",
                 }}
               >
-                {icon}
+                {React.cloneElement(icon, {
+                  fontSize: isCollapsed ? "small" : "medium", // 🔹 shrink icon in collapsed mode
+                  sx: { mx: "auto" },
+                })}
               </ListItemIcon>
 
               {isCollapsed ? (
                 <Typography
                   variant="caption"
                   sx={{
-                    fontSize: "0.6rem",   // 🔹 smaller text
-                    lineHeight: 1.05,     // tighter line height
+                    fontSize: "0.6rem", // 🔹 smaller
+                    lineHeight: 1.1,   // tighter line height
                     mt: 0.25,
                     wordBreak: "break-word",
                     whiteSpace: "normal",
