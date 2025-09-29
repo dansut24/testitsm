@@ -25,7 +25,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import StorageIcon from "@mui/icons-material/Storage";
 
 const EXPANDED_WIDTH = 260;
-const COLLAPSED_WIDTH = 56;
+const COLLAPSED_WIDTH = 60;
 const NAVBAR_HEIGHT = 48;
 const BOTTOM_NAV_HEIGHT = 56;
 
