@@ -4,7 +4,6 @@ import {
   Typography,
   Paper,
   Chip,
-  Divider,
   TextField,
   InputAdornment,
   IconButton,
@@ -91,10 +90,18 @@ const ServiceRequests = () => {
           <MoreVertIcon />
         </IconButton>
         <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose}>
-          <MenuItem onClick={() => handleMenuAction("new")}>New Service Request</MenuItem>
-          <MenuItem onClick={() => handleMenuAction("csv")}>Export to CSV</MenuItem>
-          <MenuItem onClick={() => handleMenuAction("xlsx")}>Export to Excel</MenuItem>
-          <MenuItem onClick={() => handleMenuAction("pdf")}>Export to PDF</MenuItem>
+          <MenuItem onClick={() => handleMenuAction("new")}>
+            New Service Request
+          </MenuItem>
+          <MenuItem onClick={() => handleMenuAction("csv")}>
+            Export to CSV
+          </MenuItem>
+          <MenuItem onClick={() => handleMenuAction("xlsx")}>
+            Export to Excel
+          </MenuItem>
+          <MenuItem onClick={() => handleMenuAction("pdf")}>
+            Export to PDF
+          </MenuItem>
         </Menu>
       </Box>
 
