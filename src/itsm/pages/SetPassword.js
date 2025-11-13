@@ -8,11 +8,9 @@ import {
   Alert,
   CircularProgress,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 
 function SetPassword() {
-  const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,18 +32,17 @@ function SetPassword() {
 
     try {
       // Update the user's password
-      const { data, error } = await supabase.auth.updateUser({
+      const { error } = await supabase.auth.updateUser({
         password,
       });
 
       if (error) throw error;
 
       // Sign in after password set
-      const { data: signInData, error: loginError } =
-        await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
       if (loginError) throw loginError;
 
@@ -59,13 +56,26 @@ function SetPassword() {
   };
 
   return (
-    <Box sx={{ maxWidth: 480, mx: "auto", mt: 8, p: 3, boxShadow: 3, borderRadius: 2 }}>
-      <Typography variant="h5" gutterBottom>Set Your Password</Typography>
+    <Box
+      sx={{
+        maxWidth: 480,
+        mx: "auto",
+        mt: 8,
+        p: 3,
+        boxShadow: 3,
+        borderRadius: 2,
+      }}
+    >
+      <Typography variant="h5" gutterBottom>
+        Set Your Password
+      </Typography>
+
       {email && (
         <Typography variant="body2" sx={{ mb: 2 }}>
           Email: <strong>{email}</strong>
         </Typography>
       )}
+
       <form onSubmit={handleSetPassword}>
         <TextField
           fullWidth
@@ -76,11 +86,13 @@ function SetPassword() {
           sx={{ mb: 2 }}
           required
         />
+
         {message && (
           <Alert severity={message.startsWith("✅") ? "success" : "error"}>
             {message}
           </Alert>
         )}
+
         <Button fullWidth type="submit" variant="contained" disabled={loading}>
           {loading ? <CircularProgress size={22} /> : "Set Password & Continue"}
         </Button>
