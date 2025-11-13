@@ -1,5 +1,5 @@
 // Navbar.js
-import React, { useState, useMemo, useMemo as memo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   AppBar,
   Toolbar,
@@ -13,7 +13,6 @@ import {
   MenuItem,
   Avatar,
   SwipeableDrawer,
-  Chip,
 } from "@mui/material";
 import { useThemeMode } from "../../common/context/ThemeContext";
 import { useNavigate } from "react-router-dom";
@@ -59,8 +58,7 @@ const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
     const previousTab = nextHistory.pop();
     setTabHistory(nextHistory);
     console.log("Go back to:", previousTab);
-    // if you later wire this to router:
-    // navigate(previousTab.path || previousTab);
+    // later you can hook this to navigate(previousTab.path || previousTab)
   };
 
   const openDrawer = (type) => {
