@@ -144,8 +144,8 @@ function AppRoutes() {
           {/* New Tab Route */}
           <Route path="new-tab/:id" element={<NewTab />} />
 
-          {/* 🔹 Self-Service nested under /selfservice */}
-          <Route path="selfservice" element={<SelfServiceLayout />}>
+          {/* 🔹 Self-Service nested under /self-service */}
+          <Route path="self-service" element={<SelfServiceLayout />}>
             <Route index element={<SelfServiceHome />} />
             <Route path="raise-request" element={<RaiseRequest />} />
             <Route path="raise-incident" element={<RaiseIncident />} />
