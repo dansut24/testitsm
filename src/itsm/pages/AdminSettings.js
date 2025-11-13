@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -22,19 +22,24 @@ const AdminSettings = () => {
 
   const tableOptions = ["incidents", "service_requests"];
 
-  useEffect(() => {
-    fetchData();
+  // ✅ Wrap fetchData in useCallback so it's stable
+  const fetchData = useCallback(async () => {
+    const { data, error } = await supabase
+      .from(type)
+      .select("id, title, reference");
+
+    if (!error) setRecords(data);
   }, [type]);
 
-  const fetchData = async () => {
-    const { data, error } = await supabase.from(type).select("id, title, reference");
-    if (!error) setRecords(data);
-  };
+  // ✅ Now ESLint is happy because fetchData is a stable dependency
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleDelete = async () => {
     const { error } = await supabase.from(type).delete().eq("id", selectedId);
     if (!error) {
-      setRecords(records.filter((r) => r.id !== selectedId));
+      setRecords((prev) => prev.filter((r) => r.id !== selectedId));
       setConfirmOpen(false);
     }
   };
@@ -46,7 +51,13 @@ const AdminSettings = () => {
       </Typography>
 
       <Paper sx={{ mt: 3 }}>
-        <Tabs value={tab} onChange={(e, v) => { setTab(v); setType(tableOptions[v]); }}>
+        <Tabs
+          value={tab}
+          onChange={(e, v) => {
+            setTab(v);
+            setType(tableOptions[v]);
+          }}
+        >
           <Tab label="Incidents" />
           <Tab label="Service Requests" />
         </Tabs>
@@ -55,13 +66,30 @@ const AdminSettings = () => {
           {records.map((item) => (
             <Box
               key={item.id}
-              sx={{ display: "flex", justifyContent: "space-between", mb: 1, p: 1, border: "1px solid #ddd", borderRadius: 1 }}
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                mb: 1,
+                p: 1,
+                border: "1px solid #ddd",
+                borderRadius: 1,
+              }}
             >
               <Box>
-                <Typography fontWeight="bold">{item.reference || item.id}</Typography>
+                <Typography fontWeight="bold">
+                  {item.reference || item.id}
+                </Typography>
                 <Typography variant="body2">{item.title}</Typography>
               </Box>
-              <Button color="error" variant="outlined" onClick={() => { setSelectedId(item.id); setConfirmOpen(true); }}>
+
+              <Button
+                color="error"
+                variant="outlined"
+                onClick={() => {
+                  setSelectedId(item.id);
+                  setConfirmOpen(true);
+                }}
+              >
                 Delete
               </Button>
             </Box>
@@ -76,7 +104,9 @@ const AdminSettings = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
-          <Button color="error" onClick={handleDelete}>Delete</Button>
+          <Button color="error" onClick={handleDelete}>
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
