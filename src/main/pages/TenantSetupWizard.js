@@ -65,7 +65,7 @@ const TenantSetupWizard = () => {
     setStatus(null);
     const { adminEmail, otp, adminPassword } = formData;
 
-    const { data, error } = await supabase.auth.verifyOtp({
+    const { error } = await supabase.auth.verifyOtp({
       email: adminEmail,
       token: otp,
       type: "email",
@@ -100,9 +100,13 @@ const TenantSetupWizard = () => {
     const { companyName, subdomain, logoFile } = formData;
     const domain = `${subdomain}-itsm.hi5tech.co.uk`;
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
     if (sessionError || !sessionData.session || !sessionData.session.user) {
-      return setStatus({ type: "error", message: "User session not found. Please log in again." });
+      return setStatus({
+        type: "error",
+        message: "User session not found. Please log in again.",
+      });
     }
 
     const user = sessionData.session.user;
@@ -153,6 +157,7 @@ const TenantSetupWizard = () => {
       <Typography variant="h4" gutterBottom>
         Tenant Setup
       </Typography>
+
       <Stepper activeStep={step} alternativeLabel>
         {["Company Info", "Admin", "Verify Email", "Logo", "Finish"].map(
           (label) => (
