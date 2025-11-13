@@ -5,13 +5,10 @@ import {
   TextField,
   Button,
   Typography,
-  Divider,
-  Stack,
   Box,
   Link as MuiLink,
 } from "@mui/material";
 import { Link, useSearchParams } from "react-router-dom";
-import { useThemeMode } from "../../common/context/ThemeContext";
 import { supabase } from "../../common/utils/supabaseClient";
 import defaultLogo from "../../assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
 import AuthService from "../../common/services/AuthService";
@@ -21,7 +18,6 @@ const ControlLogin = () => {
   const [error, setError] = useState("");
   const [logoUrl, setLogoUrl] = useState(defaultLogo);
   const [searchParams] = useSearchParams();
-  const { mode } = useThemeMode();
 
   const rawSubdomain = window.location.hostname.split(".")[0];
   const baseSubdomain = rawSubdomain.replace("-control", "");
@@ -52,7 +48,8 @@ const ControlLogin = () => {
     fetchLogo();
   }, [baseSubdomain]);
 
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e) =>
+    setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleLogin = async () => {
     setError("");
@@ -76,8 +73,15 @@ const ControlLogin = () => {
 
   return (
     <Container maxWidth="sm" sx={{ mt: 10 }}>
-      <Paper elevation={4} sx={{ p: 4, textAlign: "center", borderRadius: 4 }}>
-        <img src={logoUrl} alt="Tenant Logo" style={{ height: 60, marginBottom: 16 }} />
+      <Paper
+        elevation={4}
+        sx={{ p: 4, textAlign: "center", borderRadius: 4 }}
+      >
+        <img
+          src={logoUrl}
+          alt="Tenant Logo"
+          style={{ height: 60, marginBottom: 16 }}
+        />
         <Typography variant="h5" fontWeight={600} gutterBottom>
           Welcome to Hi5Tech Control
         </Typography>
@@ -104,12 +108,21 @@ const ControlLogin = () => {
           margin="dense"
         />
         <Box sx={{ textAlign: "right", mt: 1 }}>
-          <MuiLink component={Link} to="/reset-password" underline="hover" fontSize="0.875rem">
+          <MuiLink
+            component={Link}
+            to="/reset-password"
+            underline="hover"
+            fontSize="0.875rem"
+          >
             Forgot password?
           </MuiLink>
         </Box>
 
-        {error && <Typography color="error" mt={1}>{error}</Typography>}
+        {error && (
+          <Typography color="error" mt={1}>
+            {error}
+          </Typography>
+        )}
 
         <Button
           variant="contained"
