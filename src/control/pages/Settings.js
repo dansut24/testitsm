@@ -1,12 +1,10 @@
 // src/control/pages/Settings.js
 import React from "react";
 import { Box, Typography, Button, Stack } from "@mui/material";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 import { useAuth } from "../../common/context/AuthContext";
 
 const Settings = () => {
-  const navigate = useNavigate();
   const { logout } = useAuth();
 
   const handleLogout = async () => {
