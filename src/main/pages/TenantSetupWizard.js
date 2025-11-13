@@ -42,22 +42,68 @@ const TenantSetupWizard = () => {
 
   const sendOtp = async () => {
     setStatus(null);
-    const { adminEmail } = formData;
+    const { adminEmail, adminPassword, confirmPassword } = formData;
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email: adminEmail,
-      options: {
-        data: { role: "admin" },
-        shouldCreateUser: true,
-      },
-    });
+    // Basic validation
+    if (!adminEmail || !adminPassword || !confirmPassword) {
+      setStatus({
+        type: "error",
+        message: "Please complete email and both password fields.",
+      });
+      return;
+    }
 
-    if (error) {
-      setStatus({ type: "error", message: error.message });
-    } else {
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(adminEmail)) {
+      setStatus({
+        type: "error",
+        message: "Please enter a valid email address.",
+      });
+      return;
+    }
+
+    if (adminPassword !== confirmPassword) {
+      setStatus({
+        type: "error",
+        message: "Passwords do not match.",
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signInWithOtp({
+        email: adminEmail,
+        options: {
+          data: { role: "admin" },
+          shouldCreateUser: true,
+          // Optional: where you want the magic link to land
+          // emailRedirectTo: `${window.location.origin}/verify`,
+        },
+      });
+
+      if (error) {
+        console.error("Supabase signInWithOtp error:", error);
+        setStatus({
+          type: "error",
+          message:
+            error.message || "Unable to send verification code. Please try again.",
+        });
+        return;
+      }
+
+      console.log("signInWithOtp response:", data);
+
       setResendCooldown(60);
-      setStatus({ type: "success", message: "OTP sent to email." });
+      setStatus({
+        type: "success",
+        message: "Verification code sent to your email.",
+      });
       setStep(2);
+    } catch (err) {
+      console.error("Unexpected error during sendOtp:", err);
+      setStatus({
+        type: "error",
+        message: "Unexpected error sending verification code.",
+      });
     }
   };
 
@@ -65,15 +111,24 @@ const TenantSetupWizard = () => {
     setStatus(null);
     const { adminEmail, otp, adminPassword } = formData;
 
-    const { error } = await supabase.auth.verifyOtp({
-      email: adminEmail,
-      token: otp,
-      type: "email",
-    });
+    if (!otp) {
+      setStatus({ type: "error", message: "Please enter the verification code." });
+      return;
+    }
 
-    if (error) {
-      setStatus({ type: "error", message: error.message });
-    } else {
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: adminEmail,
+        token: otp,
+        type: "email",
+      });
+
+      if (error) {
+        console.error("Supabase verifyOtp error:", error);
+        setStatus({ type: "error", message: error.message });
+        return;
+      }
+
       setStatus({ type: "success", message: "Email verified!" });
 
       const { data: sessionData } = await supabase.auth.getSession();
@@ -85,13 +140,19 @@ const TenantSetupWizard = () => {
           console.error("Password update failed:", pwError.message);
           setStatus({
             type: "error",
-            message: "Email verified, but password not set.",
+            message: "Email verified, but password could not be set.",
           });
           return;
         }
       }
 
       setStep(3);
+    } catch (err) {
+      console.error("Unexpected error during verifyOtp:", err);
+      setStatus({
+        type: "error",
+        message: "Unexpected error verifying code.",
+      });
     }
   };
 
