@@ -5,7 +5,6 @@ import {
   Box,
   Typography,
   Paper,
-  IconButton,
   TextField,
   InputAdornment,
 } from "@mui/material";
@@ -30,9 +29,10 @@ const mockAnnouncements = [
 const Announcements = () => {
   const [search, setSearch] = React.useState("");
 
-  const filtered = mockAnnouncements.filter((a) =>
-    a.title.toLowerCase().includes(search.toLowerCase()) ||
-    a.message.toLowerCase().includes(search.toLowerCase())
+  const filtered = mockAnnouncements.filter(
+    (a) =>
+      a.title.toLowerCase().includes(search.toLowerCase()) ||
+      a.message.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -63,13 +63,20 @@ const Announcements = () => {
         {filtered.map((a) => (
           <Paper
             key={a.id}
-            sx={{ p: 2, bgcolor: "#f5f8fe", borderLeft: "4px solid #2196f3" }}
+            sx={{
+              p: 2,
+              bgcolor: "#f5f8fe",
+              borderLeft: "4px solid #2196f3",
+            }}
           >
             <Typography variant="h6">{a.title}</Typography>
             <Typography variant="body2" sx={{ mt: 1 }}>
               {a.message}
             </Typography>
-            <Typography variant="caption" sx={{ mt: 1, display: "block", color: "#789" }}>
+            <Typography
+              variant="caption"
+              sx={{ mt: 1, display: "block", color: "#789" }}
+            >
               {a.date}
             </Typography>
           </Paper>
