@@ -4,8 +4,6 @@ import {
   Typography,
   Paper,
   Chip,
-  Divider,
-  Button,
   TextField,
   InputAdornment,
 } from "@mui/material";
@@ -92,6 +90,7 @@ const Approvals = () => {
                 }}
               />
             </Typography>
+
             <Typography variant="h6">{approval.title}</Typography>
             <Typography variant="body2" sx={{ mt: 1 }}>
               Submitted: {approval.submitted}
