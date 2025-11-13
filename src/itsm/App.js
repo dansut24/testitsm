@@ -1,8 +1,9 @@
+// src/itsm/App.js
 import React, { useEffect, useState } from "react";
 import { Box } from "@mui/material";
 import { Routes, Route } from "react-router-dom";
 import { supabase } from "../common/utils/supabaseClient";
-import { ThemeModeProvider } from "./theme/ThemeContext"; // ✅ new theme provider
+import { ThemeModeProvider } from "./theme/ThemeContext";
 
 // Layout & Auth
 import Layout from "./components/Layout";
@@ -50,6 +51,16 @@ import SetPassword from "./pages/SetPassword";
 // New Tab Page
 import NewTab from "./pages/NewTab";
 
+// 🔹 Self-Service Layout & Pages (imported from ../selfservice)
+import SelfServiceLayout from "../selfservice/layouts/SelfServiceLayout";
+import SelfServiceHome from "../selfservice/pages/SelfServiceHome";
+import RaiseRequest from "../selfservice/pages/RaiseRequest";
+import RaiseIncident from "../selfservice/pages/RaiseIncident";
+import ServiceCatalog from "../selfservice/pages/ServiceCatalog";
+import Checkout from "../selfservice/pages/Checkout";
+import SelfServiceConfirmation from "../selfservice/pages/CheckoutConfirmation";
+import SelfServiceKnowledgeBase from "../selfservice/pages/KnowledgeBase";
+
 function AppRoutes() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -86,6 +97,7 @@ function AppRoutes() {
       {/* Authenticated Pages */}
       {isLoggedIn && (
         <Route path="/" element={<Layout />}>
+          {/* Core */}
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="incidents" element={<Incidents />} />
           <Route path="service-requests" element={<ServiceRequests />} />
@@ -97,6 +109,7 @@ function AppRoutes() {
           <Route path="approvals" element={<Approvals />} />
           <Route path="profile" element={<UserProfile />} />
           <Route path="settings" element={<Settings />} />
+
           <Route
             path="admin-settings"
             element={
@@ -105,22 +118,45 @@ function AppRoutes() {
               </ProtectedRoute>
             }
           />
+
+          {/* Create */}
           <Route path="new-incident" element={<NewIncident />} />
           <Route path="new-service-request" element={<NewServiceRequest />} />
           <Route path="new-change" element={<NewChange />} />
           <Route path="new-problem" element={<NewProblem />} />
           <Route path="new-asset" element={<NewAsset />} />
+
+          {/* Detail */}
           <Route path="incidents/:id" element={<IncidentDetail />} />
-          <Route path="service-requests/:id" element={<ServiceRequestDetail />} />
+          <Route
+            path="service-requests/:id"
+            element={<ServiceRequestDetail />}
+          />
           <Route path="changes/:id" element={<ChangeDetail />} />
           <Route path="problems/:id" element={<ProblemDetail />} />
           <Route path="assets/:id" element={<AssetDetail />} />
           <Route path="knowledge-base/:id" element={<ArticleDetail />} />
+
+          {/* Other */}
           <Route path="announcements" element={<Announcements />} />
           <Route path="work-scheduler" element={<WorkScheduler />} />
 
           {/* New Tab Route */}
           <Route path="new-tab/:id" element={<NewTab />} />
+
+          {/* 🔹 Self-Service nested under /selfservice */}
+          <Route path="selfservice" element={<SelfServiceLayout />}>
+            <Route index element={<SelfServiceHome />} />
+            <Route path="raise-request" element={<RaiseRequest />} />
+            <Route path="raise-incident" element={<RaiseIncident />} />
+            <Route path="catalog" element={<ServiceCatalog />} />
+            <Route path="checkout" element={<Checkout />} />
+            <Route path="confirmation" element={<SelfServiceConfirmation />} />
+            <Route
+              path="knowledge-base"
+              element={<SelfServiceKnowledgeBase />}
+            />
+          </Route>
         </Route>
       )}
 
