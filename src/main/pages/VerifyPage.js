@@ -1,13 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
-  Container, Typography, Box, TextField, Button, Alert,
-} from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../common/utils/supabaseClient';
+  Container,
+  Typography,
+  Box,
+  TextField,
+  Button,
+  Alert,
+} from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "../../common/utils/supabaseClient";
 
 export default function VerifyPage() {
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [setting, setSetting] = useState(false);
   const navigate = useNavigate();
 
@@ -16,7 +21,9 @@ export default function VerifyPage() {
     const checkAuth = async () => {
       const { data } = await supabase.auth.getUser();
       if (!data?.user) {
-        setError('You are not signed in. Check your email for the verification link.');
+        setError(
+          "You are not signed in. Check your email for the verification link."
+        );
       }
     };
     checkAuth();
@@ -24,13 +31,13 @@ export default function VerifyPage() {
 
   const handleSetPassword = async () => {
     setSetting(true);
-    setError('');
+    setError("");
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const { data: sessionData } = await supabase.auth.getSession();
     const access_token = sessionData?.session?.access_token;
 
     if (!access_token) {
-      setError('No active session found.');
+      setError("No active session found.");
       setSetting(false);
       return;
     }
@@ -43,7 +50,7 @@ export default function VerifyPage() {
     if (updateError) {
       setError(updateError.message);
     } else {
-      navigate('/dashboard'); // Replace with actual destination
+      navigate("/dashboard"); // Replace with actual destination
     }
 
     setSetting(false);
@@ -58,7 +65,7 @@ export default function VerifyPage() {
         Choose a secure password to complete your account setup.
       </Typography>
 
-      <Box sx={{ mt: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Box sx={{ mt: 4, display: "flex", flexDirection: "column", gap: 2 }}>
         <TextField
           label="New Password"
           type="password"
@@ -74,7 +81,7 @@ export default function VerifyPage() {
           onClick={handleSetPassword}
           disabled={!password || setting}
         >
-          {setting ? 'Saving...' : 'Set Password & Continue'}
+          {setting ? "Saving..." : "Set Password & Continue"}
         </Button>
       </Box>
     </Container>
