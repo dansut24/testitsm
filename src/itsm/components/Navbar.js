@@ -1,5 +1,5 @@
 // Navbar.js
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useMemo as memo } from "react";
 import {
   AppBar,
   Toolbar,
@@ -13,6 +13,7 @@ import {
   MenuItem,
   Avatar,
   SwipeableDrawer,
+  Chip,
 } from "@mui/material";
 import { useThemeMode } from "../../common/context/ThemeContext";
 import { useNavigate } from "react-router-dom";
@@ -28,6 +29,14 @@ import CloseIcon from "@mui/icons-material/Close";
 import NotificationDrawer from "./NotificationDrawer";
 import UserActivityLogDrawer from "./UserActivityLogDrawer";
 import ProfileDrawer from "./ProfileDrawer";
+
+const drawerLabels = {
+  profile: "Profile",
+  notifications: "Notifications",
+  activity: "Activity Log",
+  help: "Help",
+  settings: "Settings",
+};
 
 const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
   const theme = useTheme();
@@ -45,11 +54,13 @@ const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
   }, []);
 
   const goBack = () => {
-    if (tabHistory.length > 0) {
-      const previousTab = tabHistory.pop();
-      setTabHistory([...tabHistory]);
-      console.log("Go back to:", previousTab);
-    }
+    if (!tabHistory.length) return;
+    const nextHistory = [...tabHistory];
+    const previousTab = nextHistory.pop();
+    setTabHistory(nextHistory);
+    console.log("Go back to:", previousTab);
+    // if you later wire this to router:
+    // navigate(previousTab.path || previousTab);
   };
 
   const openDrawer = (type) => {
@@ -76,18 +87,22 @@ const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
       case "help":
         return (
           <Box p={2}>
-            <Typography variant="h6">Help</Typography>
-            <Typography variant="body2" sx={{ mt: 1 }}>
-              Search the knowledge base or contact support.
+            <Typography variant="h6" gutterBottom>
+              Help & Support
+            </Typography>
+            <Typography variant="body2">
+              Search the knowledge base, raise a ticket, or contact support.
             </Typography>
           </Box>
         );
       case "settings":
         return (
           <Box p={2}>
-            <Typography variant="h6">Settings</Typography>
-            <Typography variant="body2" sx={{ mt: 1 }}>
-              Theme, layout, and preferences go here.
+            <Typography variant="h6" gutterBottom>
+              Settings
+            </Typography>
+            <Typography variant="body2">
+              Configure theme, layout, and personal preferences here.
             </Typography>
           </Box>
         );
@@ -96,10 +111,19 @@ const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
     }
   };
 
+  const iconButtonSx = {
+    color: "white",
+    mx: 0.25,
+    "&:hover": {
+      bgcolor: "rgba(255,255,255,0.12)",
+    },
+  };
+
   return (
     <>
       <AppBar
         position="fixed"
+        elevation={2}
         sx={{
           top: 0,
           width: isMobile
@@ -110,15 +134,40 @@ const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
           zIndex: (theme) => theme.zIndex.drawer + 2,
         }}
       >
-        <Toolbar variant="dense" sx={{ px: 1, minHeight: 48 }}>
-          {/* Left Section */}
-          <Box display="flex" alignItems="center" gap={1}>
-            <img src="/logo192.png" alt="Logo" style={{ height: 24 }} />
+        <Toolbar
+          variant="dense"
+          sx={{
+            px: 1,
+            minHeight: 48,
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
+          {/* Left Section: logo + title */}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              minWidth: 0,
+            }}
+          >
+            <img
+              src="/logo192.png"
+              alt="Logo"
+              style={{ height: 24, borderRadius: 4 }}
+            />
             {!isMobile && (
               <Typography
-                variant="h6"
+                variant="subtitle1"
                 noWrap
-                sx={{ fontSize: 16, color: "#fff", fontWeight: 500 }}
+                sx={{
+                  fontSize: 15,
+                  color: "#fff",
+                  fontWeight: 600,
+                  letterSpacing: 0.3,
+                }}
               >
                 Hi5Tech ITSM
               </Typography>
@@ -128,59 +177,79 @@ const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
           {/* Spacer */}
           <Box flexGrow={1} />
 
-          {/* Actions */}
-          <IconButton size="small" sx={{ color: "white" }} aria-label="Search">
-            <SearchIcon fontSize="small" />
-          </IconButton>
+          {/* Search */}
+          <Tooltip title="Search">
+            <IconButton size="small" sx={iconButtonSx} aria-label="Search">
+              <SearchIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
 
-          {tabHistory.length > 0 && (
-            <Tooltip title="Go Back">
+          {/* Back button */}
+          <Tooltip title={tabHistory.length ? "Go Back" : "No previous tab"}>
+            <span>
               <IconButton
                 size="small"
-                onClick={goBack}
-                sx={{ color: "white" }}
+                sx={{
+                  ...iconButtonSx,
+                  opacity: tabHistory.length ? 1 : 0.35,
+                  cursor: tabHistory.length ? "pointer" : "default",
+                }}
+                onClick={tabHistory.length ? goBack : undefined}
                 aria-label="Go back"
               >
                 <ArrowBackIcon fontSize="small" />
               </IconButton>
-            </Tooltip>
-          )}
+            </span>
+          </Tooltip>
 
           {/* Theme Selector */}
           <Tooltip title="Theme">
-            <Select
-              value={mode}
-              onChange={(e) => setMode(e.target.value)}
-              size="small"
-              variant="standard"
-              disableUnderline
+            <Box
               sx={{
-                fontSize: "0.75rem",
-                color: "white",
                 mx: 1,
-                minWidth: 64,
-                ".MuiSelect-icon": { color: "white" },
+                display: "flex",
+                alignItems: "center",
               }}
             >
-              <MenuItem value="light">Light</MenuItem>
-              <MenuItem value="dark">Dark</MenuItem>
-              <MenuItem value="system">System</MenuItem>
-              <MenuItem value="ocean">Ocean</MenuItem>
-              <MenuItem value="sunset">Sunset</MenuItem>
-              <MenuItem value="forest">Forest</MenuItem>
-            </Select>
+              <Select
+                value={mode}
+                onChange={(e) => setMode(e.target.value)}
+                size="small"
+                variant="standard"
+                disableUnderline
+                sx={{
+                  fontSize: "0.75rem",
+                  color: "white",
+                  minWidth: 80,
+                  "& .MuiSelect-select": {
+                    py: 0.25,
+                    px: 1,
+                    borderRadius: 999,
+                    border: "1px solid rgba(255,255,255,0.4)",
+                  },
+                  "& .MuiSelect-icon": { color: "white" },
+                }}
+              >
+                <MenuItem value="light">Light</MenuItem>
+                <MenuItem value="dark">Dark</MenuItem>
+                <MenuItem value="system">System</MenuItem>
+                <MenuItem value="ocean">Ocean</MenuItem>
+                <MenuItem value="sunset">Sunset</MenuItem>
+                <MenuItem value="forest">Forest</MenuItem>
+              </Select>
+            </Box>
           </Tooltip>
 
-          {/* Right Icons */}
+          {/* Right Icons / Avatar */}
           {["activity", "help", "settings", "notifications", "profile"].map(
             (type) => (
               <Tooltip
                 key={type}
-                title={type[0].toUpperCase() + type.slice(1)}
+                title={drawerLabels[type] || type[0].toUpperCase() + type.slice(1)}
               >
                 <IconButton
                   size="small"
-                  sx={{ color: "white" }}
+                  sx={iconButtonSx}
                   onClick={() => openDrawer(type)}
                   aria-label={type}
                 >
@@ -196,7 +265,7 @@ const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
                             ? storedUser.avatar_url
                             : ""
                         }
-                        sx={{ width: 28, height: 28 }}
+                        sx={{ width: 28, height: 28, fontSize: 14 }}
                       >
                         {storedUser.username?.[0]?.toUpperCase() || "U"}
                       </Avatar>
@@ -221,8 +290,8 @@ const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
           sx: {
             position: "fixed",
             zIndex: (theme) => theme.zIndex.appBar + 10,
-            width: isMobile ? "100%" : 320,
-            height: isMobile ? "50%" : "100%",
+            width: isMobile ? "100%" : 360,
+            height: isMobile ? "55%" : "100%",
             bottom: isMobile ? 0 : "auto",
             right: !isMobile ? 0 : "auto",
             top: !isMobile ? 0 : "auto",
@@ -238,16 +307,23 @@ const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
           sx={{
             flexShrink: 0,
             display: "flex",
-            justifyContent: "flex-end",
             alignItems: "center",
-            px: 1,
+            justifyContent: "space-between",
+            px: 1.5,
             py: 1,
             borderBottom: "1px solid",
             borderColor: "divider",
           }}
         >
-          <IconButton onClick={closeDrawer} aria-label="Close drawer">
-            <CloseIcon />
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            {drawerLabels[drawerType] || "Panel"}
+          </Typography>
+          <IconButton
+            onClick={closeDrawer}
+            aria-label="Close drawer"
+            size="small"
+          >
+            <CloseIcon fontSize="small" />
           </IconButton>
         </Box>
 
