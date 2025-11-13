@@ -180,7 +180,9 @@ export default function NavbarTabs({
       requestAnimationFrame(() => {
         const container = scrollRef.current;
         if (!container) return;
-        const activeTab = container.querySelector(".chrome-tab.chrome-tab-active");
+        const activeTab = container.querySelector(
+          ".chrome-tab.chrome-tab-active"
+        );
         if (!activeTab) return;
         scrollElementIntoView(activeTab, { inline: "center" });
       });
@@ -193,7 +195,6 @@ export default function NavbarTabs({
   };
 
   const handleAddTab = () => {
-    // Keep your existing API: use handleTabReorder as a generic "update tabs" handler
     const newTabs = [
       ...tabs,
       { label: "New Tab", path: `/new-tab/${tabs.length + 1}` },
