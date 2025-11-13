@@ -8,7 +8,6 @@ import {
   Paper,
   Tabs,
   Tab,
-  Divider,
 } from "@mui/material";
 
 const dummyAsset = {
@@ -50,12 +49,22 @@ const AssetDetail = () => {
           Details
         </Typography>
         <Typography variant="body2">Model: {dummyAsset.model}</Typography>
-        <Typography variant="body2">Manufacturer: {dummyAsset.manufacturer}</Typography>
-        <Typography variant="body2">Serial Number: {dummyAsset.serialNumber}</Typography>
-        <Typography variant="body2">Assigned To: {dummyAsset.assignedTo}</Typography>
-        <Typography variant="body2">Location: {dummyAsset.location}</Typography>
+        <Typography variant="body2">
+          Manufacturer: {dummyAsset.manufacturer}
+        </Typography>
+        <Typography variant="body2">
+          Serial Number: {dummyAsset.serialNumber}
+        </Typography>
+        <Typography variant="body2">
+          Assigned To: {dummyAsset.assignedTo}
+        </Typography>
+        <Typography variant="body2">
+          Location: {dummyAsset.location}
+        </Typography>
         <Typography variant="body2">Added: {dummyAsset.added}</Typography>
-        <Typography variant="body2">Last Updated: {dummyAsset.updated}</Typography>
+        <Typography variant="body2">
+          Last Updated: {dummyAsset.updated}
+        </Typography>
       </Paper>
 
       <Tabs value={tab} onChange={handleTabChange} sx={{ mt: 3 }}>
@@ -67,11 +76,21 @@ const AssetDetail = () => {
       </Tabs>
 
       <Box sx={{ mt: 2 }}>
-        {tab === 0 && <Typography variant="body2">[Details shown above]</Typography>}
-        {tab === 1 && <Typography variant="body2">[Asset history timeline]</Typography>}
-        {tab === 2 && <Typography variant="body2">[Linked items go here]</Typography>}
-        {tab === 3 && <Typography variant="body2">[Comments section]</Typography>}
-        {tab === 4 && <Typography variant="body2">[File attachments]</Typography>}
+        {tab === 0 && (
+          <Typography variant="body2">[Details shown above]</Typography>
+        )}
+        {tab === 1 && (
+          <Typography variant="body2">[Asset history timeline]</Typography>
+        )}
+        {tab === 2 && (
+          <Typography variant="body2">[Linked items go here]</Typography>
+        )}
+        {tab === 3 && (
+          <Typography variant="body2">[Comments section]</Typography>
+        )}
+        {tab === 4 && (
+          <Typography variant="body2">[File attachments]</Typography>
+        )}
       </Box>
     </Box>
   );
