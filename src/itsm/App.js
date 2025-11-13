@@ -51,7 +51,7 @@ import SetPassword from "./pages/SetPassword";
 // New Tab Page
 import NewTab from "./pages/NewTab";
 
-// 🔹 Self-Service Layout & Pages (imported from ../selfservice)
+// 🔹 Self-Service Layout & Pages
 import SelfServiceLayout from "../selfservice/layouts/SelfServiceLayout";
 import SelfServiceHome from "../selfservice/pages/SelfServiceHome";
 import RaiseRequest from "../selfservice/pages/RaiseRequest";
@@ -94,7 +94,7 @@ function AppRoutes() {
       <Route path="/not-authorised" element={<NotAuthorised />} />
       <Route path="/set-password" element={<SetPassword />} />
 
-      {/* Authenticated Pages */}
+      {/* Authenticated ITSM Pages (wrapped in Layout) */}
       {isLoggedIn && (
         <Route path="/" element={<Layout />}>
           {/* Core */}
@@ -143,20 +143,22 @@ function AppRoutes() {
 
           {/* New Tab Route */}
           <Route path="new-tab/:id" element={<NewTab />} />
+        </Route>
+      )}
 
-          {/* 🔹 Self-Service nested under /self-service */}
-          <Route path="self-service" element={<SelfServiceLayout />}>
-            <Route index element={<SelfServiceHome />} />
-            <Route path="raise-request" element={<RaiseRequest />} />
-            <Route path="raise-incident" element={<RaiseIncident />} />
-            <Route path="catalog" element={<ServiceCatalog />} />
-            <Route path="checkout" element={<Checkout />} />
-            <Route path="confirmation" element={<SelfServiceConfirmation />} />
-            <Route
-              path="knowledge-base"
-              element={<SelfServiceKnowledgeBase />}
-            />
-          </Route>
+      {/* 🔹 Authenticated Self-Service - NO ITSM Layout wrapper */}
+      {isLoggedIn && (
+        <Route path="/selfservice" element={<SelfServiceLayout />}>
+          <Route index element={<SelfServiceHome />} />
+          <Route path="raise-request" element={<RaiseRequest />} />
+          <Route path="raise-incident" element={<RaiseIncident />} />
+          <Route path="catalog" element={<ServiceCatalog />} />
+          <Route path="checkout" element={<Checkout />} />
+          <Route path="confirmation" element={<SelfServiceConfirmation />} />
+          <Route
+            path="knowledge-base"
+            element={<SelfServiceKnowledgeBase />}
+          />
         </Route>
       )}
 
