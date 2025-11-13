@@ -26,13 +26,14 @@ import UserProfile from "./pages/UserProfile";
 import Settings from "./pages/Settings";
 import AdminSettings from "./pages/AdminSettings";
 
-// Detail & Create Pages
+// Create Pages
 import NewIncident from "./pages/NewIncident";
 import NewServiceRequest from "./pages/NewServiceRequest";
 import NewChange from "./pages/NewChange";
 import NewProblem from "./pages/NewProblem";
 import NewAsset from "./pages/NewAsset";
 
+// Detail Pages
 import IncidentDetail from "./pages/IncidentDetail";
 import ServiceRequestDetail from "./pages/ServiceRequestDetail";
 import ChangeDetail from "./pages/ChangeDetail";
@@ -40,18 +41,14 @@ import ProblemDetail from "./pages/ProblemDetail";
 import AssetDetail from "./pages/AssetDetail";
 import ArticleDetail from "./pages/ArticleDetail";
 
-// Other ITSM Features
+// Other Features
 import Announcements from "./pages/Announcements";
 import WorkScheduler from "./pages/WorkScheduler";
 import NotFound from "./pages/NotFound";
-
-// Magic link verification & password setup
 import SetPassword from "./pages/SetPassword";
-
-// New Tab Page
 import NewTab from "./pages/NewTab";
 
-// 🔹 Self-Service Layout & Pages
+// 🔹 Self-Service Pages
 import SelfServiceLayout from "../selfservice/layouts/SelfServiceLayout";
 import SelfServiceHome from "../selfservice/pages/SelfServiceHome";
 import RaiseRequest from "../selfservice/pages/RaiseRequest";
@@ -72,14 +69,10 @@ function AppRoutes() {
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-      }
+      (_event, session) => setSession(session)
     );
 
-    return () => {
-      listener.subscription.unsubscribe();
-    };
+    return () => listener.subscription.unsubscribe();
   }, []);
 
   if (loading) return <div>Loading...</div>;
@@ -94,10 +87,9 @@ function AppRoutes() {
       <Route path="/not-authorised" element={<NotAuthorised />} />
       <Route path="/set-password" element={<SetPassword />} />
 
-      {/* Authenticated ITSM Pages (wrapped in Layout) */}
+      {/* ITSM Layout — only for ITSM pages */}
       {isLoggedIn && (
         <Route path="/" element={<Layout />}>
-          {/* Core */}
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="incidents" element={<Incidents />} />
           <Route path="service-requests" element={<ServiceRequests />} />
@@ -128,10 +120,7 @@ function AppRoutes() {
 
           {/* Detail */}
           <Route path="incidents/:id" element={<IncidentDetail />} />
-          <Route
-            path="service-requests/:id"
-            element={<ServiceRequestDetail />}
-          />
+          <Route path="service-requests/:id" element={<ServiceRequestDetail />} />
           <Route path="changes/:id" element={<ChangeDetail />} />
           <Route path="problems/:id" element={<ProblemDetail />} />
           <Route path="assets/:id" element={<AssetDetail />} />
@@ -140,25 +129,20 @@ function AppRoutes() {
           {/* Other */}
           <Route path="announcements" element={<Announcements />} />
           <Route path="work-scheduler" element={<WorkScheduler />} />
-
-          {/* New Tab Route */}
           <Route path="new-tab/:id" element={<NewTab />} />
         </Route>
       )}
 
-      {/* 🔹 Authenticated Self-Service - NO ITSM Layout wrapper */}
+      {/* 🔹 Self-Service — OUTSIDE ITSM Layout */}
       {isLoggedIn && (
-        <Route path="/selfservice" element={<SelfServiceLayout />}>
+        <Route path="/self-service" element={<SelfServiceLayout />}>
           <Route index element={<SelfServiceHome />} />
           <Route path="raise-request" element={<RaiseRequest />} />
           <Route path="raise-incident" element={<RaiseIncident />} />
           <Route path="catalog" element={<ServiceCatalog />} />
           <Route path="checkout" element={<Checkout />} />
           <Route path="confirmation" element={<SelfServiceConfirmation />} />
-          <Route
-            path="knowledge-base"
-            element={<SelfServiceKnowledgeBase />}
-          />
+          <Route path="knowledge-base" element={<SelfServiceKnowledgeBase />} />
         </Route>
       )}
 
