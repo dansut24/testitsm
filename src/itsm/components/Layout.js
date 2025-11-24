@@ -170,22 +170,7 @@ const Layout = () => {
     navigate("/login");
   };
 
-  // Fix viewport height for mobile
-  useEffect(() => {
-    const setVh = () => {
-      const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty("--vh", `${vh}px`);
-    };
-    setVh();
-    window.addEventListener("resize", setVh);
-    window.addEventListener("orientationchange", setVh);
-    return () => {
-      window.removeEventListener("resize", setVh);
-      window.removeEventListener("orientationchange", setVh);
-    };
-  }, []);
-
-  // Sync tabs with current route
+  // 🔹 Sync tabs with current route
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -257,7 +242,8 @@ const Layout = () => {
         inset: 0,
         display: "flex",
         width: "100%",
-        height: "calc(var(--vh, 1vh) * 100)",
+        height: "100vh",   // 🔹 no more --vh hack
+        minHeight: "100vh",
         overflow: "hidden",
         bgcolor: theme.palette.background.default,
         overscrollBehavior: "none",
