@@ -19,7 +19,7 @@ export default function NavbarTabs({
 }) {
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down("sm"));
-  const tabHeight = 30; // 🔹 slimmer tabs
+  const tabHeight = 30; // slim
 
   const scrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -143,8 +143,8 @@ export default function NavbarTabs({
           alignItems: "center",
         }}
       >
-        {/* Left arrow */}
-        {canScrollLeft && (
+        {/* Left arrow – desktop only */}
+        {!isMobile && canScrollLeft && (
           <Box
             sx={{
               flexShrink: 0,
@@ -175,7 +175,7 @@ export default function NavbarTabs({
           </Box>
         )}
 
-        {/* Scrollable strip */}
+        {/* Scrollable strip (mobile: swipe / desktop: arrows + click-scroll) */}
         <Box
           ref={scrollRef}
           onScroll={handleScroll}
@@ -324,8 +324,8 @@ export default function NavbarTabs({
           </Box>
         </Box>
 
-        {/* Right arrow */}
-        {canScrollRight && (
+        {/* Right arrow – desktop only */}
+        {!isMobile && canScrollRight && (
           <Box
             sx={{
               flexShrink: 0,
