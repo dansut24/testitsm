@@ -11,6 +11,8 @@ import {
   Avatar,
   Stack,
   Button,
+  Menu,
+  MenuItem,
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
@@ -81,6 +83,9 @@ const Layout = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null); // 'search' | 'notifications' | 'profile' | null
 
+  // 🔹 Mobile status menu anchor (for profile icon dropdown)
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
+
   const username = "User";
   const userInitial = username[0]?.toUpperCase() || "U";
 
@@ -92,6 +97,15 @@ const Layout = () => {
   useEffect(() => {
     localStorage.setItem("userStatus", userStatus);
   }, [userStatus]);
+
+  const getStatusColor = (statusKey) => {
+    const opt = STATUS_OPTIONS.find((o) => o.key === statusKey);
+    return opt ? opt.color : "text.disabled";
+  };
+
+  const handleStatusChange = (statusKey) => {
+    setUserStatus(statusKey);
+  };
 
   // Logout handler for ProfileDrawer
   const handleLogout = () => {
@@ -179,24 +193,6 @@ const Layout = () => {
     { label: "Settings", icon: <SettingsIcon /> },
     { label: "Assets", icon: <StorageIcon /> },
   ];
-
-  const handleStatusChange = (statusKey) => {
-    setUserStatus(statusKey);
-  };
-
-  const renderStatusDot = (statusKey) => {
-    const opt = STATUS_OPTIONS.find((o) => o.key === statusKey);
-    return (
-      <Box
-        sx={{
-          width: 8,
-          height: 8,
-          borderRadius: "50%",
-          bgcolor: opt ? opt.color : "text.disabled",
-        }}
-      />
-    );
-  };
 
   return (
     <Box
@@ -371,7 +367,7 @@ const Layout = () => {
                     </Typography>
                   </Box>
 
-                  {/* Status chip (overall system status, not user status) */}
+                  {/* System status chip */}
                   <Box
                     sx={{
                       px: 1,
@@ -440,15 +436,14 @@ const Layout = () => {
                         position: "absolute",
                         bottom: -1,
                         right: -1,
-                        width: 8,
-                        height: 8,
+                        width: 10,
+                        height: 10,
                         borderRadius: "50%",
                         border: "2px solid",
                         borderColor: "background.paper",
+                        bgcolor: getStatusColor(userStatus),
                       }}
-                    >
-                      {renderStatusDot(userStatus)}
-                    </Box>
+                    />
                   </Box>
 
                   <Box sx={{ display: "flex", flexDirection: "column" }}>
@@ -464,7 +459,14 @@ const Layout = () => {
                       alignItems="center"
                       sx={{ lineHeight: 1.1 }}
                     >
-                      {renderStatusDot(userStatus)}
+                      <Box
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          bgcolor: getStatusColor(userStatus),
+                        }}
+                      />
                       <Typography
                         variant="caption"
                         sx={{
@@ -480,13 +482,74 @@ const Layout = () => {
               </Box>
             )}
 
+            {/* 🔹 Mobile: profile icon shows coloured dot + opens status dropdown */}
             {isMobile && (
-              <IconButton
-                size="small"
-                onClick={() => setDrawerType("profile")}
-              >
-                <AccountCircleIcon sx={{ fontSize: 22 }} />
-              </IconButton>
+              <>
+                <IconButton
+                  size="small"
+                  onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
+                >
+                  <Box sx={{ position: "relative", display: "flex" }}>
+                    <AccountCircleIcon sx={{ fontSize: 22 }} />
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        bottom: 0,
+                        right: -1,
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        border: "2px solid",
+                        borderColor: "background.paper",
+                        bgcolor: getStatusColor(userStatus),
+                      }}
+                    />
+                  </Box>
+                </IconButton>
+
+                <Menu
+                  anchorEl={statusMenuAnchor}
+                  open={Boolean(statusMenuAnchor)}
+                  onClose={() => setStatusMenuAnchor(null)}
+                  anchorOrigin={{
+                    vertical: "bottom",
+                    horizontal: "right",
+                  }}
+                  transformOrigin={{
+                    vertical: "top",
+                    horizontal: "right",
+                  }}
+                >
+                  {STATUS_OPTIONS.map((opt) => (
+                    <MenuItem
+                      key={opt.key}
+                      selected={userStatus === opt.key}
+                      onClick={() => {
+                        handleStatusChange(opt.key);
+                        setStatusMenuAnchor(null);
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: "50%",
+                            bgcolor: opt.color,
+                          }}
+                        />
+                        <Typography variant="body2">{opt.key}</Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </>
             )}
           </Box>
 
@@ -536,8 +599,10 @@ const Layout = () => {
             <NotificationsIcon
               onClick={() => setDrawerType("notifications")}
             />
+            {/* Bottom nav profile still opens profile drawer (no status controls inside) */}
             <AccountCircleIcon
               onClick={() => setDrawerType("profile")}
+              style={{ cursor: "pointer" }}
             />
           </Box>
         )}
@@ -592,6 +657,7 @@ const Layout = () => {
               status={userStatus}
               onStatusChange={handleStatusChange}
               onLogout={handleLogout}
+              showStatus
             />
           )}
           {drawerType === "search" && (
@@ -636,46 +702,11 @@ const Layout = () => {
               Search
             </Typography>
           )}
-
           {drawerType === "notifications" && <NotificationDrawer />}
 
-          {/* 🔹 Mobile: profile -> status picker only */}
+          {/* 🔹 Mobile profile drawer: no status controls */}
           {drawerType === "profile" && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                Set your status
-              </Typography>
-              <Stack spacing={1.5} mt={1}>
-                {STATUS_OPTIONS.map((opt) => (
-                  <Button
-                    key={opt.key}
-                    variant={
-                      userStatus === opt.key ? "contained" : "outlined"
-                    }
-                    size="medium"
-                    onClick={() => {
-                      handleStatusChange(opt.key);
-                      setDrawerType(null);
-                    }}
-                    sx={{
-                      justifyContent: "flex-start",
-                      textTransform: "none",
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: "50%",
-                        bgcolor: opt.color,
-                        mr: 1,
-                      }}
-                    />
-                    {opt.key}
-                  </Button>
-                ))}
-              </Stack>
-            </Box>
+            <ProfileDrawer onLogout={handleLogout} showStatus={false} />
           )}
         </SwipeableDrawer>
       )}
