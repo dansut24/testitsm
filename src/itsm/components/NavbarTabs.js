@@ -1,12 +1,11 @@
 // NavbarTabs.js
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import {
   Box,
-  Tabs,
-  Tab,
   IconButton,
   Tooltip,
   useMediaQuery,
+  Avatar,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
@@ -27,13 +26,26 @@ export default function NavbarTabs({
 }) {
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down("sm"));
-
+  const scrollRef = useRef(null);
   const tabHeight = 40;
 
-  const onChange = (_event, newIndex) => {
-    const tab = tabs[newIndex];
+  // Scroll active tab into view when tabIndex changes
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const activeEl = container.querySelector('[data-active="true"]');
+    if (!activeEl) return;
+    activeEl.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [tabIndex, tabs.length]);
+
+  const onTabClick = (idx) => {
+    const tab = tabs[idx];
     if (!tab) return;
-    handleTabChange(null, newIndex, tab.path);
+    handleTabChange(null, idx, tab.path);
   };
 
   const onClose = (e, idx) => {
@@ -43,7 +55,6 @@ export default function NavbarTabs({
 
     handleTabClose(tab.path);
 
-    // keep array in sync
     const newTabs = tabs.filter((_, i) => i !== idx);
     handleTabReorder(newTabs);
   };
@@ -72,10 +83,10 @@ export default function NavbarTabs({
         bgcolor: theme.palette.background.paper,
         boxShadow: "inset 0 -1px 0 rgba(0,0,0,0.04)",
         zIndex: 1,
-        overflow: "hidden", // <- stops the whole page growing wider
+        overflow: "hidden", // <- stops the bar from widening the page
       }}
     >
-      {/* Left: sidebar trigger / icon */}
+      {/* Left: sidebar trigger / burger etc. */}
       {navTrigger && (
         <Box
           sx={{
@@ -91,119 +102,122 @@ export default function NavbarTabs({
         </Box>
       )}
 
-      {/* Center: tabs area (fixed width, internal scroll) */}
+      {/* Center: tabs (fixed width area, internal horizontal scroll) */}
       <Box
+        ref={scrollRef}
         sx={{
           flex: 1,
           minWidth: 0,
+          overflowX: "auto", // scrollbar INSIDE this area
+          overflowY: "hidden",
           display: "flex",
           alignItems: "center",
-          overflow: "hidden", // important: constrain Tabs to this area
         }}
       >
-        <Tabs
-          value={tabIndex}
-          onChange={onChange}
-          variant="scrollable"
-          scrollButtons="auto"
+        <Box
           sx={{
-            flex: 1,
-            minHeight: tabHeight,
-            width: "100%",
-            "& .MuiTabs-flexContainer": {
-              alignItems: "stretch",
-            },
-            "& .MuiTabs-scroller": {
-              overflowX: "auto !important", // scroll inside, not grow page
-            },
-            "& .MuiTab-root": {
-              minHeight: tabHeight,
-              textTransform: "none",
-              fontSize: isXs ? 11 : 13,
-              px: 1,
-              py: 0,
-              alignItems: "center",
-              justifyContent: "flex-start",
-              minWidth: isXs ? 72 : 110, // shrinkable tabs
-              maxWidth: 200,
-              flexShrink: 1, // <- let tabs shrink instead of forcing layout wider
-            },
-            "& .MuiTab-root.Mui-selected": {
-              fontWeight: 600,
-              bgcolor:
-                theme.palette.mode === "dark"
-                  ? "rgba(255,255,255,0.04)"
-                  : "rgba(0,0,0,0.03)",
-            },
-            "& .MuiTabs-indicator": {
-              height: 2,
-              borderRadius: 999,
-            },
+            display: "flex",
+            alignItems: "stretch",
+            height: "100%",
+            width: "max-content", // only as wide as needed, scrolls inside
           }}
         >
-          {tabs.map((tab, idx) => (
-            <Tab
-              key={tab.path || idx}
-              label={
+          {tabs.map((tab, idx) => {
+            const active = idx === tabIndex;
+            return (
+              <Box
+                key={tab.path || idx}
+                component="button"
+                type="button"
+                data-active={active ? "true" : "false"}
+                onClick={() => onTabClick(idx)}
+                sx={{
+                  border: "none",
+                  outline: "none",
+                  cursor: "pointer",
+                  backgroundColor: active
+                    ? theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.04)"
+                      : "rgba(0,0,0,0.03)"
+                    : "transparent",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.75,
+                  px: 1.25,
+                  height: tabHeight,
+                  borderBottom: active
+                    ? `2px solid ${theme.palette.primary.main}`
+                    : "2px solid transparent",
+                  fontSize: isXs ? 11 : 13,
+                  color: active
+                    ? theme.palette.text.primary
+                    : theme.palette.text.secondary,
+                  flex: isMobile ? "1 1 auto" : "0 1 160px", // shrinkable on desktop
+                  minWidth: isMobile ? 0 : 90,
+                  maxWidth: 220,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  "&:hover": {
+                    backgroundColor: active
+                      ? theme.palette.action.hover
+                      : theme.palette.action.hover,
+                  },
+                }}
+              >
+                {/* favicon / icon */}
+                {tab.favicon && (
+                  <Box
+                    component="img"
+                    src={tab.favicon}
+                    alt=""
+                    sx={{
+                      width: 14,
+                      height: 14,
+                      borderRadius: 0.5,
+                      flexShrink: 0,
+                    }}
+                  />
+                )}
+
+                {/* title */}
                 <Box
+                  component="span"
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 0.75,
-                    maxWidth: "100%",
+                    flex: 1,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                   }}
                 >
-                  {tab.favicon && (
-                    <Box
-                      component="img"
-                      src={tab.favicon}
-                      alt=""
-                      sx={{
-                        width: 14,
-                        height: 14,
-                        borderRadius: 0.5,
-                        flexShrink: 0,
-                      }}
-                    />
-                  )}
+                  {tab.label}
+                </Box>
 
-                  <Box
-                    component="span"
+                {/* close icon (skip first if you want it pinned) */}
+                {idx !== 0 && (
+                  <IconButton
+                    size="small"
+                    onClick={(e) => onClose(e, idx)}
                     sx={{
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
+                      p: 0,
+                      ml: 0.25,
+                      flexShrink: 0,
+                      opacity: 0.7,
+                      "&:hover": {
+                        opacity: 1,
+                        bgcolor: "transparent",
+                      },
                     }}
                   >
-                    {tab.label}
-                  </Box>
-
-                  {idx !== 0 && (
-                    <IconButton
-                      size="small"
-                      sx={{
-                        ml: 0.25,
-                        p: 0,
-                        opacity: 0.7,
-                        "&:hover": {
-                          opacity: 1,
-                          bgcolor: "transparent",
-                        },
-                      }}
-                      onClick={(e) => onClose(e, idx)}
-                    >
-                      <CloseIcon sx={{ fontSize: 15 }} />
-                    </IconButton>
-                  )}
-                </Box>
-              }
-              disableRipple
-            />
-          ))}
-        </Tabs>
+                    <CloseIcon sx={{ fontSize: 15 }} />
+                  </IconButton>
+                )}
+              </Box>
+            );
+          })}
+        </Box>
       </Box>
 
-      {/* Right: Add tab + profile/notifications/search icons */}
+      {/* Right: +tab and profile/notifications etc. */}
       <Box
         sx={{
           display: "flex",
@@ -223,15 +237,12 @@ export default function NavbarTabs({
           <IconButton
             size="small"
             onClick={handleAddTab}
-            sx={{
-              p: 0.5,
-            }}
+            sx={{ p: 0.5 }}
           >
             <AddIcon sx={{ fontSize: 22 }} />
           </IconButton>
         </Tooltip>
 
-        {/* Match old behaviour — just visual for now */}
         {!isMobile && (
           <>
             <Tooltip title="Search">
@@ -246,6 +257,7 @@ export default function NavbarTabs({
             </Tooltip>
             <Tooltip title="Profile">
               <IconButton size="small" sx={{ p: 0.5 }}>
+                {/* you can swap to real avatar if you like */}
                 <AccountCircleIcon sx={{ fontSize: 22 }} />
               </IconButton>
             </Tooltip>
