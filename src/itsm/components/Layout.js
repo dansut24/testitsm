@@ -295,8 +295,9 @@ const Layout = () => {
             position: "relative",
             zIndex: 1200,
             bgcolor: "background.paper",
-            display: "grid",
-            gridTemplateRows: `${APP_HEADER_HEIGHT}px ${TABBAR_HEIGHT}px`,
+            display: "flex",
+            flexDirection: "column",
+            height: NAVBAR_HEIGHT,
             borderBottom: "1px solid",
             borderColor: "divider",
             overflow: "hidden",
@@ -305,16 +306,17 @@ const Layout = () => {
           {/* Row 1: header */}
           <Box
             sx={{
+              flex: `0 0 ${APP_HEADER_HEIGHT}px`,
+              height: APP_HEADER_HEIGHT,
+              minHeight: APP_HEADER_HEIGHT,
+              boxSizing: "border-box",
               display: "flex",
               alignItems: "center",
               px: 1,
               gap: 1,
               borderBottom: "1px solid",
               borderColor: "divider",
-              height: APP_HEADER_HEIGHT,
-              minHeight: APP_HEADER_HEIGHT,
-              boxSizing: "border-box",
-              pt: isMobile ? 0.5 : 0, // ensures constant gap above search on mobile
+              pt: isMobile ? 0.5 : 0, // fixed top gap on mobile
             }}
           >
             {/* Logo / brand / menu */}
@@ -623,7 +625,12 @@ const Layout = () => {
           </Box>
 
           {/* Row 2: Tab strip */}
-          <Box sx={{ minWidth: 0 }}>
+          <Box
+            sx={{
+              flex: `0 0 ${TABBAR_HEIGHT}px`,
+              minHeight: TABBAR_HEIGHT,
+            }}
+          >
             <NavbarTabs
               tabs={tabs}
               tabIndex={tabIndex}
