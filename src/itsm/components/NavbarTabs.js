@@ -1,11 +1,10 @@
 // NavbarTabs.js
-import React, { useRef, useEffect } from "react";
+import React, { useRef } from "react";
 import {
   Box,
   IconButton,
   Tooltip,
   useMediaQuery,
-  Avatar,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
@@ -28,19 +27,6 @@ export default function NavbarTabs({
   const isXs = useMediaQuery(theme.breakpoints.down("sm"));
   const scrollRef = useRef(null);
   const tabHeight = 40;
-
-  // Scroll active tab into view when tabIndex changes
-  useEffect(() => {
-    const container = scrollRef.current;
-    if (!container) return;
-    const activeEl = container.querySelector('[data-active="true"]');
-    if (!activeEl) return;
-    activeEl.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-      inline: "center",
-    });
-  }, [tabIndex, tabs.length]);
 
   const onTabClick = (idx) => {
     const tab = tabs[idx];
@@ -68,6 +54,14 @@ export default function NavbarTabs({
     const newTabs = [...tabs, newTab];
     handleTabReorder(newTabs);
     handleTabChange(null, newTabs.length - 1, newTab.path);
+
+    // scroll to the far right so the new tab is visible
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        const el = scrollRef.current;
+        el.scrollLeft = el.scrollWidth;
+      }
+    });
   };
 
   return (
@@ -83,7 +77,7 @@ export default function NavbarTabs({
         bgcolor: theme.palette.background.paper,
         boxShadow: "inset 0 -1px 0 rgba(0,0,0,0.04)",
         zIndex: 1,
-        overflow: "hidden", // <- stops the bar from widening the page
+        overflow: "hidden", // bar itself never widens the layout
       }}
     >
       {/* Left: sidebar trigger / burger etc. */}
@@ -102,13 +96,13 @@ export default function NavbarTabs({
         </Box>
       )}
 
-      {/* Center: tabs (fixed width area, internal horizontal scroll) */}
+      {/* Center: tabs (fixed area, internal horizontal scroll) */}
       <Box
         ref={scrollRef}
         sx={{
           flex: 1,
           minWidth: 0,
-          overflowX: "auto", // scrollbar INSIDE this area
+          overflowX: "auto",   // scroll INSIDE this area
           overflowY: "hidden",
           display: "flex",
           alignItems: "center",
@@ -116,10 +110,9 @@ export default function NavbarTabs({
       >
         <Box
           sx={{
-            display: "flex",
+            display: "inline-flex", // content width can grow; parent scrolls
             alignItems: "stretch",
             height: "100%",
-            width: "max-content", // only as wide as needed, scrolls inside
           }}
         >
           {tabs.map((tab, idx) => {
@@ -129,7 +122,6 @@ export default function NavbarTabs({
                 key={tab.path || idx}
                 component="button"
                 type="button"
-                data-active={active ? "true" : "false"}
                 onClick={() => onTabClick(idx)}
                 sx={{
                   border: "none",
@@ -152,16 +144,14 @@ export default function NavbarTabs({
                   color: active
                     ? theme.palette.text.primary
                     : theme.palette.text.secondary,
-                  flex: isMobile ? "1 1 auto" : "0 1 160px", // shrinkable on desktop
-                  minWidth: isMobile ? 0 : 90,
+                  flex: "0 0 auto",           // DON'T stretch/shrink siblings
+                  minWidth: isMobile ? 80 : 110,
                   maxWidth: 220,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   "&:hover": {
-                    backgroundColor: active
-                      ? theme.palette.action.hover
-                      : theme.palette.action.hover,
+                    backgroundColor: theme.palette.action.hover,
                   },
                 }}
               >
@@ -234,11 +224,7 @@ export default function NavbarTabs({
         }}
       >
         <Tooltip title="New tab">
-          <IconButton
-            size="small"
-            onClick={handleAddTab}
-            sx={{ p: 0.5 }}
-          >
+          <IconButton size="small" onClick={handleAddTab} sx={{ p: 0.5 }}>
             <AddIcon sx={{ fontSize: 22 }} />
           </IconButton>
         </Tooltip>
@@ -257,7 +243,6 @@ export default function NavbarTabs({
             </Tooltip>
             <Tooltip title="Profile">
               <IconButton size="small" sx={{ p: 0.5 }}>
-                {/* you can swap to real avatar if you like */}
                 <AccountCircleIcon sx={{ fontSize: 22 }} />
               </IconButton>
             </Tooltip>
