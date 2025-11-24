@@ -9,6 +9,8 @@ import {
   IconButton,
   InputBase,
   Avatar,
+  Stack,
+  Button,
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
@@ -51,6 +53,13 @@ const routeLabels = {
   "/assets": "Assets",
 };
 
+const STATUS_OPTIONS = [
+  { key: "Available", color: "success.main" },
+  { key: "Busy", color: "error.main" },
+  { key: "Away", color: "warning.main" },
+  { key: "Offline", color: "text.disabled" },
+];
+
 const Layout = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -74,6 +83,15 @@ const Layout = () => {
 
   const username = "User";
   const userInitial = username[0]?.toUpperCase() || "U";
+
+  // 🔹 Shared user status state
+  const [userStatus, setUserStatus] = useState(
+    () => localStorage.getItem("userStatus") || "Available"
+  );
+
+  useEffect(() => {
+    localStorage.setItem("userStatus", userStatus);
+  }, [userStatus]);
 
   // Logout handler for ProfileDrawer
   const handleLogout = () => {
@@ -161,6 +179,24 @@ const Layout = () => {
     { label: "Settings", icon: <SettingsIcon /> },
     { label: "Assets", icon: <StorageIcon /> },
   ];
+
+  const handleStatusChange = (statusKey) => {
+    setUserStatus(statusKey);
+  };
+
+  const renderStatusDot = (statusKey) => {
+    const opt = STATUS_OPTIONS.find((o) => o.key === statusKey);
+    return (
+      <Box
+        sx={{
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
+          bgcolor: opt ? opt.color : "text.disabled",
+        }}
+      />
+    );
+  };
 
   return (
     <Box
@@ -335,7 +371,7 @@ const Layout = () => {
                     </Typography>
                   </Box>
 
-                  {/* Status chip */}
+                  {/* Status chip (overall system status, not user status) */}
                   <Box
                     sx={{
                       px: 1,
@@ -394,9 +430,27 @@ const Layout = () => {
                   }}
                   onClick={() => setDrawerType("profile")}
                 >
-                  <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>
-                    {userInitial}
-                  </Avatar>
+                  <Box sx={{ position: "relative" }}>
+                    <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>
+                      {userInitial}
+                    </Avatar>
+                    {/* small status dot over avatar */}
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        bottom: -1,
+                        right: -1,
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        border: "2px solid",
+                        borderColor: "background.paper",
+                      }}
+                    >
+                      {renderStatusDot(userStatus)}
+                    </Box>
+                  </Box>
+
                   <Box sx={{ display: "flex", flexDirection: "column" }}>
                     <Typography
                       variant="caption"
@@ -404,16 +458,23 @@ const Layout = () => {
                     >
                       {username}
                     </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        lineHeight: 1.1,
-                        color: "text.secondary",
-                        fontSize: 10,
-                      }}
+                    <Stack
+                      direction="row"
+                      spacing={0.5}
+                      alignItems="center"
+                      sx={{ lineHeight: 1.1 }}
                     >
-                      Admin
-                    </Typography>
+                      {renderStatusDot(userStatus)}
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: "text.secondary",
+                          fontSize: 10,
+                        }}
+                      >
+                        {userStatus}
+                      </Typography>
+                    </Stack>
                   </Box>
                 </Box>
               </Box>
@@ -527,7 +588,11 @@ const Layout = () => {
         >
           {drawerType === "notifications" && <NotificationDrawer />}
           {drawerType === "profile" && (
-            <ProfileDrawer onLogout={handleLogout} />
+            <ProfileDrawer
+              status={userStatus}
+              onStatusChange={handleStatusChange}
+              onLogout={handleLogout}
+            />
           )}
           {drawerType === "search" && (
             <Box p={2}>
@@ -571,9 +636,46 @@ const Layout = () => {
               Search
             </Typography>
           )}
+
           {drawerType === "notifications" && <NotificationDrawer />}
+
+          {/* 🔹 Mobile: profile -> status picker only */}
           {drawerType === "profile" && (
-            <ProfileDrawer onLogout={handleLogout} />
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Set your status
+              </Typography>
+              <Stack spacing={1.5} mt={1}>
+                {STATUS_OPTIONS.map((opt) => (
+                  <Button
+                    key={opt.key}
+                    variant={
+                      userStatus === opt.key ? "contained" : "outlined"
+                    }
+                    size="medium"
+                    onClick={() => {
+                      handleStatusChange(opt.key);
+                      setDrawerType(null);
+                    }}
+                    sx={{
+                      justifyContent: "flex-start",
+                      textTransform: "none",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        bgcolor: opt.color,
+                        mr: 1,
+                      }}
+                    />
+                    {opt.key}
+                  </Button>
+                ))}
+              </Stack>
+            </Box>
           )}
         </SwipeableDrawer>
       )}
