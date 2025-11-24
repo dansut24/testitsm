@@ -2,7 +2,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import {
   Box,
-  IconButton,
   Tooltip,
   useMediaQuery,
 } from "@mui/material";
@@ -23,7 +22,7 @@ export default function NavbarTabs({
   handleTabClose,
   handleTabReorder,
   isMobile,
-  navTrigger, // optional, Layout isn't passing this right now
+  navTrigger, // currently unused but supported
 }) {
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down("sm"));
@@ -39,12 +38,18 @@ export default function NavbarTabs({
     const { scrollLeft, scrollWidth, clientWidth } = el;
     const maxScrollLeft = scrollWidth - clientWidth;
     setCanScrollLeft(scrollLeft > 2);
-    setCanScrollRight(scrollLeft < maxScrollLeft - 2);
+    setCanScrollRight(maxScrollLeft > 2 && scrollLeft < maxScrollLeft - 2);
   };
 
   useEffect(() => {
     updateScrollButtons();
   }, [tabs.length]);
+
+  useEffect(() => {
+    const handleResize = () => updateScrollButtons();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const handleScroll = () => {
     updateScrollButtons();
@@ -86,6 +91,7 @@ export default function NavbarTabs({
     requestAnimationFrame(() => {
       const el = scrollRef.current;
       if (el) el.scrollLeft = el.scrollWidth;
+      updateScrollButtons();
     });
   };
 
@@ -102,10 +108,10 @@ export default function NavbarTabs({
         bgcolor: theme.palette.background.paper,
         boxShadow: "inset 0 -1px 0 rgba(0,0,0,0.04)",
         zIndex: 1,
-        overflow: "hidden", // this row itself never widens the layout
+        overflow: "hidden",
       }}
     >
-      {/* LEFT: optional nav trigger (not used currently) */}
+      {/* LEFT: optional nav trigger */}
       {navTrigger && (
         <Box
           sx={{
@@ -121,7 +127,7 @@ export default function NavbarTabs({
         </Box>
       )}
 
-      {/* CENTER: arrows + scrollable tabs + + button */}
+      {/* CENTER: arrows (only when needed) + scrollable tabs + + button */}
       <Box
         sx={{
           flex: 1,
@@ -130,28 +136,38 @@ export default function NavbarTabs({
           alignItems: "center",
         }}
       >
-        {/* Left arrow */}
-        <Box
-          sx={{
-            flexShrink: 0,
-            borderRight: 1,
-            borderColor: "divider",
-            display: "flex",
-            alignItems: "center",
-            px: 0.5,
-          }}
-        >
-          <IconButton
-            size="small"
-            onClick={() => scrollByAmount(-150)}
-            disabled={!canScrollLeft}
-            sx={{ p: 0.25 }}
+        {/* Left arrow (only rendered if we can scroll left) */}
+        {canScrollLeft && (
+          <Box
+            sx={{
+              flexShrink: 0,
+              borderRight: 1,
+              borderColor: "divider",
+              display: "flex",
+              alignItems: "center",
+              px: 0.25,
+            }}
           >
-            <ChevronLeftIcon sx={{ fontSize: 20 }} />
-          </IconButton>
-        </Box>
+            <Box
+              component="button"
+              type="button"
+              onClick={() => scrollByAmount(-150)}
+              style={{
+                border: "none",
+                outline: "none",
+                background: "transparent",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                padding: 0,
+              }}
+            >
+              <ChevronLeftIcon sx={{ fontSize: 20 }} />
+            </Box>
+          </Box>
+        )}
 
-        {/* Scrollable tab strip (no visible scrollbar) */}
+        {/* Scrollable tab strip */}
         <Box
           ref={scrollRef}
           onScroll={handleScroll}
@@ -244,28 +260,34 @@ export default function NavbarTabs({
 
                   {/* close icon for non-first tabs (first pinned) */}
                   {idx !== 0 && (
-                    <IconButton
-                      size="small"
+                    <Box
+                      component="button"
+                      type="button"
                       onClick={(e) => handleClose(e, idx)}
                       sx={{
+                        border: "none",
+                        outline: "none",
+                        background: "transparent",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
                         p: 0,
                         ml: 0.25,
                         flexShrink: 0,
                         opacity: 0.7,
                         "&:hover": {
                           opacity: 1,
-                          bgcolor: "transparent",
                         },
                       }}
                     >
                       <CloseIcon sx={{ fontSize: 15 }} />
-                    </IconButton>
+                    </Box>
                   )}
                 </Box>
               );
             })}
 
-            {/* + button right after last tab (scrolls with tabs) */}
+            {/* + button right after last tab */}
             <Box
               sx={{
                 display: "flex",
@@ -276,42 +298,60 @@ export default function NavbarTabs({
               }}
             >
               <Tooltip title="New tab">
-                <IconButton
-                  size="small"
+                <Box
+                  component="button"
+                  type="button"
                   onClick={handleAddTab}
                   sx={{
+                    border: "1px solid",
+                    borderColor: theme.palette.divider,
+                    outline: "none",
+                    background: "transparent",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                     p: 0.5,
                     borderRadius: "999px",
-                    border: `1px solid ${theme.palette.divider}`,
                   }}
                 >
                   <AddIcon sx={{ fontSize: 18 }} />
-                </IconButton>
+                </Box>
               </Tooltip>
             </Box>
           </Box>
         </Box>
 
-        {/* Right arrow */}
-        <Box
-          sx={{
-            flexShrink: 0,
-            borderLeft: 1,
-            borderColor: "divider",
-            display: "flex",
-            alignItems: "center",
-            px: 0.5,
-          }}
-        >
-          <IconButton
-            size="small"
-            onClick={() => scrollByAmount(150)}
-            disabled={!canScrollRight}
-            sx={{ p: 0.25 }}
+        {/* Right arrow (only rendered if we can scroll right) */}
+        {canScrollRight && (
+          <Box
+            sx={{
+              flexShrink: 0,
+              borderLeft: 1,
+              borderColor: "divider",
+              display: "flex",
+              alignItems: "center",
+              px: 0.25,
+            }}
           >
-            <ChevronRightIcon sx={{ fontSize: 20 }} />
-          </IconButton>
-        </Box>
+            <Box
+              component="button"
+              type="button"
+              onClick={() => scrollByAmount(150)}
+              style={{
+                border: "none",
+                outline: "none",
+                background: "transparent",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                padding: 0,
+              }}
+            >
+              <ChevronRightIcon sx={{ fontSize: 20 }} />
+            </Box>
+          </Box>
+        )}
       </Box>
 
       {/* RIGHT: fixed icons (never move) */}
@@ -333,19 +373,55 @@ export default function NavbarTabs({
         {!isMobile && (
           <>
             <Tooltip title="Search">
-              <IconButton size="small" sx={{ p: 0.5 }}>
+              <Box
+                component="button"
+                type="button"
+                sx={{
+                  border: "none",
+                  outline: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  p: 0,
+                }}
+              >
                 <SearchIcon sx={{ fontSize: 20 }} />
-              </IconButton>
+              </Box>
             </Tooltip>
             <Tooltip title="Notifications">
-              <IconButton size="small" sx={{ p: 0.5 }}>
+              <Box
+                component="button"
+                type="button"
+                sx={{
+                  border: "none",
+                  outline: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  p: 0,
+                }}
+              >
                 <NotificationsIcon sx={{ fontSize: 20 }} />
-              </IconButton>
+              </Box>
             </Tooltip>
             <Tooltip title="Profile">
-              <IconButton size="small" sx={{ p: 0.5 }}>
+              <Box
+                component="button"
+                type="button"
+                sx={{
+                  border: "none",
+                  outline: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  p: 0,
+                }}
+              >
                 <AccountCircleIcon sx={{ fontSize: 22 }} />
-              </IconButton>
+              </Box>
             </Tooltip>
           </>
         )}
