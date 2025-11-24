@@ -2,8 +2,6 @@
 import React from "react";
 import {
   Box,
-  Tabs,
-  Tab,
   IconButton,
   Tooltip,
   useMediaQuery,
@@ -27,21 +25,20 @@ export default function NavbarTabs({
 }) {
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down("sm"));
-
   const tabHeight = 40;
 
-  const onChange = (_event, newIndex) => {
-    const tab = tabs[newIndex];
+  const handleTabClick = (idx) => {
+    const tab = tabs[idx];
     if (!tab) return;
-    handleTabChange(null, newIndex, tab.path);
+    handleTabChange(null, idx, tab.path);
   };
 
-  const onClose = (e, idx) => {
+  const handleClose = (e, idx) => {
     e.stopPropagation();
     const tab = tabs[idx];
     if (!tab) return;
-
     handleTabClose(tab.path);
+
     const newTabs = tabs.filter((_, i) => i !== idx);
     handleTabReorder(newTabs);
   };
@@ -63,18 +60,18 @@ export default function NavbarTabs({
         width: "100%",
         maxWidth: "100%",
         height: tabHeight,
-        display: "flex",
+        display: "grid",
+        gridTemplateColumns: navTrigger ? "auto 1fr auto" : "1fr auto",
         alignItems: "stretch",
         borderBottom: 1,
         borderColor: "divider",
         bgcolor: theme.palette.background.paper,
         boxShadow: "inset 0 -1px 0 rgba(0,0,0,0.04)",
         zIndex: 1,
-        // IMPORTANT: this row itself will never be wider than its parent
-        overflow: "hidden",
+        overflow: "hidden", // the row itself never exceeds its container
       }}
     >
-      {/* Left: sidebar trigger / burger */}
+      {/* LEFT: sidebar trigger */}
       {navTrigger && (
         <Box
           sx={{
@@ -90,158 +87,151 @@ export default function NavbarTabs({
         </Box>
       )}
 
-      {/* Middle: tabs area (flexible, shrinkable, scroll inside) */}
+      {/* CENTER: tabs + + (scrollable area) */}
       <Box
         sx={{
-          flex: 1,
-          minWidth: 0, // CRITICAL: allow this flex child to shrink
+          minWidth: 0, // grid column can shrink
+          overflow: "hidden", // no bleed; internal scroll instead
           display: "flex",
           alignItems: "center",
         }}
       >
-        {/* Tabs sit in their own scrollable container */}
+        {/* Scrollable strip with tabs + + */}
         <Box
           sx={{
             flex: 1,
             minWidth: 0,
-            overflow: "hidden",
-            display: "flex",
-            alignItems: "center",
+            overflowX: "auto",
+            overflowY: "hidden",
+            height: "100%",
           }}
         >
-          <Tabs
-            value={tabIndex}
-            onChange={onChange}
-            variant="scrollable"
-            scrollButtons="auto"
-            allowScrollButtonsMobile
+          <Box
             sx={{
-              flex: 1,
-              minWidth: 0,
-              height: tabHeight,
-              "& .MuiTabs-flexContainer": {
-                alignItems: "stretch",
-              },
-              "& .MuiTabs-scroller": {
-                // only this part scrolls horizontally
-                overflowX: "auto !important",
-              },
-              "& .MuiTab-root": {
-                minHeight: tabHeight,
-                textTransform: "none",
-                fontSize: isXs ? 11 : 13,
-                px: 1,
-                py: 0,
-                alignItems: "center",
-                justifyContent: "flex-start",
-                // these control tab sizing
-                minWidth: isXs ? 80 : 110,
-                maxWidth: 220,
-              },
-              "& .MuiTab-root.Mui-selected": {
-                fontWeight: 600,
-                bgcolor:
-                  theme.palette.mode === "dark"
-                    ? "rgba(255,255,255,0.04)"
-                    : "rgba(0,0,0,0.03)",
-              },
-              "& .MuiTabs-indicator": {
-                height: 2,
-                borderRadius: 999,
-              },
+              display: "inline-flex", // width = content; parent scrolls
+              alignItems: "stretch",
+              height: "100%",
             }}
           >
-            {tabs.map((tab, idx) => (
-              <Tab
-                key={tab.path || idx}
-                disableRipple
-                label={
+            {tabs.map((tab, idx) => {
+              const active = idx === tabIndex;
+              return (
+                <Box
+                  key={tab.path || idx}
+                  component="button"
+                  type="button"
+                  onClick={() => handleTabClick(idx)}
+                  sx={{
+                    border: "none",
+                    outline: "none",
+                    cursor: "pointer",
+                    backgroundColor: active
+                      ? theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.04)"
+                        : "rgba(0,0,0,0.03)"
+                      : "transparent",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.75,
+                    px: 1.25,
+                    height: tabHeight,
+                    borderBottom: active
+                      ? `2px solid ${theme.palette.primary.main}`
+                      : "2px solid transparent",
+                    fontSize: isXs ? 11 : 13,
+                    color: active
+                      ? theme.palette.text.primary
+                      : theme.palette.text.secondary,
+                    flex: "0 0 auto", // each tab takes its own width
+                    minWidth: isMobile ? 80 : 110,
+                    maxWidth: 220,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    "&:hover": {
+                      backgroundColor: theme.palette.action.hover,
+                    },
+                  }}
+                >
+                  {/* favicon */}
+                  {tab.favicon && (
+                    <Box
+                      component="img"
+                      src={tab.favicon}
+                      alt=""
+                      sx={{
+                        width: 14,
+                        height: 14,
+                        borderRadius: 0.5,
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
+
+                  {/* title */}
                   <Box
+                    component="span"
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 0.75,
-                      maxWidth: "100%",
+                      flex: 1,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                     }}
                   >
-                    {/* favicon / icon */}
-                    {tab.favicon && (
-                      <Box
-                        component="img"
-                        src={tab.favicon}
-                        alt=""
-                        sx={{
-                          width: 14,
-                          height: 14,
-                          borderRadius: 0.5,
-                          flexShrink: 0,
-                        }}
-                      />
-                    )}
+                    {tab.label}
+                  </Box>
 
-                    {/* title */}
-                    <Box
-                      component="span"
+                  {/* close (skip first to "pin" it) */}
+                  {idx !== 0 && (
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleClose(e, idx)}
                       sx={{
-                        flex: 1,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
+                        p: 0,
+                        ml: 0.25,
+                        flexShrink: 0,
+                        opacity: 0.7,
+                        "&:hover": {
+                          opacity: 1,
+                          bgcolor: "transparent",
+                        },
                       }}
                     >
-                      {tab.label}
-                    </Box>
+                      <CloseIcon sx={{ fontSize: 15 }} />
+                    </IconButton>
+                  )}
+                </Box>
+              );
+            })}
 
-                    {/* close icon (skip first tab if you want it pinned) */}
-                    {idx !== 0 && (
-                      <IconButton
-                        size="small"
-                        onClick={(e) => onClose(e, idx)}
-                        sx={{
-                          p: 0,
-                          ml: 0.25,
-                          flexShrink: 0,
-                          opacity: 0.7,
-                          "&:hover": {
-                            opacity: 1,
-                            bgcolor: "transparent",
-                          },
-                        }}
-                      >
-                        <CloseIcon sx={{ fontSize: 15 }} />
-                      </IconButton>
-                    )}
-                  </Box>
-                }
-              />
-            ))}
-          </Tabs>
-        </Box>
-
-        {/* + button ALWAYS to the right of the last tab, but still inside middle block */}
-        <Box
-          sx={{
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            px: 0.5,
-            borderLeft: 1,
-            borderColor: "divider",
-          }}
-        >
-          <Tooltip title="New tab">
-            <IconButton
-              size="small"
-              onClick={handleAddTab}
-              sx={{ p: 0.5 }}
+            {/* + button IMMEDIATELY after last tab */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                px: 0.5,
+                flexShrink: 0,
+              }}
             >
-              <AddIcon sx={{ fontSize: 20 }} />
-            </IconButton>
-          </Tooltip>
+              <Tooltip title="New tab">
+                <IconButton
+                  size="small"
+                  onClick={handleAddTab}
+                  sx={{
+                    p: 0.5,
+                    borderRadius: "999px",
+                    border: `1px solid ${theme.palette.divider}`,
+                  }}
+                >
+                  <AddIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </Box>
         </Box>
       </Box>
 
-      {/* Right: fixed icons (never move) */}
+      {/* RIGHT: fixed icons, never move */}
       <Box
         sx={{
           display: "flex",
