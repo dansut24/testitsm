@@ -1,5 +1,5 @@
 // NavbarTabs.js
-import React from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   Box,
   IconButton,
@@ -13,6 +13,8 @@ import CloseIcon from "@mui/icons-material/Close";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
 export default function NavbarTabs({
   tabs,
@@ -21,11 +23,38 @@ export default function NavbarTabs({
   handleTabClose,
   handleTabReorder,
   isMobile,
-  navTrigger,
+  navTrigger, // optional, Layout isn't passing this right now
 }) {
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down("sm"));
   const tabHeight = 40;
+
+  const scrollRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollButtons = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const maxScrollLeft = scrollWidth - clientWidth;
+    setCanScrollLeft(scrollLeft > 2);
+    setCanScrollRight(scrollLeft < maxScrollLeft - 2);
+  };
+
+  useEffect(() => {
+    updateScrollButtons();
+  }, [tabs.length]);
+
+  const handleScroll = () => {
+    updateScrollButtons();
+  };
+
+  const scrollByAmount = (amount) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: amount, behavior: "smooth" });
+  };
 
   const handleTabClick = (idx) => {
     const tab = tabs[idx];
@@ -52,6 +81,12 @@ export default function NavbarTabs({
     const newTabs = [...tabs, newTab];
     handleTabReorder(newTabs);
     handleTabChange(null, newTabs.length - 1, newTab.path);
+
+    // scroll to the right so the new tab is visible
+    requestAnimationFrame(() => {
+      const el = scrollRef.current;
+      if (el) el.scrollLeft = el.scrollWidth;
+    });
   };
 
   return (
@@ -60,18 +95,17 @@ export default function NavbarTabs({
         width: "100%",
         maxWidth: "100%",
         height: tabHeight,
-        display: "grid",
-        gridTemplateColumns: navTrigger ? "auto 1fr auto" : "1fr auto",
+        display: "flex",
         alignItems: "stretch",
         borderBottom: 1,
         borderColor: "divider",
         bgcolor: theme.palette.background.paper,
         boxShadow: "inset 0 -1px 0 rgba(0,0,0,0.04)",
         zIndex: 1,
-        overflow: "hidden", // the row itself never exceeds its container
+        overflow: "hidden", // this row itself never widens the layout
       }}
     >
-      {/* LEFT: sidebar trigger */}
+      {/* LEFT: optional nav trigger (not used currently) */}
       {navTrigger && (
         <Box
           sx={{
@@ -87,28 +121,56 @@ export default function NavbarTabs({
         </Box>
       )}
 
-      {/* CENTER: tabs + + (scrollable area) */}
+      {/* CENTER: arrows + scrollable tabs + + button */}
       <Box
         sx={{
-          minWidth: 0, // grid column can shrink
-          overflow: "hidden", // no bleed; internal scroll instead
+          flex: 1,
+          minWidth: 0,
           display: "flex",
           alignItems: "center",
         }}
       >
-        {/* Scrollable strip with tabs + + */}
+        {/* Left arrow */}
         <Box
+          sx={{
+            flexShrink: 0,
+            borderRight: 1,
+            borderColor: "divider",
+            display: "flex",
+            alignItems: "center",
+            px: 0.5,
+          }}
+        >
+          <IconButton
+            size="small"
+            onClick={() => scrollByAmount(-150)}
+            disabled={!canScrollLeft}
+            sx={{ p: 0.25 }}
+          >
+            <ChevronLeftIcon sx={{ fontSize: 20 }} />
+          </IconButton>
+        </Box>
+
+        {/* Scrollable tab strip (no visible scrollbar) */}
+        <Box
+          ref={scrollRef}
+          onScroll={handleScroll}
           sx={{
             flex: 1,
             minWidth: 0,
             overflowX: "auto",
             overflowY: "hidden",
             height: "100%",
+            "&::-webkit-scrollbar": {
+              display: "none",
+            },
+            msOverflowStyle: "none",
+            scrollbarWidth: "none",
           }}
         >
           <Box
             sx={{
-              display: "inline-flex", // width = content; parent scrolls
+              display: "inline-flex",
               alignItems: "stretch",
               height: "100%",
             }}
@@ -142,7 +204,7 @@ export default function NavbarTabs({
                     color: active
                       ? theme.palette.text.primary
                       : theme.palette.text.secondary,
-                    flex: "0 0 auto", // each tab takes its own width
+                    flex: "0 0 auto",
                     minWidth: isMobile ? 80 : 110,
                     maxWidth: 220,
                     whiteSpace: "nowrap",
@@ -180,7 +242,7 @@ export default function NavbarTabs({
                     {tab.label}
                   </Box>
 
-                  {/* close (skip first to "pin" it) */}
+                  {/* close icon for non-first tabs (first pinned) */}
                   {idx !== 0 && (
                     <IconButton
                       size="small"
@@ -203,7 +265,7 @@ export default function NavbarTabs({
               );
             })}
 
-            {/* + button IMMEDIATELY after last tab */}
+            {/* + button right after last tab (scrolls with tabs) */}
             <Box
               sx={{
                 display: "flex",
@@ -229,9 +291,30 @@ export default function NavbarTabs({
             </Box>
           </Box>
         </Box>
+
+        {/* Right arrow */}
+        <Box
+          sx={{
+            flexShrink: 0,
+            borderLeft: 1,
+            borderColor: "divider",
+            display: "flex",
+            alignItems: "center",
+            px: 0.5,
+          }}
+        >
+          <IconButton
+            size="small"
+            onClick={() => scrollByAmount(150)}
+            disabled={!canScrollRight}
+            sx={{ p: 0.25 }}
+          >
+            <ChevronRightIcon sx={{ fontSize: 20 }} />
+          </IconButton>
+        </Box>
       </Box>
 
-      {/* RIGHT: fixed icons, never move */}
+      {/* RIGHT: fixed icons (never move) */}
       <Box
         sx={{
           display: "flex",
