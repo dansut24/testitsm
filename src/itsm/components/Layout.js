@@ -1,4 +1,3 @@
-// Layout.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -13,6 +12,9 @@ import {
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
 import Sidebar from "./Sidebar";
+
+import NotificationDrawer from "./NotificationDrawer";
+import ProfileDrawer from "./ProfileDrawer";
 
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
@@ -60,11 +62,19 @@ const Layout = () => {
   const [sidebarPinned, setSidebarPinned] = useState(true);
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState(null);
+  const [drawerType, setDrawerType] = useState(null); // 'search' | 'notifications' | 'profile' | null
 
   const username = "User";
   const userInitial = username[0]?.toUpperCase() || "U";
 
+  // Logout handler for ProfileDrawer
+  const handleLogout = () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    navigate("/login");
+  };
+
+  // Fix viewport height for mobile
   useEffect(() => {
     const setVh = () => {
       const vh = window.innerHeight * 0.01;
@@ -79,6 +89,7 @@ const Layout = () => {
     };
   }, []);
 
+  // Sync tabs with current route
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -353,15 +364,21 @@ const Layout = () => {
                   gap: 1,
                 }}
               >
-                <IconButton size="small">
+                <IconButton
+                  size="small"
+                  onClick={() => setDrawerType("notifications")}
+                >
                   <NotificationsIcon sx={{ fontSize: 18 }} />
                 </IconButton>
+
                 <Box
                   sx={{
                     display: "flex",
                     alignItems: "center",
                     gap: 0.5,
+                    cursor: "pointer",
                   }}
+                  onClick={() => setDrawerType("profile")}
                 >
                   <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>
                     {userInitial}
@@ -389,7 +406,10 @@ const Layout = () => {
             )}
 
             {isMobile && (
-              <IconButton size="small">
+              <IconButton
+                size="small"
+                onClick={() => setDrawerType("profile")}
+              >
                 <AccountCircleIcon sx={{ fontSize: 20 }} />
               </IconButton>
             )}
@@ -438,8 +458,12 @@ const Layout = () => {
           >
             <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
             <SearchIcon onClick={() => setDrawerType("search")} />
-            <NotificationsIcon onClick={() => setDrawerType("notifications")} />
-            <AccountCircleIcon onClick={() => setDrawerType("profile")} />
+            <NotificationsIcon
+              onClick={() => setDrawerType("notifications")}
+            />
+            <AccountCircleIcon
+              onClick={() => setDrawerType("profile")}
+            />
           </Box>
         )}
       </Box>
@@ -473,6 +497,37 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
+      {/* Desktop right-hand drawer for notifications/profile */}
+      {!isMobile && (
+        <SwipeableDrawer
+          anchor="right"
+          open={Boolean(drawerType)}
+          onClose={() => setDrawerType(null)}
+          onOpen={() => {}}
+          PaperProps={{
+            sx: {
+              width: 360,
+              maxWidth: "100%",
+            },
+          }}
+        >
+          {drawerType === "notifications" && <NotificationDrawer />}
+          {drawerType === "profile" && (
+            <ProfileDrawer onLogout={handleLogout} />
+          )}
+          {drawerType === "search" && (
+            <Box p={2}>
+              <Typography variant="h6" gutterBottom>
+                Search
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Advanced search coming soon.
+              </Typography>
+            </Box>
+          )}
+        </SwipeableDrawer>
+      )}
+
       {/* Bottom action drawer (mobile) */}
       {isMobile && (
         <SwipeableDrawer
@@ -498,13 +553,13 @@ const Layout = () => {
           }}
         >
           {drawerType === "search" && (
-            <Typography variant="h6">Search</Typography>
+            <Typography variant="h6" gutterBottom>
+              Search
+            </Typography>
           )}
-          {drawerType === "notifications" && (
-            <Typography variant="h6">Notifications</Typography>
-          )}
+          {drawerType === "notifications" && <NotificationDrawer />}
           {drawerType === "profile" && (
-            <Typography variant="h6">Profile</Typography>
+            <ProfileDrawer onLogout={handleLogout} />
           )}
         </SwipeableDrawer>
       )}
