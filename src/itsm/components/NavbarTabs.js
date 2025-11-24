@@ -15,7 +15,7 @@ export default function NavbarTabs({
   handleTabClose,
   handleTabReorder,
   isMobile,
-  navTrigger, // optional
+  navTrigger, // optional (sidebar trigger, logo, etc.)
 }) {
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down("sm"));
@@ -26,6 +26,12 @@ export default function NavbarTabs({
   const scrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+
+  // 🔹 Long-press handling for mobile close
+  const longPressRef = useRef({
+    timerId: null,
+    index: null,
+  });
 
   const updateScrollButtons = () => {
     const el = scrollRef.current;
@@ -79,14 +85,41 @@ export default function NavbarTabs({
     });
   };
 
-  const handleClose = (e, idx) => {
-    e.stopPropagation();
+  // 🔹 Normal close handler (desktop + long-press)
+  const handleClose = (idx) => {
     const tab = tabs[idx];
     if (!tab) return;
     handleTabClose(tab.path);
 
     const newTabs = tabs.filter((_, i) => i !== idx);
     handleTabReorder(newTabs);
+  };
+
+  // 🔹 Long press start (mobile only)
+  const handlePressStart = (idx) => {
+    if (!isMobile) return;
+    if (idx === 0) return; // never close first tab
+
+    // clear any existing timer
+    if (longPressRef.current.timerId) {
+      clearTimeout(longPressRef.current.timerId);
+    }
+    longPressRef.current.index = idx;
+
+    longPressRef.current.timerId = setTimeout(() => {
+      handleClose(idx);
+      longPressRef.current.timerId = null;
+      longPressRef.current.index = null;
+    }, 600); // 600ms press = close
+  };
+
+  // 🔹 Long press end / cancel
+  const handlePressEnd = () => {
+    if (longPressRef.current.timerId) {
+      clearTimeout(longPressRef.current.timerId);
+      longPressRef.current.timerId = null;
+      longPressRef.current.index = null;
+    }
   };
 
   const handleAddTab = () => {
@@ -177,7 +210,7 @@ export default function NavbarTabs({
           </Box>
         )}
 
-        {/* Scrollable strip (mobile: swipe / desktop: arrows + click-scroll) */}
+        {/* Scrollable strip (mobile: swipe / desktop: arrows + wheel) */}
         <Box
           ref={scrollRef}
           onScroll={handleScroll}
@@ -208,14 +241,17 @@ export default function NavbarTabs({
                   type="button"
                   data-tab-index={idx}
                   onClick={() => handleTabClick(idx)}
+                  onMouseDown={() => handlePressStart(idx)}
+                  onMouseUp={handlePressEnd}
+                  onMouseLeave={handlePressEnd}
+                  onTouchStart={() => handlePressStart(idx)}
+                  onTouchEnd={handlePressEnd}
                   sx={{
                     border: "none",
                     outline: "none",
                     cursor: "pointer",
                     backgroundColor: active
-                      ? theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.06)"
-                        : "rgba(0,0,0,0.04)"
+                      ? theme.palette.action.selected
                       : "transparent",
                     display: "flex",
                     alignItems: "center",
@@ -231,12 +267,14 @@ export default function NavbarTabs({
                       : theme.palette.text.secondary,
                     flex: "0 0 auto",
                     minWidth: isMobile ? 90 : 100,
-                    maxWidth: 200,
+                    maxWidth: isMobile ? 160 : 220,
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     "&:hover": {
-                      backgroundColor: theme.palette.action.hover,
+                      backgroundColor: active
+                        ? theme.palette.action.selected
+                        : theme.palette.action.hover,
                     },
                   }}
                 >
@@ -265,11 +303,15 @@ export default function NavbarTabs({
                     {tab.label}
                   </Box>
 
-                  {idx !== 0 && (
+                  {/* Desktop close icon only */}
+                  {!isMobile && idx !== 0 && (
                     <Box
                       component="button"
                       type="button"
-                      onClick={(e) => handleClose(e, idx)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleClose(idx);
+                      }}
                       sx={{
                         border: "none",
                         outline: "none",
@@ -284,7 +326,7 @@ export default function NavbarTabs({
                         "&:hover": { opacity: 1 },
                       }}
                     >
-                      <CloseIcon sx={{ fontSize: isMobile ? 18 : 14 }} />
+                      <CloseIcon sx={{ fontSize: 14 }} />
                     </Box>
                   )}
                 </Box>
