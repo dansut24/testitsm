@@ -1,3 +1,4 @@
+// Layout.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -29,8 +30,8 @@ import ArticleIcon from "@mui/icons-material/Article";
 
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 60;
-const APP_HEADER_HEIGHT = 48;
-const TABBAR_HEIGHT = 40;
+const APP_HEADER_HEIGHT = 38;   // 🔹 was 48
+const TABBAR_HEIGHT = 30;       // 🔹 was 40
 const NAVBAR_HEIGHT = APP_HEADER_HEIGHT + TABBAR_HEIGHT;
 const BOTTOM_NAV_HEIGHT = 56;
 
@@ -61,11 +62,9 @@ const Layout = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null);
 
-  // Fake user (replace with real auth data / localStorage if you like)
   const username = "User";
   const userInitial = username[0]?.toUpperCase() || "U";
 
-  // ✅ Fix viewport height for mobile + orientation changes
   useEffect(() => {
     const setVh = () => {
       const vh = window.innerHeight * 0.01;
@@ -80,7 +79,6 @@ const Layout = () => {
     };
   }, []);
 
-  // Sync tabs with current route
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -158,7 +156,6 @@ const Layout = () => {
         overscrollBehavior: "none",
       }}
     >
-      {/* Sidebar (desktop) */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -172,7 +169,6 @@ const Layout = () => {
         />
       )}
 
-      {/* Main grid */}
       <Box
         sx={{
           flex: 1,
@@ -197,18 +193,17 @@ const Layout = () => {
             overflow: "hidden",
           }}
         >
-          {/* Row 1: App header */}
+          {/* Row 1: header */}
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
-              px: 1.5,
-              gap: 1.5,
+              px: 1,
+              gap: 1,
               borderBottom: "1px solid",
               borderColor: "divider",
             }}
           >
-            {/* Logo / brand */}
             {!isMobile && sidebarMode === "hidden" ? (
               <IconButton
                 onClick={() => setMobileSidebarOpen(true)}
@@ -217,7 +212,7 @@ const Layout = () => {
                 <img
                   src="https://www.bing.com/sa/simg/favicon-2x.ico"
                   alt="Logo"
-                  style={{ width: 24, height: 24 }}
+                  style={{ width: 20, height: 20 }}
                 />
               </IconButton>
             ) : (
@@ -225,18 +220,18 @@ const Layout = () => {
                 sx={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 1,
+                  gap: 0.75,
                 }}
               >
                 <img
                   src="/logo192.png"
                   alt="Logo"
-                  style={{ width: 24, height: 24, borderRadius: 4 }}
+                  style={{ width: 22, height: 22, borderRadius: 4 }}
                 />
                 {!isMobile && (
                   <Typography
-                    variant="subtitle1"
-                    sx={{ fontWeight: 600, letterSpacing: 0.3 }}
+                    variant="subtitle2"
+                    sx={{ fontWeight: 600, letterSpacing: 0.3, fontSize: 13 }}
                   >
                     Hi5Tech ITSM
                   </Typography>
@@ -244,7 +239,7 @@ const Layout = () => {
               </Box>
             )}
 
-            {/* Search bar */}
+            {/* Search */}
             <Box
               sx={{
                 flex: 1,
@@ -257,55 +252,56 @@ const Layout = () => {
                     ? "rgba(255,255,255,0.04)"
                     : "rgba(0,0,0,0.03)",
                 borderRadius: 999,
-                px: 1.5,
-                py: 0.25,
+                px: 1,
+                py: 0,
+                height: 26,
               }}
             >
-              <SearchIcon sx={{ fontSize: 18, mr: 1, opacity: 0.7 }} />
+              <SearchIcon sx={{ fontSize: 16, mr: 0.75, opacity: 0.7 }} />
               <InputBase
-                placeholder="Search tickets, devices, users..."
+                placeholder="Search..."
                 sx={{
-                  fontSize: 13,
+                  fontSize: 12,
                   width: "100%",
                 }}
               />
             </Box>
 
-            {/* Right header actions */}
+            {/* Right actions */}
             {!isMobile && (
               <Box
                 sx={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 1.5,
+                  gap: 1,
                 }}
               >
                 <IconButton size="small">
-                  <NotificationsIcon sx={{ fontSize: 20 }} />
+                  <NotificationsIcon sx={{ fontSize: 18 }} />
                 </IconButton>
-
                 <Box
                   sx={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 1,
+                    gap: 0.5,
                   }}
                 >
-                  <Avatar sx={{ width: 28, height: 28, fontSize: 14 }}>
+                  <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>
                     {userInitial}
                   </Avatar>
                   <Box sx={{ display: "flex", flexDirection: "column" }}>
                     <Typography
-                      variant="body2"
-                      sx={{ lineHeight: 1.2, fontWeight: 500 }}
+                      variant="caption"
+                      sx={{ lineHeight: 1.2, fontWeight: 500, fontSize: 11 }}
                     >
                       {username}
                     </Typography>
                     <Typography
                       variant="caption"
                       sx={{
-                        lineHeight: 1.2,
+                        lineHeight: 1.1,
                         color: "text.secondary",
+                        fontSize: 10,
                       }}
                     >
                       Admin
@@ -315,10 +311,9 @@ const Layout = () => {
               </Box>
             )}
 
-            {/* Mobile right action: profile icon */}
             {isMobile && (
               <IconButton size="small">
-                <AccountCircleIcon sx={{ fontSize: 22 }} />
+                <AccountCircleIcon sx={{ fontSize: 20 }} />
               </IconButton>
             )}
           </Box>
@@ -352,7 +347,7 @@ const Layout = () => {
           <Outlet />
         </Box>
 
-        {/* Bottom nav (mobile only) */}
+        {/* Bottom nav (mobile) */}
         {isMobile && (
           <Box
             sx={{
@@ -372,7 +367,6 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Sidebar Drawer (mobile & hidden desktop) */}
       {(isMobile || sidebarMode === "hidden") && (
         <SwipeableDrawer
           anchor="left"
@@ -401,7 +395,6 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Bottom action drawer */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
@@ -425,11 +418,15 @@ const Layout = () => {
             },
           }}
         >
-          {drawerType === "search" && <Typography variant="h6">Search</Typography>}
+          {drawerType === "search" && (
+            <Typography variant="h6">Search</Typography>
+          )}
           {drawerType === "notifications" && (
             <Typography variant="h6">Notifications</Typography>
           )}
-          {drawerType === "profile" && <Typography variant="h6">Profile</Typography>}
+          {drawerType === "profile" && (
+            <Typography variant="h6">Profile</Typography>
+          )}
         </SwipeableDrawer>
       )}
     </Box>
