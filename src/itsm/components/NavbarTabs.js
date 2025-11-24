@@ -5,9 +5,6 @@ import { useTheme } from "@mui/material/styles";
 
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
-import SearchIcon from "@mui/icons-material/Search";
-import NotificationsIcon from "@mui/icons-material/Notifications";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
@@ -18,7 +15,7 @@ export default function NavbarTabs({
   handleTabClose,
   handleTabReorder,
   isMobile,
-  navTrigger, // currently unused but supported
+  navTrigger, // optional
 }) {
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down("sm"));
@@ -63,7 +60,6 @@ export default function NavbarTabs({
     const tabEl = container.querySelector(`[data-tab-index="${index}"]`);
     if (!tabEl) return;
 
-    // Let the browser do the minimal scroll needed to reveal the tab
     tabEl.scrollIntoView({
       behavior: "smooth",
       block: "nearest",
@@ -76,7 +72,6 @@ export default function NavbarTabs({
     if (!tab) return;
     handleTabChange(null, idx, tab.path);
 
-    // After state updates & render, nudge that tab fully into view
     requestAnimationFrame(() => {
       scrollTabIntoView(idx);
     });
@@ -102,7 +97,6 @@ export default function NavbarTabs({
     handleTabReorder(newTabs);
     handleTabChange(null, newTabs.length - 1, newTab.path);
 
-    // scroll to the right so the new tab is visible
     requestAnimationFrame(() => {
       const el = scrollRef.current;
       if (el) el.scrollLeft = el.scrollWidth;
@@ -151,7 +145,7 @@ export default function NavbarTabs({
           alignItems: "center",
         }}
       >
-        {/* Left arrow (only rendered if we can scroll left) */}
+        {/* Left arrow (only when needed) */}
         {canScrollLeft && (
           <Box
             sx={{
@@ -338,7 +332,7 @@ export default function NavbarTabs({
           </Box>
         </Box>
 
-        {/* Right arrow (only rendered if we can scroll right) */}
+        {/* Right arrow (only when needed) */}
         {canScrollRight && (
           <Box
             sx={{
@@ -367,79 +361,6 @@ export default function NavbarTabs({
               <ChevronRightIcon sx={{ fontSize: 20 }} />
             </Box>
           </Box>
-        )}
-      </Box>
-
-      {/* RIGHT: fixed icons (never move) */}
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 0.5,
-          px: 1,
-          borderLeft: 1,
-          borderColor: "divider",
-          flexShrink: 0,
-          bgcolor:
-            theme.palette.mode === "dark"
-              ? "rgba(255,255,255,0.02)"
-              : "rgba(0,0,0,0.01)",
-        }}
-      >
-        {!isMobile && (
-          <>
-            <Tooltip title="Search">
-              <Box
-                component="button"
-                type="button"
-                sx={{
-                  border: "none",
-                  outline: "none",
-                  background: "transparent",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  p: 0,
-                }}
-              >
-                <SearchIcon sx={{ fontSize: 20 }} />
-              </Box>
-            </Tooltip>
-            <Tooltip title="Notifications">
-              <Box
-                component="button"
-                type="button"
-                sx={{
-                  border: "none",
-                  outline: "none",
-                  background: "transparent",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  p: 0,
-                }}
-              >
-                <NotificationsIcon sx={{ fontSize: 20 }} />
-              </Box>
-            </Tooltip>
-            <Tooltip title="Profile">
-              <Box
-                component="button"
-                type="button"
-                sx={{
-                  border: "none",
-                  outline: "none",
-                  background: "transparent",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  p: 0,
-                }}
-              >
-                <AccountCircleIcon sx={{ fontSize: 22 }} />
-              </Box>
-            </Tooltip>
-          </>
         )}
       </Box>
     </Box>
