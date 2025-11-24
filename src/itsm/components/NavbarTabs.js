@@ -1,4 +1,4 @@
-// NavbarTabs.js
+// src/itsm/layout/NavbarTabs.js
 import React, { useRef, useState, useEffect } from "react";
 import { Box, Tooltip, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
@@ -19,7 +19,9 @@ export default function NavbarTabs({
 }) {
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down("sm"));
-  const tabHeight = 30; // slim
+
+  // 🔹 Taller tabs on mobile, slim on desktop
+  const tabHeight = isMobile ? 48 : 30;
 
   const scrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -218,17 +220,17 @@ export default function NavbarTabs({
                     display: "flex",
                     alignItems: "center",
                     gap: 0.75,
-                    px: 1,
+                    px: isMobile ? 1.6 : 1,
                     height: tabHeight,
                     borderBottom: active
                       ? `2px solid ${theme.palette.primary.main}`
                       : "2px solid transparent",
-                    fontSize: isXs ? 10 : 12,
+                    fontSize: isMobile ? 14 : isXs ? 10 : 12,
                     color: active
                       ? theme.palette.text.primary
                       : theme.palette.text.secondary,
                     flex: "0 0 auto",
-                    minWidth: isMobile ? 70 : 100,
+                    minWidth: isMobile ? 90 : 100,
                     maxWidth: 200,
                     whiteSpace: "nowrap",
                     overflow: "hidden",
@@ -244,8 +246,8 @@ export default function NavbarTabs({
                       src={tab.favicon}
                       alt=""
                       sx={{
-                        width: 12,
-                        height: 12,
+                        width: isMobile ? 16 : 12,
+                        height: isMobile ? 16 : 12,
                         borderRadius: 0.5,
                         flexShrink: 0,
                       }}
@@ -282,7 +284,7 @@ export default function NavbarTabs({
                         "&:hover": { opacity: 1 },
                       }}
                     >
-                      <CloseIcon sx={{ fontSize: 14 }} />
+                      <CloseIcon sx={{ fontSize: isMobile ? 18 : 14 }} />
                     </Box>
                   )}
                 </Box>
@@ -317,7 +319,7 @@ export default function NavbarTabs({
                     borderRadius: "999px",
                   }}
                 >
-                  <AddIcon sx={{ fontSize: 16 }} />
+                  <AddIcon sx={{ fontSize: isMobile ? 22 : 16 }} />
                 </Box>
               </Tooltip>
             </Box>
