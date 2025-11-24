@@ -187,6 +187,7 @@ const Layout = () => {
             height: NAVBAR_HEIGHT,
             borderBottom: "1px solid",
             borderColor: "divider",
+            overflow: "hidden", // 🔹 ensure this row itself never overflows horizontally
           }}
         >
           {/* 🔹 Show menu/logo if sidebar hidden on desktop */}
@@ -205,7 +206,13 @@ const Layout = () => {
           )}
 
           {/* Tabs */}
-          <Box sx={{ flex: 1, overflow: "hidden" }}>
+          <Box
+            sx={{
+              flex: 1,
+              overflow: "hidden",
+              minWidth: 0, // 🔥 CRITICAL: allow the tab container to shrink instead of pushing layout
+            }}
+          >
             <NavbarTabs
               tabs={tabs}
               tabIndex={tabIndex}
