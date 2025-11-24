@@ -1,15 +1,13 @@
 // NavbarTabs.js
 import React, { useRef } from "react";
-import {
-  Box,
-  IconButton,
-  Tooltip,
-  useMediaQuery,
-} from "@mui/material";
 import { useTheme } from "@mui/material/styles";
+import { Tabs } from "@sinm/react-chrome-tabs";
+import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
+import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
+
+import { Box, IconButton, Tooltip, useMediaQuery } from "@mui/material";
 
 import AddIcon from "@mui/icons-material/Add";
-import CloseIcon from "@mui/icons-material/Close";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
@@ -26,229 +24,247 @@ export default function NavbarTabs({
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down("sm"));
   const scrollRef = useRef(null);
-  const tabHeight = 40;
 
-  const onTabClick = (idx) => {
-    const tab = tabs[idx];
-    if (!tab) return;
-    handleTabChange(null, idx, tab.path);
+  const styles = `
+    .navbar-container {
+      width: 100%;
+      max-width: 100%;
+      position: relative;
+      background: ${theme.palette.background.paper};
+      display: flex;
+      align-items: stretch;
+      height: 40px;
+      box-shadow: inset 0 -1px 0 ${theme.palette.divider};
+      z-index: 1;
+      overflow: hidden; /* <<< prevent bar from widening the page */
+    }
+
+    .chrome-tabs-bottom-bar {
+      display: none !important;
+    }
+
+    .ctn-bar {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .nav-trigger-wrap {
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      border-right: 1px solid ${theme.palette.divider};
+      flex-shrink: 0;
+    }
+
+    .ctn-scroll {
+      flex: 1;
+      min-width: 0;
+      height: 100%;
+      overflow-x: auto;     /* scroll INSIDE this area only */
+      overflow-y: hidden;
+    }
+
+    .ctn-scroll::-webkit-scrollbar {
+      height: 4px;
+    }
+
+    .ctn-scroll::-webkit-scrollbar-thumb {
+      border-radius: 999px;
+    }
+
+    .chrome-tabs {
+      background: transparent !important;
+      height: 100%;
+      min-width: 100%;       /* fill width; extra tabs extend within scroller */
+    }
+
+    .chrome-tab {
+      background: transparent !important;
+      height: 40px !important;
+      margin-top: 0 !important;
+      box-shadow: none !important;
+      border-top: none !important;
+      font-size: ${isXs ? 11 : 13}px;
+      max-width: 200px;      /* don't allow tabs to be too wide */
+    }
+
+    .chrome-tab.chrome-tab-active .chrome-tab-title {
+      font-weight: 600;
+    }
+
+    .chrome-tab-title {
+      max-width: 130px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chrome-tab-divider {
+      top: 6px !important;
+      bottom: 6px !important;
+      opacity: 0.6;
+    }
+
+    .chrome-tab-background::before,
+    .chrome-tab-background::after {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+
+    .navbar-icons {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 8px;
+      border-left: 1px solid ${theme.palette.divider};
+      flex-shrink: 0;
+      background: linear-gradient(
+        to right,
+        ${theme.palette.background.paper},
+        ${theme.palette.background.default}
+      );
+    }
+
+    .navbar-icons svg {
+      font-size: 20px;
+    }
+
+    .navbar-icons .add-tab-icon {
+      font-size: 24px;
+    }
+
+    .navbar-icons-icon {
+      cursor: pointer;
+      transition: transform 0.12s ease, opacity 0.12s ease;
+      opacity: 0.9;
+    }
+
+    .navbar-icons-icon:hover {
+      transform: translateY(-1px);
+      opacity: 1;
+    }
+
+    @media (max-width: 600px) {
+      .navbar-container {
+        height: 40px;
+      }
+
+      .ctn-scroll {
+        overflow-x: auto; /* still allow scroll on mobile */
+      }
+
+      .chrome-tabs {
+        display: flex !important;
+        flex: 1;
+      }
+
+      .chrome-tab {
+        flex: 1 1 auto !important;
+        max-width: none !important;
+      }
+
+      .chrome-tab-title {
+        font-size: 11px;
+        text-align: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .navbar-icons {
+        gap: 4px;
+        padding-right: 6px;
+      }
+    }
+  `;
+
+  const scrollElementIntoView = (el, opts = { inline: "center" }) => {
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "nearest", ...opts });
+    }
   };
 
-  const onClose = (e, idx) => {
-    e.stopPropagation();
-    const tab = tabs[idx];
-    if (!tab) return;
+  const onTabActive = (id) => {
+    const idx = tabs.findIndex((t) => t.id === id || t.path === id);
+    if (idx >= 0) {
+      handleTabChange(null, idx, tabs[idx].path);
 
-    handleTabClose(tab.path);
+      // scroll active tab into view within the ctn-scroll area
+      requestAnimationFrame(() => {
+        const container = scrollRef.current;
+        if (!container) return;
+        const activeTab = container.querySelector(".chrome-tab.chrome-tab-active");
+        if (!activeTab) return;
+        scrollElementIntoView(activeTab, { inline: "center" });
+      });
+    }
+  };
 
-    const newTabs = tabs.filter((_, i) => i !== idx);
-    handleTabReorder(newTabs);
+  const onTabClose = (id) => {
+    const tab = tabs.find((t) => t.id === id || t.path === id);
+    if (tab) handleTabClose(tab.path);
   };
 
   const handleAddTab = () => {
-    const newTab = {
-      label: "New Tab",
-      path: `/new-tab/${tabs.length + 1}`,
-      favicon: "/favicon.ico",
-    };
-    const newTabs = [...tabs, newTab];
+    const newTabs = [
+      ...tabs,
+      { label: "New Tab", path: `/new-tab/${tabs.length + 1}` },
+    ];
     handleTabReorder(newTabs);
+
+    // activate the new tab
+    const newTab = newTabs[newTabs.length - 1];
     handleTabChange(null, newTabs.length - 1, newTab.path);
 
-    // scroll to the far right so the new tab is visible
+    // scroll all the way to the right to reveal it
     requestAnimationFrame(() => {
-      if (scrollRef.current) {
-        const el = scrollRef.current;
-        el.scrollLeft = el.scrollWidth;
-      }
+      const container = scrollRef.current;
+      if (container) container.scrollLeft = container.scrollWidth;
     });
   };
 
   return (
-    <Box
-      sx={{
-        width: "100%",
-        maxWidth: "100%",
-        height: tabHeight,
-        display: "flex",
-        alignItems: "stretch",
-        borderBottom: 1,
-        borderColor: "divider",
-        bgcolor: theme.palette.background.paper,
-        boxShadow: "inset 0 -1px 0 rgba(0,0,0,0.04)",
-        zIndex: 1,
-        overflow: "hidden", // bar itself never widens the layout
-      }}
-    >
-      {/* Left: sidebar trigger / burger etc. */}
-      {navTrigger && (
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            px: 1,
-            borderRight: 1,
-            borderColor: "divider",
-            flexShrink: 0,
-          }}
-        >
-          {navTrigger}
-        </Box>
-      )}
+    <>
+      <style>{styles}</style>
+      <div className="navbar-container">
+        {navTrigger && <div className="nav-trigger-wrap">{navTrigger}</div>}
 
-      {/* Center: tabs (fixed area, internal horizontal scroll) */}
-      <Box
-        ref={scrollRef}
-        sx={{
-          flex: 1,
-          minWidth: 0,
-          overflowX: "auto",   // scroll INSIDE this area
-          overflowY: "hidden",
-          display: "flex",
-          alignItems: "center",
-        }}
-      >
-        <Box
-          sx={{
-            display: "inline-flex", // content width can grow; parent scrolls
-            alignItems: "stretch",
-            height: "100%",
-          }}
-        >
-          {tabs.map((tab, idx) => {
-            const active = idx === tabIndex;
-            return (
-              <Box
-                key={tab.path || idx}
-                component="button"
-                type="button"
-                onClick={() => onTabClick(idx)}
-                sx={{
-                  border: "none",
-                  outline: "none",
-                  cursor: "pointer",
-                  backgroundColor: active
-                    ? theme.palette.mode === "dark"
-                      ? "rgba(255,255,255,0.04)"
-                      : "rgba(0,0,0,0.03)"
-                    : "transparent",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0.75,
-                  px: 1.25,
-                  height: tabHeight,
-                  borderBottom: active
-                    ? `2px solid ${theme.palette.primary.main}`
-                    : "2px solid transparent",
-                  fontSize: isXs ? 11 : 13,
-                  color: active
-                    ? theme.palette.text.primary
-                    : theme.palette.text.secondary,
-                  flex: "0 0 auto",           // DON'T stretch/shrink siblings
-                  minWidth: isMobile ? 80 : 110,
-                  maxWidth: 220,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  "&:hover": {
-                    backgroundColor: theme.palette.action.hover,
-                  },
-                }}
-              >
-                {/* favicon / icon */}
-                {tab.favicon && (
-                  <Box
-                    component="img"
-                    src={tab.favicon}
-                    alt=""
-                    sx={{
-                      width: 14,
-                      height: 14,
-                      borderRadius: 0.5,
-                      flexShrink: 0,
-                    }}
-                  />
-                )}
+        <div className="ctn-bar">
+          {/* Tabs area with internal horizontal scroll */}
+          <div ref={scrollRef} className="ctn-scroll">
+            <Tabs
+              darkMode={theme.palette.mode === "dark"}
+              onTabClose={onTabClose}
+              onTabActive={onTabActive}
+              tabs={tabs.map((t, idx) => ({
+                id: t.path,
+                title: t.label,
+                favicon: t.favicon || "https://www.google.com/favicon.ico",
+                active: idx === tabIndex,
+                isCloseIconVisible: idx !== 0, // keep first tab pinned if you want
+              }))}
+            />
+          </div>
 
-                {/* title */}
-                <Box
-                  component="span"
-                  sx={{
-                    flex: 1,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {tab.label}
-                </Box>
-
-                {/* close icon (skip first if you want it pinned) */}
-                {idx !== 0 && (
-                  <IconButton
-                    size="small"
-                    onClick={(e) => onClose(e, idx)}
-                    sx={{
-                      p: 0,
-                      ml: 0.25,
-                      flexShrink: 0,
-                      opacity: 0.7,
-                      "&:hover": {
-                        opacity: 1,
-                        bgcolor: "transparent",
-                      },
-                    }}
-                  >
-                    <CloseIcon sx={{ fontSize: 15 }} />
-                  </IconButton>
-                )}
-              </Box>
-            );
-          })}
-        </Box>
-      </Box>
-
-      {/* Right: +tab and profile/notifications etc. */}
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 0.5,
-          px: 1,
-          borderLeft: 1,
-          borderColor: "divider",
-          flexShrink: 0,
-          bgcolor: (theme) =>
-            theme.palette.mode === "dark"
-              ? "rgba(255,255,255,0.02)"
-              : "rgba(0,0,0,0.01)",
-        }}
-      >
-        <Tooltip title="New tab">
-          <IconButton size="small" onClick={handleAddTab} sx={{ p: 0.5 }}>
-            <AddIcon sx={{ fontSize: 22 }} />
-          </IconButton>
-        </Tooltip>
-
-        {!isMobile && (
-          <>
-            <Tooltip title="Search">
-              <IconButton size="small" sx={{ p: 0.5 }}>
-                <SearchIcon sx={{ fontSize: 20 }} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Notifications">
-              <IconButton size="small" sx={{ p: 0.5 }}>
-                <NotificationsIcon sx={{ fontSize: 20 }} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Profile">
-              <IconButton size="small" sx={{ p: 0.5 }}>
-                <AccountCircleIcon sx={{ fontSize: 22 }} />
-              </IconButton>
-            </Tooltip>
-          </>
-        )}
-      </Box>
-    </Box>
+          {/* Right icons (add + search/notifications/profile) */}
+          <div className="navbar-icons">
+            <AddIcon
+              className="navbar-icons-icon add-tab-icon"
+              onClick={handleAddTab}
+            />
+            {!isMobile && (
+              <>
+                <SearchIcon className="navbar-icons-icon" />
+                <NotificationsIcon className="navbar-icons-icon" />
+                <AccountCircleIcon className="navbar-icons-icon" />
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
