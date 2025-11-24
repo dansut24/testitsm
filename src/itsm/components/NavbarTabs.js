@@ -5,8 +5,17 @@ import { Tabs } from "@sinm/react-chrome-tabs";
 import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
 import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
 
-import { Box, IconButton, useMediaQuery } from "@mui/material";
+import {
+  Box,
+  IconButton,
+  Tooltip,
+  useMediaQuery,
+} from "@mui/material";
+
 import AddIcon from "@mui/icons-material/Add";
+import SearchIcon from "@mui/icons-material/Search";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
 export default function NavbarTabs({
   tabs,
@@ -32,7 +41,7 @@ export default function NavbarTabs({
       height: 40px;
       box-shadow: inset 0 -1px 0 ${theme.palette.divider};
       z-index: 1;
-      overflow: hidden; /* keep this bar from widening the page */
+      overflow: hidden; /* this bar itself will never widen the page */
     }
 
     .chrome-tabs-bottom-bar {
@@ -76,12 +85,13 @@ export default function NavbarTabs({
       display: inline-flex;
       align-items: center;
       height: 100%;
+      /* width is content-based, overflow handled by .ctn-scroll */
     }
 
     .chrome-tabs {
       background: transparent !important;
       height: 100%;
-      /* no min-width: let content define width and scroll inside .ctn-scroll */
+      /* IMPORTANT: no min-width / width here */
     }
 
     .chrome-tab {
@@ -91,7 +101,7 @@ export default function NavbarTabs({
       box-shadow: none !important;
       border-top: none !important;
       font-size: ${isXs ? 11 : 13}px;
-      max-width: 200px;
+      max-width: 190px; /* reasonable max size */
     }
 
     .chrome-tab.chrome-tab-active .chrome-tab-title {
@@ -118,13 +128,14 @@ export default function NavbarTabs({
       box-shadow: none !important;
     }
 
-    /* Plus button styled to sit like Chrome's add button */
+    /* Plus button lives INSIDE the scroll area, just after last tab */
     .add-tab-wrap {
       display: flex;
       align-items: center;
       justify-content: center;
       height: 100%;
-      padding: 0 4px 0 0;
+      padding-left: 4px;
+      padding-right: 4px;
       flex-shrink: 0;
     }
 
@@ -139,6 +150,7 @@ export default function NavbarTabs({
       cursor: pointer;
       opacity: 0.9;
       transition: background 0.12s ease, opacity 0.12s ease, transform 0.12s ease;
+      background: ${theme.palette.background.paper};
     }
 
     .add-tab-btn:hover {
@@ -149,6 +161,32 @@ export default function NavbarTabs({
 
     .add-tab-btn svg {
       font-size: 18px;
+    }
+
+    /* Right fixed icons (never move) */
+    .navbar-icons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 8px;
+      border-left: 1px solid ${theme.palette.divider};
+      flex-shrink: 0;
+      background: ${theme.palette.background.paper};
+    }
+
+    .navbar-icons-icon {
+      cursor: pointer;
+      transition: transform 0.12s ease, opacity 0.12s ease;
+      opacity: 0.9;
+    }
+
+    .navbar-icons-icon:hover {
+      transform: translateY(-1px);
+      opacity: 1;
+    }
+
+    .navbar-icons svg {
+      font-size: 20px;
     }
 
     @media (max-width: 600px) {
@@ -163,6 +201,11 @@ export default function NavbarTabs({
       .chrome-tab-title {
         font-size: 11px;
         text-align: center;
+      }
+
+      .navbar-icons {
+        gap: 4px;
+        padding-right: 6px;
       }
     }
   `;
@@ -182,7 +225,9 @@ export default function NavbarTabs({
       requestAnimationFrame(() => {
         const container = scrollRef.current;
         if (!container) return;
-        const activeTab = container.querySelector(".chrome-tab.chrome-tab-active");
+        const activeTab = container.querySelector(
+          ".chrome-tab.chrome-tab-active"
+        );
         if (!activeTab) return;
         scrollElementIntoView(activeTab, { inline: "center" });
       });
@@ -215,10 +260,11 @@ export default function NavbarTabs({
     <>
       <style>{styles}</style>
       <div className="navbar-container">
+        {/* Left: sidebar trigger */}
         {navTrigger && <div className="nav-trigger-wrap">{navTrigger}</div>}
 
         <div className="ctn-bar">
-          {/* Scroll area that contains chrome-tabs + plus button */}
+          {/* Middle: scrollable tabs + + button */}
           <div ref={scrollRef} className="ctn-scroll">
             <div className="ctn-inner">
               <Tabs
@@ -234,13 +280,42 @@ export default function NavbarTabs({
                 }))}
               />
 
-              {/* Plus immediately after the last tab, inside scroller */}
+              {/* + button immediately after last tab, inside scroll area */}
               <div className="add-tab-wrap">
                 <div className="add-tab-btn" onClick={handleAddTab}>
                   <AddIcon />
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Right: fixed icons that never move */}
+          <div className="navbar-icons">
+            {!isMobile && (
+              <>
+                <Tooltip title="Search">
+                  <span>
+                    <IconButton size="small" className="navbar-icons-icon">
+                      <SearchIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip title="Notifications">
+                  <span>
+                    <IconButton size="small" className="navbar-icons-icon">
+                      <NotificationsIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip title="Profile">
+                  <span>
+                    <IconButton size="small" className="navbar-icons-icon">
+                      <AccountCircleIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </>
+            )}
           </div>
         </div>
       </div>
