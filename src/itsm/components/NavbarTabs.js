@@ -19,7 +19,7 @@ export default function NavbarTabs({
 }) {
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down("sm"));
-  const tabHeight = 40;
+  const tabHeight = 30; // 🔹 slimmer tabs
 
   const scrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -120,7 +120,6 @@ export default function NavbarTabs({
         overflow: "hidden",
       }}
     >
-      {/* LEFT: optional nav trigger */}
       {navTrigger && (
         <Box
           sx={{
@@ -136,7 +135,6 @@ export default function NavbarTabs({
         </Box>
       )}
 
-      {/* CENTER: arrows (only when needed) + scrollable tabs + + button */}
       <Box
         sx={{
           flex: 1,
@@ -145,7 +143,7 @@ export default function NavbarTabs({
           alignItems: "center",
         }}
       >
-        {/* Left arrow (only when needed) */}
+        {/* Left arrow */}
         {canScrollLeft && (
           <Box
             sx={{
@@ -155,6 +153,7 @@ export default function NavbarTabs({
               display: "flex",
               alignItems: "center",
               px: 0.25,
+              height: "100%",
             }}
           >
             <Box
@@ -171,12 +170,12 @@ export default function NavbarTabs({
                 padding: 0,
               }}
             >
-              <ChevronLeftIcon sx={{ fontSize: 20 }} />
+              <ChevronLeftIcon sx={{ fontSize: 18 }} />
             </Box>
           </Box>
         )}
 
-        {/* Scrollable tab strip */}
+        {/* Scrollable strip */}
         <Box
           ref={scrollRef}
           onScroll={handleScroll}
@@ -186,9 +185,7 @@ export default function NavbarTabs({
             overflowX: "auto",
             overflowY: "hidden",
             height: "100%",
-            "&::-webkit-scrollbar": {
-              display: "none",
-            },
+            "&::-webkit-scrollbar": { display: "none" },
             msOverflowStyle: "none",
             scrollbarWidth: "none",
           }}
@@ -215,24 +212,24 @@ export default function NavbarTabs({
                     cursor: "pointer",
                     backgroundColor: active
                       ? theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.04)"
-                        : "rgba(0,0,0,0.03)"
+                        ? "rgba(255,255,255,0.06)"
+                        : "rgba(0,0,0,0.04)"
                       : "transparent",
                     display: "flex",
                     alignItems: "center",
                     gap: 0.75,
-                    px: 1.25,
+                    px: 1,
                     height: tabHeight,
                     borderBottom: active
                       ? `2px solid ${theme.palette.primary.main}`
                       : "2px solid transparent",
-                    fontSize: isXs ? 11 : 13,
+                    fontSize: isXs ? 10 : 12,
                     color: active
                       ? theme.palette.text.primary
                       : theme.palette.text.secondary,
                     flex: "0 0 auto",
-                    minWidth: isMobile ? 80 : 110,
-                    maxWidth: 220,
+                    minWidth: isMobile ? 70 : 100,
+                    maxWidth: 200,
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -241,22 +238,20 @@ export default function NavbarTabs({
                     },
                   }}
                 >
-                  {/* favicon */}
                   {tab.favicon && (
                     <Box
                       component="img"
                       src={tab.favicon}
                       alt=""
                       sx={{
-                        width: 14,
-                        height: 14,
+                        width: 12,
+                        height: 12,
                         borderRadius: 0.5,
                         flexShrink: 0,
                       }}
                     />
                   )}
 
-                  {/* title */}
                   <Box
                     component="span"
                     sx={{
@@ -268,7 +263,6 @@ export default function NavbarTabs({
                     {tab.label}
                   </Box>
 
-                  {/* close icon for non-first tabs (first pinned) */}
                   {idx !== 0 && (
                     <Box
                       component="button"
@@ -285,19 +279,17 @@ export default function NavbarTabs({
                         ml: 0.25,
                         flexShrink: 0,
                         opacity: 0.7,
-                        "&:hover": {
-                          opacity: 1,
-                        },
+                        "&:hover": { opacity: 1 },
                       }}
                     >
-                      <CloseIcon sx={{ fontSize: 15 }} />
+                      <CloseIcon sx={{ fontSize: 14 }} />
                     </Box>
                   )}
                 </Box>
               );
             })}
 
-            {/* + button right after last tab */}
+            {/* + button */}
             <Box
               sx={{
                 display: "flex",
@@ -321,18 +313,18 @@ export default function NavbarTabs({
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    p: 0.5,
+                    p: 0.25,
                     borderRadius: "999px",
                   }}
                 >
-                  <AddIcon sx={{ fontSize: 18 }} />
+                  <AddIcon sx={{ fontSize: 16 }} />
                 </Box>
               </Tooltip>
             </Box>
           </Box>
         </Box>
 
-        {/* Right arrow (only when needed) */}
+        {/* Right arrow */}
         {canScrollRight && (
           <Box
             sx={{
@@ -342,6 +334,7 @@ export default function NavbarTabs({
               display: "flex",
               alignItems: "center",
               px: 0.25,
+              height: "100%",
             }}
           >
             <Box
@@ -358,7 +351,7 @@ export default function NavbarTabs({
                 padding: 0,
               }}
             >
-              <ChevronRightIcon sx={{ fontSize: 20 }} />
+              <ChevronRightIcon sx={{ fontSize: 18 }} />
             </Box>
           </Box>
         )}
