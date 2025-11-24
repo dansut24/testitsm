@@ -1,10 +1,6 @@
 // NavbarTabs.js
 import React, { useRef, useState, useEffect } from "react";
-import {
-  Box,
-  Tooltip,
-  useMediaQuery,
-} from "@mui/material";
+import { Box, Tooltip, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
 import AddIcon from "@mui/icons-material/Add";
@@ -61,10 +57,29 @@ export default function NavbarTabs({
     el.scrollBy({ left: amount, behavior: "smooth" });
   };
 
+  const scrollTabIntoView = (index) => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const tabEl = container.querySelector(`[data-tab-index="${index}"]`);
+    if (!tabEl) return;
+
+    // Let the browser do the minimal scroll needed to reveal the tab
+    tabEl.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "nearest",
+    });
+  };
+
   const handleTabClick = (idx) => {
     const tab = tabs[idx];
     if (!tab) return;
     handleTabChange(null, idx, tab.path);
+
+    // After state updates & render, nudge that tab fully into view
+    requestAnimationFrame(() => {
+      scrollTabIntoView(idx);
+    });
   };
 
   const handleClose = (e, idx) => {
@@ -198,6 +213,7 @@ export default function NavbarTabs({
                   key={tab.path || idx}
                   component="button"
                   type="button"
+                  data-tab-index={idx}
                   onClick={() => handleTabClick(idx)}
                   sx={{
                     border: "none",
