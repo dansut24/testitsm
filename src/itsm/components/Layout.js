@@ -10,7 +10,6 @@ import {
   InputBase,
   Avatar,
   Stack,
-  Button,
   Menu,
   MenuItem,
 } from "@mui/material";
@@ -101,6 +100,63 @@ const Layout = () => {
   const getStatusColor = (statusKey) => {
     const opt = STATUS_OPTIONS.find((o) => o.key === statusKey);
     return opt ? opt.color : "text.disabled";
+  };
+
+  // 🔹 Avatar styling per status (navbar)
+  const getNavbarAvatarSx = (statusKey, size = 24) => {
+    const base = {
+      width: size,
+      height: size,
+      fontSize: size * 0.5,
+      transition: "all 0.2s ease",
+      bgcolor:
+        theme.palette.mode === "dark"
+          ? theme.palette.grey[800]
+          : theme.palette.grey[200],
+      color: theme.palette.text.primary,
+    };
+
+    switch (statusKey) {
+      case "Available":
+        return {
+          ...base,
+          border: "2px solid",
+          borderColor: "success.main",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 0 0 2px rgba(76,175,80,0.25)"
+              : "0 0 0 2px rgba(76,175,80,0.35)",
+        };
+      case "Busy":
+        return {
+          ...base,
+          border: "2px solid",
+          borderColor: "error.main",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 0 0 2px rgba(244,67,54,0.35)"
+              : "0 0 0 2px rgba(244,67,54,0.45)",
+        };
+      case "Away":
+        return {
+          ...base,
+          border: "2px solid",
+          borderColor: "warning.main",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 0 0 2px rgba(255,179,0,0.25)"
+              : "0 0 0 2px rgba(255,179,0,0.35)",
+        };
+      case "Offline":
+      default:
+        return {
+          ...base,
+          border: "1px dashed",
+          borderColor: "text.disabled",
+          filter: "grayscale(100%)",
+          opacity: 0.6,
+        };
+    }
   };
 
   const handleStatusChange = (statusKey) => {
@@ -427,7 +483,7 @@ const Layout = () => {
                   onClick={() => setDrawerType("profile")}
                 >
                   <Box sx={{ position: "relative" }}>
-                    <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>
+                    <Avatar sx={getNavbarAvatarSx(userStatus, 24)}>
                       {userInitial}
                     </Avatar>
                     {/* small status dot over avatar */}
@@ -470,7 +526,7 @@ const Layout = () => {
                       <Typography
                         variant="caption"
                         sx={{
-                          color: "text.secondary",
+                          color: getStatusColor(userStatus),
                           fontSize: 10,
                         }}
                       >
@@ -490,7 +546,12 @@ const Layout = () => {
                   onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
                 >
                   <Box sx={{ position: "relative", display: "flex" }}>
-                    <AccountCircleIcon sx={{ fontSize: 22 }} />
+                    <AccountCircleIcon
+                      sx={{
+                        fontSize: 22,
+                        opacity: userStatus === "Offline" ? 0.6 : 1,
+                      }}
+                    />
                     <Box
                       sx={{
                         position: "absolute",
@@ -502,6 +563,10 @@ const Layout = () => {
                         border: "2px solid",
                         borderColor: "background.paper",
                         bgcolor: getStatusColor(userStatus),
+                        boxShadow:
+                          userStatus === "Busy"
+                            ? "0 0 0 2px rgba(244,67,54,0.4)"
+                            : "none",
                       }}
                     />
                   </Box>
