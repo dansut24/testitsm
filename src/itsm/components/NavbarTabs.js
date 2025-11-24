@@ -5,12 +5,8 @@ import { Tabs } from "@sinm/react-chrome-tabs";
 import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
 import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
 
-import { Box, IconButton, Tooltip, useMediaQuery } from "@mui/material";
-
+import { Box, IconButton, useMediaQuery } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import SearchIcon from "@mui/icons-material/Search";
-import NotificationsIcon from "@mui/icons-material/Notifications";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
 export default function NavbarTabs({
   tabs,
@@ -36,7 +32,7 @@ export default function NavbarTabs({
       height: 40px;
       box-shadow: inset 0 -1px 0 ${theme.palette.divider};
       z-index: 1;
-      overflow: hidden; /* <<< prevent bar from widening the page */
+      overflow: hidden; /* keep this bar from widening the page */
     }
 
     .chrome-tabs-bottom-bar {
@@ -59,11 +55,12 @@ export default function NavbarTabs({
       flex-shrink: 0;
     }
 
+    /* Middle: scrollable area that contains tabs + plus button */
     .ctn-scroll {
       flex: 1;
       min-width: 0;
       height: 100%;
-      overflow-x: auto;     /* scroll INSIDE this area only */
+      overflow-x: auto;
       overflow-y: hidden;
     }
 
@@ -75,10 +72,16 @@ export default function NavbarTabs({
       border-radius: 999px;
     }
 
+    .ctn-inner {
+      display: inline-flex;
+      align-items: center;
+      height: 100%;
+    }
+
     .chrome-tabs {
       background: transparent !important;
       height: 100%;
-      min-width: 100%;       /* fill width; extra tabs extend within scroller */
+      /* no min-width: let content define width and scroll inside .ctn-scroll */
     }
 
     .chrome-tab {
@@ -88,7 +91,7 @@ export default function NavbarTabs({
       box-shadow: none !important;
       border-top: none !important;
       font-size: ${isXs ? 11 : 13}px;
-      max-width: 200px;      /* don't allow tabs to be too wide */
+      max-width: 200px;
     }
 
     .chrome-tab.chrome-tab-active .chrome-tab-title {
@@ -115,37 +118,37 @@ export default function NavbarTabs({
       box-shadow: none !important;
     }
 
-    .navbar-icons {
+    /* Plus button styled to sit like Chrome's add button */
+    .add-tab-wrap {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 0 8px;
-      border-left: 1px solid ${theme.palette.divider};
+      justify-content: center;
+      height: 100%;
+      padding: 0 4px 0 0;
       flex-shrink: 0;
-      background: linear-gradient(
-        to right,
-        ${theme.palette.background.paper},
-        ${theme.palette.background.default}
-      );
     }
 
-    .navbar-icons svg {
-      font-size: 20px;
-    }
-
-    .navbar-icons .add-tab-icon {
-      font-size: 24px;
-    }
-
-    .navbar-icons-icon {
+    .add-tab-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      border: 1px solid ${theme.palette.divider};
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
-      transition: transform 0.12s ease, opacity 0.12s ease;
       opacity: 0.9;
+      transition: background 0.12s ease, opacity 0.12s ease, transform 0.12s ease;
     }
 
-    .navbar-icons-icon:hover {
-      transform: translateY(-1px);
+    .add-tab-btn:hover {
       opacity: 1;
+      background: ${theme.palette.action.hover};
+      transform: translateY(-1px);
+    }
+
+    .add-tab-btn svg {
+      font-size: 18px;
     }
 
     @media (max-width: 600px) {
@@ -153,30 +156,13 @@ export default function NavbarTabs({
         height: 40px;
       }
 
-      .ctn-scroll {
-        overflow-x: auto; /* still allow scroll on mobile */
-      }
-
-      .chrome-tabs {
-        display: flex !important;
-        flex: 1;
-      }
-
       .chrome-tab {
-        flex: 1 1 auto !important;
         max-width: none !important;
       }
 
       .chrome-tab-title {
         font-size: 11px;
         text-align: center;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .navbar-icons {
-        gap: 4px;
-        padding-right: 6px;
       }
     }
   `;
@@ -192,7 +178,7 @@ export default function NavbarTabs({
     if (idx >= 0) {
       handleTabChange(null, idx, tabs[idx].path);
 
-      // scroll active tab into view within the ctn-scroll area
+      // keep active tab visible in the scroll area
       requestAnimationFrame(() => {
         const container = scrollRef.current;
         if (!container) return;
@@ -215,11 +201,10 @@ export default function NavbarTabs({
     ];
     handleTabReorder(newTabs);
 
-    // activate the new tab
     const newTab = newTabs[newTabs.length - 1];
     handleTabChange(null, newTabs.length - 1, newTab.path);
 
-    // scroll all the way to the right to reveal it
+    // scroll to the right to reveal the new tab + plus button
     requestAnimationFrame(() => {
       const container = scrollRef.current;
       if (container) container.scrollLeft = container.scrollWidth;
@@ -233,35 +218,29 @@ export default function NavbarTabs({
         {navTrigger && <div className="nav-trigger-wrap">{navTrigger}</div>}
 
         <div className="ctn-bar">
-          {/* Tabs area with internal horizontal scroll */}
+          {/* Scroll area that contains chrome-tabs + plus button */}
           <div ref={scrollRef} className="ctn-scroll">
-            <Tabs
-              darkMode={theme.palette.mode === "dark"}
-              onTabClose={onTabClose}
-              onTabActive={onTabActive}
-              tabs={tabs.map((t, idx) => ({
-                id: t.path,
-                title: t.label,
-                favicon: t.favicon || "https://www.google.com/favicon.ico",
-                active: idx === tabIndex,
-                isCloseIconVisible: idx !== 0, // keep first tab pinned if you want
-              }))}
-            />
-          </div>
+            <div className="ctn-inner">
+              <Tabs
+                darkMode={theme.palette.mode === "dark"}
+                onTabClose={onTabClose}
+                onTabActive={onTabActive}
+                tabs={tabs.map((t, idx) => ({
+                  id: t.path,
+                  title: t.label,
+                  favicon: t.favicon || "https://www.google.com/favicon.ico",
+                  active: idx === tabIndex,
+                  isCloseIconVisible: idx !== 0,
+                }))}
+              />
 
-          {/* Right icons (add + search/notifications/profile) */}
-          <div className="navbar-icons">
-            <AddIcon
-              className="navbar-icons-icon add-tab-icon"
-              onClick={handleAddTab}
-            />
-            {!isMobile && (
-              <>
-                <SearchIcon className="navbar-icons-icon" />
-                <NotificationsIcon className="navbar-icons-icon" />
-                <AccountCircleIcon className="navbar-icons-icon" />
-              </>
-            )}
+              {/* Plus immediately after the last tab, inside scroller */}
+              <div className="add-tab-wrap">
+                <div className="add-tab-btn" onClick={handleAddTab}>
+                  <AddIcon />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
