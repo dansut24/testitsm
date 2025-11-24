@@ -311,6 +311,10 @@ const Layout = () => {
               gap: 1,
               borderBottom: "1px solid",
               borderColor: "divider",
+              height: APP_HEADER_HEIGHT,
+              minHeight: APP_HEADER_HEIGHT,
+              boxSizing: "border-box",
+              pt: isMobile ? 0.5 : 0, // ensures constant gap above search on mobile
             }}
           >
             {/* Logo / brand / menu */}
@@ -360,7 +364,7 @@ const Layout = () => {
                 mx: 1,
               }}
             >
-              {/* Search – taller on mobile, smaller on desktop */}
+              {/* Search – slightly shorter on mobile so it always fits */}
               <Box
                 sx={{
                   flex: isMobile ? 1 : 0,
@@ -375,7 +379,7 @@ const Layout = () => {
                   borderRadius: 999,
                   px: isMobile ? 1.4 : 1,
                   py: 0,
-                  height: isMobile ? 34 : 26,
+                  height: isMobile ? 32 : 26,
                 }}
               >
                 <SearchIcon
