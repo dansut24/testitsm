@@ -7,6 +7,7 @@ import {
   Divider,
   Stack,
   Button,
+  useTheme,
 } from "@mui/material";
 
 const STATUS_OPTIONS = [
@@ -17,8 +18,70 @@ const STATUS_OPTIONS = [
 ];
 
 const ProfileDrawer = ({ status, onStatusChange, onLogout, showStatus = true }) => {
+  const theme = useTheme();
   const username = "User";
   const email = "user@example.com";
+
+  const getStatusColor = (statusKey) => {
+    const opt = STATUS_OPTIONS.find((o) => o.key === statusKey);
+    return opt ? opt.color : "text.disabled";
+  };
+
+  const getAvatarSx = (statusKey, size = 40) => {
+    const base = {
+      width: size,
+      height: size,
+      fontSize: size * 0.5,
+      transition: "all 0.2s ease",
+      bgcolor:
+        theme.palette.mode === "dark"
+          ? theme.palette.grey[800]
+          : theme.palette.grey[200],
+      color: theme.palette.text.primary,
+    };
+
+    switch (statusKey) {
+      case "Available":
+        return {
+          ...base,
+          border: "2px solid",
+          borderColor: "success.main",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 0 0 3px rgba(76,175,80,0.3)"
+              : "0 0 0 3px rgba(76,175,80,0.4)",
+        };
+      case "Busy":
+        return {
+          ...base,
+          border: "2px solid",
+          borderColor: "error.main",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 0 0 3px rgba(244,67,54,0.35)"
+              : "0 0 0 3px rgba(244,67,54,0.45)",
+        };
+      case "Away":
+        return {
+          ...base,
+          border: "2px solid",
+          borderColor: "warning.main",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 0 0 3px rgba(255,179,0,0.3)"
+              : "0 0 0 3px rgba(255,179,0,0.4)",
+        };
+      case "Offline":
+      default:
+        return {
+          ...base,
+          border: "1px dashed",
+          borderColor: "text.disabled",
+          filter: "grayscale(100%)",
+          opacity: 0.6,
+        };
+    }
+  };
 
   return (
     <Box
@@ -30,9 +93,26 @@ const ProfileDrawer = ({ status, onStatusChange, onLogout, showStatus = true }) 
     >
       {/* Header */}
       <Box sx={{ p: 2, display: "flex", alignItems: "center", gap: 1.5 }}>
-        <Avatar sx={{ width: 40, height: 40, fontSize: 18 }}>
-          {username[0]}
-        </Avatar>
+        <Box sx={{ position: "relative" }}>
+          <Avatar sx={getAvatarSx(status || "Offline", 40)}>
+            {username[0]}
+          </Avatar>
+          {showStatus && (
+            <Box
+              sx={{
+                position: "absolute",
+                bottom: -2,
+                right: -2,
+                width: 12,
+                height: 12,
+                borderRadius: "50%",
+                border: "2px solid",
+                borderColor: "background.paper",
+                bgcolor: getStatusColor(status || "Offline"),
+              }}
+            />
+          )}
+        </Box>
         <Box>
           <Typography variant="subtitle1" fontWeight={600}>
             {username}
@@ -40,6 +120,32 @@ const ProfileDrawer = ({ status, onStatusChange, onLogout, showStatus = true }) 
           <Typography variant="body2" color="text.secondary">
             {email}
           </Typography>
+          {showStatus && (
+            <Stack
+              direction="row"
+              spacing={0.75}
+              alignItems="center"
+              sx={{ mt: 0.5 }}
+            >
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  bgcolor: getStatusColor(status || "Offline"),
+                }}
+              />
+              <Typography
+                variant="caption"
+                sx={{
+                  color: getStatusColor(status || "Offline"),
+                  fontSize: 11,
+                }}
+              >
+                {status || "Offline"}
+              </Typography>
+            </Stack>
+          )}
         </Box>
       </Box>
 
