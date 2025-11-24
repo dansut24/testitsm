@@ -1,3 +1,4 @@
+// src/itsm/layout/Layout.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -32,10 +33,11 @@ import ArticleIcon from "@mui/icons-material/Article";
 
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 60;
-const APP_HEADER_HEIGHT = 38;
-const TABBAR_HEIGHT = 30;
-const NAVBAR_HEIGHT = APP_HEADER_HEIGHT + TABBAR_HEIGHT;
-const BOTTOM_NAV_HEIGHT = 56;
+
+// base values; actual heights are computed per-device inside the component
+const BASE_APP_HEADER_HEIGHT = 38;
+const BASE_TABBAR_HEIGHT = 30;
+const BASE_BOTTOM_NAV_HEIGHT = 56;
 
 const routeLabels = {
   "/dashboard": "Dashboard",
@@ -54,6 +56,12 @@ const Layout = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
   const location = useLocation();
+
+  // 🔹 Device-dependent heights
+  const APP_HEADER_HEIGHT = isMobile ? 52 : BASE_APP_HEADER_HEIGHT;
+  const TABBAR_HEIGHT = isMobile ? 42 : BASE_TABBAR_HEIGHT;
+  const NAVBAR_HEIGHT = APP_HEADER_HEIGHT + TABBAR_HEIGHT;
+  const BOTTOM_NAV_HEIGHT = isMobile ? 64 : BASE_BOTTOM_NAV_HEIGHT;
 
   const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
@@ -264,7 +272,7 @@ const Layout = () => {
                 mx: 1,
               }}
             >
-              {/* Search – smaller on desktop */}
+              {/* Search – taller on mobile, smaller on desktop */}
               <Box
                 sx={{
                   flex: isMobile ? 1 : 0,
@@ -277,16 +285,22 @@ const Layout = () => {
                       ? "rgba(255,255,255,0.04)"
                       : "rgba(0,0,0,0.03)",
                   borderRadius: 999,
-                  px: 1,
+                  px: isMobile ? 1.4 : 1,
                   py: 0,
-                  height: 26,
+                  height: isMobile ? 34 : 26,
                 }}
               >
-                <SearchIcon sx={{ fontSize: 16, mr: 0.75, opacity: 0.7 }} />
+                <SearchIcon
+                  sx={{
+                    fontSize: isMobile ? 20 : 16,
+                    mr: 1,
+                    opacity: 0.7,
+                  }}
+                />
                 <InputBase
                   placeholder="Search..."
                   sx={{
-                    fontSize: 12,
+                    fontSize: isMobile ? 13 : 12,
                     width: "100%",
                   }}
                 />
@@ -410,7 +424,7 @@ const Layout = () => {
                 size="small"
                 onClick={() => setDrawerType("profile")}
               >
-                <AccountCircleIcon sx={{ fontSize: 20 }} />
+                <AccountCircleIcon sx={{ fontSize: 22 }} />
               </IconButton>
             )}
           </Box>
@@ -497,7 +511,7 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Desktop right-hand drawer for notifications/profile */}
+      {/* Desktop right-hand drawer for notifications/profile/search */}
       {!isMobile && (
         <SwipeableDrawer
           anchor="right"
