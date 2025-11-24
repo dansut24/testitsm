@@ -1,14 +1,17 @@
 // NavbarTabs.js
-import React, { useRef } from "react";
+import React from "react";
+import {
+  Box,
+  Tabs,
+  Tab,
+  IconButton,
+  Tooltip,
+  useMediaQuery,
+} from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { Tabs } from "@sinm/react-chrome-tabs";
-import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
-import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
 
 import AddIcon from "@mui/icons-material/Add";
-import SearchIcon from "@mui/icons-material/Search";
-import NotificationsIcon from "@mui/icons-material/Notifications";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import CloseIcon from "@mui/icons-material/Close";
 
 export default function NavbarTabs({
   tabs,
@@ -20,226 +23,205 @@ export default function NavbarTabs({
   navTrigger,
 }) {
   const theme = useTheme();
-  const scrollRef = useRef(null);
+  const isXs = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const styles = `
-    .navbar-container {
-      width: 100%;
-      position: relative;
-      background: ${theme.palette.background.paper};
-      display: flex;
-      align-items: stretch;
-      height: 40px;
-      box-shadow: inset 0 -1px 0 ${theme.palette.divider};
-      z-index: 1;
-    }
-
-    .chrome-tabs-bottom-bar {
-      display: none !important;
-    }
-
-    .ctn-bar {
-      display: flex;
-      align-items: center;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-    }
-
-    .nav-trigger-wrap {
-      display: flex;
-      align-items: center;
-      padding: 0 8px;
-      border-right: 1px solid ${theme.palette.divider};
-      flex-shrink: 0;
-    }
-
-    .ctn-scroll {
-      flex: 1;
-      min-width: 0;
-      overflow-x: auto;
-      overflow-y: hidden;
-      height: 100%;
-    }
-
-    .ctn-scroll::-webkit-scrollbar {
-      height: 4px;
-    }
-
-    .ctn-scroll::-webkit-scrollbar-thumb {
-      border-radius: 999px;
-    }
-
-    .chrome-tabs {
-      background: transparent !important;
-      height: 100%;
-    }
-
-    .chrome-tab {
-      background: transparent !important;
-      height: 40px !important;
-      margin-top: 0 !important;
-      box-shadow: none !important;
-      border-top: none !important;
-      font-size: 13px;
-    }
-
-    .chrome-tab.chrome-tab-active .chrome-tab-title {
-      font-weight: 600;
-    }
-
-    .chrome-tab-divider {
-      top: 6px !important;
-      bottom: 6px !important;
-      opacity: 0.6;
-    }
-
-    .chrome-tab-background::before,
-    .chrome-tab-background::after {
-      background: transparent !important;
-      border: none !important;
-      box-shadow: none !important;
-    }
-
-    .navbar-icons {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 0 8px;
-      border-left: 1px solid ${theme.palette.divider};
-      flex-shrink: 0;
-      background: linear-gradient(
-        to right,
-        ${theme.palette.background.paper},
-        ${theme.palette.background.default}
-      );
-    }
-
-    .navbar-icons svg {
-      font-size: 20px;
-    }
-
-    .navbar-icons .add-tab-icon {
-      font-size: 24px;
-    }
-
-    .navbar-icons-icon {
-      cursor: pointer;
-      transition: transform 0.12s ease, opacity 0.12s ease;
-      opacity: 0.9;
-    }
-
-    .navbar-icons-icon:hover {
-      transform: translateY(-1px);
-      opacity: 1;
-    }
-
-    @media (max-width: 600px) {
-      .navbar-container {
-        height: 40px;
-      }
-
-      .ctn-scroll {
-        overflow-x: hidden;
-      }
-
-      .chrome-tabs {
-        display: flex !important;
-        flex: 1;
-      }
-
-      .chrome-tab {
-        flex: 1 1 auto !important;
-        max-width: none !important;
-      }
-
-      .chrome-tab-title {
-        font-size: 11px;
-        text-align: center;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .navbar-icons {
-        gap: 4px;
-        padding-right: 6px;
-      }
-    }
-  `;
-
-  const scrollElementIntoView = (el, opts = { inline: "center" }) => {
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "nearest", ...opts });
-    }
+  const onChange = (_event, newIndex) => {
+    const tab = tabs[newIndex];
+    if (!tab) return;
+    // keep your existing signature: (event, index, path)
+    handleTabChange(null, newIndex, tab.path);
   };
 
-  const onTabActive = (id) => {
-    const idx = tabs.findIndex((t) => t.id === id || t.path === id);
-    if (idx >= 0) {
-      handleTabChange(null, idx, tabs[idx].path);
-      requestAnimationFrame(() => {
-        const container = scrollRef.current;
-        if (!container) return;
-        const activeTab = container.querySelector(
-          ".chrome-tab.chrome-tab-active"
-        );
-        if (!activeTab) return;
-        scrollElementIntoView(activeTab, { inline: "center" });
-      });
-    }
-  };
+  const onClose = (e, idx) => {
+    e.stopPropagation();
+    const tab = tabs[idx];
+    if (!tab) return;
+    handleTabClose(tab.path);
 
-  const onTabClose = (id) => {
-    const tab = tabs.find((t) => t.id === id || t.path === id);
-    if (tab) handleTabClose(tab.path);
-  };
-
-  const handleAddTab = () => {
-    const newTabs = [
-      ...tabs,
-      { label: "New Tab", path: `/new-tab/${tabs.length + 1}` },
-    ];
+    // Optionally keep the tabs array in sync via handleTabReorder
+    const newTabs = tabs.filter((_, i) => i !== idx);
     handleTabReorder(newTabs);
   };
 
+  const handleAddTab = () => {
+    const newTab = {
+      label: "New Tab",
+      path: `/new-tab/${tabs.length + 1}`,
+      favicon: "/favicon.ico",
+    };
+    const newTabs = [...tabs, newTab];
+    handleTabReorder(newTabs);
+    // immediately activate the new tab
+    handleTabChange(null, newTabs.length - 1, newTab.path);
+  };
+
+  const tabHeight = 40;
+
   return (
-    <>
-      <style>{styles}</style>
-      <div className="navbar-container">
-        {navTrigger && <div className="nav-trigger-wrap">{navTrigger}</div>}
+    <Box
+      sx={{
+        width: "100%",
+        height: tabHeight,
+        display: "flex",
+        alignItems: "stretch",
+        borderBottom: 1,
+        borderColor: "divider",
+        bgcolor: theme.palette.background.paper,
+        boxShadow: "inset 0 -1px 0 rgba(0,0,0,0.04)",
+        zIndex: 1,
+      }}
+    >
+      {/* Left: sidebar trigger / icon */}
+      {navTrigger && (
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            px: 1,
+            borderRight: 1,
+            borderColor: "divider",
+            flexShrink: 0,
+          }}
+        >
+          {navTrigger}
+        </Box>
+      )}
 
-        <div className="ctn-bar">
-          <div ref={scrollRef} className="ctn-scroll">
-            <Tabs
-              darkMode={theme.palette.mode === "dark"}
-              onTabClose={onTabClose}
-              onTabActive={onTabActive}
-              tabs={tabs.map((t, idx) => ({
-                id: t.path,
-                title: t.label,
-                favicon: t.favicon || "https://www.google.com/favicon.ico",
-                active: idx === tabIndex,
-                isCloseIconVisible: idx !== 0,
-              }))}
-            />
-          </div>
+      {/* Center: tabs */}
+      <Box
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
+        <Tabs
+          value={tabIndex}
+          onChange={onChange}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{
+            minHeight: tabHeight,
+            "& .MuiTabs-flexContainer": {
+              alignItems: "stretch",
+            },
+            "& .MuiTab-root": {
+              minHeight: tabHeight,
+              textTransform: "none",
+              fontSize: isXs ? 12 : 13,
+              paddingX: 1.25,
+              paddingY: 0,
+              alignItems: "center",
+              justifyContent: "flex-start",
+              maxWidth: 220,
+            },
+            "& .MuiTab-root.Mui-selected": {
+              fontWeight: 600,
+              bgcolor:
+                theme.palette.mode === "dark"
+                  ? "rgba(255,255,255,0.04)"
+                  : "rgba(0,0,0,0.03)",
+            },
+            "& .MuiTabs-indicator": {
+              height: 2,
+              borderRadius: 999,
+            },
+          }}
+        >
+          {tabs.map((tab, idx) => (
+            <Tab
+              key={tab.path || idx}
+              label={
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.75,
+                    maxWidth: "100%",
+                  }}
+                >
+                  {/* favicon / icon (optional) */}
+                  {tab.favicon && (
+                    <Box
+                      component="img"
+                      src={tab.favicon}
+                      alt=""
+                      sx={{
+                        width: 14,
+                        height: 14,
+                        borderRadius: 0.5,
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
 
-          {/* Right Icons */}
-          <div className="navbar-icons">
-            <AddIcon
-              className="navbar-icons-icon add-tab-icon"
-              onClick={handleAddTab}
+                  {/* title */}
+                  <Box
+                    component="span"
+                    sx={{
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {tab.label}
+                  </Box>
+
+                  {/* close icon (keep first tab pinned if you like) */}
+                  {idx !== 0 && (
+                    <IconButton
+                      size="small"
+                      sx={{
+                        ml: 0.25,
+                        padding: 0,
+                        opacity: 0.7,
+                        "&:hover": {
+                          opacity: 1,
+                          bgcolor: "transparent",
+                        },
+                      }}
+                      onClick={(e) => onClose(e, idx)}
+                    >
+                      <CloseIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  )}
+                </Box>
+              }
+              disableRipple
             />
-            {!isMobile && (
-              <>
-                <SearchIcon className="navbar-icons-icon" />
-                <NotificationsIcon className="navbar-icons-icon" />
-                <AccountCircleIcon className="navbar-icons-icon" />
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </>
+          ))}
+        </Tabs>
+      </Box>
+
+      {/* Right: Add tab button */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          px: 1,
+          borderLeft: 1,
+          borderColor: "divider",
+          flexShrink: 0,
+          bgcolor: (theme) =>
+            theme.palette.mode === "dark"
+              ? "rgba(255,255,255,0.02)"
+              : "rgba(0,0,0,0.01)",
+        }}
+      >
+        <Tooltip title="New tab">
+          <IconButton
+            size="small"
+            onClick={handleAddTab}
+            sx={{
+              p: 0.5,
+              "& svg": { fontSize: 22 },
+            }}
+          >
+            <AddIcon />
+          </IconButton>
+        </Tooltip>
+      </Box>
+    </Box>
   );
 }
