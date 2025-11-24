@@ -30,8 +30,8 @@ import ArticleIcon from "@mui/icons-material/Article";
 
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 60;
-const APP_HEADER_HEIGHT = 38;   // 🔹 was 48
-const TABBAR_HEIGHT = 30;       // 🔹 was 40
+const APP_HEADER_HEIGHT = 38;
+const TABBAR_HEIGHT = 30;
 const NAVBAR_HEIGHT = APP_HEADER_HEIGHT + TABBAR_HEIGHT;
 const BOTTOM_NAV_HEIGHT = 56;
 
@@ -156,6 +156,7 @@ const Layout = () => {
         overscrollBehavior: "none",
       }}
     >
+      {/* Sidebar (desktop) */}
       {!isMobile && sidebarMode !== "hidden" && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -169,6 +170,7 @@ const Layout = () => {
         />
       )}
 
+      {/* Main grid */}
       <Box
         sx={{
           flex: 1,
@@ -204,6 +206,7 @@ const Layout = () => {
               borderColor: "divider",
             }}
           >
+            {/* Logo / brand / menu */}
             {!isMobile && sidebarMode === "hidden" ? (
               <IconButton
                 onClick={() => setMobileSidebarOpen(true)}
@@ -239,32 +242,106 @@ const Layout = () => {
               </Box>
             )}
 
-            {/* Search */}
+            {/* Center: search + quick info (tenant & status) */}
             <Box
               sx={{
                 flex: 1,
                 minWidth: 0,
-                mx: 1,
                 display: "flex",
                 alignItems: "center",
-                bgcolor:
-                  theme.palette.mode === "dark"
-                    ? "rgba(255,255,255,0.04)"
-                    : "rgba(0,0,0,0.03)",
-                borderRadius: 999,
-                px: 1,
-                py: 0,
-                height: 26,
+                gap: 1,
+                mx: 1,
               }}
             >
-              <SearchIcon sx={{ fontSize: 16, mr: 0.75, opacity: 0.7 }} />
-              <InputBase
-                placeholder="Search..."
+              {/* Search – smaller on desktop */}
+              <Box
                 sx={{
-                  fontSize: 12,
-                  width: "100%",
+                  flex: isMobile ? 1 : 0,
+                  minWidth: 0,
+                  maxWidth: isMobile ? "100%" : 320,
+                  display: "flex",
+                  alignItems: "center",
+                  bgcolor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.04)"
+                      : "rgba(0,0,0,0.03)",
+                  borderRadius: 999,
+                  px: 1,
+                  py: 0,
+                  height: 26,
                 }}
-              />
+              >
+                <SearchIcon sx={{ fontSize: 16, mr: 0.75, opacity: 0.7 }} />
+                <InputBase
+                  placeholder="Search..."
+                  sx={{
+                    fontSize: 12,
+                    width: "100%",
+                  }}
+                />
+              </Box>
+
+              {/* Extra info chips (desktop only) */}
+              {!isMobile && (
+                <>
+                  {/* Tenant chip */}
+                  <Box
+                    sx={{
+                      px: 1,
+                      py: 0.25,
+                      borderRadius: 999,
+                      border: "1px solid",
+                      borderColor: "divider",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={{ fontSize: 10, color: "text.secondary" }}
+                    >
+                      Tenant:&nbsp;
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{ fontSize: 10, fontWeight: 500 }}
+                    >
+                      Hi5Tech
+                    </Typography>
+                  </Box>
+
+                  {/* Status chip */}
+                  <Box
+                    sx={{
+                      px: 1,
+                      py: 0.25,
+                      borderRadius: 999,
+                      bgcolor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(46, 125, 50, 0.25)"
+                          : "rgba(76, 175, 80, 0.12)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 0.5,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        bgcolor: "success.main",
+                      }}
+                    />
+                    <Typography
+                      variant="caption"
+                      sx={{ fontSize: 10, color: "success.main" }}
+                    >
+                      All systems operational
+                    </Typography>
+                  </Box>
+                </>
+              )}
             </Box>
 
             {/* Right actions */}
@@ -347,7 +424,7 @@ const Layout = () => {
           <Outlet />
         </Box>
 
-        {/* Bottom nav (mobile) */}
+        {/* Bottom nav (mobile only) */}
         {isMobile && (
           <Box
             sx={{
@@ -367,6 +444,7 @@ const Layout = () => {
         )}
       </Box>
 
+      {/* Sidebar Drawer (mobile & hidden desktop) */}
       {(isMobile || sidebarMode === "hidden") && (
         <SwipeableDrawer
           anchor="left"
@@ -395,6 +473,7 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
+      {/* Bottom action drawer (mobile) */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
