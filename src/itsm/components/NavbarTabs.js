@@ -1,6 +1,6 @@
 // src/itsm/layout/NavbarTabs.js
 import React, { useRef, useState, useEffect } from "react";
-import { Box, Tooltip, useMediaQuery } from "@mui/material";
+import { Box, Tooltip } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
 import AddIcon from "@mui/icons-material/Add";
@@ -15,23 +15,17 @@ export default function NavbarTabs({
   handleTabClose,
   handleTabReorder,
   isMobile,
-  navTrigger, // optional (sidebar trigger, logo, etc.)
+  navTrigger,
 }) {
   const theme = useTheme();
-  const isXs = useMediaQuery(theme.breakpoints.down("sm"));
-
-  // 🔹 Taller tabs on mobile, slim on desktop
   const tabHeight = isMobile ? 48 : 30;
 
   const scrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
-  // 🔹 Long-press handling for mobile close
-  const longPressRef = useRef({
-    timerId: null,
-    index: null,
-  });
+  // long-press close on mobile
+  const longPressRef = useRef({ timerId: null, index: null });
 
   const updateScrollButtons = () => {
     const el = scrollRef.current;
@@ -52,9 +46,7 @@ export default function NavbarTabs({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const handleScroll = () => {
-    updateScrollButtons();
-  };
+  const handleScroll = () => updateScrollButtons();
 
   const scrollByAmount = (amount) => {
     const el = scrollRef.current;
@@ -67,7 +59,6 @@ export default function NavbarTabs({
     if (!container) return;
     const tabEl = container.querySelector(`[data-tab-index="${index}"]`);
     if (!tabEl) return;
-
     tabEl.scrollIntoView({
       behavior: "smooth",
       block: "nearest",
@@ -79,41 +70,33 @@ export default function NavbarTabs({
     const tab = tabs[idx];
     if (!tab) return;
     handleTabChange(null, idx, tab.path);
-
     requestAnimationFrame(() => {
       scrollTabIntoView(idx);
     });
   };
 
-  // 🔹 Normal close handler (desktop + long-press)
   const handleClose = (idx) => {
     const tab = tabs[idx];
     if (!tab) return;
     handleTabClose(tab.path);
-
     const newTabs = tabs.filter((_, i) => i !== idx);
     handleTabReorder(newTabs);
   };
 
-  // 🔹 Long press start (mobile only)
   const handlePressStart = (idx) => {
     if (!isMobile) return;
-    if (idx === 0) return; // never close first tab
-
-    // clear any existing timer
+    if (idx === 0) return;
     if (longPressRef.current.timerId) {
       clearTimeout(longPressRef.current.timerId);
     }
     longPressRef.current.index = idx;
-
     longPressRef.current.timerId = setTimeout(() => {
       handleClose(idx);
       longPressRef.current.timerId = null;
       longPressRef.current.index = null;
-    }, 600); // 600ms press = close
+    }, 600);
   };
 
-  // 🔹 Long press end / cancel
   const handlePressEnd = () => {
     if (longPressRef.current.timerId) {
       clearTimeout(longPressRef.current.timerId);
@@ -131,7 +114,6 @@ export default function NavbarTabs({
     const newTabs = [...tabs, newTab];
     handleTabReorder(newTabs);
     handleTabChange(null, newTabs.length - 1, newTab.path);
-
     requestAnimationFrame(() => {
       const el = scrollRef.current;
       if (el) el.scrollLeft = el.scrollWidth;
@@ -178,8 +160,8 @@ export default function NavbarTabs({
           alignItems: "center",
         }}
       >
-        {/* Left arrow – desktop only */}
-        {!isMobile && canScrollLeft && (
+        {/* Left arrow – desktop always visible, disabled when no scroll */}
+        {!isMobile && (
           <Box
             sx={{
               flexShrink: 0,
@@ -194,15 +176,16 @@ export default function NavbarTabs({
             <Box
               component="button"
               type="button"
-              onClick={() => scrollByAmount(-150)}
+              onClick={() => canScrollLeft && scrollByAmount(-150)}
               style={{
                 border: "none",
                 outline: "none",
                 background: "transparent",
-                cursor: "pointer",
+                cursor: canScrollLeft ? "pointer" : "default",
                 display: "flex",
                 alignItems: "center",
                 padding: 0,
+                opacity: canScrollLeft ? 1 : 0.3,
               }}
             >
               <ChevronLeftIcon sx={{ fontSize: 18 }} />
@@ -210,7 +193,7 @@ export default function NavbarTabs({
           </Box>
         )}
 
-        {/* Scrollable strip (mobile: swipe / desktop: arrows + wheel) */}
+        {/* Scrollable strip */}
         <Box
           ref={scrollRef}
           onScroll={handleScroll}
@@ -261,7 +244,7 @@ export default function NavbarTabs({
                     borderBottom: active
                       ? `2px solid ${theme.palette.primary.main}`
                       : "2px solid transparent",
-                    fontSize: isMobile ? 14 : isXs ? 10 : 12,
+                    fontSize: isMobile ? 14 : 12,
                     color: active
                       ? theme.palette.text.primary
                       : theme.palette.text.secondary,
@@ -368,8 +351,8 @@ export default function NavbarTabs({
           </Box>
         </Box>
 
-        {/* Right arrow – desktop only */}
-        {!isMobile && canScrollRight && (
+        {/* Right arrow – desktop always visible, disabled when no scroll */}
+        {!isMobile && (
           <Box
             sx={{
               flexShrink: 0,
@@ -384,15 +367,16 @@ export default function NavbarTabs({
             <Box
               component="button"
               type="button"
-              onClick={() => scrollByAmount(150)}
+              onClick={() => canScrollRight && scrollByAmount(150)}
               style={{
                 border: "none",
                 outline: "none",
                 background: "transparent",
-                cursor: "pointer",
+                cursor: canScrollRight ? "pointer" : "default",
                 display: "flex",
                 alignItems: "center",
                 padding: 0,
+                opacity: canScrollRight ? 1 : 0.3,
               }}
             >
               <ChevronRightIcon sx={{ fontSize: 18 }} />
