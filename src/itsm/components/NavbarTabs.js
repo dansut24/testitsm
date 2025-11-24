@@ -12,6 +12,9 @@ import { useTheme } from "@mui/material/styles";
 
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
+import SearchIcon from "@mui/icons-material/Search";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
 export default function NavbarTabs({
   tabs,
@@ -25,10 +28,11 @@ export default function NavbarTabs({
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down("sm"));
 
+  const tabHeight = 40;
+
   const onChange = (_event, newIndex) => {
     const tab = tabs[newIndex];
     if (!tab) return;
-    // keep your existing signature: (event, index, path)
     handleTabChange(null, newIndex, tab.path);
   };
 
@@ -36,9 +40,10 @@ export default function NavbarTabs({
     e.stopPropagation();
     const tab = tabs[idx];
     if (!tab) return;
+
     handleTabClose(tab.path);
 
-    // Optionally keep the tabs array in sync via handleTabReorder
+    // keep array in sync
     const newTabs = tabs.filter((_, i) => i !== idx);
     handleTabReorder(newTabs);
   };
@@ -51,16 +56,14 @@ export default function NavbarTabs({
     };
     const newTabs = [...tabs, newTab];
     handleTabReorder(newTabs);
-    // immediately activate the new tab
     handleTabChange(null, newTabs.length - 1, newTab.path);
   };
-
-  const tabHeight = 40;
 
   return (
     <Box
       sx={{
         width: "100%",
+        maxWidth: "100%",
         height: tabHeight,
         display: "flex",
         alignItems: "stretch",
@@ -69,6 +72,7 @@ export default function NavbarTabs({
         bgcolor: theme.palette.background.paper,
         boxShadow: "inset 0 -1px 0 rgba(0,0,0,0.04)",
         zIndex: 1,
+        overflow: "hidden", // <- stops the whole page growing wider
       }}
     >
       {/* Left: sidebar trigger / icon */}
@@ -87,13 +91,14 @@ export default function NavbarTabs({
         </Box>
       )}
 
-      {/* Center: tabs */}
+      {/* Center: tabs area (fixed width, internal scroll) */}
       <Box
         sx={{
           flex: 1,
           minWidth: 0,
           display: "flex",
           alignItems: "center",
+          overflow: "hidden", // important: constrain Tabs to this area
         }}
       >
         <Tabs
@@ -102,19 +107,26 @@ export default function NavbarTabs({
           variant="scrollable"
           scrollButtons="auto"
           sx={{
+            flex: 1,
             minHeight: tabHeight,
+            width: "100%",
             "& .MuiTabs-flexContainer": {
               alignItems: "stretch",
+            },
+            "& .MuiTabs-scroller": {
+              overflowX: "auto !important", // scroll inside, not grow page
             },
             "& .MuiTab-root": {
               minHeight: tabHeight,
               textTransform: "none",
-              fontSize: isXs ? 12 : 13,
-              paddingX: 1.25,
-              paddingY: 0,
+              fontSize: isXs ? 11 : 13,
+              px: 1,
+              py: 0,
               alignItems: "center",
               justifyContent: "flex-start",
-              maxWidth: 220,
+              minWidth: isXs ? 72 : 110, // shrinkable tabs
+              maxWidth: 200,
+              flexShrink: 1, // <- let tabs shrink instead of forcing layout wider
             },
             "& .MuiTab-root.Mui-selected": {
               fontWeight: 600,
@@ -141,7 +153,6 @@ export default function NavbarTabs({
                     maxWidth: "100%",
                   }}
                 >
-                  {/* favicon / icon (optional) */}
                   {tab.favicon && (
                     <Box
                       component="img"
@@ -156,7 +167,6 @@ export default function NavbarTabs({
                     />
                   )}
 
-                  {/* title */}
                   <Box
                     component="span"
                     sx={{
@@ -168,13 +178,12 @@ export default function NavbarTabs({
                     {tab.label}
                   </Box>
 
-                  {/* close icon (keep first tab pinned if you like) */}
                   {idx !== 0 && (
                     <IconButton
                       size="small"
                       sx={{
                         ml: 0.25,
-                        padding: 0,
+                        p: 0,
                         opacity: 0.7,
                         "&:hover": {
                           opacity: 1,
@@ -183,7 +192,7 @@ export default function NavbarTabs({
                       }}
                       onClick={(e) => onClose(e, idx)}
                     >
-                      <CloseIcon sx={{ fontSize: 16 }} />
+                      <CloseIcon sx={{ fontSize: 15 }} />
                     </IconButton>
                   )}
                 </Box>
@@ -194,11 +203,12 @@ export default function NavbarTabs({
         </Tabs>
       </Box>
 
-      {/* Right: Add tab button */}
+      {/* Right: Add tab + profile/notifications/search icons */}
       <Box
         sx={{
           display: "flex",
           alignItems: "center",
+          gap: 0.5,
           px: 1,
           borderLeft: 1,
           borderColor: "divider",
@@ -215,12 +225,32 @@ export default function NavbarTabs({
             onClick={handleAddTab}
             sx={{
               p: 0.5,
-              "& svg": { fontSize: 22 },
             }}
           >
-            <AddIcon />
+            <AddIcon sx={{ fontSize: 22 }} />
           </IconButton>
         </Tooltip>
+
+        {/* Match old behaviour — just visual for now */}
+        {!isMobile && (
+          <>
+            <Tooltip title="Search">
+              <IconButton size="small" sx={{ p: 0.5 }}>
+                <SearchIcon sx={{ fontSize: 20 }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Notifications">
+              <IconButton size="small" sx={{ p: 0.5 }}>
+                <NotificationsIcon sx={{ fontSize: 20 }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Profile">
+              <IconButton size="small" sx={{ p: 0.5 }}>
+                <AccountCircleIcon sx={{ fontSize: 22 }} />
+              </IconButton>
+            </Tooltip>
+          </>
+        )}
       </Box>
     </Box>
   );
