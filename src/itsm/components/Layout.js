@@ -6,6 +6,8 @@ import {
   SwipeableDrawer,
   Typography,
   IconButton,
+  InputBase,
+  Avatar,
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
@@ -27,7 +29,9 @@ import ArticleIcon from "@mui/icons-material/Article";
 
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 60;
-const NAVBAR_HEIGHT = 48;
+const APP_HEADER_HEIGHT = 48;
+const TABBAR_HEIGHT = 40;
+const NAVBAR_HEIGHT = APP_HEADER_HEIGHT + TABBAR_HEIGHT;
 const BOTTOM_NAV_HEIGHT = 56;
 
 const routeLabels = {
@@ -56,6 +60,10 @@ const Layout = () => {
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null);
+
+  // Fake user (replace with real auth data / localStorage if you like)
+  const username = "User";
+  const userInitial = username[0]?.toUpperCase() || "U";
 
   // ✅ Fix viewport height for mobile + orientation changes
   useEffect(() => {
@@ -176,43 +184,147 @@ const Layout = () => {
           height: "100%",
         }}
       >
-        {/* Navbar */}
+        {/* Navbar (header + tabs) */}
         <Box
           sx={{
             position: "relative",
             zIndex: 1200,
             bgcolor: "background.paper",
-            display: "flex",
-            alignItems: "center",
-            height: NAVBAR_HEIGHT,
+            display: "grid",
+            gridTemplateRows: `${APP_HEADER_HEIGHT}px ${TABBAR_HEIGHT}px`,
             borderBottom: "1px solid",
             borderColor: "divider",
-            overflow: "hidden", // 🔹 ensure this row itself never overflows horizontally
+            overflow: "hidden",
           }}
         >
-          {/* 🔹 Show menu/logo if sidebar hidden on desktop */}
-          {!isMobile && sidebarMode === "hidden" && (
-            <IconButton
-              onClick={() => setMobileSidebarOpen(true)}
-              size="small"
-              sx={{ ml: 1 }}
-            >
-              <img
-                src="https://www.bing.com/sa/simg/favicon-2x.ico"
-                alt="Logo"
-                style={{ width: 24, height: 24 }}
-              />
-            </IconButton>
-          )}
-
-          {/* Tabs */}
+          {/* Row 1: App header */}
           <Box
             sx={{
-              flex: 1,
-              overflow: "hidden",
-              minWidth: 0, // 🔥 CRITICAL: allow the tab container to shrink instead of pushing layout
+              display: "flex",
+              alignItems: "center",
+              px: 1.5,
+              gap: 1.5,
+              borderBottom: "1px solid",
+              borderColor: "divider",
             }}
           >
+            {/* Logo / brand */}
+            {!isMobile && sidebarMode === "hidden" ? (
+              <IconButton
+                onClick={() => setMobileSidebarOpen(true)}
+                size="small"
+              >
+                <img
+                  src="https://www.bing.com/sa/simg/favicon-2x.ico"
+                  alt="Logo"
+                  style={{ width: 24, height: 24 }}
+                />
+              </IconButton>
+            ) : (
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                }}
+              >
+                <img
+                  src="/logo192.png"
+                  alt="Logo"
+                  style={{ width: 24, height: 24, borderRadius: 4 }}
+                />
+                {!isMobile && (
+                  <Typography
+                    variant="subtitle1"
+                    sx={{ fontWeight: 600, letterSpacing: 0.3 }}
+                  >
+                    Hi5Tech ITSM
+                  </Typography>
+                )}
+              </Box>
+            )}
+
+            {/* Search bar */}
+            <Box
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                mx: 1,
+                display: "flex",
+                alignItems: "center",
+                bgcolor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(255,255,255,0.04)"
+                    : "rgba(0,0,0,0.03)",
+                borderRadius: 999,
+                px: 1.5,
+                py: 0.25,
+              }}
+            >
+              <SearchIcon sx={{ fontSize: 18, mr: 1, opacity: 0.7 }} />
+              <InputBase
+                placeholder="Search tickets, devices, users..."
+                sx={{
+                  fontSize: 13,
+                  width: "100%",
+                }}
+              />
+            </Box>
+
+            {/* Right header actions */}
+            {!isMobile && (
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                }}
+              >
+                <IconButton size="small">
+                  <NotificationsIcon sx={{ fontSize: 20 }} />
+                </IconButton>
+
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
+                  <Avatar sx={{ width: 28, height: 28, fontSize: 14 }}>
+                    {userInitial}
+                  </Avatar>
+                  <Box sx={{ display: "flex", flexDirection: "column" }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ lineHeight: 1.2, fontWeight: 500 }}
+                    >
+                      {username}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        lineHeight: 1.2,
+                        color: "text.secondary",
+                      }}
+                    >
+                      Admin
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+            )}
+
+            {/* Mobile right action: profile icon */}
+            {isMobile && (
+              <IconButton size="small">
+                <AccountCircleIcon sx={{ fontSize: 22 }} />
+              </IconButton>
+            )}
+          </Box>
+
+          {/* Row 2: Tab strip */}
+          <Box sx={{ minWidth: 0 }}>
             <NavbarTabs
               tabs={tabs}
               tabIndex={tabIndex}
