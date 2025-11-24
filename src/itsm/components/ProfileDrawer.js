@@ -16,7 +16,7 @@ const STATUS_OPTIONS = [
   { key: "Offline", color: "text.disabled" },
 ];
 
-const ProfileDrawer = ({ status, onStatusChange, onLogout }) => {
+const ProfileDrawer = ({ status, onStatusChange, onLogout, showStatus = true }) => {
   const username = "User";
   const email = "user@example.com";
 
@@ -45,39 +45,43 @@ const ProfileDrawer = ({ status, onStatusChange, onLogout }) => {
 
       <Divider />
 
-      {/* Status section */}
-      <Box sx={{ p: 2 }}>
-        <Typography variant="subtitle2" gutterBottom>
-          Status
-        </Typography>
-        <Stack spacing={1}>
-          {STATUS_OPTIONS.map((opt) => (
-            <Button
-              key={opt.key}
-              variant={status === opt.key ? "contained" : "outlined"}
-              size="small"
-              onClick={() => onStatusChange && onStatusChange(opt.key)}
-              sx={{
-                justifyContent: "flex-start",
-                textTransform: "none",
-              }}
-            >
-              <Box
-                sx={{
-                  width: 10,
-                  height: 10,
-                  borderRadius: "50%",
-                  bgcolor: opt.color,
-                  mr: 1,
-                }}
-              />
-              {opt.key}
-            </Button>
-          ))}
-        </Stack>
-      </Box>
+      {/* Status section (desktop only when showStatus = true) */}
+      {showStatus && (
+        <>
+          <Box sx={{ p: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Status
+            </Typography>
+            <Stack spacing={1}>
+              {STATUS_OPTIONS.map((opt) => (
+                <Button
+                  key={opt.key}
+                  variant={status === opt.key ? "contained" : "outlined"}
+                  size="small"
+                  onClick={() => onStatusChange && onStatusChange(opt.key)}
+                  sx={{
+                    justifyContent: "flex-start",
+                    textTransform: "none",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      bgcolor: opt.color,
+                      mr: 1,
+                    }}
+                  />
+                  {opt.key}
+                </Button>
+              ))}
+            </Stack>
+          </Box>
 
-      <Divider />
+          <Divider />
+        </>
+      )}
 
       {/* Footer actions */}
       <Box sx={{ p: 2, mt: "auto" }}>
