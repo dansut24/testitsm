@@ -1,22 +1,9 @@
-import React, { useRef, useEffect, useState } from "react";
-import {
-  Box,
-  IconButton,
-  Typography,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-} from "@mui/material";
+// src/itsm/layout/NavbarTabs.js
+import React, { useRef, useState, useEffect } from "react";
+import { Box, Tabs, Tab, IconButton, Badge } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
-import ClearAllIcon from "@mui/icons-material/ClearAll";
-import FilterNoneIcon from "@mui/icons-material/FilterNone";
-import CancelPresentationIcon from "@mui/icons-material/CancelPresentation";
-
-const LONG_PRESS_MS = 500;
 
 export default function NavbarTabs({
   tabs,
@@ -29,391 +16,378 @@ export default function NavbarTabs({
   const theme = useTheme();
   const scrollRef = useRef(null);
 
-  const [contextAnchor, setContextAnchor] = useState(null);
-  const [contextTabIndex, setContextTabIndex] = useState(null);
-  const [longPressTimer, setLongPressTimer] = useState(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
 
-  const contextTab =
-    contextTabIndex != null && contextTabIndex >= 0
-      ? tabs[contextTabIndex]
-      : null;
+  const [dragIndex, setDragIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
 
-  /* ------------------------------------------------------------------
-   * Accent colour per tab (small left bar)
-   * ------------------------------------------------------------------ */
-  const getTabAccentColor = (label = "") => {
-    const lower = label.toLowerCase();
-    if (lower.includes("incident")) return theme.palette.error.main;
-    if (lower.includes("service request")) return theme.palette.info.main;
-    if (lower.includes("change")) return theme.palette.warning.main;
-    if (lower.includes("task")) return theme.palette.success.main;
-    if (lower.includes("asset")) return theme.palette.secondary.main;
-    if (lower.includes("settings")) return theme.palette.grey[600];
-    if (lower.includes("profile")) return theme.palette.primary.main;
-    if (lower.includes("knowledge")) return "#00897b";
-    if (lower.includes("dashboard")) return theme.palette.primary.main;
-    return theme.palette.text.disabled;
+  const mobile = !!isMobile;
+
+  const safeTabIndex =
+    typeof tabIndex === "number" && tabIndex >= 0 && tabIndex <= tabs.length
+      ? tabIndex
+      : 0;
+
+  const reorderArray = (arr, from, to) => {
+    if (from === to || from == null || to == null) return arr;
+    const result = [...arr];
+    const [moved] = result.splice(from, 1);
+    result.splice(to, 0, moved);
+    return result;
   };
 
-  /* ------------------------------------------------------------------
-   * Keep active tab in view when changed
-   * ------------------------------------------------------------------ */
-  useEffect(() => {
+  const updateArrows = () => {
     const el = scrollRef.current;
     if (!el) return;
-    const active = el.querySelector('[data-active-tab="true"]');
-    if (!active) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const maxScrollLeft = scrollWidth - clientWidth;
+
+    if (mobile) {
+      setShowLeftArrow(false);
+      setShowRightArrow(false);
+    } else {
+      setShowLeftArrow(scrollLeft > 4);
+      setShowRightArrow(scrollLeft < maxScrollLeft - 4);
+    }
+  };
+
+  useEffect(() => {
+    updateArrows();
+  }, [tabs.length, mobile]);
+
+  useEffect(() => {
+    scrollActiveTabIntoView();
+  }, [safeTabIndex, tabs.length]);
+
+  const handleScroll = () => {
+    if (!mobile) updateArrows();
+  };
+
+  const scrollByOffset = (delta) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: delta, behavior: "smooth" });
+  };
+
+  const scrollActiveTabIntoView = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const activeTab = el.querySelector(".navbar-tab.Mui-selected");
+    if (!activeTab) return;
 
     const containerRect = el.getBoundingClientRect();
-    const tabRect = active.getBoundingClientRect();
+    const tabRect = activeTab.getBoundingClientRect();
 
-    if (tabRect.left < containerRect.left || tabRect.right > containerRect.right) {
-      active.scrollIntoView({
+    if (tabRect.left < containerRect.left) {
+      el.scrollBy({
+        left: tabRect.left - containerRect.left - 16,
         behavior: "smooth",
-        block: "nearest",
-        inline: "center",
+      });
+    } else if (tabRect.right > containerRect.right) {
+      el.scrollBy({
+        left: tabRect.right - containerRect.right + 16,
+        behavior: "smooth",
       });
     }
-  }, [tabIndex, tabs.length]);
-
-  /* ------------------------------------------------------------------
-   * Context menu (desktop right-click + mobile long-press)
-   * ------------------------------------------------------------------ */
-  const openContextMenu = (anchorEl, idx) => {
-    setContextTabIndex(idx);
-    setContextAnchor(anchorEl);
   };
 
-  const closeContextMenu = () => {
-    setContextAnchor(null);
-    setContextTabIndex(null);
-  };
-
-  const handleContextMenuDesktop = (event, idx) => {
-    if (isMobile) return;
-    event.preventDefault();
-    openContextMenu(event.currentTarget, idx);
-  };
-
-  const handleTouchStart = (event, idx) => {
-    if (!isMobile) return;
-    const target = event.currentTarget;
-    const timer = setTimeout(() => {
-      openContextMenu(target, idx);
-    }, LONG_PRESS_MS);
-    setLongPressTimer(timer);
-  };
-
-  const handleTouchEnd = () => {
-    if (longPressTimer) {
-      clearTimeout(longPressTimer);
-      setLongPressTimer(null);
-    }
-  };
-
-  /* ------------------------------------------------------------------
-   * Context menu actions
-   * ------------------------------------------------------------------ */
-  const handleMenuCloseTab = () => {
-    if (!contextTab || contextTabIndex === 0) {
-      closeContextMenu();
-      return;
-    }
-    handleTabClose(contextTab.path);
-    closeContextMenu();
-  };
-
-  const handleMenuCloseOthers = () => {
-    if (!contextTab || tabs.length <= 1) {
-      closeContextMenu();
-      return;
-    }
-
-    let newTabs;
-    if (contextTabIndex === 0) {
-      newTabs = [tabs[0]];
+  const onTabsChange = (event, newIndex) => {
+    // "+" tab
+    if (newIndex === tabs.length) {
+      const newTabs = [
+        ...tabs,
+        { label: "New Tab", path: `/new-tab/${tabs.length + 1}` },
+      ];
+      handleTabReorder(newTabs);
+      const createdIndex = newTabs.length - 1;
+      handleTabChange(event, createdIndex, newTabs[createdIndex].path);
+      requestAnimationFrame(scrollActiveTabIntoView);
     } else {
-      newTabs = [tabs[0], contextTab];
+      const path = tabs[newIndex]?.path;
+      handleTabChange(event, newIndex, path);
     }
-
-    handleTabReorder(newTabs);
-    const newIndex = newTabs.findIndex((t) => t.path === contextTab.path);
-    const path = contextTab.path;
-
-    if (newIndex >= 0) {
-      handleTabChange(null, newIndex, path);
-    } else {
-      handleTabChange(null, 0, newTabs[0].path);
-    }
-
-    closeContextMenu();
   };
 
-  const handleMenuCloseAll = () => {
-    if (!tabs.length) {
-      closeContextMenu();
+  const onCloseClick = (e, tabPath) => {
+    e.stopPropagation();
+    handleTabClose(tabPath);
+  };
+
+  // Drag + drop (desktop only)
+  const onDragStart = (e, index) => {
+    if (mobile) return;
+    setDragIndex(index);
+    setDragOverIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    try {
+      e.dataTransfer.setData("text/plain", String(index));
+    } catch {
+      // ignore
+    }
+  };
+
+  const onDragOver = (e, index) => {
+    if (mobile || dragIndex == null) return;
+    e.preventDefault();
+    if (index !== dragOverIndex) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const onDrop = (e, index) => {
+    if (mobile || dragIndex == null) return;
+    e.preventDefault();
+    const finalIndex = index;
+    if (finalIndex == null || finalIndex === dragIndex) {
+      setDragIndex(null);
+      setDragOverIndex(null);
       return;
     }
-    const newTabs = [tabs[0]];
+    const newTabs = reorderArray(tabs, dragIndex, finalIndex);
     handleTabReorder(newTabs);
-    handleTabChange(null, 0, newTabs[0].path);
-    closeContextMenu();
+    setDragIndex(null);
+    setDragOverIndex(null);
   };
 
-  const handleMenuDuplicate = () => {
-    if (!contextTab) {
-      closeContextMenu();
-      return;
-    }
-
-    const dupTab = {
-      ...contextTab,
-      label: contextTab.label.includes("(Copy)")
-        ? contextTab.label
-        : `${contextTab.label} (Copy)`,
-    };
-
-    const idx = contextTabIndex ?? 0;
-    const newTabs = [
-      ...tabs.slice(0, idx + 1),
-      dupTab,
-      ...tabs.slice(idx + 1),
-    ];
-
-    handleTabReorder(newTabs);
-    const newIndex = idx + 1;
-    handleTabChange(null, newIndex, dupTab.path);
-    closeContextMenu();
+  const onDragEnd = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
   };
 
-  /* ------------------------------------------------------------------
-   * Add tab
-   * ------------------------------------------------------------------ */
-  const handleAddTab = () => {
-    const newTabs = [
-      ...tabs,
-      { label: `New Tab ${tabs.length + 1}`, path: `/new-tab/${tabs.length + 1}` },
-    ];
-    handleTabReorder(newTabs);
-  };
+  const getTabLabel = (t, idx) => {
+    const badgeRaw =
+      typeof t.badge !== "undefined" ? t.badge : t.badgeCount ?? null;
+    const showBadge = badgeRaw !== null && badgeRaw !== 0;
+    const isNumberBadge =
+      typeof badgeRaw === "number" && Number.isFinite(badgeRaw);
 
-  /* ------------------------------------------------------------------
-   * Tab styles (rectangular)
-   * ------------------------------------------------------------------ */
-  const getTabSx = (active) => {
-    const baseBg =
-      theme.palette.mode === "dark"
-        ? theme.palette.background.default
-        : theme.palette.background.paper;
-
-    const activeBg =
-      theme.palette.mode === "dark"
-        ? "rgba(25,118,210,0.25)"
-        : "rgba(25,118,210,0.08)";
-
-    return {
-      display: "flex",
-      alignItems: "center",
-      maxWidth: 220,
-      minWidth: 90,
-      padding: "0 10px",
-      marginRight: 4,
-      borderRadius: 6,
-      border: "1px solid",
-      borderColor: active ? "primary.main" : "divider",
-      bgcolor: active ? activeBg : baseBg,
-      cursor: "pointer",
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      fontSize: 13,
-      flexShrink: 0,
-      height: "100%",
-      boxSizing: "border-box",
-      transition: "background 0.15s ease, border-color 0.15s ease",
-      "&:hover": {
-        borderColor: active ? "primary.main" : "action.hover",
-        bgcolor: active
-          ? activeBg
-          : theme.palette.mode === "dark"
-          ? "rgba(255,255,255,0.04)"
-          : "rgba(0,0,0,0.02)",
-      },
-    };
-  };
-
-  /* ------------------------------------------------------------------
-   * Middle-click close (desktop)
-   * ------------------------------------------------------------------ */
-  const handleMouseDown = (event, tab, idx) => {
-    if (event.button === 1 && idx !== 0) {
-      event.preventDefault();
-      handleTabClose(tab.path);
-    }
-  };
-
-  return (
-    <>
+    return (
       <Box
         sx={{
-          height: "100%",
           display: "flex",
           alignItems: "center",
-          bgcolor: "background.paper",
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          minWidth: 0,
-          overflow: "hidden", // 🔒 this row NEVER makes the page wider
+          gap: 0.75,
+          px: mobile ? 0.25 : 0.5,
         }}
       >
-        {/* One scrollable strip with tabs + +, clamped to navbar width */}
         <Box
-          ref={scrollRef}
           sx={{
             display: "flex",
             alignItems: "center",
-            flex: 1,
-            minWidth: 0,
-            overflowX: "auto",           // ✅ only this scrolls horizontally
-            overflowY: "hidden",
-            WebkitOverflowScrolling: "touch",
-            px: 0.5,
-            "&::-webkit-scrollbar": {
-              height: 3,
+            gap: 0.5,
+            maxWidth: mobile ? 120 : 180,
+          }}
+        >
+          <Box
+            component="span"
+            sx={{
+              whiteSpace: "nowrap",
+              textOverflow: "ellipsis",
+              overflow: "hidden",
+              fontSize: mobile ? 12 : 13,
+            }}
+          >
+            {t.label}
+          </Box>
+          {showBadge && (
+            <Badge
+              color="primary"
+              variant={isNumberBadge && !mobile ? "standard" : "dot"}
+              badgeContent={isNumberBadge && !mobile ? badgeRaw : undefined}
+              overlap="circular"
+              sx={{
+                "& .MuiBadge-badge": {
+                  fontSize: 9,
+                  minWidth: 14,
+                  height: 14,
+                  px: isNumberBadge && !mobile ? 0.4 : 0,
+                  borderRadius: "999px",
+                  boxShadow:
+                    theme.palette.mode === "dark"
+                      ? "0 0 0 1px rgba(0,0,0,0.6)"
+                      : "0 0 0 1px rgba(255,255,255,0.8)",
+                },
+              }}
+            />
+          )}
+        </Box>
+
+        {idx !== 0 && (
+          <IconButton
+            size="small"
+            onClick={(e) => onCloseClick(e, t.path)}
+            sx={{
+              p: 0,
+              ml: 0.25,
+              "& svg": {
+                fontSize: mobile ? 14 : 15,
+              },
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        )}
+      </Box>
+    );
+  };
+
+  return (
+    <Box
+      sx={{
+        width: "100%",
+        height: "100%",
+        bgcolor: "background.paper",
+        boxShadow: (t) => `inset 0 -1px 0 ${t.palette.divider}`,
+        display: "flex",
+        alignItems: "stretch",
+        overflow: "hidden", // tabs can't change layout width
+      }}
+    >
+      {/* Left arrow – desktop only */}
+      {!mobile && (
+        <Box
+          sx={{
+            width: 22,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: showLeftArrow ? "pointer" : "default",
+            opacity: showLeftArrow ? 0.8 : 0,
+            transition: "opacity 0.2s, transform 0.2s",
+            "&:hover": {
+              transform: showLeftArrow ? "translateY(-1px)" : "none",
+              opacity: showLeftArrow ? 1 : 0,
             },
-            "&::-webkit-scrollbar-thumb": {
-              background: "transparent",
+          }}
+          onClick={() => showLeftArrow && scrollByOffset(-160)}
+        >
+          ‹
+        </Box>
+      )}
+
+      {/* Scrollable strip containing Tabs + + button */}
+      <Box
+        ref={scrollRef}
+        onScroll={handleScroll}
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          height: "100%",
+          display: "flex",
+          alignItems: "stretch",
+          overflowX: "auto", // always scrollable container
+          overflowY: "hidden",
+          WebkitOverflowScrolling: mobile ? "touch" : "auto",
+          msOverflowStyle: "none",
+          scrollbarWidth: "none",
+          "&::-webkit-scrollbar": {
+            display: "none",
+          },
+        }}
+      >
+        <Tabs
+          value={safeTabIndex}
+          onChange={onTabsChange}
+          variant="standard"
+          TabIndicatorProps={{ style: { display: "none" } }}
+          sx={{
+            minHeight: "100%",
+            height: "100%",
+            "& .MuiTabs-flexContainer": {
+              height: "100%",
+              alignItems: "stretch",
             },
-            "&:hover::-webkit-scrollbar-thumb": {
-              background: "rgba(120,120,120,0.4)",
+            "& .MuiTab-root": {
+              minHeight: "100%",
+              height: "100%",
+              textTransform: "none",
+              color: "text.secondary",
+              padding: mobile ? "0 4px" : "0 8px",
+              // ⬇️ This is critical to create horizontal overflow for arrows
+              minWidth: mobile ? 90 : 130,
+              maxWidth: 200,
+            },
+            "& .MuiTab-root.Mui-selected": {
+              fontWeight: 600,
+              color: "text.primary",
+              bgcolor:
+                theme.palette.mode === "dark"
+                  ? "rgba(255,255,255,0.06)"
+                  : "rgba(0,0,0,0.04)",
+              boxShadow: `inset 0 -2px 0 ${theme.palette.primary.main}`,
+            },
+            "& .MuiTab-root:hover": {
+              bgcolor:
+                theme.palette.mode === "dark"
+                  ? "rgba(255,255,255,0.03)"
+                  : "rgba(0,0,0,0.02)",
             },
           }}
         >
-          {tabs.map((tab, idx) => {
-            const active = idx === tabIndex;
-            const accent = getTabAccentColor(tab.label);
+          {tabs.map((t, idx) => (
+            <Tab
+              key={t.path}
+              className="navbar-tab"
+              disableRipple
+              draggable={!mobile}
+              onDragStart={(e) => onDragStart(e, idx)}
+              onDragOver={(e) => onDragOver(e, idx)}
+              onDrop={(e) => onDrop(e, idx)}
+              onDragEnd={onDragEnd}
+              label={getTabLabel(t, idx)}
+              sx={{
+                opacity: dragIndex === idx ? 0.6 : 1,
+                borderLeft:
+                  dragOverIndex === idx && dragIndex !== null
+                    ? `2px solid ${theme.palette.primary.main}`
+                    : "none",
+                transition: "opacity 0.15s, border-color 0.15s",
+              }}
+            />
+          ))}
 
-            return (
+          {/* + tab */}
+          <Tab
+            disableRipple
+            value={tabs.length}
+            label={
               <Box
-                key={tab.path || tab.id || idx}
-                data-active-tab={active ? "true" : "false"}
-                onClick={() => handleTabChange(null, idx, tab.path)}
-                onContextMenu={(e) => handleContextMenuDesktop(e, idx)}
-                onMouseDown={(e) => handleMouseDown(e, tab, idx)}
-                onTouchStart={(e) => handleTouchStart(e, idx)}
-                onTouchEnd={handleTouchEnd}
-                onTouchCancel={handleTouchEnd}
-                sx={getTabSx(active)}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  px: mobile ? 0.25 : 0.5,
+                }}
               >
-                {/* coloured accent bar */}
-                <Box
-                  sx={{
-                    width: 3,
-                    borderRadius: 999,
-                    bgcolor: accent,
-                    mr: 0.75,
-                    alignSelf: "stretch",
-                    my: "22%",
-                    opacity: 0.9,
-                  }}
-                />
-
-                <Typography
-                  variant="body2"
-                  noWrap
-                  sx={{
-                    fontSize: 12,
-                    flex: 1,
-                    pr: idx !== 0 ? 0.5 : 0,
-                  }}
-                >
-                  {tab.label}
-                </Typography>
-
-                {/* No close on Dashboard (index 0) */}
-                {idx !== 0 && (
-                  <IconButton
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleTabClose(tab.path);
-                    }}
-                    sx={{
-                      ml: 0.25,
-                      p: 0,
-                      "& svg": { fontSize: 14 },
-                    }}
-                  >
-                    <CloseIcon />
-                  </IconButton>
-                )}
+                <AddIcon sx={{ fontSize: mobile ? 18 : 20 }} />
               </Box>
-            );
-          })}
-
-          {/* + Add tab – always after last tab, inside scroll strip */}
-          <IconButton
-            size="small"
-            onClick={handleAddTab}
-            sx={{
-              flexShrink: 0,
-              ml: 0.5,
-              p: 0.25,
-            }}
-          >
-            <AddIcon sx={{ fontSize: 18 }} />
-          </IconButton>
-        </Box>
+            }
+          />
+        </Tabs>
       </Box>
 
-      {/* Context menu (desktop right-click + mobile long-press) */}
-      <Menu
-        anchorEl={contextAnchor}
-        open={Boolean(contextAnchor)}
-        onClose={closeContextMenu}
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "left",
-        }}
-        transformOrigin={{
-          vertical: "top",
-          horizontal: "left",
-        }}
-      >
-        <MenuItem
-          disabled={!contextTab || contextTabIndex === 0}
-          onClick={handleMenuCloseTab}
+      {/* Right arrow – desktop only */}
+      {!mobile && (
+        <Box
+          sx={{
+            width: 22,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: showRightArrow ? "pointer" : "default",
+            opacity: showRightArrow ? 0.8 : 0,
+            transition: "opacity 0.2s, transform 0.2s",
+            "&:hover": {
+              transform: showRightArrow ? "translateY(-1px)" : "none",
+              opacity: showRightArrow ? 1 : 0,
+            },
+          }}
+          onClick={() => showRightArrow && scrollByOffset(160)}
         >
-          <ListItemIcon>
-            <CloseIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Close tab</ListItemText>
-        </MenuItem>
-
-        <MenuItem
-          disabled={!contextTab || tabs.length <= 1}
-          onClick={handleMenuCloseOthers}
-        >
-          <ListItemIcon>
-            <CancelPresentationIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Close other tabs</ListItemText>
-        </MenuItem>
-
-        <MenuItem disabled={tabs.length <= 1} onClick={handleMenuCloseAll}>
-          <ListItemIcon>
-            <ClearAllIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Close all (keep Dashboard)</ListItemText>
-        </MenuItem>
-
-        <MenuItem disabled={!contextTab} onClick={handleMenuDuplicate}>
-          <ListItemIcon>
-            <FilterNoneIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Duplicate tab</ListItemText>
-        </MenuItem>
-      </Menu>
-    </>
+          ›
+        </Box>
+      )}
+    </Box>
   );
 }
