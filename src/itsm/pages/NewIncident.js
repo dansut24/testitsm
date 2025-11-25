@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import {
   Box,
   TextField,
-  Button,
+Button,
   Typography,
   CircularProgress,
   Paper,
@@ -18,7 +18,7 @@ const StepIndicator = ({ step, active }) => (
       width: 40,
       height: 40,
       borderRadius: "50%",
-      border: active ? "4px solid #4caf50" : "2px solid #ccc",
+      border: active ? "4px solid #4caf50" : "2px solid "#ccc",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -126,7 +126,6 @@ const NewIncident = () => {
           priority: incident.priority,
           category: incident.category,
           status: incident.status,
-          // who the incident is for
           requester: requesterUser
             ? requesterUser.username ||
               `${requesterUser.first_name || ""} ${
@@ -134,13 +133,12 @@ const NewIncident = () => {
               }`.trim() ||
               requesterUser.email
             : "Unknown",
-          // who created it in the portal (current logged-in agent/user)
           submittedBy: agentUser?.username || agentUser?.email || "unknown",
         }),
       });
     } catch (err) {
       console.error("Email notification error:", err);
-      // Don't block incident creation on email failure
+      // Don’t block incident creation on email failure
     }
   };
 
@@ -166,14 +164,13 @@ const NewIncident = () => {
       return;
     }
 
-    try:
+    try {
       // 1) Get next reference number from RPC
       const { data: refData, error: refErr } = await supabase.rpc(
         "get_next_incident_reference"
       );
       if (refErr) throw refErr;
 
-      // Support either plain text or { reference_number: "INC-000001" }
       const reference_number =
         typeof refData === "string"
           ? refData
@@ -192,11 +189,11 @@ const NewIncident = () => {
           .from("sla_settings")
           .select("duration_minutes")
           .eq("priority", formData.priority)
-          .maybeSingle?.() ?? {}; // if maybeSingle isn't available, replace with .single()
+          .maybeSingle();
 
         if (slaError) {
           console.warn("SLA lookup error:", slaError);
-        } else if (sla?.duration_minutes) {
+        } else if (sla && sla.duration_minutes) {
           const now = new Date();
           sla_due = new Date(
             now.getTime() + sla.duration_minutes * 60000
@@ -219,10 +216,9 @@ const NewIncident = () => {
             description: formData.description,
             priority: formData.priority,
             category: formData.category,
-            status: "New", // default new status
-            created_by: selectedUser.id, // FK to users.id (requester)
+            status: "New",
+            created_by: selectedUser.id, // requester FK → users.id
             sla_due,
-            // assigned_team_id / assigned_user_id left null for now
           },
         ])
         .select()
@@ -287,7 +283,6 @@ const NewIncident = () => {
             </Typography>
           )}
 
-          {/* Results */}
           {users.length > 0 && (
             <Box sx={{ mt: 2 }}>
               <Typography
