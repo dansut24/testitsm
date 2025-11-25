@@ -8,16 +8,14 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-/* MAIN CONTENT SCROLL AREA */
+/* MAIN CONTENT SCROLLBAR STYLING ONLY
+   (do NOT control scroll behavior here) */
 .scrollable {
-  overflow-y: auto;               /* Only this area scrolls */
-  overflow-x: hidden;             /* NO horizontal scroll ever */
-  scrollbar-width: thin;          /* Firefox: thin scrollbar */
-  scrollbar-color: rgba(120,120,120,0.45) transparent;
-  position: relative;
+  scrollbar-width: thin;                          /* Firefox: thin scrollbar */
+  scrollbar-color: rgba(120, 120, 120, 0.45) transparent;
 }
 
-/* WebKit / Chrome / Edge / Safari Scrollbar */
+/* WebKit / Chrome / Edge / Safari scrollbar styling */
 .scrollable::-webkit-scrollbar {
   width: 8px;
 }
