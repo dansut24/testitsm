@@ -71,7 +71,7 @@ const NewIncident = () => {
 
     const query = userQuery.trim();
     if (!query) {
-      setUserError("Enter a name, username or email to search.");
+      setUserError("Enter a username or email to search.");
       setUserLoading(false);
       return;
     }
@@ -79,9 +79,9 @@ const NewIncident = () => {
     try {
       const { data, error: supaError } = await supabase
         .from("users")
-        .select("id, username, first_name, last_name, email")
+        .select("id, username, email")
         .or(
-          `first_name.ilike.%${query}%,last_name.ilike.%${query}%,username.ilike.%${query}%,email.ilike.%${query}%`
+          `username.ilike.%${query}%,email.ilike.%${query}%`
         )
         .limit(10);
 
@@ -126,14 +126,14 @@ const NewIncident = () => {
           priority: incident.priority,
           category: incident.category,
           status: incident.status,
-          requester: requesterUser
-            ? requesterUser.username ||
-              `${requesterUser.first_name || ""} ${
-                requesterUser.last_name || ""
-              }`.trim() ||
-              requesterUser.email
-            : "Unknown",
-          submittedBy: agentUser?.username || agentUser?.email || "unknown",
+          requester:
+            requesterUser?.username ||
+            requesterUser?.email ||
+            "Unknown",
+          submittedBy:
+            agentUser?.username ||
+            agentUser?.email ||
+            "unknown",
         }),
       });
     } catch (err) {
@@ -185,8 +185,6 @@ const NewIncident = () => {
       // 2) Look up SLA duration for chosen priority
       let sla_due = null;
       try {
-        // If your supabase-js version doesn't support maybeSingle(),
-        // change it to .single()
         const { data: sla, error: slaError } = await supabase
           .from("sla_settings")
           .select("duration_minutes")
@@ -259,7 +257,7 @@ const NewIncident = () => {
           <Box display="flex" gap={1}>
             <TextField
               fullWidth
-              label="Name, Username or Email"
+              label="Username or Email"
               value={userQuery}
               onChange={(e) => setUserQuery(e.target.value)}
               onKeyDown={(e) => {
@@ -295,10 +293,7 @@ const NewIncident = () => {
                 Select a user:
               </Typography>
               {users.map((user) => {
-                const name =
-                  `${user.first_name || ""} ${
-                    user.last_name || ""
-                  }`.trim() || user.username || user.email;
+                const name = user.username || user.email || `User #${user.id}`;
                 return (
                   <Paper
                     key={user.id}
@@ -323,11 +318,6 @@ const NewIncident = () => {
                         {user.email}
                       </Typography>
                     )}
-                    {user.username && (
-                      <Typography variant="body2" color="text.secondary">
-                        @{user.username}
-                      </Typography>
-                    )}
                   </Paper>
                 );
               })}
@@ -336,12 +326,7 @@ const NewIncident = () => {
 
           {selectedUser && (
             <Typography sx={{ mt: 1 }} color="text.secondary">
-              Selected:{" "}
-              {`${selectedUser.first_name || ""} ${
-                selectedUser.last_name || ""
-              }`.trim() ||
-                selectedUser.username ||
-                selectedUser.email}
+              Selected: {selectedUser.username || selectedUser.email}
             </Typography>
           )}
         </Paper>
