@@ -164,6 +164,7 @@ const Layout = () => {
     navigate("/login");
   };
 
+  // keep tabs in sync with route
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -237,8 +238,7 @@ const Layout = () => {
         width: "100%",
         height: "100vh",
         minHeight: "100vh",
-        overflowX: "hidden",
-        overflowY: "auto", // 🔹 allow browser scrollbar to scroll
+        overflow: "hidden", // 🔹 keep grid pinned; content scrolls inside main
         bgcolor: theme.palette.background.default,
         overscrollBehavior: "none",
       }}
@@ -257,7 +257,7 @@ const Layout = () => {
         />
       )}
 
-      {/* Main grid */}
+      {/* Main grid: header+tabs / content / bottom nav (mobile) */}
       <Box
         sx={{
           flex: 1,
@@ -296,9 +296,11 @@ const Layout = () => {
               gap: 1,
               borderBottom: "1px solid",
               borderColor: "divider",
+              // small constant padding so search never hugs the top on mobile
               pt: isMobile ? 0.5 : 0,
             }}
           >
+            {/* Logo / brand / menu */}
             {!isMobile && sidebarMode === "hidden" ? (
               <IconButton
                 onClick={() => setMobileSidebarOpen(true)}
@@ -616,7 +618,7 @@ const Layout = () => {
           </Box>
         </Box>
 
-        {/* Main content */}
+        {/* Main content row – only this scrolls */}
         <Box
           component="main"
           sx={{
@@ -632,7 +634,7 @@ const Layout = () => {
           <Outlet />
         </Box>
 
-        {/* Bottom nav (mobile only) */}
+        {/* Bottom nav (mobile only, pinned in the grid) */}
         {isMobile && (
           <Box
             sx={{
@@ -657,6 +659,7 @@ const Layout = () => {
         )}
       </Box>
 
+      {/* Sidebar Drawer (mobile & hidden desktop) */}
       {(isMobile || sidebarMode === "hidden") && (
         <SwipeableDrawer
           anchor="left"
@@ -685,6 +688,7 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
+      {/* Desktop right-hand drawer */}
       {!isMobile && (
         <SwipeableDrawer
           anchor="right"
@@ -720,6 +724,7 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
+      {/* Bottom action drawer (mobile) */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
@@ -749,6 +754,7 @@ const Layout = () => {
             </Typography>
           )}
           {drawerType === "notifications" && <NotificationDrawer />}
+          {/* Mobile profile drawer: no status controls */}
           {drawerType === "profile" && (
             <ProfileDrawer onLogout={handleLogout} showStatus={false} />
           )}
