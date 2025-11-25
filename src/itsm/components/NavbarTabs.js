@@ -1,4 +1,3 @@
-// src/itsm/layout/NavbarTabs.js
 import React, { useRef, useEffect, useState } from "react";
 import {
   Box,
@@ -16,8 +15,13 @@ import CloseIcon from "@mui/icons-material/Close";
 import ClearAllIcon from "@mui/icons-material/ClearAll";
 import FilterNoneIcon from "@mui/icons-material/FilterNone";
 import CancelPresentationIcon from "@mui/icons-material/CancelPresentation";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
 const LONG_PRESS_MS = 500;
+const LEFT_ARROW_WIDTH = 26;
+const RIGHT_ARROW_WIDTH = 26;
+const PLUS_WIDTH = 30;
 
 export default function NavbarTabs({
   tabs,
@@ -28,9 +32,10 @@ export default function NavbarTabs({
   isMobile,
 }) {
   const theme = useTheme();
-
-  // This is the ONLY element that scrolls horizontally
   const scrollRef = useRef(null);
+
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
   const [contextAnchor, setContextAnchor] = useState(null);
   const [contextTabIndex, setContextTabIndex] = useState(null);
@@ -59,8 +64,37 @@ export default function NavbarTabs({
   };
 
   /* ------------------------------------------------------------------
-   * Keep active tab in view when changed
+   * Scroll helpers
    * ------------------------------------------------------------------ */
+  const updateScrollButtons = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const { scrollLeft, clientWidth, scrollWidth } = el;
+
+    setCanScrollLeft(scrollLeft > 2);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2);
+  };
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    updateScrollButtons();
+
+    const handleScroll = () => updateScrollButtons();
+    const handleResize = () => updateScrollButtons();
+
+    el.addEventListener("scroll", handleScroll);
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      el.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleResize);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabs.length, isMobile]);
+
+  // Keep active tab visible when changed
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -79,8 +113,15 @@ export default function NavbarTabs({
     }
   }, [tabIndex, tabs.length]);
 
+  const scrollTabs = (direction) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const delta = el.clientWidth * 0.6 * (direction === "left" ? -1 : 1);
+    el.scrollBy({ left: delta, behavior: "smooth" });
+  };
+
   /* ------------------------------------------------------------------
-   * Context menu helpers (desktop right-click + mobile long-press)
+   * Context menu (desktop right-click + mobile long-press)
    * ------------------------------------------------------------------ */
   const openContextMenu = (anchorEl, idx) => {
     setContextTabIndex(idx);
@@ -203,7 +244,7 @@ export default function NavbarTabs({
   };
 
   /* ------------------------------------------------------------------
-   * Styles
+   * Tab styles
    * ------------------------------------------------------------------ */
   const getTabSx = (active) => {
     const baseBg =
@@ -258,34 +299,37 @@ export default function NavbarTabs({
     }
   };
 
+  // Padding left/right inside scroll area to reserve space for overlays
+  const paddingLeft = !isMobile ? LEFT_ARROW_WIDTH + 4 : 4;
+  const paddingRight = !isMobile
+    ? RIGHT_ARROW_WIDTH + PLUS_WIDTH + 8
+    : PLUS_WIDTH + 8;
+
   return (
     <>
       <Box
         sx={{
+          position: "relative",
           height: "100%",
-          display: "flex",
-          alignItems: "center",
           bgcolor: "background.paper",
           borderBottom: "1px solid",
           borderColor: "divider",
           minWidth: 0,
-          overflow: "hidden", // 🔒 this whole row never extends page width
+          overflow: "hidden", // 🔒 row never grows wider than container
         }}
       >
-        {/* Single scrollable strip: tabs + + button.
-            This strip has fixed width (100%) and will NOT push content right.
-        */}
+        {/* Scrollable strip: tabs only (no arrows / plus) */}
         <Box
           ref={scrollRef}
           sx={{
+            height: "100%",
             display: "flex",
             alignItems: "center",
-            flex: 1,
-            minWidth: 0,
-            overflowX: "auto",           // ✅ horizontal scroll ONLY here
+            overflowX: "auto",
             overflowY: "hidden",
             WebkitOverflowScrolling: "touch",
-            px: 0.5,
+            pl: paddingLeft,
+            pr: paddingRight,
             "&::-webkit-scrollbar": {
               height: 3,
             },
@@ -293,7 +337,7 @@ export default function NavbarTabs({
               background: "transparent",
             },
             "&:hover::-webkit-scrollbar-thumb": {
-              background: "rgba(120, 120, 120, 0.4)",
+              background: "rgba(120,120,120,0.4)",
             },
           }}
         >
@@ -357,15 +401,72 @@ export default function NavbarTabs({
               </Box>
             );
           })}
+        </Box>
 
-          {/* + Add tab – always at the visible end of the strip */}
+        {/* Left arrow (desktop only, overlaid, doesn’t affect width) */}
+        {!isMobile && (
+          <Box
+            sx={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: LEFT_ARROW_WIDTH,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              pointerEvents: "none",
+              background:
+                "linear-gradient(to right, rgba(0,0,0,0.06), transparent)",
+            }}
+          >
+            {canScrollLeft && (
+              <IconButton
+                size="small"
+                onClick={() => scrollTabs("left")}
+                sx={{ p: 0.25, pointerEvents: "auto" }}
+              >
+                <ChevronLeftIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            )}
+          </Box>
+        )}
+
+        {/* Right arrow + plus (desktop) or just plus (mobile) – overlaid on right, fixed */}
+        <Box
+          sx={{
+            position: "absolute",
+            right: 0,
+            top: 0,
+            bottom: 0,
+            display: "flex",
+            alignItems: "center",
+            pr: 0.5,
+            pl: 1,
+            background:
+              "linear-gradient(to left, rgba(0,0,0,0.06), transparent)",
+            pointerEvents: "none",
+            gap: 0.5,
+          }}
+        >
+          {/* Desktop right arrow */}
+          {!isMobile && canScrollRight && (
+            <IconButton
+              size="small"
+              onClick={() => scrollTabs("right")}
+              sx={{ p: 0.25, pointerEvents: "auto" }}
+            >
+              <ChevronRightIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          )}
+
+          {/* + Add tab – always visible, never off-screen */}
           <IconButton
             size="small"
             onClick={handleAddTab}
             sx={{
-              flexShrink: 0,
-              ml: 0.5,
               p: 0.25,
+              pointerEvents: "auto",
             }}
           >
             <AddIcon sx={{ fontSize: 18 }} />
@@ -411,7 +512,7 @@ export default function NavbarTabs({
           <ListItemIcon>
             <ClearAllIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Close all (keep home)</ListItemText>
+          <ListItemText>Close all (keep Dashboard)</ListItemText>
         </MenuItem>
 
         <MenuItem disabled={!contextTab} onClick={handleMenuDuplicate}>
