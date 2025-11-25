@@ -1,15 +1,38 @@
-<Box
-  component="main"
-  sx={{
-    position: "relative",
-    height: "100%",
-    overflowY: "auto",      // ✅ Only vertical scroll allowed
-    overflowX: "hidden",    // 🚫 No horizontal scroll
-    WebkitOverflowScrolling: "touch",
-    px: 2,
-    pt: 1,
-    pb: isMobile ? BOTTOM_NAV_HEIGHT + 8 : 2,
-  }}
->
-  <Outlet />
-</Box>
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden; /* Disable scrolling everywhere */
+  overscroll-behavior: none; /* 🚫 Prevent iOS/Android page bounce */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Scrollbar for the MAIN content only */
+.scrollable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollable::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 120, 0.35);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.scrollable::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 120, 120, 0.55);
+}
+
+/* Auto-hide scrollbar until scrolling */
+.scrollable {
+  scrollbar-width: thin;       /* Firefox support */
+  scrollbar-color: transparent transparent;
+}
+
+.scrollable:hover {
+  scrollbar-color: rgba(120, 120, 120, 0.4) transparent;
+}
