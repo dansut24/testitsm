@@ -289,21 +289,27 @@ const Layout = () => {
       )}
 
       {/* Fixed Navbar (header + tabs) */}
-      <Box
-        sx={{
-          position: "fixed",
-          top: 0,
-          left: desktopHasSidebar ? sidebarWidth : 0,
-          right: 0,
-          height: NAVBAR_HEIGHT,
-          zIndex: 1200,
-          bgcolor: "background.paper",
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
+     <Box
+  sx={{
+    bgcolor: "background.paper",
+    display: "flex",
+    flexDirection: "column",
+    height: NAVBAR_HEIGHT,
+    borderBottom: "1px solid",
+    borderColor: "divider",
+    zIndex: 1200,
+
+    /* 🔥 Shadow only when main content is scrolled */
+    boxShadow: theme =>
+      document.body.dataset.navshadow === "true"
+        ? `0 2px 5px ${theme.palette.mode === "dark"
+            ? "rgba(0,0,0,0.45)"
+            : "rgba(0,0,0,0.15)"}`
+        : "none",
+
+    transition: "box-shadow 0.25s ease",
+  }}
+>
         {/* Header row */}
         <Box
           sx={{
@@ -637,25 +643,26 @@ const Layout = () => {
       </Box>
 
       {/* Main content – now sized to avoid horizontal overflow */}
-        <Box
-    component="main"
-    className="app-main"
-    sx={{
-      mt: `${NAVBAR_HEIGHT}px`,
-      ml: desktopHasSidebar ? `${sidebarWidth}px` : 0,
-      mb: isMobile ? `${BOTTOM_NAV_HEIGHT}px` : 0,
-      px: 2,
-      pt: 1,
-      pb: isMobile ? 2 : 3,
-      width: desktopHasSidebar ? `calc(100% - ${sidebarWidth}px)` : "100%",
-      maxWidth: "100%",
-      boxSizing: "border-box",
-      overflowX: "hidden",   // 🔒 extra safety on the content area itself
-      minHeight: "calc(100vh - 0px)",
-    }}
-  >
-    <Outlet />
-  </Box>
+       <Box
+  component="main"
+  className="scrollable"
+  onScroll={(e) => {
+    const scrolled = e.currentTarget.scrollTop > 4;
+    document.body.dataset.navshadow = scrolled ? "true" : "false";
+  }}
+  sx={{
+    position: "relative",
+    height: "100%",
+    overflowY: "auto",      // Main scroll area
+    overflowX: "hidden",    // No horizontal scroll
+    WebkitOverflowScrolling: "touch",
+    px: 2,
+    pt: 1,
+    pb: isMobile ? BOTTOM_NAV_HEIGHT + 8 : 2,
+  }}
+>
+  <Outlet />
+</Box>
 
       {/* Sidebar Drawer (mobile & hidden desktop) */}
       {(isMobile || sidebarMode === "hidden") && (
