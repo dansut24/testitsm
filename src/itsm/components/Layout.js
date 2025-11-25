@@ -92,7 +92,7 @@ const Layout = () => {
     localStorage.setItem("userStatus", userStatus);
   }, [userStatus]);
 
-  // Optional: keep vh var in case you still use it elsewhere
+  // Optional vh helper if you use it elsewhere
   useEffect(() => {
     const setVh = () => {
       const vh = window.innerHeight * 0.01;
@@ -257,7 +257,7 @@ const Layout = () => {
         width: "100%",
         minHeight: "100vh",
         bgcolor: theme.palette.background.default,
-        overflowX: "hidden",
+        overflowX: "hidden", // prevent page-wide horizontal scroll
       }}
     >
       {/* Fixed Sidebar (desktop) */}
@@ -636,19 +636,22 @@ const Layout = () => {
         </Box>
       </Box>
 
-      {/* Main content – scrolls with the page */}
+      {/* Main content – now sized to avoid horizontal overflow */}
       <Box
         component="main"
         sx={{
           mt: `${NAVBAR_HEIGHT}px`,
           ml: desktopHasSidebar ? `${sidebarWidth}px` : 0,
-          mr: 0,
           mb: isMobile ? `${BOTTOM_NAV_HEIGHT}px` : 0,
           px: 2,
           pt: 1,
           pb: isMobile ? 2 : 3,
-          minHeight: "calc(100vh - 0px)",
+          // 🔑 Keep main content width within the viewport minus sidebar
+          width: desktopHasSidebar ? `calc(100% - ${sidebarWidth}px)` : "100%",
+          maxWidth: "100%",
+          boxSizing: "border-box",
           overflowX: "hidden",
+          minHeight: "calc(100vh - 0px)",
         }}
       >
         <Outlet />
@@ -734,8 +737,8 @@ const Layout = () => {
           }}
           PaperProps={{
             sx: {
-              height: `calc(50dvh - ${BOTTOM_NAV_HEIGHT}px)`,
-              bottom: `${BOTTOM_NAV_HEIGHT}px`,
+              height: `calc(50dvh - ${BASE_BOTTOM_NAV_HEIGHT}px)`,
+              bottom: `${BASE_BOTTOM_NAV_HEIGHT}px`,
               p: 2,
               borderTopLeftRadius: 12,
               borderTopRightRadius: 12,
