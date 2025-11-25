@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import {
   Box,
   TextField,
-Button,
+  Button,
   Typography,
   CircularProgress,
   Paper,
@@ -18,7 +18,7 @@ const StepIndicator = ({ step, active }) => (
       width: 40,
       height: 40,
       borderRadius: "50%",
-      border: active ? "4px solid #4caf50" : "2px solid "#ccc",
+      border: active ? "4px solid #4caf50" : "2px solid #ccc",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -185,6 +185,8 @@ const NewIncident = () => {
       // 2) Look up SLA duration for chosen priority
       let sla_due = null;
       try {
+        // If your supabase-js version doesn't support maybeSingle(),
+        // change it to .single()
         const { data: sla, error: slaError } = await supabase
           .from("sla_settings")
           .select("duration_minutes")
