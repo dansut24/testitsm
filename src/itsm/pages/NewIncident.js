@@ -41,75 +41,188 @@ const priorityOptions = ["Low", "Medium", "High", "Critical"];
 
 const NewIncident = () => {
   const navigate = useNavigate();
+
   const [step, setStep] = useState(1);
-  const [customerQuery, setCustomerQuery] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
+
+  // STEP 1 – USER (CUSTOMER) SEARCH
+  const [userQuery, setUserQuery] = useState("");
+  const [users, setUsers] = useState([]);
+  const [userLoading, setUserLoading] = useState(false);
+  const [userError, setUserError] = useState("");
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  // STEP 2 – INCIDENT FORM
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     category: "",
     priority: "",
-    asset_tag: "",
   });
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const handleCustomerSearch = () => {
-    setSelectedCustomer({ name: customerQuery });
+  // --- SEARCH USERS TABLE (ACTING AS CUSTOMER/REQUESTER) ---
+  const handleUserSearch = async () => {
+    setUserError("");
+    setUserLoading(true);
+    setUsers([]);
+    setSelectedUser(null);
+
+    const query = userQuery.trim();
+    if (!query) {
+      setUserError("Enter a name, username or email to search.");
+      setUserLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error: supaError } = await supabase
+        .from("users")
+        .select("id, username, first_name, last_name, email")
+        .or(
+          `first_name.ilike.%${query}%,last_name.ilike.%${query}%,username.ilike.%${query}%,email.ilike.%${query}%`
+        )
+        .limit(10);
+
+      if (supaError) throw supaError;
+
+      if (!data || data.length === 0) {
+        setUserError("No users found for that search.");
+      } else {
+        setUsers(data);
+        if (data.length === 1) {
+          setSelectedUser(data[0]);
+          setStep(2);
+        }
+      }
+    } catch (err) {
+      console.error("User search error:", err);
+      setUserError(
+        err?.message || "There was a problem searching for users."
+      );
+    } finally {
+      setUserLoading(false);
+    }
+  };
+
+  const handleUserSelect = (user) => {
+    setSelectedUser(user);
     setStep(2);
   };
 
-  const sendNotificationEmail = async (incident) => {
+  // --- EMAIL NOTIFICATION (YOUR API) ---
+  const sendNotificationEmail = async (incident, requesterUser, agentUser) => {
     try {
       await fetch("/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "incident",
-          subject: `New Incident Submitted - ${incident.reference}`,
-          reference: incident.reference,
+          subject: `New Incident Submitted - ${incident.reference_number}`,
+          reference: incident.reference_number,
           title: incident.title,
           description: incident.description,
           priority: incident.priority,
           category: incident.category,
-          submittedBy: incident.submitted_by,
-          customer: incident.customer_name,
+          status: incident.status,
+          // who the incident is for
+          requester: requesterUser
+            ? requesterUser.username ||
+              `${requesterUser.first_name || ""} ${
+                requesterUser.last_name || ""
+              }`.trim() ||
+              requesterUser.email
+            : "Unknown",
+          // who created it in the portal (current logged-in agent/user)
+          submittedBy: agentUser?.username || agentUser?.email || "unknown",
         }),
       });
     } catch (err) {
       console.error("Email notification error:", err);
+      // Don't block incident creation on email failure
     }
   };
 
+  // --- SUBMIT INCIDENT TO SUPABASE ---
   const handleSubmit = async () => {
     setSubmitting(true);
     setError("");
 
-    if (!formData.title || !formData.description || !formData.category || !formData.priority) {
+    if (!selectedUser) {
+      setError("Please select the user/customer this incident is for.");
+      setSubmitting(false);
+      return;
+    }
+
+    if (
+      !formData.title ||
+      !formData.description ||
+      !formData.category ||
+      !formData.priority
+    ) {
       setError("Please complete all required fields.");
       setSubmitting(false);
       return;
     }
 
-    try {
-      const { data: refData, error: refErr } = await supabase.rpc("get_next_incident_reference");
+    try:
+      // 1) Get next reference number from RPC
+      const { data: refData, error: refErr } = await supabase.rpc(
+        "get_next_incident_reference"
+      );
       if (refErr) throw refErr;
 
-      const reference = refData;
-      const user = JSON.parse(localStorage.getItem("user"));
+      // Support either plain text or { reference_number: "INC-000001" }
+      const reference_number =
+        typeof refData === "string"
+          ? refData
+          : refData?.reference_number || refData?.reference;
 
+      if (!reference_number) {
+        throw new Error(
+          "Could not generate incident reference number (check RPC)."
+        );
+      }
+
+      // 2) Look up SLA duration for chosen priority
+      let sla_due = null;
+      try {
+        const { data: sla, error: slaError } = await supabase
+          .from("sla_settings")
+          .select("duration_minutes")
+          .eq("priority", formData.priority)
+          .maybeSingle?.() ?? {}; // if maybeSingle isn't available, replace with .single()
+
+        if (slaError) {
+          console.warn("SLA lookup error:", slaError);
+        } else if (sla?.duration_minutes) {
+          const now = new Date();
+          sla_due = new Date(
+            now.getTime() + sla.duration_minutes * 60000
+          ).toISOString();
+        }
+      } catch (slaErr) {
+        console.warn("SLA calculation error:", slaErr);
+      }
+
+      // 3) Get current portal user (agent) from localStorage
+      const agentUser = JSON.parse(localStorage.getItem("user") || "null");
+
+      // 4) Insert into incidents table
       const { data, error: insertError } = await supabase
         .from("incidents")
         .insert([
           {
+            reference_number,
             title: formData.title,
             description: formData.description,
-            category: formData.category,
             priority: formData.priority,
-            reference,
-            asset_tag: formData.asset_tag || null,
-            customer_name: selectedCustomer?.name || "",
-            submitted_by: user?.username || "unknown",
+            category: formData.category,
+            status: "New", // default new status
+            created_by: selectedUser.id, // FK to users.id (requester)
+            sla_due,
+            // assigned_team_id / assigned_user_id left null for now
           },
         ])
         .select()
@@ -117,16 +230,16 @@ const NewIncident = () => {
 
       if (insertError) throw insertError;
 
-      await sendNotificationEmail({
-        ...formData,
-        reference,
-        customer_name: selectedCustomer?.name || "",
-        submitted_by: user?.username || "unknown",
-      });
+      // 5) Fire email notification (non-blocking failure)
+      await sendNotificationEmail(data, selectedUser, agentUser);
 
-      navigate(`/incidents/${data.id}`, { state: { tabName: reference } });
+      // 6) Navigate to incident detail page
+      navigate(`/incidents/${data.id}`, {
+        state: { tabName: reference_number },
+      });
     } catch (err) {
-      setError(err.message);
+      console.error("Incident submit error:", err);
+      setError(err?.message || "There was a problem submitting the incident.");
     } finally {
       setSubmitting(false);
     }
@@ -138,31 +251,106 @@ const NewIncident = () => {
         Raise New Incident
       </Typography>
 
+      {/* STEP 1: SEARCH USER / CUSTOMER */}
       <Box sx={{ position: "relative", mb: 5 }}>
         <StepIndicator step={1} active={step >= 1} />
         <Paper elevation={3} sx={{ pt: 4, pb: 2, px: 2 }}>
           <Typography variant="subtitle1" gutterBottom>
-            Step 1: Search for Customer
+            Step 1: Search for User / Customer
           </Typography>
           <Box display="flex" gap={1}>
             <TextField
               fullWidth
-              label="Customer Name or Email"
-              value={customerQuery}
-              onChange={(e) => setCustomerQuery(e.target.value)}
+              label="Name, Username or Email"
+              value={userQuery}
+              onChange={(e) => setUserQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleUserSearch();
+              }}
             />
-            <Button variant="contained" onClick={handleCustomerSearch}>
-              Search
+            <Button
+              variant="contained"
+              onClick={handleUserSearch}
+              disabled={userLoading}
+            >
+              {userLoading ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : (
+                "Search"
+              )}
             </Button>
           </Box>
-          {selectedCustomer && (
+
+          {userError && (
+            <Typography sx={{ mt: 1 }} color="error">
+              {userError}
+            </Typography>
+          )}
+
+          {/* Results */}
+          {users.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 1 }}
+              >
+                Select a user:
+              </Typography>
+              {users.map((user) => {
+                const name =
+                  `${user.first_name || ""} ${
+                    user.last_name || ""
+                  }`.trim() || user.username || user.email;
+                return (
+                  <Paper
+                    key={user.id}
+                    variant="outlined"
+                    sx={{
+                      p: 1.5,
+                      mb: 1,
+                      cursor: "pointer",
+                      borderColor:
+                        selectedUser?.id === user.id
+                          ? "#4caf50"
+                          : "rgba(0,0,0,0.12)",
+                      "&:hover": {
+                        borderColor: "#4caf50",
+                      },
+                    }}
+                    onClick={() => handleUserSelect(user)}
+                  >
+                    <Typography variant="subtitle2">{name}</Typography>
+                    {user.email && (
+                      <Typography variant="body2" color="text.secondary">
+                        {user.email}
+                      </Typography>
+                    )}
+                    {user.username && (
+                      <Typography variant="body2" color="text.secondary">
+                        @{user.username}
+                      </Typography>
+                    )}
+                  </Paper>
+                );
+              })}
+            </Box>
+          )}
+
+          {selectedUser && (
             <Typography sx={{ mt: 1 }} color="text.secondary">
-              Selected: {selectedCustomer.name}
+              Selected:{" "}
+              {`${selectedUser.first_name || ""} ${
+                selectedUser.last_name || ""
+              }`.trim() ||
+                selectedUser.username ||
+                selectedUser.email}
             </Typography>
           )}
         </Paper>
       </Box>
 
+      {/* STEP 2: INCIDENT DETAILS */}
       <Fade in={step >= 2}>
         <Box sx={{ position: "relative" }}>
           <StepIndicator step={2} active={step === 2} />
@@ -175,7 +363,9 @@ const NewIncident = () => {
               fullWidth
               label="Incident Title"
               value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, title: e.target.value })
+              }
               sx={{ mb: 2 }}
             />
             <TextField
@@ -185,7 +375,9 @@ const NewIncident = () => {
               rows={4}
               label="Description"
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               sx={{ mb: 2 }}
             />
             <TextField
@@ -194,11 +386,15 @@ const NewIncident = () => {
               select
               label="Category"
               value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, category: e.target.value })
+              }
               sx={{ mb: 2 }}
             >
               {categoryOptions.map((cat) => (
-                <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+                <MenuItem key={cat} value={cat}>
+                  {cat}
+                </MenuItem>
               ))}
             </TextField>
             <TextField
@@ -207,23 +403,35 @@ const NewIncident = () => {
               select
               label="Priority"
               value={formData.priority}
-              onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, priority: e.target.value })
+              }
               sx={{ mb: 2 }}
             >
               {priorityOptions.map((level) => (
-                <MenuItem key={level} value={level}>{level}</MenuItem>
+                <MenuItem key={level} value={level}>
+                  {level}
+                </MenuItem>
               ))}
             </TextField>
-            <TextField
+
+            {error && (
+              <Typography color="error" sx={{ mb: 2 }}>
+                {error}
+              </Typography>
+            )}
+
+            <Button
+              variant="contained"
               fullWidth
-              label="Asset Tag (optional)"
-              value={formData.asset_tag}
-              onChange={(e) => setFormData({ ...formData, asset_tag: e.target.value })}
-              sx={{ mb: 2 }}
-            />
-            {error && <Typography color="error" sx={{ mb: 2 }}>{error}</Typography>}
-            <Button variant="contained" fullWidth onClick={handleSubmit} disabled={submitting}>
-              {submitting ? <CircularProgress size={20} color="inherit" /> : "Submit Incident"}
+              onClick={handleSubmit}
+              disabled={submitting}
+            >
+              {submitting ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : (
+                "Submit Incident"
+              )}
             </Button>
           </Paper>
         </Box>
