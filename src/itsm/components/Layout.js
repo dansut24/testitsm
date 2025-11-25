@@ -1,4 +1,3 @@
-// src/itsm/layout/Layout.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -164,7 +163,7 @@ const Layout = () => {
     navigate("/login");
   };
 
-  // Tabs sync with route
+  // Sync tabs with route
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -263,7 +262,7 @@ const Layout = () => {
           flex: 1,
           minWidth: 0,
           display: "grid",
-          gridTemplateRows: `${NAVBAR_HEIGHT}px 1fr`, // 🔹 only two rows
+          gridTemplateRows: `${NAVBAR_HEIGHT}px 1fr`,
           height: "100%",
         }}
       >
@@ -622,7 +621,7 @@ const Layout = () => {
             WebkitOverflowScrolling: "touch",
             px: 2,
             pt: 1,
-            pb: isMobile ? BOTTOM_NAV_HEIGHT + 8 : 2, // 🔹 room for fixed bottom nav
+            pb: isMobile ? BOTTOM_NAV_HEIGHT + 8 : 2,
           }}
         >
           <Outlet />
@@ -694,7 +693,7 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Bottom action drawer (mobile) – sits just above bottom nav */}
+      {/* Bottom action drawer (mobile) */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
