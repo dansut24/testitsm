@@ -37,6 +37,7 @@ import ArticleIcon from "@mui/icons-material/Article";
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 60;
 
+// Base heights; we tweak them slightly for mobile
 const BASE_APP_HEADER_HEIGHT = 38;
 const BASE_TABBAR_HEIGHT = 30;
 const BASE_BOTTOM_NAV_HEIGHT = 56;
@@ -66,6 +67,7 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // 🔹 Fixed heights (no wobble)
   const APP_HEADER_HEIGHT = isMobile ? 52 : BASE_APP_HEADER_HEIGHT;
   const TABBAR_HEIGHT = isMobile ? 42 : BASE_TABBAR_HEIGHT;
   const NAVBAR_HEIGHT = APP_HEADER_HEIGHT + TABBAR_HEIGHT;
@@ -78,13 +80,14 @@ const Layout = () => {
   const [sidebarPinned, setSidebarPinned] = useState(true);
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState(null);
+  const [drawerType, setDrawerType] = useState(null); // 'search' | 'notifications' | 'profile' | null
 
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
 
   const username = "User";
   const userInitial = username[0]?.toUpperCase() || "U";
 
+  // 🔹 User status (shared with ProfileDrawer)
   const [userStatus, setUserStatus] = useState(
     () => localStorage.getItem("userStatus") || "Available"
   );
@@ -164,7 +167,7 @@ const Layout = () => {
     navigate("/login");
   };
 
-  // Keep tabs in sync with route
+  // 🔹 Keep tabs in sync with route
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -234,13 +237,16 @@ const Layout = () => {
   return (
     <Box
       sx={{
-        minHeight: "100vh",
+        position: "fixed",
+        inset: 0,
         width: "100%",
+        height: "100vh",
         display: "flex",
         bgcolor: theme.palette.background.default,
+        overflow: "hidden", // 🔹 Only main content area scrolls
       }}
     >
-      {/* Sidebar (desktop) */}
+      {/* Sidebar (desktop) – spans full height, static */}
       {desktopHasSidebar && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -254,33 +260,34 @@ const Layout = () => {
         />
       )}
 
-      {/* Main column — this scrolls with browser scrollbar */}
+      {/* Main grid (navbar + content + bottom nav) */}
       <Box
         sx={{
           flex: 1,
           minWidth: 0,
-          display: "flex",
-          flexDirection: "column",
+          display: "grid",
+          gridTemplateRows: isMobile
+            ? `${NAVBAR_HEIGHT}px 1fr ${BOTTOM_NAV_HEIGHT}px`
+            : `${NAVBAR_HEIGHT}px 1fr`,
+          height: "100%",
         }}
       >
-        {/* Navbar (header + tabs)
-            Desktop: sticky inside scroll
-            Mobile: fixed to viewport top */}
+        {/* Navbar row (header + tabs) – static in grid */}
         <Box
           sx={{
-            position: isMobile ? "fixed" : "sticky",
-            top: 0,
-            left: isMobile ? 0 : "auto",
-            right: isMobile ? 0 : "auto",
-            zIndex: 1200,
             bgcolor: "background.paper",
+            display: "flex",
+            flexDirection: "column",
+            height: NAVBAR_HEIGHT,
             borderBottom: "1px solid",
             borderColor: "divider",
+            zIndex: 1200,
           }}
         >
-          {/* Row 1: header */}
+          {/* Header row */}
           <Box
             sx={{
+              flex: `0 0 ${APP_HEADER_HEIGHT}px`,
               height: APP_HEADER_HEIGHT,
               minHeight: APP_HEADER_HEIGHT,
               display: "flex",
@@ -289,7 +296,7 @@ const Layout = () => {
               gap: 1,
               borderBottom: "1px solid",
               borderColor: "divider",
-              pt: isMobile ? 0.5 : 0, // tiny, consistent gap on mobile
+              pt: isMobile ? 0.5 : 0, // small consistent padding on mobile
             }}
           >
             {/* Logo / brand / menu */}
@@ -432,7 +439,7 @@ const Layout = () => {
               )}
             </Box>
 
-            {/* Right actions */}
+            {/* Right actions (desktop) */}
             {!isMobile && (
               <Box
                 sx={{
@@ -592,10 +599,10 @@ const Layout = () => {
             )}
           </Box>
 
-          {/* Row 2: Tab strip */}
+          {/* Tabs row */}
           <Box
             sx={{
-              height: TABBAR_HEIGHT,
+              flex: `0 0 ${TABBAR_HEIGHT}px`,
               minHeight: TABBAR_HEIGHT,
             }}
           >
@@ -610,21 +617,45 @@ const Layout = () => {
           </Box>
         </Box>
 
-        {/* Main content – add padding so it sits below fixed navbar on mobile */}
+        {/* Main content row – only this scrolls */}
         <Box
           component="main"
           sx={{
-            flex: 1,
             minHeight: 0,
+            overflowY: "auto",
             overflowX: "hidden",
-            // vertical scroll handled by the page (body)
+            WebkitOverflowScrolling: "touch",
             px: 2,
-            pt: isMobile ? NAVBAR_HEIGHT + 8 : 1,
-            pb: isMobile ? BOTTOM_NAV_HEIGHT + 8 : 2,
+            pt: 1,
+            pb: isMobile ? 1 : 2,
           }}
         >
           <Outlet />
         </Box>
+
+        {/* Bottom nav row (mobile only, static in grid) */}
+        {isMobile && (
+          <Box
+            sx={{
+              borderTop: `1px solid ${theme.palette.divider}`,
+              backgroundColor: theme.palette.background.paper,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-around",
+              height: BOTTOM_NAV_HEIGHT,
+            }}
+          >
+            <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
+            <SearchIcon onClick={() => setDrawerType("search")} />
+            <NotificationsIcon
+              onClick={() => setDrawerType("notifications")}
+            />
+            <AccountCircleIcon
+              onClick={() => setDrawerType("profile")}
+              style={{ cursor: "pointer" }}
+            />
+          </Box>
+        )}
       </Box>
 
       {/* Sidebar Drawer (mobile & hidden desktop) */}
@@ -722,38 +753,11 @@ const Layout = () => {
             </Typography>
           )}
           {drawerType === "notifications" && <NotificationDrawer />}
-          {/* Mobile profile drawer: no status controls */}
+          {/* Mobile profile drawer: no status controls here */}
           {drawerType === "profile" && (
             <ProfileDrawer onLogout={handleLogout} showStatus={false} />
           )}
         </SwipeableDrawer>
-      )}
-
-      {/* Fixed bottom nav (mobile) */}
-      {isMobile && (
-        <Box
-          sx={{
-            position: "fixed",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: BOTTOM_NAV_HEIGHT,
-            borderTop: `1px solid ${theme.palette.divider}`,
-            backgroundColor: theme.palette.background.paper,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-around",
-            zIndex: 1300,
-          }}
-        >
-          <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
-          <SearchIcon onClick={() => setDrawerType("search")} />
-          <NotificationsIcon onClick={() => setDrawerType("notifications")} />
-          <AccountCircleIcon
-            onClick={() => setDrawerType("profile")}
-            style={{ cursor: "pointer" }}
-          />
-        </Box>
       )}
     </Box>
   );
