@@ -229,13 +229,7 @@ const Layout = () => {
     { label: "Assets", icon: <StorageIcon /> },
   ];
 
-  // Desktop: reserve horizontal space so content doesn’t sit under sidebar
-  const desktopContentMarginLeft =
-    !isMobile && sidebarMode !== "hidden"
-      ? sidebarMode === "pinned" || sidebarPinned
-        ? `${EXPANDED_WIDTH}px`
-        : `${COLLAPSED_WIDTH}px`
-      : 0;
+  const desktopHasSidebar = !isMobile && sidebarMode !== "hidden";
 
   return (
     <Box
@@ -247,7 +241,7 @@ const Layout = () => {
       }}
     >
       {/* Sidebar (desktop) */}
-      {!isMobile && sidebarMode !== "hidden" && (
+      {desktopHasSidebar && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
           onToggle={() => {
@@ -260,21 +254,24 @@ const Layout = () => {
         />
       )}
 
-      {/* Main column – scrolls with browser scrollbar */}
+      {/* Main column — this scrolls with browser scrollbar */}
       <Box
         sx={{
           flex: 1,
           minWidth: 0,
-          ml: desktopContentMarginLeft,
           display: "flex",
           flexDirection: "column",
         }}
       >
-        {/* Sticky navbar (header + tabs) */}
+        {/* Navbar (header + tabs)
+            Desktop: sticky inside scroll
+            Mobile: fixed to viewport top */}
         <Box
           sx={{
-            position: "sticky",
+            position: isMobile ? "fixed" : "sticky",
             top: 0,
+            left: isMobile ? 0 : "auto",
+            right: isMobile ? 0 : "auto",
             zIndex: 1200,
             bgcolor: "background.paper",
             borderBottom: "1px solid",
@@ -292,7 +289,7 @@ const Layout = () => {
               gap: 1,
               borderBottom: "1px solid",
               borderColor: "divider",
-              pt: isMobile ? 0.5 : 0, // small consistent gap on mobile
+              pt: isMobile ? 0.5 : 0, // tiny, consistent gap on mobile
             }}
           >
             {/* Logo / brand / menu */}
@@ -613,17 +610,17 @@ const Layout = () => {
           </Box>
         </Box>
 
-        {/* Main content – browser scrollbar controls this */}
+        {/* Main content – add padding so it sits below fixed navbar on mobile */}
         <Box
           component="main"
           sx={{
             flex: 1,
             minHeight: 0,
             overflowX: "hidden",
-            // Let body/window handle vertical scroll
+            // vertical scroll handled by the page (body)
             px: 2,
-            pt: 1,
-            pb: isMobile ? BOTTOM_NAV_HEIGHT + 8 : 2, // space for bottom nav on mobile
+            pt: isMobile ? NAVBAR_HEIGHT + 8 : 1,
+            pb: isMobile ? BOTTOM_NAV_HEIGHT + 8 : 2,
           }}
         >
           <Outlet />
