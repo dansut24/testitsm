@@ -3,32 +3,12 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
-  overflow: hidden;               /* Disable all page-level scroll */
-  overscroll-behavior: none;      /* Prevent iOS/Android bounce */
+  /* ✅ Allow normal scrolling again */
+  overflow-x: hidden;                 /* No horizontal scroll globally */
+  overflow-y: auto;                   /* Body can scroll on pages that need it */
   -webkit-overflow-scrolling: touch;
 }
 
-/* MAIN CONTENT SCROLLBAR STYLING ONLY
-   (do NOT control scroll behavior here) */
-.scrollable {
-  scrollbar-width: thin;                          /* Firefox: thin scrollbar */
-  scrollbar-color: rgba(120, 120, 120, 0.45) transparent;
-}
-
-/* WebKit / Chrome / Edge / Safari scrollbar styling */
-.scrollable::-webkit-scrollbar {
-  width: 8px;
-}
-
-.scrollable::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.scrollable::-webkit-scrollbar-thumb {
-  background: rgba(120, 120, 120, 0.45);
-  border-radius: 4px;
-}
-
-.scrollable::-webkit-scrollbar-thumb:hover {
-  background: rgba(120, 120, 120, 0.7);
+#root {
+  height: 100%;
 }
