@@ -1,3 +1,4 @@
+// src/itsm/layout/NavbarTabs.js
 import React, { useRef, useEffect, useState } from "react";
 import {
   Box,
@@ -7,8 +8,6 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Tabs,
-  Tab,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
@@ -29,7 +28,9 @@ export default function NavbarTabs({
   isMobile,
 }) {
   const theme = useTheme();
-  const tabsRef = useRef(null);
+
+  // This is the ONLY thing allowed to scroll horizontally
+  const scrollRef = useRef(null);
 
   const [contextAnchor, setContextAnchor] = useState(null);
   const [contextTabIndex, setContextTabIndex] = useState(null);
@@ -61,21 +62,16 @@ export default function NavbarTabs({
    * Keep active tab in view when changed
    * ------------------------------------------------------------------ */
   useEffect(() => {
-    const root = tabsRef.current;
-    if (!root) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const active = el.querySelector('[data-active-tab="true"]');
+    if (!active) return;
 
-    const tabNodes = root.querySelectorAll(".MuiTab-root");
-    const activeNode = tabNodes[tabIndex];
-    if (!activeNode) return;
-
-    const container = root.querySelector(".MuiTabs-scroller");
-    if (!container) return;
-
-    const containerRect = container.getBoundingClientRect();
-    const tabRect = activeNode.getBoundingClientRect();
+    const containerRect = el.getBoundingClientRect();
+    const tabRect = active.getBoundingClientRect();
 
     if (tabRect.left < containerRect.left || tabRect.right > containerRect.right) {
-      activeNode.scrollIntoView({
+      active.scrollIntoView({
         behavior: "smooth",
         block: "nearest",
         inline: "center",
@@ -138,10 +134,8 @@ export default function NavbarTabs({
 
     let newTabs;
     if (contextTabIndex === 0) {
-      // Keep only Dashboard
       newTabs = [tabs[0]];
     } else {
-      // Keep Dashboard + selected
       newTabs = [tabs[0], contextTab];
     }
 
@@ -207,6 +201,51 @@ export default function NavbarTabs({
   };
 
   /* ------------------------------------------------------------------
+   * Rectangular tab styles
+   * ------------------------------------------------------------------ */
+  const getTabSx = (active) => {
+    const baseBg =
+      theme.palette.mode === "dark"
+        ? theme.palette.background.default
+        : theme.palette.background.paper;
+
+    const activeBg =
+      theme.palette.mode === "dark"
+        ? "rgba(25,118,210,0.25)"
+        : "rgba(25,118,210,0.08)";
+
+    return {
+      display: "flex",
+      alignItems: "center",
+      maxWidth: 220,
+      minWidth: 90,
+      padding: "0 10px",
+      marginRight: 4,
+      borderRadius: 6,
+      border: "1px solid",
+      borderColor: active ? "primary.main" : "divider",
+      bgcolor: active ? activeBg : baseBg,
+      cursor: "pointer",
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      fontSize: 13,
+      flexShrink: 0,
+      height: "100%",
+      boxSizing: "border-box",
+      transition: "background 0.15s ease, border-color 0.15s ease",
+      "&:hover": {
+        borderColor: active ? "primary.main" : "action.hover",
+        bgcolor: active
+          ? activeBg
+          : theme.palette.mode === "dark"
+          ? "rgba(255,255,255,0.04)"
+          : "rgba(0,0,0,0.02)",
+      },
+    };
+  };
+
+  /* ------------------------------------------------------------------
    * Middle-click close (desktop)
    * ------------------------------------------------------------------ */
   const handleMouseDown = (event, tab, idx) => {
@@ -216,176 +255,129 @@ export default function NavbarTabs({
     }
   };
 
-  /* ------------------------------------------------------------------
-   * Tab label renderer – rectangular tabs
-   * ------------------------------------------------------------------ */
-  const renderTabLabel = (tab, idx, active) => {
-    const accent = getTabAccentColor(tab.label);
-
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          maxWidth: 220,
-          minWidth: 90,
-        }}
-      >
-        {/* coloured accent bar on the left */}
-        <Box
-          sx={{
-            width: 3,
-            borderRadius: 999,
-            bgcolor: accent,
-            mr: 0.75,
-            alignSelf: "stretch",
-            my: "22%",
-            opacity: 0.9,
-          }}
-        />
-        <Typography
-          variant="body2"
-          noWrap
-          sx={{
-            fontSize: 12,
-            flex: 1,
-            pr: idx !== 0 ? 0.5 : 0,
-          }}
-        >
-          {tab.label}
-        </Typography>
-        {/* no close on Dashboard (idx 0) */}
-        {idx !== 0 && (
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleTabClose(tab.path);
-            }}
-            sx={{
-              ml: 0.25,
-              p: 0,
-              "& svg": { fontSize: 14 },
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        )}
-      </Box>
-    );
-  };
-
   return (
     <>
       <Box
         sx={{
+          position: "relative",
           height: "100%",
-          display: "flex",
-          alignItems: "stretch",
           bgcolor: "background.paper",
           borderBottom: "1px solid",
           borderColor: "divider",
           minWidth: 0,
-          overflow: "hidden", // 🔒 the tab row itself can NEVER make the page wider
+          overflow: "hidden", // 🔒 this strip can NEVER make the layout wider
         }}
       >
-        {/* Scrollable tabs area */}
+        {/* Scrollable strip with tabs only.
+            Width is locked to the navbar; overflow stays INSIDE via scroll. */}
         <Box
+          ref={scrollRef}
           sx={{
-            flex: 1,
-            minWidth: 0,
-            display: "flex",
-            alignItems: "stretch",
-            overflow: "hidden",
-          }}
-        >
-          <Tabs
-            ref={tabsRef}
-            value={tabIndex}
-            onChange={(event, newIndex) => {
-              const tab = tabs[newIndex];
-              handleTabChange(event, newIndex, tab?.path);
-            }}
-            variant="scrollable"
-            scrollButtons={!isMobile}
-            allowScrollButtonsMobile={false}
-            TabIndicatorProps={{ style: { display: "none" } }}
-            sx={{
-              minHeight: "100%",
-              "& .MuiTabs-flexContainer": {
-                alignItems: "stretch",
-              },
-              "& .MuiTab-root": {
-                minHeight: "100%",
-                paddingX: 1.25,
-                paddingY: 0,
-                marginRight: 0.5,     // compact gaps
-                textTransform: "none",
-                fontSize: 13,
-                minWidth: 90,
-                maxWidth: 220,
-                borderRadius: 1,
-                border: "1px solid",
-                borderColor: "divider",
-                bgcolor:
-                  theme.palette.mode === "dark"
-                    ? theme.palette.background.default
-                    : theme.palette.background.paper,
-                "&:hover": {
-                  borderColor: "action.hover",
-                  bgcolor:
-                    theme.palette.mode === "dark"
-                      ? "rgba(255,255,255,0.04)"
-                      : "rgba(0,0,0,0.02)",
-                },
-              },
-              "& .Mui-selected": {
-                borderColor: theme.palette.primary.main,
-                bgcolor:
-                  theme.palette.mode === "dark"
-                    ? "rgba(25,118,210,0.25)"
-                    : "rgba(25,118,210,0.08)",
-              },
-              "& .MuiTabs-scrollButtons": {
-                width: 26,
-              },
-              "& .MuiTabs-scrollButtons.Mui-disabled": {
-                opacity: 0.25,
-              },
-            }}
-          >
-            {tabs.map((tab, idx) => {
-              const active = idx === tabIndex;
-              return (
-                <Tab
-                  key={tab.path || tab.id || idx}
-                  disableRipple
-                  data-active-tab={active ? "true" : "false"}
-                  onContextMenu={(e) => handleContextMenuDesktop(e, idx)}
-                  onMouseDown={(e) => handleMouseDown(e, tab, idx)}
-                  onTouchStart={(e) => handleTouchStart(e, idx)}
-                  onTouchEnd={handleTouchEnd}
-                  onTouchCancel={handleTouchEnd}
-                  label={renderTabLabel(tab, idx, active)}
-                />
-              );
-            })}
-          </Tabs>
-        </Box>
-
-        {/* + button – fixed on the right end of the navbar strip */}
-        <Box
-          sx={{
-            flexShrink: 0,
+            height: "100%",
             display: "flex",
             alignItems: "center",
-            px: 0.5,
+            overflowX: "auto",
+            overflowY: "hidden",
+            WebkitOverflowScrolling: "touch",
+            px: 1,
+            pr: isMobile ? 4.5 : 4.5, // leave space for + button overlay
+            "&::-webkit-scrollbar": {
+              height: 3,
+            },
+            "&::-webkit-scrollbar-thumb": {
+              background: "transparent",
+            },
+            "&:hover::-webkit-scrollbar-thumb": {
+              background: "rgba(120,120,120,0.4)",
+            },
+          }}
+        >
+          {tabs.map((tab, idx) => {
+            const active = idx === tabIndex;
+            const accent = getTabAccentColor(tab.label);
+
+            return (
+              <Box
+                key={tab.path || tab.id || idx}
+                data-active-tab={active ? "true" : "false"}
+                onClick={() => handleTabChange(null, idx, tab.path)}
+                onContextMenu={(e) => handleContextMenuDesktop(e, idx)}
+                onMouseDown={(e) => handleMouseDown(e, tab, idx)}
+                onTouchStart={(e) => handleTouchStart(e, idx)}
+                onTouchEnd={handleTouchEnd}
+                onTouchCancel={handleTouchEnd}
+                sx={getTabSx(active)}
+              >
+                {/* coloured accent bar */}
+                <Box
+                  sx={{
+                    width: 3,
+                    borderRadius: 999,
+                    bgcolor: accent,
+                    mr: 0.75,
+                    alignSelf: "stretch",
+                    my: "22%",
+                    opacity: 0.9,
+                  }}
+                />
+
+                <Typography
+                  variant="body2"
+                  noWrap
+                  sx={{
+                    fontSize: 12,
+                    flex: 1,
+                    pr: idx !== 0 ? 0.5 : 0,
+                  }}
+                >
+                  {tab.label}
+                </Typography>
+
+                {/* no close on Dashboard (index 0) */}
+                {idx !== 0 && (
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTabClose(tab.path);
+                    }}
+                    sx={{
+                      ml: 0.25,
+                      p: 0,
+                      "& svg": { fontSize: 14 },
+                    }}
+                  >
+                    <CloseIcon />
+                  </IconButton>
+                )}
+              </Box>
+            );
+          })}
+        </Box>
+
+        {/* + Add tab – FIXED overlay at right edge, never off-screen */}
+        <Box
+          sx={{
+            position: "absolute",
+            right: 4,
+            top: 0,
+            bottom: 0,
+            display: "flex",
+            alignItems: "center",
+            // subtle fade to hint tabs continue behind +
+            background:
+              "linear-gradient(to left, rgba(0,0,0,0.06), transparent)",
+            pointerEvents: "none",
+            pl: 1,
           }}
         >
           <IconButton
             size="small"
             onClick={handleAddTab}
-            sx={{ p: 0.25 }}
+            sx={{
+              p: 0.25,
+              pointerEvents: "auto",
+            }}
           >
             <AddIcon sx={{ fontSize: 18 }} />
           </IconButton>
