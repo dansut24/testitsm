@@ -233,49 +233,60 @@ const Layout = () => {
   return (
     <Box
       sx={{
-        position: "fixed",
-        inset: 0,
         width: "100%",
-        height: "100vh",
+        minHeight: "100vh",
         display: "flex",
         bgcolor: theme.palette.background.default,
-        overflow: "hidden", // only main content scrolls
+        overflowX: "hidden", // allow normal vertical page scroll
       }}
     >
-      {/* Sidebar (desktop, full height, static) */}
+      {/* Sidebar (desktop) - sticky full-height column */}
       {desktopHasSidebar && (
-        <Sidebar
-          pinned={sidebarMode === "pinned" ? true : sidebarPinned}
-          onToggle={() => {
-            if (sidebarMode === "collapsible") setSidebarPinned((p) => !p);
+        <Box
+          sx={{
+            position: "sticky",
+            top: 0,
+            alignSelf: "flex-start",
+            height: "100vh",
+            flexShrink: 0,
+            zIndex: 1100,
           }}
-          items={sidebarItems}
-          onItemClick={activateOrAddTab}
-          widthExpanded={EXPANDED_WIDTH}
-          widthCollapsed={COLLAPSED_WIDTH}
-        />
+        >
+          <Sidebar
+            pinned={sidebarMode === "pinned" ? true : sidebarPinned}
+            onToggle={() => {
+              if (sidebarMode === "collapsible") setSidebarPinned((p) => !p);
+            }}
+            items={sidebarItems}
+            onItemClick={activateOrAddTab}
+            widthExpanded={EXPANDED_WIDTH}
+            widthCollapsed={COLLAPSED_WIDTH}
+          />
+        </Box>
       )}
 
-      {/* Main grid: navbar + scrollable content */}
+      {/* Main column: sticky navbar + scrollable content */}
       <Box
         sx={{
           flex: 1,
           minWidth: 0,
           display: "grid",
           gridTemplateRows: `${NAVBAR_HEIGHT}px 1fr`,
-          height: "100%",
+          minHeight: "100vh",
         }}
       >
-        {/* Navbar (header + tabs) */}
+        {/* Navbar (header + tabs) stays pinned at top via sticky */}
         <Box
           sx={{
+            position: "sticky",
+            top: 0,
+            zIndex: 1200,
             bgcolor: "background.paper",
             display: "flex",
             flexDirection: "column",
             height: NAVBAR_HEIGHT,
             borderBottom: "1px solid",
             borderColor: "divider",
-            zIndex: 1200,
           }}
         >
           {/* Header row */}
@@ -611,14 +622,10 @@ const Layout = () => {
           </Box>
         </Box>
 
-        {/* Main content – only thing that scrolls */}
+        {/* Main content – now uses the normal page scrollbar */}
         <Box
           component="main"
           sx={{
-            minHeight: 0,
-            overflowY: "auto",
-            overflowX: "hidden",
-            WebkitOverflowScrolling: "touch",
             px: 2,
             pt: 1,
             pb: isMobile ? BOTTOM_NAV_HEIGHT + 8 : 2,
