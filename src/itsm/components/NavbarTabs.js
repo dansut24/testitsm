@@ -1,4 +1,3 @@
-// src/itsm/layout/NavbarTabs.js
 import React, { useRef, useEffect, useState } from "react";
 import {
   Box,
@@ -199,7 +198,7 @@ export default function NavbarTabs({
   };
 
   /* ------------------------------------------------------------------
-   * Rectangular tab styles
+   * Rectangular tab styles – TIGHT + NOT ROUND
    * ------------------------------------------------------------------ */
   const getTabSx = (active) => {
     const baseBg =
@@ -213,13 +212,13 @@ export default function NavbarTabs({
         : "rgba(25,118,210,0.08)";
 
     return {
-      display: "inline-flex",     // ⬅ inline so we can use white-space: nowrap
+      display: "inline-flex",
       alignItems: "center",
       maxWidth: 220,
       minWidth: 90,
-      padding: "0 10px",
-      marginRight: 4,
-      borderRadius: 6,
+      padding: "0 8px",        // ⬅ a bit slimmer
+      marginRight: 2,          // ⬅ closer together
+      borderRadius: 2,         // ⬅ almost square, no pill
       border: "1px solid",
       borderColor: active ? "primary.main" : "divider",
       bgcolor: active ? activeBg : baseBg,
@@ -263,21 +262,21 @@ export default function NavbarTabs({
           borderBottom: "1px solid",
           borderColor: "divider",
           minWidth: 0,
-          overflow: "hidden", // 🔒 this entire row can NEVER extend page width
+          overflow: "hidden", // this row can NEVER extend page width
         }}
       >
-        {/* Horizontal scroller – tabs + +, all inline, no layout games */}
+        {/* Horizontal scroller – tabs + +, all inline */}
         <Box
           ref={scrollRef}
           sx={{
             flex: 1,
             minWidth: 0,
             height: "100%",
-            overflowX: "auto",        // ✅ only this scrolls horizontally
+            overflowX: "auto",
             overflowY: "hidden",
             WebkitOverflowScrolling: "touch",
             px: 0.5,
-            whiteSpace: "nowrap",     // ⬅ prevents wrapping, keeps everything in one line
+            whiteSpace: "nowrap",
             "&::-webkit-scrollbar": {
               height: 3,
             },
@@ -305,15 +304,15 @@ export default function NavbarTabs({
                 onTouchCancel={handleTouchEnd}
                 sx={getTabSx(active)}
               >
-                {/* coloured accent bar */}
+                {/* coloured accent bar – slightly slimmer now */}
                 <Box
                   sx={{
-                    width: 3,
-                    borderRadius: 999,
+                    width: 2,
+                    borderRadius: 1,
                     bgcolor: accent,
-                    mr: 0.75,
+                    mr: 0.5,
                     alignSelf: "stretch",
-                    my: "22%",
+                    my: "25%",
                     opacity: 0.9,
                   }}
                 />
