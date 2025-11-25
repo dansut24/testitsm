@@ -37,7 +37,6 @@ import ArticleIcon from "@mui/icons-material/Article";
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 60;
 
-// Base heights; we tweak them slightly for mobile
 const BASE_APP_HEADER_HEIGHT = 38;
 const BASE_TABBAR_HEIGHT = 30;
 const BASE_BOTTOM_NAV_HEIGHT = 56;
@@ -67,7 +66,6 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 🔹 Fixed heights (no wobble)
   const APP_HEADER_HEIGHT = isMobile ? 52 : BASE_APP_HEADER_HEIGHT;
   const TABBAR_HEIGHT = isMobile ? 42 : BASE_TABBAR_HEIGHT;
   const NAVBAR_HEIGHT = APP_HEADER_HEIGHT + TABBAR_HEIGHT;
@@ -80,14 +78,13 @@ const Layout = () => {
   const [sidebarPinned, setSidebarPinned] = useState(true);
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState(null); // 'search' | 'notifications' | 'profile' | null
+  const [drawerType, setDrawerType] = useState(null);
 
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
 
   const username = "User";
   const userInitial = username[0]?.toUpperCase() || "U";
 
-  // 🔹 User status (shared with ProfileDrawer)
   const [userStatus, setUserStatus] = useState(
     () => localStorage.getItem("userStatus") || "Available"
   );
@@ -167,7 +164,7 @@ const Layout = () => {
     navigate("/login");
   };
 
-  // 🔹 Keep tabs in sync with route
+  // Tabs sync with route
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -243,10 +240,10 @@ const Layout = () => {
         height: "100vh",
         display: "flex",
         bgcolor: theme.palette.background.default,
-        overflow: "hidden", // 🔹 Only main content area scrolls
+        overflow: "hidden", // only main content scrolls
       }}
     >
-      {/* Sidebar (desktop) – spans full height, static */}
+      {/* Sidebar (desktop, full height, static) */}
       {desktopHasSidebar && (
         <Sidebar
           pinned={sidebarMode === "pinned" ? true : sidebarPinned}
@@ -260,19 +257,17 @@ const Layout = () => {
         />
       )}
 
-      {/* Main grid (navbar + content + bottom nav) */}
+      {/* Main grid: navbar + scrollable content */}
       <Box
         sx={{
           flex: 1,
           minWidth: 0,
           display: "grid",
-          gridTemplateRows: isMobile
-            ? `${NAVBAR_HEIGHT}px 1fr ${BOTTOM_NAV_HEIGHT}px`
-            : `${NAVBAR_HEIGHT}px 1fr`,
+          gridTemplateRows: `${NAVBAR_HEIGHT}px 1fr`, // 🔹 only two rows
           height: "100%",
         }}
       >
-        {/* Navbar row (header + tabs) – static in grid */}
+        {/* Navbar (header + tabs) */}
         <Box
           sx={{
             bgcolor: "background.paper",
@@ -296,7 +291,7 @@ const Layout = () => {
               gap: 1,
               borderBottom: "1px solid",
               borderColor: "divider",
-              pt: isMobile ? 0.5 : 0, // small consistent padding on mobile
+              pt: isMobile ? 0.5 : 0,
             }}
           >
             {/* Logo / brand / menu */}
@@ -617,7 +612,7 @@ const Layout = () => {
           </Box>
         </Box>
 
-        {/* Main content row – only this scrolls */}
+        {/* Main content – only thing that scrolls */}
         <Box
           component="main"
           sx={{
@@ -627,35 +622,11 @@ const Layout = () => {
             WebkitOverflowScrolling: "touch",
             px: 2,
             pt: 1,
-            pb: isMobile ? 1 : 2,
+            pb: isMobile ? BOTTOM_NAV_HEIGHT + 8 : 2, // 🔹 room for fixed bottom nav
           }}
         >
           <Outlet />
         </Box>
-
-        {/* Bottom nav row (mobile only, static in grid) */}
-        {isMobile && (
-          <Box
-            sx={{
-              borderTop: `1px solid ${theme.palette.divider}`,
-              backgroundColor: theme.palette.background.paper,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-around",
-              height: BOTTOM_NAV_HEIGHT,
-            }}
-          >
-            <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
-            <SearchIcon onClick={() => setDrawerType("search")} />
-            <NotificationsIcon
-              onClick={() => setDrawerType("notifications")}
-            />
-            <AccountCircleIcon
-              onClick={() => setDrawerType("profile")}
-              style={{ cursor: "pointer" }}
-            />
-          </Box>
-        )}
       </Box>
 
       {/* Sidebar Drawer (mobile & hidden desktop) */}
@@ -723,7 +694,7 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Bottom action drawer (mobile) */}
+      {/* Bottom action drawer (mobile) – sits just above bottom nav */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
@@ -753,11 +724,37 @@ const Layout = () => {
             </Typography>
           )}
           {drawerType === "notifications" && <NotificationDrawer />}
-          {/* Mobile profile drawer: no status controls here */}
           {drawerType === "profile" && (
             <ProfileDrawer onLogout={handleLogout} showStatus={false} />
           )}
         </SwipeableDrawer>
+      )}
+
+      {/* Fixed bottom nav (mobile) */}
+      {isMobile && (
+        <Box
+          sx={{
+            position: "fixed",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: BOTTOM_NAV_HEIGHT,
+            borderTop: `1px solid ${theme.palette.divider}`,
+            backgroundColor: theme.palette.background.paper,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-around",
+            zIndex: 1300,
+          }}
+        >
+          <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
+          <SearchIcon onClick={() => setDrawerType("search")} />
+          <NotificationsIcon onClick={() => setDrawerType("notifications")} />
+          <AccountCircleIcon
+            onClick={() => setDrawerType("profile")}
+            style={{ cursor: "pointer" }}
+          />
+        </Box>
       )}
     </Box>
   );
