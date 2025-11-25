@@ -1,12 +1,9 @@
 // src/itsm/layout/NavbarTabs.js
 import React, { useRef, useState, useEffect } from "react";
-import { Box, IconButton } from "@mui/material";
+import { Box, IconButton, Tabs, Tab } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { Tabs } from "@sinm/react-chrome-tabs";
-import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
-import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
-
 import AddIcon from "@mui/icons-material/Add";
+import CloseIcon from "@mui/icons-material/Close";
 
 export default function NavbarTabs({
   tabs,
@@ -21,143 +18,6 @@ export default function NavbarTabs({
 
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
-
-  const styles = `
-    .navbar-tabs-root {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: stretch;
-      background: ${theme.palette.background.paper};
-      box-shadow: inset 0 -1px 0 ${theme.palette.divider};
-      position: relative;
-      overflow: hidden;
-    }
-
-    .tabs-scroll {
-      flex: 1;
-      min-width: 0;
-      height: 100%;
-    }
-
-    .tabs-inner {
-      display: inline-flex;
-      align-items: stretch;
-      height: 100%;
-    }
-
-    .chrome-tabs {
-      background: transparent !important;
-      height: 100%;
-    }
-
-    .chrome-tab {
-      background: transparent !important;
-      height: 100% !important;
-      margin-top: 0 !important;
-      box-shadow: none !important;
-      border-top: none !important;
-      font-size: 13px;
-      padding: 0 4px !important;
-    }
-
-    /* Hide favicon area completely */
-    .chrome-tab-favicon {
-      display: none !important;
-      width: 0 !important;
-      margin-right: 0 !important;
-    }
-
-    /* Title styling */
-    .chrome-tab-title {
-      font-size: 13px;
-      padding: 0 10px;
-      white-space: nowrap;
-    }
-
-    /* Active tab: subtle background + bottom border */
-    .chrome-tab.chrome-tab-active .chrome-tab-title {
-      font-weight: 600;
-      color: ${theme.palette.text.primary};
-    }
-
-    .chrome-tab.chrome-tab-active {
-      background: ${
-        theme.palette.mode === "dark"
-          ? "rgba(255,255,255,0.05)"
-          : "rgba(0,0,0,0.03)"
-      } !important;
-      border-radius: 0 !important;
-      box-shadow: inset 0 -2px 0 ${theme.palette.primary.main} !important;
-    }
-
-    .chrome-tab:not(.chrome-tab-active):hover {
-      background: ${
-        theme.palette.mode === "dark"
-          ? "rgba(255,255,255,0.02)"
-          : "rgba(0,0,0,0.015)"
-      } !important;
-    }
-
-    .chrome-tab-divider {
-      top: 6px !important;
-      bottom: 6px !important;
-      opacity: 0.2;
-    }
-
-    .chrome-tab-background::before,
-    .chrome-tab-background::after {
-      background: transparent !important;
-      border: none !important;
-      box-shadow: none !important;
-    }
-
-    .nav-arrow {
-      display: flex;
-      align-items: center;
-      justifyContent: center;
-      width: 22px;
-      cursor: pointer;
-      user-select: none;
-      font-size: 16px;
-      opacity: 0.7;
-      transition: opacity 0.15s ease, transform 0.15s ease;
-    }
-
-    .nav-arrow:hover {
-      opacity: 1;
-      transform: translateY(-1px);
-    }
-
-    .nav-arrow.disabled {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .add-tab-button {
-      margin-right: 4px;
-    }
-
-    .add-tab-button svg {
-      font-size: 22px;
-    }
-
-    @media (max-width: 600px) {
-      .navbar-tabs-root {
-        box-shadow: inset 0 -1px 0 ${theme.palette.divider};
-      }
-
-      .chrome-tab {
-        flex: 0 0 auto !important;
-        max-width: none !important;
-      }
-
-      .chrome-tab-title {
-        font-size: 12px;
-        padding: 0 8px;
-      }
-    }
-  `;
 
   const updateArrows = () => {
     const el = scrollRef.current;
@@ -176,6 +36,10 @@ export default function NavbarTabs({
     updateArrows();
   }, [tabs.length, isMobile]);
 
+  useEffect(() => {
+    scrollActiveTabIntoView();
+  }, [tabIndex, tabs.length, isMobile]);
+
   const handleScroll = () => {
     if (!isMobile) updateArrows();
   };
@@ -189,7 +53,7 @@ export default function NavbarTabs({
   const scrollActiveTabIntoView = () => {
     const el = scrollRef.current;
     if (!el) return;
-    const activeTab = el.querySelector(".chrome-tab.chrome-tab-active");
+    const activeTab = el.querySelector(".navbar-tab.Mui-selected");
     if (!activeTab) return;
 
     const containerRect = el.getBoundingClientRect();
@@ -208,20 +72,17 @@ export default function NavbarTabs({
     }
   };
 
-  const onTabActive = (id) => {
-    const idx = tabs.findIndex((t) => t.id === id || t.path === id);
-    if (idx >= 0) {
-      handleTabChange(null, idx, tabs[idx].path);
-      requestAnimationFrame(scrollActiveTabIntoView);
-    }
+  const onTabsChange = (event, newIndex) => {
+    const path = tabs[newIndex]?.path;
+    handleTabChange(event, newIndex, path);
   };
 
-  const onTabClose = (id) => {
-    const tab = tabs.find((t) => t.id === id || t.path === id);
-    if (tab) handleTabClose(tab.path);
+  const onCloseClick = (e, tabPath) => {
+    e.stopPropagation();
+    handleTabClose(tabPath);
   };
 
-  const handleAddTab = () => {
+  const onAddTab = () => {
     const newTabs = [
       ...tabs,
       { label: "New Tab", path: `/new-tab/${tabs.length + 1}` },
@@ -233,68 +94,191 @@ export default function NavbarTabs({
   };
 
   return (
-    <>
-      <style>{styles}</style>
-      <Box className="navbar-tabs-root">
-        {/* Left arrow – desktop only */}
-        {!isMobile && (
-          <Box
-            className={`nav-arrow ${showLeftArrow ? "" : "disabled"}`}
-            onClick={() => scrollByOffset(-140)}
-          >
-            ‹
-          </Box>
-        )}
-
-        {/* Scrollable tab strip (tabs + + button) */}
+    <Box
+      sx={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "stretch",
+        bgcolor: "background.paper",
+        boxShadow: (t) => `inset 0 -1px 0 ${t.palette.divider}`,
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Left arrow – desktop only */}
+      {!isMobile && (
         <Box
-          ref={scrollRef}
-          className="tabs-scroll"
-          onScroll={handleScroll}
           sx={{
-            overflowX: isMobile ? "auto" : "hidden",
-            overflowY: "hidden",
-            WebkitOverflowScrolling: isMobile ? "touch" : "auto",
-            msOverflowStyle: isMobile ? "none" : "auto",
-            scrollbarWidth: isMobile ? "none" : "auto",
-            "&::-webkit-scrollbar": {
-              display: isMobile ? "none" : "initial",
+            width: 22,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: showLeftArrow ? "pointer" : "default",
+            opacity: showLeftArrow ? 0.8 : 0,
+            transition: "opacity 0.15s ease, transform 0.15s ease",
+            "&:hover": {
+              transform: showLeftArrow ? "translateY(-1px)" : "none",
+              opacity: showLeftArrow ? 1 : 0,
+            },
+          }}
+          onClick={() => showLeftArrow && scrollByOffset(-140)}
+        >
+          ‹
+        </Box>
+      )}
+
+      {/* Scrollable tab strip (tabs + + button) */}
+      <Box
+        ref={scrollRef}
+        onScroll={handleScroll}
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          height: "100%",
+          display: "flex",
+          alignItems: "stretch",
+          overflowX: isMobile ? "auto" : "hidden",
+          overflowY: "hidden",
+          WebkitOverflowScrolling: isMobile ? "touch" : "auto",
+          msOverflowStyle: isMobile ? "none" : "auto",
+          scrollbarWidth: isMobile ? "none" : "auto",
+          "&::-webkit-scrollbar": {
+            display: isMobile ? "none" : "initial",
+          },
+        }}
+      >
+        <Tabs
+          value={tabIndex}
+          onChange={onTabsChange}
+          variant="standard"
+          TabIndicatorProps={{ style: { display: "none" } }}
+          sx={{
+            minHeight: "100%",
+            height: "100%",
+            "& .MuiTabs-flexContainer": {
+              height: "100%",
+              alignItems: "stretch",
+            },
+            "& .MuiTab-root": {
+              minHeight: "100%",
+              height: "100%",
+              textTransform: "none",
+              fontSize: 13,
+              padding: "0 8px",
+              color: "text.secondary",
+              alignItems: "center",
+              justifyContent: "center",
+              maxWidth: "none",
+              minWidth: 0,
+            },
+            "& .MuiTab-root.Mui-selected": {
+              fontWeight: 600,
+              color: "text.primary",
+              bgcolor:
+                theme.palette.mode === "dark"
+                  ? "rgba(255,255,255,0.05)"
+                  : "rgba(0,0,0,0.03)",
+              boxShadow: `inset 0 -2px 0 ${theme.palette.primary.main}`,
+            },
+            "& .MuiTab-root:hover": {
+              bgcolor:
+                theme.palette.mode === "dark"
+                  ? "rgba(255,255,255,0.02)"
+                  : "rgba(0,0,0,0.015)",
             },
           }}
         >
-          <Box className="tabs-inner">
-            <Tabs
-              darkMode={theme.palette.mode === "dark"}
-              onTabClose={onTabClose}
-              onTabActive={onTabActive}
-              tabs={tabs.map((t, idx) => ({
-                id: t.path,
-                title: t.label,
-                // no favicon: clean text-only tabs
-                active: idx === tabIndex,
-                isCloseIconVisible: idx !== 0,
-              }))}
+          {tabs.map((t, idx) => (
+            <Tab
+              key={t.path}
+              className="navbar-tab"
+              disableRipple
+              label={
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    pl: 0.5,
+                  }}
+                >
+                  <Box
+                    component="span"
+                    sx={{
+                      whiteSpace: "nowrap",
+                      textOverflow: "ellipsis",
+                      overflow: "hidden",
+                      maxWidth: isMobile ? 120 : 160,
+                      fontSize: 13,
+                    }}
+                  >
+                    {t.label}
+                  </Box>
+                  {idx !== 0 && (
+                    <IconButton
+                      size="small"
+                      onClick={(e) => onCloseClick(e, t.path)}
+                      sx={{
+                        p: 0,
+                        ml: 0.5,
+                        "& svg": {
+                          fontSize: 14,
+                        },
+                      }}
+                    >
+                      <CloseIcon />
+                    </IconButton>
+                  )}
+                </Box>
+              }
             />
-            <IconButton
-              size="small"
-              className="add-tab-button"
-              onClick={handleAddTab}
-            >
-              <AddIcon />
-            </IconButton>
-          </Box>
-        </Box>
+          ))}
+        </Tabs>
 
-        {/* Right arrow – desktop only */}
-        {!isMobile && (
-          <Box
-            className={`nav-arrow ${showRightArrow ? "" : "disabled"}`}
-            onClick={() => scrollByOffset(140)}
+        {/* + button – scrolls with tabs */}
+        <Box
+          sx={{
+            flex: "0 0 auto",
+            display: "flex",
+            alignItems: "center",
+            pr: 0.5,
+          }}
+        >
+          <IconButton
+            size="small"
+            onClick={onAddTab}
+            sx={{
+              ml: 0.5,
+              "& svg": { fontSize: 20 },
+            }}
           >
-            ›
-          </Box>
-        )}
+            <AddIcon />
+          </IconButton>
+        </Box>
       </Box>
-    </>
+
+      {/* Right arrow – desktop only */}
+      {!isMobile && (
+        <Box
+          sx={{
+            width: 22,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: showRightArrow ? "pointer" : "default",
+            opacity: showRightArrow ? 0.8 : 0,
+            transition: "opacity 0.15s ease, transform 0.15s ease",
+            "&:hover": {
+              transform: showRightArrow ? "translateY(-1px)" : "none",
+              opacity: showRightArrow ? 1 : 0,
+            },
+          }}
+          onClick={() => showRightArrow && scrollByOffset(140)}
+        >
+          ›
+        </Box>
+      )}
+    </Box>
   );
 }
