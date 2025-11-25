@@ -1,3 +1,4 @@
+// src/itsm/layout/NavbarTabs.js
 import React, { useRef, useState, useEffect } from "react";
 import { Box, Tabs, Tab, IconButton, Badge } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
@@ -41,6 +42,7 @@ export default function NavbarTabs({
     if (!el) return;
     const { scrollLeft, scrollWidth, clientWidth } = el;
     const maxScrollLeft = scrollWidth - clientWidth;
+
     if (mobile) {
       setShowLeftArrow(false);
       setShowRightArrow(false);
@@ -92,6 +94,7 @@ export default function NavbarTabs({
   };
 
   const onTabsChange = (event, newIndex) => {
+    // "+" tab
     if (newIndex === tabs.length) {
       const newTabs = [
         ...tabs,
@@ -157,7 +160,6 @@ export default function NavbarTabs({
     const badgeRaw =
       typeof t.badge !== "undefined" ? t.badge : t.badgeCount ?? null;
     const showBadge = badgeRaw !== null && badgeRaw !== 0;
-
     const isNumberBadge =
       typeof badgeRaw === "number" && Number.isFinite(badgeRaw);
 
@@ -170,7 +172,6 @@ export default function NavbarTabs({
           px: mobile ? 0.25 : 0.5,
         }}
       >
-        {/* Label + optional badge */}
         <Box
           sx={{
             display: "flex",
@@ -213,7 +214,6 @@ export default function NavbarTabs({
           )}
         </Box>
 
-        {/* Close icon (not on first tab) */}
         {idx !== 0 && (
           <IconButton
             size="small"
@@ -277,7 +277,7 @@ export default function NavbarTabs({
           height: "100%",
           display: "flex",
           alignItems: "stretch",
-          overflowX: "auto",
+          overflowX: "auto", // always scrollable container
           overflowY: "hidden",
           WebkitOverflowScrolling: mobile ? "touch" : "auto",
           msOverflowStyle: "none",
@@ -305,8 +305,9 @@ export default function NavbarTabs({
               textTransform: "none",
               color: "text.secondary",
               padding: mobile ? "0 4px" : "0 8px",
-              maxWidth: "none",
-              minWidth: 0,
+              // ⬇️ This is critical to create horizontal overflow for arrows
+              minWidth: mobile ? 90 : 130,
+              maxWidth: 200,
             },
             "& .MuiTab-root.Mui-selected": {
               fontWeight: 600,
@@ -328,9 +329,7 @@ export default function NavbarTabs({
           {tabs.map((t, idx) => (
             <Tab
               key={t.path}
-              className={`navbar-tab${
-                dragOverIndex === idx && dragIndex !== null ? " drag-over" : ""
-              }`}
+              className="navbar-tab"
               disableRipple
               draggable={!mobile}
               onDragStart={(e) => onDragStart(e, idx)}
