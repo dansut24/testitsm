@@ -1,14 +1,12 @@
 // src/itsm/layout/NavbarTabs.js
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
+import { Box, IconButton } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { Tabs } from "@sinm/react-chrome-tabs";
 import "@sinm/react-chrome-tabs/css/chrome-tabs.css";
 import "@sinm/react-chrome-tabs/css/chrome-tabs-dark-theme.css";
 
 import AddIcon from "@mui/icons-material/Add";
-import SearchIcon from "@mui/icons-material/Search";
-import NotificationsIcon from "@mui/icons-material/Notifications";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
 export default function NavbarTabs({
   tabs,
@@ -17,58 +15,35 @@ export default function NavbarTabs({
   handleTabClose,
   handleTabReorder,
   isMobile,
-  navTrigger,
 }) {
   const theme = useTheme();
   const scrollRef = useRef(null);
 
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+
   const styles = `
-    .navbar-container {
-      width: 100%;
-      position: relative;
-      background: ${theme.palette.background.paper};
-      display: flex;
-      align-items: stretch;
-      height: 40px;
-      box-shadow: inset 0 -1px 0 ${theme.palette.divider};
-      z-index: 1;
-    }
-
-    .chrome-tabs-bottom-bar {
-      display: none !important;
-    }
-
-    .ctn-bar {
-      display: flex;
-      align-items: center;
+    .navbar-tabs-root {
       width: 100%;
       height: 100%;
+      display: flex;
+      align-items: stretch;
+      background: ${theme.palette.background.paper};
+      box-shadow: inset 0 -1px 0 ${theme.palette.divider};
+      position: relative;
       overflow: hidden;
     }
 
-    .nav-trigger-wrap {
-      display: flex;
-      align-items: center;
-      padding: 0 8px;
-      border-right: 1px solid ${theme.palette.divider};
-      flex-shrink: 0;
-    }
-
-    .ctn-scroll {
+    .tabs-scroll {
       flex: 1;
       min-width: 0;
-      overflow-x: auto;
-      overflow-y: hidden;
       height: 100%;
-      scrollbar-width: thin;
     }
 
-    .ctn-scroll::-webkit-scrollbar {
-      height: 4px;
-    }
-
-    .ctn-scroll::-webkit-scrollbar-thumb {
-      border-radius: 999px;
+    .tabs-inner {
+      display: inline-flex;
+      align-items: stretch;
+      height: 100%;
     }
 
     .chrome-tabs {
@@ -78,21 +53,56 @@ export default function NavbarTabs({
 
     .chrome-tab {
       background: transparent !important;
-      height: 40px !important;
+      height: 100% !important;
       margin-top: 0 !important;
       box-shadow: none !important;
       border-top: none !important;
       font-size: 13px;
+      padding: 0 4px !important;
     }
 
+    /* Hide favicon area completely */
+    .chrome-tab-favicon {
+      display: none !important;
+      width: 0 !important;
+      margin-right: 0 !important;
+    }
+
+    /* Title styling */
+    .chrome-tab-title {
+      font-size: 13px;
+      padding: 0 10px;
+      white-space: nowrap;
+    }
+
+    /* Active tab: subtle background + bottom border */
     .chrome-tab.chrome-tab-active .chrome-tab-title {
       font-weight: 600;
+      color: ${theme.palette.text.primary};
+    }
+
+    .chrome-tab.chrome-tab-active {
+      background: ${
+        theme.palette.mode === "dark"
+          ? "rgba(255,255,255,0.05)"
+          : "rgba(0,0,0,0.03)"
+      } !important;
+      border-radius: 0 !important;
+      box-shadow: inset 0 -2px 0 ${theme.palette.primary.main} !important;
+    }
+
+    .chrome-tab:not(.chrome-tab-active):hover {
+      background: ${
+        theme.palette.mode === "dark"
+          ? "rgba(255,255,255,0.02)"
+          : "rgba(0,0,0,0.015)"
+      } !important;
     }
 
     .chrome-tab-divider {
       top: 6px !important;
       bottom: 6px !important;
-      opacity: 0.6;
+      opacity: 0.2;
     }
 
     .chrome-tab-background::before,
@@ -102,90 +112,99 @@ export default function NavbarTabs({
       box-shadow: none !important;
     }
 
-    .navbar-icons {
+    .nav-arrow {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 0 8px;
-      border-left: 1px solid ${theme.palette.divider};
-      flex-shrink: 0;
-      background: linear-gradient(
-        to right,
-        ${theme.palette.background.paper},
-        ${theme.palette.background.default}
-      );
-    }
-
-    .navbar-icons svg {
-      font-size: 20px;
-    }
-
-    .navbar-icons .add-tab-icon {
-      font-size: 24px;
-    }
-
-    .navbar-icons-icon {
+      justifyContent: center;
+      width: 22px;
       cursor: pointer;
-      transition: transform 0.12s ease, opacity 0.12s ease;
-      opacity: 0.9;
+      user-select: none;
+      font-size: 16px;
+      opacity: 0.7;
+      transition: opacity 0.15s ease, transform 0.15s ease;
     }
 
-    .navbar-icons-icon:hover {
-      transform: translateY(-1px);
+    .nav-arrow:hover {
       opacity: 1;
+      transform: translateY(-1px);
     }
 
-    ${
-      isMobile
-        ? `
-      /* Mobile tweaks */
-      .ctn-scroll {
-        overflow-x: auto;
-      }
+    .nav-arrow.disabled {
+      opacity: 0;
+      pointer-events: none;
+    }
 
-      /* Hide the built-in ChromeTabs "+" button on mobile */
-      .chrome-tabs-add-button {
-        display: none !important;
-      }
+    .add-tab-button {
+      margin-right: 4px;
+    }
 
-      .navbar-container {
-        height: 40px;
-      }
+    .add-tab-button svg {
+      font-size: 22px;
+    }
 
-      .chrome-tabs {
-        display: flex !important;
-        flex: 1;
+    @media (max-width: 600px) {
+      .navbar-tabs-root {
+        box-shadow: inset 0 -1px 0 ${theme.palette.divider};
       }
 
       .chrome-tab {
-        flex: 1 1 auto !important;
+        flex: 0 0 auto !important;
         max-width: none !important;
       }
 
       .chrome-tab-title {
-        font-size: 11px;
-        text-align: center;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        font-size: 12px;
+        padding: 0 8px;
       }
-
-      .navbar-icons {
-        gap: 4px;
-        padding-right: 6px;
-      }
-    `
-        : `
-      /* Desktop: allow ChromeTabs add button if it wants it */
-      .chrome-tabs-add-button {
-        display: block;
-      }
-    `
     }
   `;
 
-  const scrollElementIntoView = (el, opts = { inline: "center" }) => {
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "nearest", ...opts });
+  const updateArrows = () => {
+    const el = scrollRef.current;
+    if (!el || isMobile) {
+      setShowLeftArrow(false);
+      setShowRightArrow(false);
+      return;
+    }
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const maxScrollLeft = scrollWidth - clientWidth;
+    setShowLeftArrow(scrollLeft > 4);
+    setShowRightArrow(scrollLeft < maxScrollLeft - 4);
+  };
+
+  useEffect(() => {
+    updateArrows();
+  }, [tabs.length, isMobile]);
+
+  const handleScroll = () => {
+    if (!isMobile) updateArrows();
+  };
+
+  const scrollByOffset = (delta) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: delta, behavior: "smooth" });
+  };
+
+  const scrollActiveTabIntoView = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const activeTab = el.querySelector(".chrome-tab.chrome-tab-active");
+    if (!activeTab) return;
+
+    const containerRect = el.getBoundingClientRect();
+    const tabRect = activeTab.getBoundingClientRect();
+
+    if (tabRect.left < containerRect.left) {
+      el.scrollBy({
+        left: tabRect.left - containerRect.left - 16,
+        behavior: "smooth",
+      });
+    } else if (tabRect.right > containerRect.right) {
+      el.scrollBy({
+        left: tabRect.right - containerRect.right + 16,
+        behavior: "smooth",
+      });
     }
   };
 
@@ -193,15 +212,7 @@ export default function NavbarTabs({
     const idx = tabs.findIndex((t) => t.id === id || t.path === id);
     if (idx >= 0) {
       handleTabChange(null, idx, tabs[idx].path);
-      requestAnimationFrame(() => {
-        const container = scrollRef.current;
-        if (!container) return;
-        const activeTab = container.querySelector(
-          ".chrome-tab.chrome-tab-active"
-        );
-        if (!activeTab) return;
-        scrollElementIntoView(activeTab, { inline: "center" });
-      });
+      requestAnimationFrame(scrollActiveTabIntoView);
     }
   };
 
@@ -216,16 +227,42 @@ export default function NavbarTabs({
       { label: "New Tab", path: `/new-tab/${tabs.length + 1}` },
     ];
     handleTabReorder(newTabs);
+    const newIndex = newTabs.length - 1;
+    handleTabChange(null, newIndex, newTabs[newIndex].path);
+    requestAnimationFrame(scrollActiveTabIntoView);
   };
 
   return (
     <>
       <style>{styles}</style>
-      <div className="navbar-container">
-        {navTrigger && <div className="nav-trigger-wrap">{navTrigger}</div>}
+      <Box className="navbar-tabs-root">
+        {/* Left arrow – desktop only */}
+        {!isMobile && (
+          <Box
+            className={`nav-arrow ${showLeftArrow ? "" : "disabled"}`}
+            onClick={() => scrollByOffset(-140)}
+          >
+            ‹
+          </Box>
+        )}
 
-        <div className="ctn-bar">
-          <div ref={scrollRef} className="ctn-scroll">
+        {/* Scrollable tab strip (tabs + + button) */}
+        <Box
+          ref={scrollRef}
+          className="tabs-scroll"
+          onScroll={handleScroll}
+          sx={{
+            overflowX: isMobile ? "auto" : "hidden",
+            overflowY: "hidden",
+            WebkitOverflowScrolling: isMobile ? "touch" : "auto",
+            msOverflowStyle: isMobile ? "none" : "auto",
+            scrollbarWidth: isMobile ? "none" : "auto",
+            "&::-webkit-scrollbar": {
+              display: isMobile ? "none" : "initial",
+            },
+          }}
+        >
+          <Box className="tabs-inner">
             <Tabs
               darkMode={theme.palette.mode === "dark"}
               onTabClose={onTabClose}
@@ -233,29 +270,31 @@ export default function NavbarTabs({
               tabs={tabs.map((t, idx) => ({
                 id: t.path,
                 title: t.label,
-                favicon: t.favicon || "https://www.google.com/favicon.ico",
+                // no favicon: clean text-only tabs
                 active: idx === tabIndex,
                 isCloseIconVisible: idx !== 0,
               }))}
             />
-          </div>
-
-          {/* Right Icons (external + never goes off-screen) */}
-          <div className="navbar-icons">
-            <AddIcon
-              className="navbar-icons-icon add-tab-icon"
+            <IconButton
+              size="small"
+              className="add-tab-button"
               onClick={handleAddTab}
-            />
-            {!isMobile && (
-              <>
-                <SearchIcon className="navbar-icons-icon" />
-                <NotificationsIcon className="navbar-icons-icon" />
-                <AccountCircleIcon className="navbar-icons-icon" />
-              </>
-            )}
-          </div>
-        </div>
-      </div>
+            >
+              <AddIcon />
+            </IconButton>
+          </Box>
+        </Box>
+
+        {/* Right arrow – desktop only */}
+        {!isMobile && (
+          <Box
+            className={`nav-arrow ${showRightArrow ? "" : "disabled"}`}
+            onClick={() => scrollByOffset(140)}
+          >
+            ›
+          </Box>
+        )}
+      </Box>
     </>
   );
 }
