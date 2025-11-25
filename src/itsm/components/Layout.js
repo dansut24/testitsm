@@ -731,40 +731,43 @@ const Layout = () => {
       )}
 
       {/* Desktop right-hand drawer */}
-      {!isMobile && (
-        <SwipeableDrawer
-          anchor="right"
-          open={Boolean(drawerType)}
-          onClose={() => setDrawerType(null)}
-          onOpen={() => {}}
-          PaperProps={{
-            sx: {
-              width: 360,
-              maxWidth: "100%",
-            },
-          }}
-        >
-          {drawerType === "notifications" && <NotificationDrawer />}
-          {drawerType === "profile" && (
-            <ProfileDrawer
-              status={userStatus}
-              onStatusChange={handleStatusChange}
-              onLogout={handleLogout}
-              showStatus
-            />
-          )}
-          {drawerType === "search" && (
-            <Box p={2}>
-              <Typography variant="h6" gutterBottom>
-                Search
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Advanced search coming soon.
-              </Typography>
-            </Box>
-          )}
-        </SwipeableDrawer>
-      )}
+   {!isMobile && (
+  <SwipeableDrawer
+    anchor="right"
+    open={Boolean(drawerType)}
+    onClose={() => setDrawerType(null)}
+    onOpen={() => {}}
+    disableSwipeToOpen      // 🔥 turn off swipe gesture on desktop
+    disableDiscovery        // 🔥 also disable the discovery swipe area
+    swipeAreaWidth={0}      // 🔥 no 20px hidden strip on the right edge
+    PaperProps={{
+      sx: {
+        width: 360,
+        maxWidth: "100%",
+      },
+    }}
+  >
+    {drawerType === "notifications" && <NotificationDrawer />}
+    {drawerType === "profile" && (
+      <ProfileDrawer
+        status={userStatus}
+        onStatusChange={handleStatusChange}
+        onLogout={handleLogout}
+        showStatus
+      />
+    )}
+    {drawerType === "search" && (
+      <Box p={2}>
+        <Typography variant="h6" gutterBottom>
+          Search
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Advanced search coming soon.
+        </Typography>
+      </Box>
+    )}
+  </SwipeableDrawer>
+)}
 
       {/* Bottom action drawer (mobile) */}
       {isMobile && (
