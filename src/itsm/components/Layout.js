@@ -661,21 +661,24 @@ const Layout = () => {
 
         {/* MAIN CONTENT – only thing that vertically scrolls */}
         <Box
-          component="main"
-          className="scrollable"
-          onScroll={handleMainScroll}
-          sx={{
-            minHeight: 0,              // critical for grid + overflow to work
-            overflowY: "auto",
-            overflowX: "hidden",
-            WebkitOverflowScrolling: "touch",
-            px: 2,
-            pt: 1,
-            pb: isMobile ? 1 : 2,
-          }}
-        >
-          <Outlet />
-        </Box>
+  component="main"
+  className="scrollable"
+  onScroll={handleMainScroll}
+  sx={{
+    minHeight: 0,
+    height: "100%",
+    width: "100%",
+    overflowY: "auto",          // scroll lives here
+    overflowX: "hidden",        // no horizontal scroll
+    WebkitOverflowScrolling: "touch",
+    px: 2,
+    pt: 1,
+    pb: isMobile ? 1 : 2,
+    boxSizing: "border-box",
+  }}
+>
+  <Outlet />
+</Box>
 
         {/* Bottom nav row (mobile) */}
         {isMobile && (
