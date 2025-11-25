@@ -1,18 +1,15 @@
-html,
-body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-
-  /* iOS smooth scrolling */
-  -webkit-overflow-scrolling: touch;
-
-  /* 🚫 Disable horizontal scrolling globally */
-  overflow-x: hidden;
-}
-
-#root {
-  width: 100%;
-  height: 100%;
-  overflow-x: hidden; /* Extra protection */
-}
+<Box
+  component="main"
+  sx={{
+    position: "relative",
+    height: "100%",
+    overflowY: "auto",      // ✅ Only vertical scroll allowed
+    overflowX: "hidden",    // 🚫 No horizontal scroll
+    WebkitOverflowScrolling: "touch",
+    px: 2,
+    pt: 1,
+    pb: isMobile ? BOTTOM_NAV_HEIGHT + 8 : 2,
+  }}
+>
+  <Outlet />
+</Box>
