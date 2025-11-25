@@ -37,7 +37,6 @@ import ArticleIcon from "@mui/icons-material/Article";
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 60;
 
-// base values; actual heights are computed per-device inside the component
 const BASE_APP_HEADER_HEIGHT = 38;
 const BASE_TABBAR_HEIGHT = 30;
 const BASE_BOTTOM_NAV_HEIGHT = 56;
@@ -67,7 +66,6 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 🔹 Device-dependent heights
   const APP_HEADER_HEIGHT = isMobile ? 52 : BASE_APP_HEADER_HEIGHT;
   const TABBAR_HEIGHT = isMobile ? 42 : BASE_TABBAR_HEIGHT;
   const NAVBAR_HEIGHT = APP_HEADER_HEIGHT + TABBAR_HEIGHT;
@@ -80,15 +78,13 @@ const Layout = () => {
   const [sidebarPinned, setSidebarPinned] = useState(true);
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState(null); // 'search' | 'notifications' | 'profile' | null
+  const [drawerType, setDrawerType] = useState(null);
 
-  // 🔹 Mobile status menu anchor (for profile icon dropdown)
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
 
   const username = "User";
   const userInitial = username[0]?.toUpperCase() || "U";
 
-  // 🔹 Shared user status state
   const [userStatus, setUserStatus] = useState(
     () => localStorage.getItem("userStatus") || "Available"
   );
@@ -102,7 +98,6 @@ const Layout = () => {
     return opt ? opt.color : "text.disabled";
   };
 
-  // 🔹 Avatar styling per status (navbar)
   const getNavbarAvatarSx = (statusKey, size = 24) => {
     const base = {
       width: size,
@@ -163,14 +158,12 @@ const Layout = () => {
     setUserStatus(statusKey);
   };
 
-  // Logout handler for ProfileDrawer
   const handleLogout = () => {
     localStorage.clear();
     sessionStorage.clear();
     navigate("/login");
   };
 
-  // 🔹 Sync tabs with current route
   useEffect(() => {
     const currentPath = location.pathname;
     const tabExists = tabs.some((t) => t.path === currentPath);
@@ -242,9 +235,10 @@ const Layout = () => {
         inset: 0,
         display: "flex",
         width: "100%",
-        height: "100vh",   // 🔹 no more --vh hack
+        height: "100vh",
         minHeight: "100vh",
-        overflow: "hidden",
+        overflowX: "hidden",
+        overflowY: "auto", // 🔹 allow browser scrollbar to scroll
         bgcolor: theme.palette.background.default,
         overscrollBehavior: "none",
       }}
@@ -302,10 +296,9 @@ const Layout = () => {
               gap: 1,
               borderBottom: "1px solid",
               borderColor: "divider",
-              pt: isMobile ? 0.5 : 0, // fixed top gap on mobile
+              pt: isMobile ? 0.5 : 0,
             }}
           >
-            {/* Logo / brand / menu */}
             {!isMobile && sidebarMode === "hidden" ? (
               <IconButton
                 onClick={() => setMobileSidebarOpen(true)}
@@ -341,7 +334,7 @@ const Layout = () => {
               </Box>
             )}
 
-            {/* Center: search + quick info (tenant & status) */}
+            {/* Search + quick info */}
             <Box
               sx={{
                 flex: 1,
@@ -352,7 +345,6 @@ const Layout = () => {
                 mx: 1,
               }}
             >
-              {/* Search – slightly shorter on mobile so it always fits */}
               <Box
                 sx={{
                   flex: isMobile ? 1 : 0,
@@ -386,10 +378,8 @@ const Layout = () => {
                 />
               </Box>
 
-              {/* Extra info chips (desktop only) */}
               {!isMobile && (
                 <>
-                  {/* Tenant chip */}
                   <Box
                     sx={{
                       px: 1,
@@ -415,7 +405,6 @@ const Layout = () => {
                     </Typography>
                   </Box>
 
-                  {/* System status chip */}
                   <Box
                     sx={{
                       px: 1,
@@ -478,7 +467,6 @@ const Layout = () => {
                     <Avatar sx={getNavbarAvatarSx(userStatus, 24)}>
                       {userInitial}
                     </Avatar>
-                    {/* small status dot over avatar */}
                     <Box
                       sx={{
                         position: "absolute",
@@ -530,7 +518,7 @@ const Layout = () => {
               </Box>
             )}
 
-            {/* 🔹 Mobile: profile icon shows coloured dot + opens status dropdown */}
+            {/* Mobile profile icon + status dropdown */}
             {isMobile && (
               <>
                 <IconButton
@@ -661,7 +649,6 @@ const Layout = () => {
             <NotificationsIcon
               onClick={() => setDrawerType("notifications")}
             />
-            {/* Bottom nav profile still opens profile drawer (no status controls inside) */}
             <AccountCircleIcon
               onClick={() => setDrawerType("profile")}
               style={{ cursor: "pointer" }}
@@ -670,7 +657,6 @@ const Layout = () => {
         )}
       </Box>
 
-      {/* Sidebar Drawer (mobile & hidden desktop) */}
       {(isMobile || sidebarMode === "hidden") && (
         <SwipeableDrawer
           anchor="left"
@@ -699,7 +685,6 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Desktop right-hand drawer for notifications/profile/search */}
       {!isMobile && (
         <SwipeableDrawer
           anchor="right"
@@ -735,7 +720,6 @@ const Layout = () => {
         </SwipeableDrawer>
       )}
 
-      {/* Bottom action drawer (mobile) */}
       {isMobile && (
         <SwipeableDrawer
           anchor="bottom"
@@ -765,8 +749,6 @@ const Layout = () => {
             </Typography>
           )}
           {drawerType === "notifications" && <NotificationDrawer />}
-
-          {/* 🔹 Mobile profile drawer: no status controls */}
           {drawerType === "profile" && (
             <ProfileDrawer onLogout={handleLogout} showStatus={false} />
           )}
