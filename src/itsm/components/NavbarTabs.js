@@ -1,7 +1,6 @@
-// src/itsm/layout/NavbarTabs.js
-import React, { useRef, useState, useEffect } from "react";
-import { Box, IconButton, Tabs, Tab } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
+import React from "react";
+import { Box, Tabs, Tab, IconButton } from "@mui/material";
+import { useTheme, useMediaQuery } from "@mui/material/styles";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 
@@ -11,86 +10,34 @@ export default function NavbarTabs({
   handleTabChange,
   handleTabClose,
   handleTabReorder,
-  isMobile,
+  isMobile, // passed from Layout, but we'll also derive from theme just in case
 }) {
   const theme = useTheme();
-  const scrollRef = useRef(null);
+  const isXs = useMediaQuery(theme.breakpoints.down("sm"));
+  const mobile = isMobile ?? isXs;
 
-  const [showLeftArrow, setShowLeftArrow] = useState(false);
-  const [showRightArrow, setShowRightArrow] = useState(false);
-
-  const updateArrows = () => {
-    const el = scrollRef.current;
-    if (!el || isMobile) {
-      setShowLeftArrow(false);
-      setShowRightArrow(false);
-      return;
-    }
-    const { scrollLeft, scrollWidth, clientWidth } = el;
-    const maxScrollLeft = scrollWidth - clientWidth;
-    setShowLeftArrow(scrollLeft > 4);
-    setShowRightArrow(scrollLeft < maxScrollLeft - 4);
-  };
-
-  useEffect(() => {
-    updateArrows();
-  }, [tabs.length, isMobile]);
-
-  useEffect(() => {
-    scrollActiveTabIntoView();
-  }, [tabIndex, tabs.length, isMobile]);
-
-  const handleScroll = () => {
-    if (!isMobile) updateArrows();
-  };
-
-  const scrollByOffset = (delta) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollBy({ left: delta, behavior: "smooth" });
-  };
-
-  const scrollActiveTabIntoView = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const activeTab = el.querySelector(".navbar-tab.Mui-selected");
-    if (!activeTab) return;
-
-    const containerRect = el.getBoundingClientRect();
-    const tabRect = activeTab.getBoundingClientRect();
-
-    if (tabRect.left < containerRect.left) {
-      el.scrollBy({
-        left: tabRect.left - containerRect.left - 16,
-        behavior: "smooth",
-      });
-    } else if (tabRect.right > containerRect.right) {
-      el.scrollBy({
-        left: tabRect.right - containerRect.right + 16,
-        behavior: "smooth",
-      });
+  const handleTabsChange = (event, newIndex) => {
+    // Last "tab" is the + button
+    if (newIndex === tabs.length) {
+      const newTabs = [
+        ...tabs,
+        { label: "New Tab", path: `/new-tab/${tabs.length + 1}` },
+      ];
+      if (handleTabReorder) {
+        handleTabReorder(newTabs);
+      }
+      const createdIndex = newTabs.length - 1;
+      const createdPath = newTabs[createdIndex].path;
+      handleTabChange(event, createdIndex, createdPath);
+    } else {
+      const path = tabs[newIndex]?.path;
+      handleTabChange(event, newIndex, path);
     }
   };
 
-  const onTabsChange = (event, newIndex) => {
-    const path = tabs[newIndex]?.path;
-    handleTabChange(event, newIndex, path);
-  };
-
-  const onCloseClick = (e, tabPath) => {
+  const handleCloseClick = (e, tabPath) => {
     e.stopPropagation();
     handleTabClose(tabPath);
-  };
-
-  const onAddTab = () => {
-    const newTabs = [
-      ...tabs,
-      { label: "New Tab", path: `/new-tab/${tabs.length + 1}` },
-    ];
-    handleTabReorder(newTabs);
-    const newIndex = newTabs.length - 1;
-    handleTabChange(null, newIndex, newTabs[newIndex].path);
-    requestAnimationFrame(scrollActiveTabIntoView);
   };
 
   return (
@@ -98,187 +45,124 @@ export default function NavbarTabs({
       sx={{
         width: "100%",
         height: "100%",
-        display: "flex",
-        alignItems: "stretch",
         bgcolor: "background.paper",
         boxShadow: (t) => `inset 0 -1px 0 ${t.palette.divider}`,
-        position: "relative",
+        display: "flex",
+        alignItems: "stretch",
+        // 🔒 Ensure the tab strip itself never affects layout width
         overflow: "hidden",
       }}
     >
-      {/* Left arrow – desktop only */}
-      {!isMobile && (
-        <Box
-          sx={{
-            width: 22,
-            display: "flex",
+      <Tabs
+        value={tabIndex}
+        onChange={handleTabsChange}
+        // Let MUI handle scrolling inside the tab bar
+        variant="scrollable"
+        scrollButtons={mobile ? false : "auto"}
+        allowScrollButtonsMobile={false}
+        TabIndicatorProps={{ style: { display: "none" } }}
+        sx={{
+          minHeight: "100%",
+          height: "100%",
+          "& .MuiTabs-scrollableX": {
+            // This is the internal scroll container – it scrolls instead of the page
+            height: "100%",
+          },
+          "& .MuiTabs-flexContainer": {
+            height: "100%",
+            alignItems: "stretch",
+          },
+          "& .MuiTab-root": {
+            minHeight: "100%",
+            height: "100%",
+            textTransform: "none",
+            fontSize: 13,
+            padding: "0 8px",
+            color: "text.secondary",
             alignItems: "center",
             justifyContent: "center",
-            cursor: showLeftArrow ? "pointer" : "default",
-            opacity: showLeftArrow ? 0.8 : 0,
-            transition: "opacity 0.15s ease, transform 0.15s ease",
-            "&:hover": {
-              transform: showLeftArrow ? "translateY(-1px)" : "none",
-              opacity: showLeftArrow ? 1 : 0,
-            },
-          }}
-          onClick={() => showLeftArrow && scrollByOffset(-140)}
-        >
-          ‹
-        </Box>
-      )}
-
-      {/* Scrollable tab strip (tabs + + button) */}
-      <Box
-        ref={scrollRef}
-        onScroll={handleScroll}
-        sx={{
-          flex: 1,
-          minWidth: 0,
-          height: "100%",
-          display: "flex",
-          alignItems: "stretch",
-          overflowX: isMobile ? "auto" : "hidden",
-          overflowY: "hidden",
-          WebkitOverflowScrolling: isMobile ? "touch" : "auto",
-          msOverflowStyle: isMobile ? "none" : "auto",
-          scrollbarWidth: isMobile ? "none" : "auto",
-          "&::-webkit-scrollbar": {
-            display: isMobile ? "none" : "initial",
+            maxWidth: "none",
+            minWidth: 0,
+          },
+          "& .MuiTab-root.Mui-selected": {
+            fontWeight: 600,
+            color: "text.primary",
+            bgcolor:
+              theme.palette.mode === "dark"
+                ? "rgba(255,255,255,0.05)"
+                : "rgba(0,0,0,0.03)",
+            boxShadow: `inset 0 -2px 0 ${theme.palette.primary.main}`,
+          },
+          "& .MuiTab-root:hover": {
+            bgcolor:
+              theme.palette.mode === "dark"
+                ? "rgba(255,255,255,0.02)"
+                : "rgba(0,0,0,0.015)",
           },
         }}
       >
-        <Tabs
-          value={tabIndex}
-          onChange={onTabsChange}
-          variant="standard"
-          TabIndicatorProps={{ style: { display: "none" } }}
-          sx={{
-            minHeight: "100%",
-            height: "100%",
-            "& .MuiTabs-flexContainer": {
-              height: "100%",
-              alignItems: "stretch",
-            },
-            "& .MuiTab-root": {
-              minHeight: "100%",
-              height: "100%",
-              textTransform: "none",
-              fontSize: 13,
-              padding: "0 8px",
-              color: "text.secondary",
-              alignItems: "center",
-              justifyContent: "center",
-              maxWidth: "none",
-              minWidth: 0,
-            },
-            "& .MuiTab-root.Mui-selected": {
-              fontWeight: 600,
-              color: "text.primary",
-              bgcolor:
-                theme.palette.mode === "dark"
-                  ? "rgba(255,255,255,0.05)"
-                  : "rgba(0,0,0,0.03)",
-              boxShadow: `inset 0 -2px 0 ${theme.palette.primary.main}`,
-            },
-            "& .MuiTab-root:hover": {
-              bgcolor:
-                theme.palette.mode === "dark"
-                  ? "rgba(255,255,255,0.02)"
-                  : "rgba(0,0,0,0.015)",
-            },
-          }}
-        >
-          {tabs.map((t, idx) => (
-            <Tab
-              key={t.path}
-              className="navbar-tab"
-              disableRipple
-              label={
+        {tabs.map((t, idx) => (
+          <Tab
+            key={t.path}
+            disableRipple
+            label={
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  pl: 0.5,
+                }}
+              >
                 <Box
+                  component="span"
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    pl: 0.5,
+                    whiteSpace: "nowrap",
+                    textOverflow: "ellipsis",
+                    overflow: "hidden",
+                    maxWidth: mobile ? 110 : 160,
+                    fontSize: 13,
                   }}
                 >
-                  <Box
-                    component="span"
+                  {t.label}
+                </Box>
+                {idx !== 0 && (
+                  <IconButton
+                    size="small"
+                    onClick={(e) => handleCloseClick(e, t.path)}
                     sx={{
-                      whiteSpace: "nowrap",
-                      textOverflow: "ellipsis",
-                      overflow: "hidden",
-                      maxWidth: isMobile ? 120 : 160,
-                      fontSize: 13,
+                      p: 0,
+                      ml: 0.5,
+                      "& svg": {
+                        fontSize: 14,
+                      },
                     }}
                   >
-                    {t.label}
-                  </Box>
-                  {idx !== 0 && (
-                    <IconButton
-                      size="small"
-                      onClick={(e) => onCloseClick(e, t.path)}
-                      sx={{
-                        p: 0,
-                        ml: 0.5,
-                        "& svg": {
-                          fontSize: 14,
-                        },
-                      }}
-                    >
-                      <CloseIcon />
-                    </IconButton>
-                  )}
-                </Box>
-              }
-            />
-          ))}
-        </Tabs>
+                    <CloseIcon />
+                  </IconButton>
+                )}
+              </Box>
+            }
+          />
+        ))}
 
-        {/* + button – scrolls with tabs */}
-        <Box
-          sx={{
-            flex: "0 0 auto",
-            display: "flex",
-            alignItems: "center",
-            pr: 0.5,
-          }}
-        >
-          <IconButton
-            size="small"
-            onClick={onAddTab}
-            sx={{
-              ml: 0.5,
-              "& svg": { fontSize: 20 },
-            }}
-          >
-            <AddIcon />
-          </IconButton>
-        </Box>
-      </Box>
-
-      {/* Right arrow – desktop only */}
-      {!isMobile && (
-        <Box
-          sx={{
-            width: 22,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: showRightArrow ? "pointer" : "default",
-            opacity: showRightArrow ? 0.8 : 0,
-            transition: "opacity 0.15s ease, transform 0.15s ease",
-            "&:hover": {
-              transform: showRightArrow ? "translateY(-1px)" : "none",
-              opacity: showRightArrow ? 1 : 0,
-            },
-          }}
-          onClick={() => showRightArrow && scrollByOffset(140)}
-        >
-          ›
-        </Box>
-      )}
+        {/* + "tab" – always last, scrolls with tabs */}
+        <Tab
+          disableRipple
+          value={tabs.length}
+          label={
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                px: 0.5,
+              }}
+            >
+              <AddIcon sx={{ fontSize: 18 }} />
+            </Box>
+          }
+        />
+      </Tabs>
     </Box>
   );
 }
