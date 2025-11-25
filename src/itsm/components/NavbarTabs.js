@@ -1,4 +1,3 @@
-// src/itsm/layout/NavbarTabs.js
 import React, { useRef, useEffect, useState } from "react";
 import {
   Box,
@@ -30,6 +29,8 @@ export default function NavbarTabs({
   isMobile,
 }) {
   const theme = useTheme();
+
+  // This is the actual horizontal scrolling element
   const scrollRef = useRef(null);
 
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -43,6 +44,23 @@ export default function NavbarTabs({
     contextTabIndex != null && contextTabIndex >= 0
       ? tabs[contextTabIndex]
       : null;
+
+  /* ------------------------------------------------------------------
+   * Accent colour per tab (small coloured bar)
+   * ------------------------------------------------------------------ */
+  const getTabAccentColor = (label = "") => {
+    const lower = label.toLowerCase();
+    if (lower.includes("incident")) return theme.palette.error.main;
+    if (lower.includes("service request")) return theme.palette.info.main;
+    if (lower.includes("change")) return theme.palette.warning.main;
+    if (lower.includes("task")) return theme.palette.success.main;
+    if (lower.includes("asset")) return theme.palette.secondary.main;
+    if (lower.includes("settings")) return theme.palette.grey[600];
+    if (lower.includes("profile")) return theme.palette.purple?.main || "#8e24aa";
+    if (lower.includes("knowledge")) return theme.palette.teal?.main || "#00897b";
+    if (lower.includes("dashboard")) return theme.palette.primary.main;
+    return theme.palette.text.disabled;
+  };
 
   /* ------------------------------------------------------------------
    * Scroll helpers
@@ -241,7 +259,7 @@ export default function NavbarTabs({
       alignItems: "center",
       maxWidth: 220,
       minWidth: 80,
-      px: 1.5,
+      px: 1.25,
       mx: 0.25,
       borderRadius: 8,
       border: "1px solid",
@@ -287,6 +305,8 @@ export default function NavbarTabs({
           bgcolor: "background.paper",
           borderBottom: "1px solid",
           borderColor: "divider",
+          minWidth: 0,
+          overflow: "hidden", // 🔒 prevents this row pushing layout sideways
         }}
       >
         {/* Left scroll arrow (desktop only, only when needed) */}
@@ -312,77 +332,103 @@ export default function NavbarTabs({
           </Box>
         )}
 
-        {/* Tabs strip (scrollable area) */}
+        {/* Viewport for scrollable tabs (clipped to available width) */}
         <Box
-          ref={scrollRef}
           sx={{
             flex: 1,
             minWidth: 0,
+            overflow: "hidden", // 🔒 tabs can’t extend the layout, only scroll inside
             display: "flex",
             alignItems: "stretch",
-            overflowX: "auto",          // ✅ always scrollable inside this strip
-            overflowY: "hidden",
-            WebkitOverflowScrolling: "touch",
           }}
         >
-          {tabs.map((tab, idx) => {
-            const active = idx === tabIndex;
-            return (
-              <Box
-                key={tab.path || tab.id || idx}
-                data-active={active ? "true" : "false"}
-                onClick={() => handleTabChange(null, idx, tab.path)}
-                onContextMenu={(e) => handleContextMenuDesktop(e, idx)}
-                onMouseDown={(e) => handleMouseDown(e, tab, idx)}
-                onTouchStart={(e) => handleTouchStart(e, idx)}
-                onTouchEnd={handleTouchEnd}
-                onTouchCancel={handleTouchEnd}
-                sx={getTabSx(active)}
-              >
-                <Typography
-                  variant="body2"
-                  noWrap
-                  sx={{
-                    fontSize: 12,
-                    flex: 1,
-                    pr: idx !== 0 ? 0.5 : 0,
-                  }}
-                >
-                  {tab.label}
-                </Typography>
-                {idx !== 0 && (
-                  <IconButton
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleTabClose(tab.path);
-                    }}
-                    sx={{
-                      ml: 0.25,
-                      p: 0,
-                      "& svg": { fontSize: 14 },
-                    }}
-                  >
-                    <CloseIcon />
-                  </IconButton>
-                )}
-              </Box>
-            );
-          })}
-
-          {/* + Add tab button – always at the end of the scrollable strip */}
-          <IconButton
-            size="small"
-            onClick={handleAddTab}
+          {/* Actual scrollable content */}
+          <Box
+            ref={scrollRef}
             sx={{
-              alignSelf: "center",
-              mx: 0.5,
-              flexShrink: 0,
-              p: 0.25,
+              display: "flex",
+              alignItems: "stretch",
+              overflowX: "auto",      // ✅ scrolling happens only inside this strip
+              overflowY: "hidden",
+              WebkitOverflowScrolling: "touch",
+              minWidth: "100%",       // fills viewport, extra width scrolls
             }}
           >
-            <AddIcon sx={{ fontSize: 18 }} />
-          </IconButton>
+            {tabs.map((tab, idx) => {
+              const active = idx === tabIndex;
+              const accent = getTabAccentColor(tab.label);
+
+              return (
+                <Box
+                  key={tab.path || tab.id || idx}
+                  data-active={active ? "true" : "false"}
+                  onClick={() => handleTabChange(null, idx, tab.path)}
+                  onContextMenu={(e) => handleContextMenuDesktop(e, idx)}
+                  onMouseDown={(e) => handleMouseDown(e, tab, idx)}
+                  onTouchStart={(e) => handleTouchStart(e, idx)}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchCancel={handleTouchEnd}
+                  sx={getTabSx(active)}
+                >
+                  {/* coloured accent bar */}
+                  <Box
+                    sx={{
+                      width: 3,
+                      borderRadius: 999,
+                      bgcolor: accent,
+                      mr: 0.75,
+                      alignSelf: "stretch",
+                      my: "20%",
+                      opacity: 0.9,
+                    }}
+                  />
+
+                  <Typography
+                    variant="body2"
+                    noWrap
+                    sx={{
+                      fontSize: 12,
+                      flex: 1,
+                      pr: idx !== 0 ? 0.5 : 0,
+                    }}
+                  >
+                    {tab.label}
+                  </Typography>
+
+                  {idx !== 0 && (
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleTabClose(tab.path);
+                      }}
+                      sx={{
+                        ml: 0.25,
+                        p: 0,
+                        "& svg": { fontSize: 14 },
+                      }}
+                    >
+                      <CloseIcon />
+                    </IconButton>
+                  )}
+                </Box>
+              );
+            })}
+
+            {/* + Add tab button – always at the end of the scrollable strip */}
+            <IconButton
+              size="small"
+              onClick={handleAddTab}
+              sx={{
+                alignSelf: "center",
+                mx: 0.5,
+                flexShrink: 0,
+                p: 0.25,
+              }}
+            >
+              <AddIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Box>
         </Box>
 
         {/* Right scroll arrow (desktop only, only when needed) */}
