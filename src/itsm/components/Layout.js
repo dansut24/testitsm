@@ -637,25 +637,25 @@ const Layout = () => {
       </Box>
 
       {/* Main content – now sized to avoid horizontal overflow */}
-      <Box
-        component="main"
-        sx={{
-          mt: `${NAVBAR_HEIGHT}px`,
-          ml: desktopHasSidebar ? `${sidebarWidth}px` : 0,
-          mb: isMobile ? `${BOTTOM_NAV_HEIGHT}px` : 0,
-          px: 2,
-          pt: 1,
-          pb: isMobile ? 2 : 3,
-          // 🔑 Keep main content width within the viewport minus sidebar
-          width: desktopHasSidebar ? `calc(100% - ${sidebarWidth}px)` : "100%",
-          maxWidth: "100%",
-          boxSizing: "border-box",
-          overflowX: "hidden",
-          minHeight: "calc(100vh - 0px)",
-        }}
-      >
-        <Outlet />
-      </Box>
+        <Box
+    component="main"
+    className="app-main"
+    sx={{
+      mt: `${NAVBAR_HEIGHT}px`,
+      ml: desktopHasSidebar ? `${sidebarWidth}px` : 0,
+      mb: isMobile ? `${BOTTOM_NAV_HEIGHT}px` : 0,
+      px: 2,
+      pt: 1,
+      pb: isMobile ? 2 : 3,
+      width: desktopHasSidebar ? `calc(100% - ${sidebarWidth}px)` : "100%",
+      maxWidth: "100%",
+      boxSizing: "border-box",
+      overflowX: "hidden",   // 🔒 extra safety on the content area itself
+      minHeight: "calc(100vh - 0px)",
+    }}
+  >
+    <Outlet />
+  </Box>
 
       {/* Sidebar Drawer (mobile & hidden desktop) */}
       {(isMobile || sidebarMode === "hidden") && (
