@@ -302,11 +302,13 @@ const Layout = () => {
         sx={{
           flex: 1,
           minWidth: 0,
+          maxWidth: "100%",       // 🔒 never exceed viewport
           display: "grid",
           gridTemplateRows: isMobile
             ? `${NAVBAR_HEIGHT}px 1fr ${BOTTOM_NAV_HEIGHT}px`
             : `${NAVBAR_HEIGHT}px 1fr`,
           height: "100%",
+          overflow: "hidden",     // 🔒 clamp children horizontally
         }}
       >
         {/* NAVBAR (header + tabs) */}
@@ -325,6 +327,9 @@ const Layout = () => {
                 : "0 2px 5px rgba(0,0,0,0.15)"
               : "none",
             transition: "box-shadow 0.25s ease",
+            minWidth: 0,           // 🔑 let content shrink instead of pushing layout
+            maxWidth: "100%",
+            overflowX: "hidden",   // 🔒 tabs can't push width
           }}
         >
           {/* Header row */}
@@ -339,6 +344,7 @@ const Layout = () => {
               borderBottom: "1px solid",
               borderColor: "divider",
               pt: isMobile ? 0.5 : 0,
+              minWidth: 0,        // prevents header from expanding width
             }}
           >
             {/* Logo / brand / menu */}
@@ -359,6 +365,7 @@ const Layout = () => {
                   display: "flex",
                   alignItems: "center",
                   gap: 0.75,
+                  flexShrink: 0,
                 }}
               >
                 <img
@@ -432,6 +439,7 @@ const Layout = () => {
                       borderColor: "divider",
                       display: "flex",
                       alignItems: "center",
+                      flexShrink: 0,
                     }}
                   >
                     <Typography
@@ -460,6 +468,7 @@ const Layout = () => {
                       display: "flex",
                       alignItems: "center",
                       gap: 0.5,
+                      flexShrink: 0,
                     }}
                   >
                     <Box
@@ -488,6 +497,7 @@ const Layout = () => {
                   display: "flex",
                   alignItems: "center",
                   gap: 1,
+                  flexShrink: 0,
                 }}
               >
                 <IconButton
@@ -646,6 +656,8 @@ const Layout = () => {
             sx={{
               height: TABBAR_HEIGHT,
               minHeight: TABBAR_HEIGHT,
+              minWidth: 0,          // 🔑 stops tab strip from forcing widen
+              overflowX: "hidden",  // extra protection
             }}
           >
             <NavbarTabs
@@ -659,26 +671,26 @@ const Layout = () => {
           </Box>
         </Box>
 
-{/*MAIN CONTENT */}
+        {/* MAIN CONTENT */}
         <Box
-  component="main"
-  className="scrollable"    // purely a marker now, no CSS behaviour
-  onScroll={handleMainScroll}
-  sx={{
-    minHeight: 0,           // critical for grid row to allow scrolling
-    height: "100%",         // fill the available row height
-    width: "100%",
-    overflowY: "auto",      // ✅ this is the ONLY place scroll is defined
-    overflowX: "hidden",
-    WebkitOverflowScrolling: "touch",
-    px: 2,
-    pt: 1,
-    pb: isMobile ? 1 : 2,
-    boxSizing: "border-box",
-  }}
->
-  <Outlet />
-</Box>
+          component="main"
+          onScroll={handleMainScroll}
+          sx={{
+            minHeight: 0,
+            height: "100%",
+            width: "100%",
+            overflowY: "auto",
+            overflowX: "hidden",       // 🔒 main content never scrolls sideways
+            WebkitOverflowScrolling: "touch",
+            px: 2,
+            pt: 1,
+            pb: isMobile ? 1 : 2,
+            boxSizing: "border-box",
+          }}
+        >
+          <Outlet />
+        </Box>
+
         {/* Bottom nav row (mobile) */}
         {isMobile && (
           <Box
@@ -731,43 +743,43 @@ const Layout = () => {
       )}
 
       {/* Desktop right-hand drawer */}
-   {!isMobile && (
-  <SwipeableDrawer
-    anchor="right"
-    open={Boolean(drawerType)}
-    onClose={() => setDrawerType(null)}
-    onOpen={() => {}}
-    disableSwipeToOpen      // 🔥 turn off swipe gesture on desktop
-    disableDiscovery        // 🔥 also disable the discovery swipe area
-    swipeAreaWidth={0}      // 🔥 no 20px hidden strip on the right edge
-    PaperProps={{
-      sx: {
-        width: 360,
-        maxWidth: "100%",
-      },
-    }}
-  >
-    {drawerType === "notifications" && <NotificationDrawer />}
-    {drawerType === "profile" && (
-      <ProfileDrawer
-        status={userStatus}
-        onStatusChange={handleStatusChange}
-        onLogout={handleLogout}
-        showStatus
-      />
-    )}
-    {drawerType === "search" && (
-      <Box p={2}>
-        <Typography variant="h6" gutterBottom>
-          Search
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Advanced search coming soon.
-        </Typography>
-      </Box>
-    )}
-  </SwipeableDrawer>
-)}
+      {!isMobile && (
+        <SwipeableDrawer
+          anchor="right"
+          open={Boolean(drawerType)}
+          onClose={() => setDrawerType(null)}
+          onOpen={() => {}}
+          disableSwipeToOpen
+          disableDiscovery
+          swipeAreaWidth={0}
+          PaperProps={{
+            sx: {
+              width: 360,
+              maxWidth: "100%",
+            },
+          }}
+        >
+          {drawerType === "notifications" && <NotificationDrawer />}
+          {drawerType === "profile" && (
+            <ProfileDrawer
+              status={userStatus}
+              onStatusChange={handleStatusChange}
+              onLogout={handleLogout}
+              showStatus
+            />
+          )}
+          {drawerType === "search" && (
+            <Box p={2}>
+              <Typography variant="h6" gutterBottom>
+                Search
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Advanced search coming soon.
+              </Typography>
+            </Box>
+          )}
+        </SwipeableDrawer>
+      )}
 
       {/* Bottom action drawer (mobile) */}
       {isMobile && (
