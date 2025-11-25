@@ -24,7 +24,6 @@ export default function NavbarTabs({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
-  // long-press close on mobile
   const longPressRef = useRef({ timerId: null, index: null });
 
   const updateScrollButtons = () => {
@@ -160,8 +159,8 @@ export default function NavbarTabs({
           alignItems: "center",
         }}
       >
-        {/* Left arrow – desktop always visible, disabled when no scroll */}
-        {!isMobile && (
+        {/* Left arrow – desktop only, and only when needed */}
+        {!isMobile && canScrollLeft && (
           <Box
             sx={{
               flexShrink: 0,
@@ -176,16 +175,15 @@ export default function NavbarTabs({
             <Box
               component="button"
               type="button"
-              onClick={() => canScrollLeft && scrollByAmount(-150)}
+              onClick={() => scrollByAmount(-150)}
               style={{
                 border: "none",
                 outline: "none",
                 background: "transparent",
-                cursor: canScrollLeft ? "pointer" : "default",
+                cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 padding: 0,
-                opacity: canScrollLeft ? 1 : 0.3,
               }}
             >
               <ChevronLeftIcon sx={{ fontSize: 18 }} />
@@ -351,8 +349,8 @@ export default function NavbarTabs({
           </Box>
         </Box>
 
-        {/* Right arrow – desktop always visible, disabled when no scroll */}
-        {!isMobile && (
+        {/* Right arrow – desktop only, and only when needed */}
+        {!isMobile && canScrollRight && (
           <Box
             sx={{
               flexShrink: 0,
@@ -367,16 +365,15 @@ export default function NavbarTabs({
             <Box
               component="button"
               type="button"
-              onClick={() => canScrollRight && scrollByAmount(150)}
+              onClick={() => scrollByAmount(150)}
               style={{
                 border: "none",
                 outline: "none",
                 background: "transparent",
-                cursor: canScrollRight ? "pointer" : "default",
+                cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 padding: 0,
-                opacity: canScrollRight ? 1 : 0.3,
               }}
             >
               <ChevronRightIcon sx={{ fontSize: 18 }} />
