@@ -15,13 +15,8 @@ import CloseIcon from "@mui/icons-material/Close";
 import ClearAllIcon from "@mui/icons-material/ClearAll";
 import FilterNoneIcon from "@mui/icons-material/FilterNone";
 import CancelPresentationIcon from "@mui/icons-material/CancelPresentation";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
 const LONG_PRESS_MS = 500;
-const LEFT_ARROW_WIDTH = 26;
-const RIGHT_ARROW_WIDTH = 26;
-const PLUS_WIDTH = 30;
 
 export default function NavbarTabs({
   tabs,
@@ -34,9 +29,6 @@ export default function NavbarTabs({
   const theme = useTheme();
   const scrollRef = useRef(null);
 
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
   const [contextAnchor, setContextAnchor] = useState(null);
   const [contextTabIndex, setContextTabIndex] = useState(null);
   const [longPressTimer, setLongPressTimer] = useState(null);
@@ -47,7 +39,7 @@ export default function NavbarTabs({
       : null;
 
   /* ------------------------------------------------------------------
-   * Accent colour per tab (small coloured bar)
+   * Accent colour per tab (small left bar)
    * ------------------------------------------------------------------ */
   const getTabAccentColor = (label = "") => {
     const lower = label.toLowerCase();
@@ -64,37 +56,8 @@ export default function NavbarTabs({
   };
 
   /* ------------------------------------------------------------------
-   * Scroll helpers
+   * Keep active tab in view when changed
    * ------------------------------------------------------------------ */
-  const updateScrollButtons = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const { scrollLeft, clientWidth, scrollWidth } = el;
-
-    setCanScrollLeft(scrollLeft > 2);
-    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2);
-  };
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-
-    updateScrollButtons();
-
-    const handleScroll = () => updateScrollButtons();
-    const handleResize = () => updateScrollButtons();
-
-    el.addEventListener("scroll", handleScroll);
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      el.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleResize);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tabs.length, isMobile]);
-
-  // Keep active tab visible when changed
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -112,13 +75,6 @@ export default function NavbarTabs({
       });
     }
   }, [tabIndex, tabs.length]);
-
-  const scrollTabs = (direction) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const delta = el.clientWidth * 0.6 * (direction === "left" ? -1 : 1);
-    el.scrollBy({ left: delta, behavior: "smooth" });
-  };
 
   /* ------------------------------------------------------------------
    * Context menu (desktop right-click + mobile long-press)
@@ -173,7 +129,6 @@ export default function NavbarTabs({
       return;
     }
 
-    // Keep pinned tab (index 0) + context tab
     let newTabs;
     if (contextTabIndex === 0) {
       newTabs = [tabs[0]];
@@ -199,7 +154,6 @@ export default function NavbarTabs({
       closeContextMenu();
       return;
     }
-    // "Close all" = keep only the pinned first tab
     const newTabs = [tabs[0]];
     handleTabReorder(newTabs);
     handleTabChange(null, 0, newTabs[0].path);
@@ -244,7 +198,7 @@ export default function NavbarTabs({
   };
 
   /* ------------------------------------------------------------------
-   * Tab styles
+   * Tab styles (rectangular)
    * ------------------------------------------------------------------ */
   const getTabSx = (active) => {
     const baseBg =
@@ -264,7 +218,7 @@ export default function NavbarTabs({
       minWidth: 90,
       padding: "0 10px",
       marginRight: 4,
-      borderRadius: 8,
+      borderRadius: 6,
       border: "1px solid",
       borderColor: active ? "primary.main" : "divider",
       bgcolor: active ? activeBg : baseBg,
@@ -289,47 +243,41 @@ export default function NavbarTabs({
   };
 
   /* ------------------------------------------------------------------
-   * Middle-click to close (desktop)
+   * Middle-click close (desktop)
    * ------------------------------------------------------------------ */
   const handleMouseDown = (event, tab, idx) => {
-    // Middle button == 1
     if (event.button === 1 && idx !== 0) {
       event.preventDefault();
       handleTabClose(tab.path);
     }
   };
 
-  // Padding left/right inside scroll area to reserve space for overlays
-  const paddingLeft = !isMobile ? LEFT_ARROW_WIDTH + 4 : 4;
-  const paddingRight = !isMobile
-    ? RIGHT_ARROW_WIDTH + PLUS_WIDTH + 8
-    : PLUS_WIDTH + 8;
-
   return (
     <>
       <Box
         sx={{
-          position: "relative",
           height: "100%",
+          display: "flex",
+          alignItems: "center",
           bgcolor: "background.paper",
           borderBottom: "1px solid",
           borderColor: "divider",
           minWidth: 0,
-          overflow: "hidden", // 🔒 row never grows wider than container
+          overflow: "hidden", // 🔒 this row NEVER makes the page wider
         }}
       >
-        {/* Scrollable strip: tabs only (no arrows / plus) */}
+        {/* One scrollable strip with tabs + +, clamped to navbar width */}
         <Box
           ref={scrollRef}
           sx={{
-            height: "100%",
             display: "flex",
             alignItems: "center",
-            overflowX: "auto",
+            flex: 1,
+            minWidth: 0,
+            overflowX: "auto",           // ✅ only this scrolls horizontally
             overflowY: "hidden",
             WebkitOverflowScrolling: "touch",
-            pl: paddingLeft,
-            pr: paddingRight,
+            px: 0.5,
             "&::-webkit-scrollbar": {
               height: 3,
             },
@@ -382,6 +330,7 @@ export default function NavbarTabs({
                   {tab.label}
                 </Typography>
 
+                {/* No close on Dashboard (index 0) */}
                 {idx !== 0 && (
                   <IconButton
                     size="small"
@@ -401,72 +350,15 @@ export default function NavbarTabs({
               </Box>
             );
           })}
-        </Box>
 
-        {/* Left arrow (desktop only, overlaid, doesn’t affect width) */}
-        {!isMobile && (
-          <Box
-            sx={{
-              position: "absolute",
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: LEFT_ARROW_WIDTH,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              pointerEvents: "none",
-              background:
-                "linear-gradient(to right, rgba(0,0,0,0.06), transparent)",
-            }}
-          >
-            {canScrollLeft && (
-              <IconButton
-                size="small"
-                onClick={() => scrollTabs("left")}
-                sx={{ p: 0.25, pointerEvents: "auto" }}
-              >
-                <ChevronLeftIcon sx={{ fontSize: 18 }} />
-              </IconButton>
-            )}
-          </Box>
-        )}
-
-        {/* Right arrow + plus (desktop) or just plus (mobile) – overlaid on right, fixed */}
-        <Box
-          sx={{
-            position: "absolute",
-            right: 0,
-            top: 0,
-            bottom: 0,
-            display: "flex",
-            alignItems: "center",
-            pr: 0.5,
-            pl: 1,
-            background:
-              "linear-gradient(to left, rgba(0,0,0,0.06), transparent)",
-            pointerEvents: "none",
-            gap: 0.5,
-          }}
-        >
-          {/* Desktop right arrow */}
-          {!isMobile && canScrollRight && (
-            <IconButton
-              size="small"
-              onClick={() => scrollTabs("right")}
-              sx={{ p: 0.25, pointerEvents: "auto" }}
-            >
-              <ChevronRightIcon sx={{ fontSize: 18 }} />
-            </IconButton>
-          )}
-
-          {/* + Add tab – always visible, never off-screen */}
+          {/* + Add tab – always after last tab, inside scroll strip */}
           <IconButton
             size="small"
             onClick={handleAddTab}
             sx={{
+              flexShrink: 0,
+              ml: 0.5,
               p: 0.25,
-              pointerEvents: "auto",
             }}
           >
             <AddIcon sx={{ fontSize: 18 }} />
