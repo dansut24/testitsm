@@ -1,3 +1,4 @@
+// src/itsm/layout/Layout.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -80,6 +81,7 @@ const Layout = () => {
   const [drawerType, setDrawerType] = useState(null);
 
   const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
+  const [navbarElevated, setNavbarElevated] = useState(false);
 
   const username = "User";
   const userInitial = username[0]?.toUpperCase() || "U";
@@ -92,7 +94,7 @@ const Layout = () => {
     localStorage.setItem("userStatus", userStatus);
   }, [userStatus]);
 
-  // Optional vh helper if you use it elsewhere
+  // vh fix (mainly mobile)
   useEffect(() => {
     const setVh = () => {
       const vh = window.innerHeight * 0.01;
@@ -251,28 +253,35 @@ const Layout = () => {
       ? COLLAPSED_WIDTH
       : 0;
 
+  const handleMainScroll = (e) => {
+    const scrolled = e.currentTarget.scrollTop > 4;
+    setNavbarElevated(scrolled);
+  };
+
   return (
     <Box
       sx={{
+        position: "fixed",
+        inset: 0,
         width: "100%",
-        minHeight: "100vh",
+        height: "calc(var(--vh, 1vh) * 100)",
+        display: "flex",
         bgcolor: theme.palette.background.default,
-        overflowX: "hidden", // prevent page-wide horizontal scroll
+        overflow: "hidden", // no global scroll; only main content scrolls
       }}
     >
-      {/* Fixed Sidebar (desktop) */}
+      {/* Sidebar (desktop) */}
       {desktopHasSidebar && (
         <Box
           sx={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            bottom: 0,
             width: sidebarWidth,
-            zIndex: 1100,
-            bgcolor: "background.paper",
+            flexShrink: 0,
             borderRight: "1px solid",
             borderColor: "divider",
+            bgcolor: "background.paper",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
           }}
         >
           <Sidebar
@@ -288,381 +297,407 @@ const Layout = () => {
         </Box>
       )}
 
-      {/* Fixed Navbar (header + tabs) */}
-     <Box
-  sx={{
-    bgcolor: "background.paper",
-    display: "flex",
-    flexDirection: "column",
-    height: NAVBAR_HEIGHT,
-    borderBottom: "1px solid",
-    borderColor: "divider",
-    zIndex: 1200,
-
-    /* 🔥 Shadow only when main content is scrolled */
-    boxShadow: theme =>
-      document.body.dataset.navshadow === "true"
-        ? `0 2px 5px ${theme.palette.mode === "dark"
-            ? "rgba(0,0,0,0.45)"
-            : "rgba(0,0,0,0.15)"}`
-        : "none",
-
-    transition: "box-shadow 0.25s ease",
-  }}
->
-        {/* Header row */}
+      {/* Right-hand column: navbar + scrollable main + bottom nav (mobile) */}
+      <Box
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          display: "grid",
+          gridTemplateRows: isMobile
+            ? `${NAVBAR_HEIGHT}px 1fr ${BOTTOM_NAV_HEIGHT}px`
+            : `${NAVBAR_HEIGHT}px 1fr`,
+          height: "100%",
+        }}
+      >
+        {/* NAVBAR (header + tabs) */}
         <Box
           sx={{
-            height: APP_HEADER_HEIGHT,
-            minHeight: APP_HEADER_HEIGHT,
+            bgcolor: "background.paper",
             display: "flex",
-            alignItems: "center",
-            px: 1,
-            gap: 1,
+            flexDirection: "column",
+            height: NAVBAR_HEIGHT,
             borderBottom: "1px solid",
             borderColor: "divider",
-            pt: isMobile ? 0.5 : 0,
+            zIndex: 1200,
+            boxShadow: navbarElevated
+              ? theme.palette.mode === "dark"
+                ? "0 2px 5px rgba(0,0,0,0.45)"
+                : "0 2px 5px rgba(0,0,0,0.15)"
+              : "none",
+            transition: "box-shadow 0.25s ease",
           }}
         >
-          {/* Logo / brand / menu */}
-          {!isMobile && sidebarMode === "hidden" ? (
-            <IconButton
-              onClick={() => setMobileSidebarOpen(true)}
-              size="small"
-            >
-              <img
-                src="https://www.bing.com/sa/simg/favicon-2x.ico"
-                alt="Logo"
-                style={{ width: 20, height: 20 }}
-              />
-            </IconButton>
-          ) : (
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 0.75,
-              }}
-            >
-              <img
-                src="/logo192.png"
-                alt="Logo"
-                style={{ width: 22, height: 22, borderRadius: 4 }}
-              />
-              {!isMobile && (
-                <Typography
-                  variant="subtitle2"
-                  sx={{ fontWeight: 600, letterSpacing: 0.3, fontSize: 13 }}
-                >
-                  Hi5Tech ITSM
-                </Typography>
-              )}
-            </Box>
-          )}
-
-          {/* Search + quick info */}
+          {/* Header row */}
           <Box
             sx={{
-              flex: 1,
-              minWidth: 0,
+              height: APP_HEADER_HEIGHT,
+              minHeight: APP_HEADER_HEIGHT,
               display: "flex",
               alignItems: "center",
+              px: 1,
               gap: 1,
-              mx: 1,
+              borderBottom: "1px solid",
+              borderColor: "divider",
+              pt: isMobile ? 0.5 : 0,
             }}
           >
-            <Box
-              sx={{
-                flex: isMobile ? 1 : 0,
-                minWidth: 0,
-                maxWidth: isMobile ? "100%" : 320,
-                display: "flex",
-                alignItems: "center",
-                bgcolor:
-                  theme.palette.mode === "dark"
-                    ? "rgba(255,255,255,0.04)"
-                    : "rgba(0,0,0,0.03)",
-                borderRadius: 999,
-                px: isMobile ? 1.4 : 1,
-                py: 0,
-                height: isMobile ? 32 : 26,
-              }}
-            >
-              <SearchIcon
-                sx={{
-                  fontSize: isMobile ? 20 : 16,
-                  mr: 1,
-                  opacity: 0.7,
-                }}
-              />
-              <InputBase
-                placeholder="Search..."
-                sx={{
-                  fontSize: isMobile ? 13 : 12,
-                  width: "100%",
-                }}
-              />
-            </Box>
-
-            {!isMobile && (
-              <>
-                <Box
-                  sx={{
-                    px: 1,
-                    py: 0.25,
-                    borderRadius: 999,
-                    border: "1px solid",
-                    borderColor: "divider",
-                    display: "flex",
-                    alignItems: "center",
-                  }}
-                >
-                  <Typography
-                    variant="caption"
-                    sx={{ fontSize: 10, color: "text.secondary" }}
-                  >
-                    Tenant:&nbsp;
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{ fontSize: 10, fontWeight: 500 }}
-                  >
-                    Hi5Tech
-                  </Typography>
-                </Box>
-
-                <Box
-                  sx={{
-                    px: 1,
-                    py: 0.25,
-                    borderRadius: 999,
-                    bgcolor:
-                      theme.palette.mode === "dark"
-                        ? "rgba(46, 125, 50, 0.25)"
-                        : "rgba(76, 175, 80, 0.12)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 0.5,
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: "50%",
-                      bgcolor: "success.main",
-                    }}
-                  />
-                  <Typography
-                    variant="caption"
-                    sx={{ fontSize: 10, color: "success.main" }}
-                  >
-                    All systems operational
-                  </Typography>
-                </Box>
-              </>
-            )}
-          </Box>
-
-          {/* Right actions (desktop) */}
-          {!isMobile && (
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-              }}
-            >
+            {/* Logo / brand / menu */}
+            {!isMobile && sidebarMode === "hidden" ? (
               <IconButton
+                onClick={() => setMobileSidebarOpen(true)}
                 size="small"
-                onClick={() => setDrawerType("notifications")}
               >
-                <NotificationsIcon sx={{ fontSize: 18 }} />
+                <img
+                  src="https://www.bing.com/sa/simg/favicon-2x.ico"
+                  alt="Logo"
+                  style={{ width: 20, height: 20 }}
+                />
               </IconButton>
-
+            ) : (
               <Box
                 sx={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 0.5,
-                  cursor: "pointer",
+                  gap: 0.75,
                 }}
-                onClick={() => setDrawerType("profile")}
               >
-                <Box sx={{ position: "relative" }}>
-                  <Avatar sx={getNavbarAvatarSx(userStatus, 24)}>
-                    {userInitial}
-                  </Avatar>
+                <img
+                  src="/logo192.png"
+                  alt="Logo"
+                  style={{ width: 22, height: 22, borderRadius: 4 }}
+                />
+                {!isMobile && (
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ fontWeight: 600, letterSpacing: 0.3, fontSize: 13 }}
+                  >
+                    Hi5Tech ITSM
+                  </Typography>
+                )}
+              </Box>
+            )}
+
+            {/* Search + quick info */}
+            <Box
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                mx: 1,
+              }}
+            >
+              <Box
+                sx={{
+                  flex: isMobile ? 1 : 0,
+                  minWidth: 0,
+                  maxWidth: isMobile ? "100%" : 320,
+                  display: "flex",
+                  alignItems: "center",
+                  bgcolor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.04)"
+                      : "rgba(0,0,0,0.03)",
+                  borderRadius: 999,
+                  px: isMobile ? 1.4 : 1,
+                  py: 0,
+                  height: isMobile ? 32 : 26,
+                }}
+              >
+                <SearchIcon
+                  sx={{
+                    fontSize: isMobile ? 20 : 16,
+                    mr: 1,
+                    opacity: 0.7,
+                  }}
+                />
+                <InputBase
+                  placeholder="Search..."
+                  sx={{
+                    fontSize: isMobile ? 13 : 12,
+                    width: "100%",
+                  }}
+                />
+              </Box>
+
+              {!isMobile && (
+                <>
                   <Box
                     sx={{
-                      position: "absolute",
-                      bottom: -1,
-                      right: -1,
-                      width: 10,
-                      height: 10,
-                      borderRadius: "50%",
-                      border: "2px solid",
-                      borderColor: "background.paper",
-                      bgcolor: getStatusColor(userStatus),
+                      px: 1,
+                      py: 0.25,
+                      borderRadius: 999,
+                      border: "1px solid",
+                      borderColor: "divider",
+                      display: "flex",
+                      alignItems: "center",
                     }}
-                  />
-                </Box>
-
-                <Box sx={{ display: "flex", flexDirection: "column" }}>
-                  <Typography
-                    variant="caption"
-                    sx={{ lineHeight: 1.2, fontWeight: 500, fontSize: 11 }}
                   >
-                    {username}
-                  </Typography>
-                  <Stack
-                    direction="row"
-                    spacing={0.5}
-                    alignItems="center"
-                    sx={{ lineHeight: 1.1 }}
+                    <Typography
+                      variant="caption"
+                      sx={{ fontSize: 10, color: "text.secondary" }}
+                    >
+                      Tenant:&nbsp;
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{ fontSize: 10, fontWeight: 500 }}
+                    >
+                      Hi5Tech
+                    </Typography>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      px: 1,
+                      py: 0.25,
+                      borderRadius: 999,
+                      bgcolor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(46, 125, 50, 0.25)"
+                          : "rgba(76, 175, 80, 0.12)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 0.5,
+                    }}
                   >
                     <Box
                       sx={{
-                        width: 8,
-                        height: 8,
+                        width: 6,
+                        height: 6,
                         borderRadius: "50%",
-                        bgcolor: getStatusColor(userStatus),
+                        bgcolor: "success.main",
                       }}
                     />
                     <Typography
                       variant="caption"
-                      sx={{
-                        color: getStatusColor(userStatus),
-                        fontSize: 10,
-                      }}
+                      sx={{ fontSize: 10, color: "success.main" }}
                     >
-                      {userStatus}
+                      All systems operational
                     </Typography>
-                  </Stack>
-                </Box>
-              </Box>
+                  </Box>
+                </>
+              )}
             </Box>
-          )}
 
-          {/* Mobile profile icon + status dropdown */}
-          {isMobile && (
-            <>
-              <IconButton
-                size="small"
-                onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
-              >
-                <Box sx={{ position: "relative", display: "flex" }}>
-                  <AccountCircleIcon
-                    sx={{
-                      fontSize: 22,
-                      opacity: userStatus === "Offline" ? 0.6 : 1,
-                    }}
-                  />
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      bottom: 0,
-                      right: -1,
-                      width: 10,
-                      height: 10,
-                      borderRadius: "50%",
-                      border: "2px solid",
-                      borderColor: "background.paper",
-                      bgcolor: getStatusColor(userStatus),
-                      boxShadow:
-                        userStatus === "Busy"
-                          ? "0 0 0 2px rgba(244,67,54,0.4)"
-                          : "none",
-                    }}
-                  />
-                </Box>
-              </IconButton>
-
-              <Menu
-                anchorEl={statusMenuAnchor}
-                open={Boolean(statusMenuAnchor)}
-                onClose={() => setStatusMenuAnchor(null)}
-                anchorOrigin={{
-                  vertical: "bottom",
-                  horizontal: "right",
-                }}
-                transformOrigin={{
-                  vertical: "top",
-                  horizontal: "right",
+            {/* Right actions (desktop) */}
+            {!isMobile && (
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
                 }}
               >
-                {STATUS_OPTIONS.map((opt) => (
-                  <MenuItem
-                    key={opt.key}
-                    selected={userStatus === opt.key}
-                    onClick={() => {
-                      handleStatusChange(opt.key);
-                      setStatusMenuAnchor(null);
-                    }}
-                  >
+                <IconButton
+                  size="small"
+                  onClick={() => setDrawerType("notifications")}
+                >
+                  <NotificationsIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setDrawerType("profile")}
+                >
+                  <Box sx={{ position: "relative" }}>
+                    <Avatar sx={getNavbarAvatarSx(userStatus, 24)}>
+                      {userInitial}
+                    </Avatar>
                     <Box
                       sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
+                        position: "absolute",
+                        bottom: -1,
+                        right: -1,
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        border: "2px solid",
+                        borderColor: "background.paper",
+                        bgcolor: getStatusColor(userStatus),
+                      }}
+                    />
+                  </Box>
+
+                  <Box sx={{ display: "flex", flexDirection: "column" }}>
+                    <Typography
+                      variant="caption"
+                      sx={{ lineHeight: 1.2, fontWeight: 500, fontSize: 11 }}
+                    >
+                      {username}
+                    </Typography>
+                    <Stack
+                      direction="row"
+                      spacing={0.5}
+                      alignItems="center"
+                      sx={{ lineHeight: 1.1 }}
+                    >
+                      <Box
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          bgcolor: getStatusColor(userStatus),
+                        }}
+                      />
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: getStatusColor(userStatus),
+                          fontSize: 10,
+                        }}
+                      >
+                        {userStatus}
+                      </Typography>
+                    </Stack>
+                  </Box>
+                </Box>
+              </Box>
+            )}
+
+            {/* Mobile profile icon + status dropdown */}
+            {isMobile && (
+              <>
+                <IconButton
+                  size="small"
+                  onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
+                >
+                  <Box sx={{ position: "relative", display: "flex" }}>
+                    <AccountCircleIcon
+                      sx={{
+                        fontSize: 22,
+                        opacity: userStatus === "Offline" ? 0.6 : 1,
+                      }}
+                    />
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        bottom: 0,
+                        right: -1,
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        border: "2px solid",
+                        borderColor: "background.paper",
+                        bgcolor: getStatusColor(userStatus),
+                        boxShadow:
+                          userStatus === "Busy"
+                            ? "0 0 0 2px rgba(244,67,54,0.4)"
+                            : "none",
+                      }}
+                    />
+                  </Box>
+                </IconButton>
+
+                <Menu
+                  anchorEl={statusMenuAnchor}
+                  open={Boolean(statusMenuAnchor)}
+                  onClose={() => setStatusMenuAnchor(null)}
+                  anchorOrigin={{
+                    vertical: "bottom",
+                    horizontal: "right",
+                  }}
+                  transformOrigin={{
+                    vertical: "top",
+                    horizontal: "right",
+                  }}
+                >
+                  {STATUS_OPTIONS.map((opt) => (
+                    <MenuItem
+                      key={opt.key}
+                      selected={userStatus === opt.key}
+                      onClick={() => {
+                        handleStatusChange(opt.key);
+                        setStatusMenuAnchor(null);
                       }}
                     >
                       <Box
                         sx={{
-                          width: 10,
-                          height: 10,
-                          borderRadius: "50%",
-                          bgcolor: opt.color,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
                         }}
-                      />
-                      <Typography variant="body2">{opt.key}</Typography>
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Menu>
-            </>
-          )}
+                      >
+                        <Box
+                          sx={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: "50%",
+                            bgcolor: opt.color,
+                          }}
+                        />
+                        <Typography variant="body2">{opt.key}</Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </>
+            )}
+          </Box>
+
+          {/* Tabs row */}
+          <Box
+            sx={{
+              height: TABBAR_HEIGHT,
+              minHeight: TABBAR_HEIGHT,
+            }}
+          >
+            <NavbarTabs
+              tabs={tabs}
+              tabIndex={tabIndex}
+              handleTabChange={handleTabChange}
+              handleTabClose={handleTabClose}
+              handleTabReorder={handleTabReorder}
+              isMobile={isMobile}
+            />
+          </Box>
         </Box>
 
-        {/* Tabs row */}
+        {/* MAIN CONTENT – only thing that vertically scrolls */}
         <Box
+          component="main"
+          className="scrollable"
+          onScroll={handleMainScroll}
           sx={{
-            height: TABBAR_HEIGHT,
-            minHeight: TABBAR_HEIGHT,
+            minHeight: 0,              // critical for grid + overflow to work
+            overflowY: "auto",
+            overflowX: "hidden",
+            WebkitOverflowScrolling: "touch",
+            px: 2,
+            pt: 1,
+            pb: isMobile ? 1 : 2,
           }}
         >
-          <NavbarTabs
-            tabs={tabs}
-            tabIndex={tabIndex}
-            handleTabChange={handleTabChange}
-            handleTabClose={handleTabClose}
-            handleTabReorder={handleTabReorder}
-            isMobile={isMobile}
-          />
+          <Outlet />
         </Box>
-      </Box>
 
-      {/* Main content – now sized to avoid horizontal overflow */}
-       <Box
-  component="main"
-  className="scrollable"
-  onScroll={(e) => {
-    const scrolled = e.currentTarget.scrollTop > 4;
-    document.body.dataset.navshadow = scrolled ? "true" : "false";
-  }}
-  sx={{
-    position: "relative",
-    height: "100%",
-    overflowY: "auto",      // Main scroll area
-    overflowX: "hidden",    // No horizontal scroll
-    WebkitOverflowScrolling: "touch",
-    px: 2,
-    pt: 1,
-    pb: isMobile ? BOTTOM_NAV_HEIGHT + 8 : 2,
-  }}
->
-  <Outlet />
-</Box>
+        {/* Bottom nav row (mobile) */}
+        {isMobile && (
+          <Box
+            sx={{
+              borderTop: `1px solid ${theme.palette.divider}`,
+              backgroundColor: theme.palette.background.paper,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-around",
+            }}
+          >
+            <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
+            <SearchIcon onClick={() => setDrawerType("search")} />
+            <NotificationsIcon onClick={() => setDrawerType("notifications")} />
+            <AccountCircleIcon
+              onClick={() => setDrawerType("profile")}
+              style={{ cursor: "pointer" }}
+            />
+          </Box>
+        )}
+      </Box>
 
       {/* Sidebar Drawer (mobile & hidden desktop) */}
       {(isMobile || sidebarMode === "hidden") && (
@@ -763,33 +798,6 @@ const Layout = () => {
             <ProfileDrawer onLogout={handleLogout} showStatus={false} />
           )}
         </SwipeableDrawer>
-      )}
-
-      {/* Fixed bottom nav (mobile) */}
-      {isMobile && (
-        <Box
-          sx={{
-            position: "fixed",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: BOTTOM_NAV_HEIGHT,
-            borderTop: `1px solid ${theme.palette.divider}`,
-            backgroundColor: theme.palette.background.paper,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-around",
-            zIndex: 1300,
-          }}
-        >
-          <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
-          <SearchIcon onClick={() => setDrawerType("search")} />
-          <NotificationsIcon onClick={() => setDrawerType("notifications")} />
-          <AccountCircleIcon
-            onClick={() => setDrawerType("profile")}
-            style={{ cursor: "pointer" }}
-          />
-        </Box>
       )}
     </Box>
   );
