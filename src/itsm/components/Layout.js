@@ -88,6 +88,21 @@ const Layout = () => {
     () => localStorage.getItem("userStatus") || "Available"
   );
 
+  // ✅ Mobile viewport fix (so 100vh works correctly with browser bars)
+  useEffect(() => {
+    const setVh = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty("--vh", `${vh}px`);
+    };
+    setVh();
+    window.addEventListener("resize", setVh);
+    window.addEventListener("orientationchange", setVh);
+    return () => {
+      window.removeEventListener("resize", setVh);
+      window.removeEventListener("orientationchange", setVh);
+    };
+  }, []);
+
   useEffect(() => {
     localStorage.setItem("userStatus", userStatus);
   }, [userStatus]);
@@ -230,78 +245,61 @@ const Layout = () => {
 
   const desktopHasSidebar = !isMobile && sidebarMode !== "hidden";
 
-  const sidebarWidth =
-    desktopHasSidebar && (sidebarMode === "pinned" || sidebarPinned)
-      ? EXPANDED_WIDTH
-      : desktopHasSidebar
-      ? COLLAPSED_WIDTH
-      : 0;
-
   return (
     <Box
       sx={{
-        width: "100%",
-        minHeight: "100vh",
+        position: "fixed",
+        inset: 0,
         display: "flex",
+        width: "100%",
+        height: "calc(var(--vh, 1vh) * 100)",
         bgcolor: theme.palette.background.default,
-        overflowX: "hidden",
+        overflow: "hidden", // 🔒 no global scroll; inner main content scrolls
+        overscrollBehavior: "none",
       }}
     >
-      {/* Sidebar - sticky on desktop, hidden on mobile */}
+      {/* Sidebar (desktop) */}
       {desktopHasSidebar && (
-        <Box
-          sx={{
-            position: "sticky",
-            top: 0,
-            alignSelf: "flex-start",
-            height: "100vh",
-            flexShrink: 0,
-            width: sidebarWidth,
-            zIndex: 1100,
-            bgcolor: "background.paper",
-            borderRight: "1px solid",
-            borderColor: "divider",
+        <Sidebar
+          pinned={sidebarMode === "pinned" ? true : sidebarPinned}
+          onToggle={() => {
+            if (sidebarMode === "collapsible") setSidebarPinned((p) => !p);
           }}
-        >
-          <Sidebar
-            pinned={sidebarMode === "pinned" ? true : sidebarPinned}
-            onToggle={() => {
-              if (sidebarMode === "collapsible") setSidebarPinned((p) => !p);
-            }}
-            items={sidebarItems}
-            onItemClick={activateOrAddTab}
-            widthExpanded={EXPANDED_WIDTH}
-            widthCollapsed={COLLAPSED_WIDTH}
-          />
-        </Box>
+          items={sidebarItems}
+          onItemClick={activateOrAddTab}
+          widthExpanded={EXPANDED_WIDTH}
+          widthCollapsed={COLLAPSED_WIDTH}
+        />
       )}
 
-      {/* Right-side column: sticky navbar + scrolling content */}
+      {/* Main grid: navbar (top) + scrollable content + bottom nav (mobile) */}
       <Box
         sx={{
           flex: 1,
           minWidth: 0,
-          display: "flex",
-          flexDirection: "column",
-          minHeight: "100vh",
+          display: "grid",
+          gridTemplateRows: isMobile
+            ? `${NAVBAR_HEIGHT}px 1fr ${BOTTOM_NAV_HEIGHT}px`
+            : `${NAVBAR_HEIGHT}px 1fr`,
+          height: "100%",
         }}
       >
-        {/* Navbar (header + tabs) – sticky at top */}
+        {/* NAVBAR (header + tabs) */}
         <Box
           sx={{
-            position: "sticky",
-            top: 0,
-            zIndex: 1200,
             bgcolor: "background.paper",
-            borderBottom: "1px solid",
-            borderColor: "divider",
             display: "flex",
             flexDirection: "column",
+            height: NAVBAR_HEIGHT,
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            zIndex: 1200,
           }}
         >
           {/* Header row */}
           <Box
             sx={{
+              flex: `0 0 ${APP_HEADER_HEIGHT}px`,
               height: APP_HEADER_HEIGHT,
               minHeight: APP_HEADER_HEIGHT,
               display: "flex",
@@ -616,7 +614,7 @@ const Layout = () => {
           {/* Tabs row */}
           <Box
             sx={{
-              height: TABBAR_HEIGHT,
+              flex: `0 0 ${TABBAR_HEIGHT}px`,
               minHeight: TABBAR_HEIGHT,
             }}
           >
@@ -631,18 +629,43 @@ const Layout = () => {
           </Box>
         </Box>
 
-        {/* Main content – this is what scrolls, navbar stays sticky above */}
+        {/* MAIN CONTENT – only this scrolls */}
         <Box
           component="main"
           sx={{
-            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            overflowX: "hidden",
+            WebkitOverflowScrolling: "touch",
             px: 2,
             pt: 1,
-            pb: isMobile ? BOTTOM_NAV_HEIGHT + 8 : 3,
+            pb: isMobile ? 1 : 2,
           }}
         >
           <Outlet />
         </Box>
+
+        {/* Bottom nav (mobile only, sits in its own row) */}
+        {isMobile && (
+          <Box
+            sx={{
+              borderTop: `1px solid ${theme.palette.divider}`,
+              backgroundColor: theme.palette.background.paper,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-around",
+              height: BOTTOM_NAV_HEIGHT,
+            }}
+          >
+            <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
+            <SearchIcon onClick={() => setDrawerType("search")} />
+            <NotificationsIcon onClick={() => setDrawerType("notifications")} />
+            <AccountCircleIcon
+              onClick={() => setDrawerType("profile")}
+              style={{ cursor: "pointer" }}
+            />
+          </Box>
+        )}
       </Box>
 
       {/* Sidebar Drawer (mobile & hidden desktop) */}
@@ -744,33 +767,6 @@ const Layout = () => {
             <ProfileDrawer onLogout={handleLogout} showStatus={false} />
           )}
         </SwipeableDrawer>
-      )}
-
-      {/* Fixed bottom nav (mobile) */}
-      {isMobile && (
-        <Box
-          sx={{
-            position: "fixed",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: BOTTOM_NAV_HEIGHT,
-            borderTop: `1px solid ${theme.palette.divider}`,
-            backgroundColor: theme.palette.background.paper,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-around",
-            zIndex: 1300,
-          }}
-        >
-          <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
-          <SearchIcon onClick={() => setDrawerType("search")} />
-          <NotificationsIcon onClick={() => setDrawerType("notifications")} />
-          <AccountCircleIcon
-            onClick={() => setDrawerType("profile")}
-            style={{ cursor: "pointer" }}
-          />
-        </Box>
       )}
     </Box>
   );
