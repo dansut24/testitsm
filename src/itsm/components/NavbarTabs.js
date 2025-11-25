@@ -28,8 +28,6 @@ export default function NavbarTabs({
   isMobile,
 }) {
   const theme = useTheme();
-
-  // This is the ONLY thing allowed to scroll horizontally
   const scrollRef = useRef(null);
 
   const [contextAnchor, setContextAnchor] = useState(null);
@@ -42,7 +40,7 @@ export default function NavbarTabs({
       : null;
 
   /* ------------------------------------------------------------------
-   * Accent colour per tab (small left bar)
+   * Accent colour per tab (small coloured bar)
    * ------------------------------------------------------------------ */
   const getTabAccentColor = (label = "") => {
     const lower = label.toLowerCase();
@@ -157,7 +155,7 @@ export default function NavbarTabs({
       closeContextMenu();
       return;
     }
-    const newTabs = [tabs[0]]; // keep Dashboard only
+    const newTabs = [tabs[0]];
     handleTabReorder(newTabs);
     handleTabChange(null, 0, newTabs[0].path);
     closeContextMenu();
@@ -215,7 +213,7 @@ export default function NavbarTabs({
         : "rgba(25,118,210,0.08)";
 
     return {
-      display: "flex",
+      display: "inline-flex",     // ⬅ inline so we can use white-space: nowrap
       alignItems: "center",
       maxWidth: 220,
       minWidth: 90,
@@ -230,7 +228,6 @@ export default function NavbarTabs({
       overflow: "hidden",
       textOverflow: "ellipsis",
       fontSize: 13,
-      flexShrink: 0,
       height: "100%",
       boxSizing: "border-box",
       transition: "background 0.15s ease, border-color 0.15s ease",
@@ -259,28 +256,28 @@ export default function NavbarTabs({
     <>
       <Box
         sx={{
-          position: "relative",
           height: "100%",
+          display: "flex",
+          alignItems: "center",
           bgcolor: "background.paper",
           borderBottom: "1px solid",
           borderColor: "divider",
           minWidth: 0,
-          overflow: "hidden", // 🔒 this strip can NEVER make the layout wider
+          overflow: "hidden", // 🔒 this entire row can NEVER extend page width
         }}
       >
-        {/* Scrollable strip with tabs only.
-            Width is locked to the navbar; overflow stays INSIDE via scroll. */}
+        {/* Horizontal scroller – tabs + +, all inline, no layout games */}
         <Box
           ref={scrollRef}
           sx={{
+            flex: 1,
+            minWidth: 0,
             height: "100%",
-            display: "flex",
-            alignItems: "center",
-            overflowX: "auto",
+            overflowX: "auto",        // ✅ only this scrolls horizontally
             overflowY: "hidden",
             WebkitOverflowScrolling: "touch",
-            px: 1,
-            pr: isMobile ? 4.5 : 4.5, // leave space for + button overlay
+            px: 0.5,
+            whiteSpace: "nowrap",     // ⬅ prevents wrapping, keeps everything in one line
             "&::-webkit-scrollbar": {
               height: 3,
             },
@@ -353,30 +350,16 @@ export default function NavbarTabs({
               </Box>
             );
           })}
-        </Box>
 
-        {/* + Add tab – FIXED overlay at right edge, never off-screen */}
-        <Box
-          sx={{
-            position: "absolute",
-            right: 4,
-            top: 0,
-            bottom: 0,
-            display: "flex",
-            alignItems: "center",
-            // subtle fade to hint tabs continue behind +
-            background:
-              "linear-gradient(to left, rgba(0,0,0,0.06), transparent)",
-            pointerEvents: "none",
-            pl: 1,
-          }}
-        >
+          {/* + Add tab – always just after the last tab, inside scroller */}
           <IconButton
             size="small"
             onClick={handleAddTab}
             sx={{
+              display: "inline-flex",
+              verticalAlign: "middle",
+              ml: 0.5,
               p: 0.25,
-              pointerEvents: "auto",
             }}
           >
             <AddIcon sx={{ fontSize: 18 }} />
