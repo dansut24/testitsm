@@ -7,13 +7,13 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import ClearAllIcon from "@mui/icons-material/ClearAll";
 import FilterNoneIcon from "@mui/icons-material/FilterNone";
 import CancelPresentationIcon from "@mui/icons-material/CancelPresentation";
@@ -29,12 +29,7 @@ export default function NavbarTabs({
   isMobile,
 }) {
   const theme = useTheme();
-
-  // This is the actual horizontal scrolling element
-  const scrollRef = useRef(null);
-
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
+  const tabsRef = useRef(null);
 
   const [contextAnchor, setContextAnchor] = useState(null);
   const [contextTabIndex, setContextTabIndex] = useState(null);
@@ -63,43 +58,16 @@ export default function NavbarTabs({
   };
 
   /* ------------------------------------------------------------------
-   * Scroll helpers
+   * Keep active tab in view when changed
    * ------------------------------------------------------------------ */
-  const updateScrollButtons = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const { scrollLeft, clientWidth, scrollWidth } = el;
-    setCanScrollLeft(scrollLeft > 2);
-    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2);
-  };
-
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
+    const root = tabsRef.current;
+    if (!root) return;
 
-    updateScrollButtons();
-
-    const handleScroll = () => updateScrollButtons();
-    const handleResize = () => updateScrollButtons();
-
-    el.addEventListener("scroll", handleScroll);
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      el.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleResize);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tabs.length, isMobile]);
-
-  // Keep active tab visible when selection changes
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const active = el.querySelector('[data-active="true"]');
+    const active = root.querySelector('[data-active-tab="true"]');
     if (!active) return;
 
-    const containerRect = el.getBoundingClientRect();
+    const containerRect = root.getBoundingClientRect();
     const tabRect = active.getBoundingClientRect();
 
     if (tabRect.left < containerRect.left || tabRect.right > containerRect.right) {
@@ -109,14 +77,7 @@ export default function NavbarTabs({
         inline: "center",
       });
     }
-  }, [tabIndex, tabs.length, isMobile]);
-
-  const scrollTabs = (direction) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const delta = el.clientWidth * 0.6 * (direction === "left" ? -1 : 1);
-    el.scrollBy({ left: delta, behavior: "smooth" });
-  };
+  }, [tabIndex, tabs.length]);
 
   /* ------------------------------------------------------------------
    * Context menu helpers (desktop right-click + mobile long-press)
@@ -182,6 +143,7 @@ export default function NavbarTabs({
     handleTabReorder(newTabs);
     const newIndex = newTabs.findIndex((t) => t.path === contextTab.path);
     const path = contextTab.path;
+
     if (newIndex >= 0) {
       handleTabChange(null, newIndex, path);
     } else {
@@ -241,50 +203,6 @@ export default function NavbarTabs({
   };
 
   /* ------------------------------------------------------------------
-   * Tab styles
-   * ------------------------------------------------------------------ */
-  const getTabSx = (active) => {
-    const baseBg =
-      theme.palette.mode === "dark"
-        ? theme.palette.background.default
-        : theme.palette.background.paper;
-
-    const activeBg =
-      theme.palette.mode === "dark"
-        ? "rgba(25,118,210,0.28)"
-        : "rgba(25,118,210,0.08)";
-
-    return {
-      display: "flex",
-      alignItems: "center",
-      maxWidth: 220,
-      minWidth: 80,
-      px: 1.25,
-      mx: 0.25,
-      borderRadius: 8,
-      border: "1px solid",
-      borderColor: active ? "primary.main" : "divider",
-      bgcolor: active ? activeBg : baseBg,
-      cursor: "pointer",
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      fontSize: 13,
-      flexShrink: 0,
-      height: "100%",
-      transition: "background 0.15s ease, border-color 0.15s ease",
-      "&:hover": {
-        borderColor: active ? "primary.main" : "action.hover",
-        bgcolor: active
-          ? activeBg
-          : theme.palette.mode === "dark"
-          ? "rgba(255,255,255,0.04)"
-          : "rgba(0,0,0,0.02)",
-      },
-    };
-  };
-
-  /* ------------------------------------------------------------------
    * Middle-click to close (desktop convenience)
    * ------------------------------------------------------------------ */
   const handleMouseDown = (event, tab, idx) => {
@@ -293,6 +211,66 @@ export default function NavbarTabs({
       event.preventDefault();
       handleTabClose(tab.path);
     }
+  };
+
+  /* ------------------------------------------------------------------
+   * Tab label renderer (for custom accent + close icon)
+   * ------------------------------------------------------------------ */
+  const renderTabLabel = (tab, idx, active) => {
+    const accent = getTabAccentColor(tab.label);
+
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          maxWidth: 220,
+          minWidth: 80,
+        }}
+      >
+        {/* coloured accent bar */}
+        <Box
+          sx={{
+            width: 3,
+            borderRadius: 999,
+            bgcolor: accent,
+            mr: 0.75,
+            alignSelf: "stretch",
+            my: "20%",
+            opacity: 0.9,
+          }}
+        />
+
+        <Typography
+          variant="body2"
+          noWrap
+          sx={{
+            fontSize: 12,
+            flex: 1,
+            pr: idx !== 0 ? 0.5 : 0,
+          }}
+        >
+          {tab.label}
+        </Typography>
+
+        {idx !== 0 && (
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleTabClose(tab.path);
+            }}
+            sx={{
+              ml: 0.25,
+              p: 0,
+              "& svg": { fontSize: 14 },
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        )}
+      </Box>
+    );
   };
 
   return (
@@ -306,153 +284,112 @@ export default function NavbarTabs({
           borderBottom: "1px solid",
           borderColor: "divider",
           minWidth: 0,
-          overflow: "hidden", // 🔒 prevents this row pushing layout sideways
+          overflow: "hidden", // 🔒 tab row never pushes layout horizontally
         }}
       >
-        {/* Left scroll arrow (desktop only, only when needed) */}
-        {!isMobile && (
-          <Box
-            sx={{
-              width: 28,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            {canScrollLeft && (
-              <IconButton
-                size="small"
-                onClick={() => scrollTabs("left")}
-                sx={{ p: 0.25 }}
-              >
-                <ChevronLeftIcon sx={{ fontSize: 18 }} />
-              </IconButton>
-            )}
-          </Box>
-        )}
-
-        {/* Viewport for scrollable tabs (clipped to available width) */}
+        {/* Scrollable tab strip */}
         <Box
+          ref={tabsRef}
           sx={{
             flex: 1,
             minWidth: 0,
-            overflow: "hidden", // 🔒 tabs can’t extend the layout, only scroll inside
             display: "flex",
             alignItems: "stretch",
+            overflow: "hidden", // Tabs component itself handles inner scrolling
           }}
         >
-          {/* Actual scrollable content */}
-          <Box
-            ref={scrollRef}
+          <Tabs
+            value={tabIndex}
+            onChange={(event, newIndex) => {
+              const tab = tabs[newIndex];
+              handleTabChange(event, newIndex, tab?.path);
+            }}
+            variant="scrollable"
+            scrollButtons={!isMobile}
+            allowScrollButtonsMobile={false}
+            TabIndicatorProps={{ style: { display: "none" } }}
             sx={{
-              display: "flex",
-              alignItems: "stretch",
-              overflowX: "auto",      // ✅ scrolling happens only inside this strip
-              overflowY: "hidden",
-              WebkitOverflowScrolling: "touch",
-              minWidth: "100%",       // fills viewport, extra width scrolls
+              minHeight: "100%",
+              "& .MuiTabs-flexContainer": {
+                alignItems: "stretch",
+              },
+              "& .MuiTab-root": {
+                minHeight: "100%",
+                paddingX: 0,
+                paddingY: 0,
+                marginRight: 4,
+                textTransform: "none",
+                fontSize: 13,
+                borderRadius: 1,
+              },
+              "& .MuiTabs-scrollButtons": {
+                width: 26,
+              },
+              "& .MuiTabs-scrollButtons.Mui-disabled": {
+                opacity: 0.2,
+              },
             }}
           >
             {tabs.map((tab, idx) => {
               const active = idx === tabIndex;
-              const accent = getTabAccentColor(tab.label);
-
               return (
-                <Box
+                <Tab
                   key={tab.path || tab.id || idx}
-                  data-active={active ? "true" : "false"}
-                  onClick={() => handleTabChange(null, idx, tab.path)}
+                  disableRipple
+                  data-active-tab={active ? "true" : "false"}
                   onContextMenu={(e) => handleContextMenuDesktop(e, idx)}
                   onMouseDown={(e) => handleMouseDown(e, tab, idx)}
                   onTouchStart={(e) => handleTouchStart(e, idx)}
                   onTouchEnd={handleTouchEnd}
                   onTouchCancel={handleTouchEnd}
-                  sx={getTabSx(active)}
-                >
-                  {/* coloured accent bar */}
-                  <Box
-                    sx={{
-                      width: 3,
-                      borderRadius: 999,
-                      bgcolor: accent,
-                      mr: 0.75,
-                      alignSelf: "stretch",
-                      my: "20%",
-                      opacity: 0.9,
-                    }}
-                  />
-
-                  <Typography
-                    variant="body2"
-                    noWrap
-                    sx={{
-                      fontSize: 12,
-                      flex: 1,
-                      pr: idx !== 0 ? 0.5 : 0,
-                    }}
-                  >
-                    {tab.label}
-                  </Typography>
-
-                  {idx !== 0 && (
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleTabClose(tab.path);
-                      }}
-                      sx={{
-                        ml: 0.25,
-                        p: 0,
-                        "& svg": { fontSize: 14 },
-                      }}
-                    >
-                      <CloseIcon />
-                    </IconButton>
-                  )}
-                </Box>
+                  label={renderTabLabel(tab, idx, active)}
+                  sx={{
+                    borderRadius: 1,
+                    border: "1px solid",
+                    borderColor: active ? "primary.main" : "divider",
+                    bgcolor: active
+                      ? theme.palette.mode === "dark"
+                        ? "rgba(25,118,210,0.28)"
+                        : "rgba(25,118,210,0.08)"
+                      : theme.palette.mode === "dark"
+                      ? theme.palette.background.default
+                      : theme.palette.background.paper,
+                    "&:hover": {
+                      borderColor: active ? "primary.main" : "action.hover",
+                      bgcolor: active
+                        ? theme.palette.mode === "dark"
+                          ? "rgba(25,118,210,0.32)"
+                          : "rgba(25,118,210,0.1)"
+                        : theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.04)"
+                        : "rgba(0,0,0,0.02)",
+                    },
+                  }}
+                />
               );
             })}
-
-            {/* + Add tab button – always at the end of the scrollable strip */}
-            <IconButton
-              size="small"
-              onClick={handleAddTab}
-              sx={{
-                alignSelf: "center",
-                mx: 0.5,
-                flexShrink: 0,
-                p: 0.25,
-              }}
-            >
-              <AddIcon sx={{ fontSize: 18 }} />
-            </IconButton>
-          </Box>
+          </Tabs>
         </Box>
 
-        {/* Right scroll arrow (desktop only, only when needed) */}
-        {!isMobile && (
-          <Box
+        {/* + Add tab button – fixed at right, never off-screen */}
+        <Box
+          sx={{
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            px: 0.5,
+          }}
+        >
+          <IconButton
+            size="small"
+            onClick={handleAddTab}
             sx={{
-              width: 28,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
+              p: 0.25,
             }}
           >
-            {canScrollRight && (
-              <IconButton
-                size="small"
-                onClick={() => scrollTabs("right")}
-                sx={{ p: 0.25 }}
-              >
-                <ChevronRightIcon sx={{ fontSize: 18 }} />
-              </IconButton>
-            )}
-          </Box>
-        )}
+            <AddIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+        </Box>
       </Box>
 
       {/* Context menu (desktop right-click + mobile long-press) */}
