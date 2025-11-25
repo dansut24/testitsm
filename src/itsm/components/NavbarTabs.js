@@ -312,7 +312,7 @@ export default function NavbarTabs({
           </Box>
         )}
 
-        {/* Tabs strip */}
+        {/* Tabs strip (scrollable area) */}
         <Box
           ref={scrollRef}
           sx={{
@@ -320,7 +320,7 @@ export default function NavbarTabs({
             minWidth: 0,
             display: "flex",
             alignItems: "stretch",
-            overflowX: isMobile ? "auto" : "hidden",
+            overflowX: "auto",          // ✅ always scrollable inside this strip
             overflowY: "hidden",
             WebkitOverflowScrolling: "touch",
           }}
@@ -370,7 +370,7 @@ export default function NavbarTabs({
             );
           })}
 
-          {/* + Add tab button – always at the end of tabs */}
+          {/* + Add tab button – always at the end of the scrollable strip */}
           <IconButton
             size="small"
             onClick={handleAddTab}
@@ -443,10 +443,7 @@ export default function NavbarTabs({
           <ListItemText>Close other tabs</ListItemText>
         </MenuItem>
 
-        <MenuItem
-          disabled={tabs.length <= 1}
-          onClick={handleMenuCloseAll}
-        >
+        <MenuItem disabled={tabs.length <= 1} onClick={handleMenuCloseAll}>
           <ListItemIcon>
             <ClearAllIcon fontSize="small" />
           </ListItemIcon>
