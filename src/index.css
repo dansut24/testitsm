@@ -3,14 +3,23 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
-  overflow: hidden; /* Disable scrolling everywhere */
-  overscroll-behavior: none; /* 🚫 Prevent iOS/Android page bounce */
+  overflow: hidden;               /* Disable all page-level scroll */
+  overscroll-behavior: none;      /* Prevent iOS/Android bounce */
   -webkit-overflow-scrolling: touch;
 }
 
-/* Scrollbar for the MAIN content only */
+/* MAIN CONTENT SCROLL AREA */
+.scrollable {
+  overflow-y: auto;               /* Only this area scrolls */
+  overflow-x: hidden;             /* NO horizontal scroll ever */
+  scrollbar-width: thin;          /* Firefox: thin scrollbar */
+  scrollbar-color: rgba(120,120,120,0.45) transparent;
+  position: relative;
+}
+
+/* WebKit / Chrome / Edge / Safari Scrollbar */
 .scrollable::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 .scrollable::-webkit-scrollbar-track {
@@ -18,21 +27,10 @@ body {
 }
 
 .scrollable::-webkit-scrollbar-thumb {
-  background: rgba(120, 120, 120, 0.35);
+  background: rgba(120, 120, 120, 0.45);
   border-radius: 4px;
-  transition: background 0.2s ease;
 }
 
 .scrollable::-webkit-scrollbar-thumb:hover {
-  background: rgba(120, 120, 120, 0.55);
-}
-
-/* Auto-hide scrollbar until scrolling */
-.scrollable {
-  scrollbar-width: thin;       /* Firefox support */
-  scrollbar-color: transparent transparent;
-}
-
-.scrollable:hover {
-  scrollbar-color: rgba(120, 120, 120, 0.4) transparent;
+  background: rgba(120, 120, 120, 0.7);
 }
