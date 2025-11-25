@@ -659,17 +659,17 @@ const Layout = () => {
           </Box>
         </Box>
 
-        {/* MAIN CONTENT – only thing that vertically scrolls */}
+{/*MAIN CONTENT */}
         <Box
   component="main"
-  className="scrollable"
+  className="scrollable"    // purely a marker now, no CSS behaviour
   onScroll={handleMainScroll}
   sx={{
-    minHeight: 0,
-    height: "100%",
+    minHeight: 0,           // critical for grid row to allow scrolling
+    height: "100%",         // fill the available row height
     width: "100%",
-    overflowY: "auto",          // scroll lives here
-    overflowX: "hidden",        // no horizontal scroll
+    overflowY: "auto",      // ✅ this is the ONLY place scroll is defined
+    overflowX: "hidden",
     WebkitOverflowScrolling: "touch",
     px: 2,
     pt: 1,
@@ -679,7 +679,6 @@ const Layout = () => {
 >
   <Outlet />
 </Box>
-
         {/* Bottom nav row (mobile) */}
         {isMobile && (
           <Box
