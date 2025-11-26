@@ -39,7 +39,7 @@ export default function NavbarTabs({
       : null;
 
   /* ------------------------------------------------------------------
-   * Accent colour per tab (small coloured bar)
+   * Accent colour per tab (bottom indicator)
    * ------------------------------------------------------------------ */
   const getTabAccentColor = (label = "") => {
     const lower = label.toLowerCase();
@@ -51,23 +51,21 @@ export default function NavbarTabs({
     if (lower.includes("settings")) return theme.palette.grey[600];
     if (lower.includes("profile")) return theme.palette.primary.main;
     if (lower.includes("knowledge")) return "#00897b";
-    if (lower.includes("dashboard")) return theme.palette.primary.main;
     return theme.palette.text.disabled;
   };
 
-  /* ------------------------------------------------------------------
-   * Keep active tab in view when changed
-   * ------------------------------------------------------------------ */
+  /* auto-scroll active tab into view */
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+
     const active = el.querySelector('[data-active-tab="true"]');
     if (!active) return;
 
-    const containerRect = el.getBoundingClientRect();
-    const tabRect = active.getBoundingClientRect();
+    const container = el.getBoundingClientRect();
+    const rect = active.getBoundingClientRect();
 
-    if (tabRect.left < containerRect.left || tabRect.right > containerRect.right) {
+    if (rect.left < container.left || rect.right > container.right) {
       active.scrollIntoView({
         behavior: "smooth",
         block: "nearest",
@@ -76,31 +74,30 @@ export default function NavbarTabs({
     }
   }, [tabIndex, tabs.length]);
 
-  /* ------------------------------------------------------------------
-   * Context menu (desktop right-click + mobile long-press)
-   * ------------------------------------------------------------------ */
+  /* context menu handling */
   const openContextMenu = (anchorEl, idx) => {
     setContextTabIndex(idx);
     setContextAnchor(anchorEl);
   };
-
   const closeContextMenu = () => {
     setContextAnchor(null);
     setContextTabIndex(null);
   };
 
-  const handleContextMenuDesktop = (event, idx) => {
+  const handleContextMenuDesktop = (e, idx) => {
     if (isMobile) return;
-    event.preventDefault();
-    openContextMenu(event.currentTarget, idx);
+    e.preventDefault();
+    openContextMenu(e.currentTarget, idx);
   };
 
-  const handleTouchStart = (event, idx) => {
+  const handleTouchStart = (e, idx) => {
     if (!isMobile) return;
-    const target = event.currentTarget;
+    const target = e.currentTarget;
+
     const timer = setTimeout(() => {
       openContextMenu(target, idx);
     }, LONG_PRESS_MS);
+
     setLongPressTimer(timer);
   };
 
@@ -111,142 +108,90 @@ export default function NavbarTabs({
     }
   };
 
-  /* ------------------------------------------------------------------
-   * Context menu actions
-   * ------------------------------------------------------------------ */
+  /* context actions */
   const handleMenuCloseTab = () => {
-    if (!contextTab || contextTabIndex === 0) {
-      closeContextMenu();
-      return;
-    }
+    if (!contextTab || contextTabIndex === 0) return closeContextMenu();
     handleTabClose(contextTab.path);
     closeContextMenu();
   };
 
   const handleMenuCloseOthers = () => {
-    if (!contextTab || tabs.length <= 1) {
-      closeContextMenu();
-      return;
+    let newTabs = [tabs[0]];
+    if (contextTabIndex !== 0) {
+      newTabs.push(contextTab);
     }
-
-    let newTabs;
-    if (contextTabIndex === 0) {
-      newTabs = [tabs[0]];
-    } else {
-      newTabs = [tabs[0], contextTab];
-    }
-
     handleTabReorder(newTabs);
-    const newIndex = newTabs.findIndex((t) => t.path === contextTab.path);
-    const path = contextTab.path;
-
-    if (newIndex >= 0) {
-      handleTabChange(null, newIndex, path);
-    } else {
-      handleTabChange(null, 0, newTabs[0].path);
-    }
-
+    handleTabChange(null, newTabs.length - 1, newTabs[newTabs.length - 1].path);
     closeContextMenu();
   };
 
   const handleMenuCloseAll = () => {
-    if (!tabs.length) {
-      closeContextMenu();
-      return;
-    }
-    const newTabs = [tabs[0]];
-    handleTabReorder(newTabs);
-    handleTabChange(null, 0, newTabs[0].path);
+    handleTabReorder([tabs[0]]);
+    handleTabChange(null, 0, tabs[0].path);
     closeContextMenu();
   };
 
   const handleMenuDuplicate = () => {
-    if (!contextTab) {
-      closeContextMenu();
-      return;
-    }
-
-    const dupTab = {
+    if (!contextTab) return closeContextMenu();
+    const dup = {
       ...contextTab,
-      label: contextTab.label.includes("(Copy)")
-        ? contextTab.label
-        : `${contextTab.label} (Copy)`,
+      label: `${contextTab.label} (Copy)`,
     };
-
-    const idx = contextTabIndex ?? 0;
+    const idx = contextTabIndex;
     const newTabs = [
       ...tabs.slice(0, idx + 1),
-      dupTab,
+      dup,
       ...tabs.slice(idx + 1),
     ];
-
     handleTabReorder(newTabs);
-    const newIndex = idx + 1;
-    handleTabChange(null, newIndex, dupTab.path);
+    handleTabChange(null, idx + 1, dup.path);
     closeContextMenu();
   };
 
-  /* ------------------------------------------------------------------
-   * Add tab
-   * ------------------------------------------------------------------ */
-  const handleAddTab = () => {
-    const newTabs = [
+  /* add new tab */
+  const handleAddTab = () =>
+    handleTabReorder([
       ...tabs,
-      { label: `New Tab ${tabs.length + 1}`, path: `/new-tab/${tabs.length + 1}` },
-    ];
-    handleTabReorder(newTabs);
-  };
-
-  /* ------------------------------------------------------------------
-   * Rectangular tab styles – TIGHT + NOT ROUND
-   * ------------------------------------------------------------------ */
-  const getTabSx = (active) => {
-    const baseBg =
-      theme.palette.mode === "dark"
-        ? theme.palette.background.default
-        : theme.palette.background.paper;
-
-    const activeBg =
-      theme.palette.mode === "dark"
-        ? "rgba(25,118,210,0.25)"
-        : "rgba(25,118,210,0.08)";
-
-    return {
-      display: "inline-flex",
-      alignItems: "center",
-      maxWidth: 220,
-      minWidth: 90,
-      padding: "0 8px",        // ⬅ a bit slimmer
-      marginRight: 2,          // ⬅ closer together
-      borderRadius: 2,         // ⬅ almost square, no pill
-      border: "1px solid",
-      borderColor: active ? "primary.main" : "divider",
-      bgcolor: active ? activeBg : baseBg,
-      cursor: "pointer",
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      fontSize: 13,
-      height: "100%",
-      boxSizing: "border-box",
-      transition: "background 0.15s ease, border-color 0.15s ease",
-      "&:hover": {
-        borderColor: active ? "primary.main" : "action.hover",
-        bgcolor: active
-          ? activeBg
-          : theme.palette.mode === "dark"
-          ? "rgba(255,255,255,0.04)"
-          : "rgba(0,0,0,0.02)",
+      {
+        label: `New Tab ${tabs.length + 1}`,
+        path: `/new-tab/${tabs.length + 1}`,
       },
-    };
-  };
+    ]);
 
-  /* ------------------------------------------------------------------
-   * Middle-click close (desktop)
-   * ------------------------------------------------------------------ */
-  const handleMouseDown = (event, tab, idx) => {
-    if (event.button === 1 && idx !== 0) {
-      event.preventDefault();
+  /* FINAL – clean rectangular tab styling */
+  const getTabSx = (active) => ({
+    position: "relative",
+    display: "inline-flex",
+    alignItems: "center",
+    minWidth: 80,
+    maxWidth: 200,
+    padding: "0 6px",      // ← ADDED
+    marginRight: 2,        // ← ADDED
+    borderRadius: 0,       // ← ADDED (NO ROUNDING)
+
+    height: "100%",
+    border: "1px solid",
+    borderColor: active ? "primary.main" : "divider",
+    bgcolor: active
+      ? theme.palette.action.selected
+      : theme.palette.background.paper,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    fontSize: 13,
+    cursor: "pointer",
+    boxSizing: "border-box",
+    transition: "border-color 0.15s ease, background 0.15s ease",
+
+    "&:hover": {
+      borderColor: active ? "primary.main" : "action.hover",
+    },
+  });
+
+  /* middle-click close */
+  const handleMouseDown = (e, tab, idx) => {
+    if (e.button === 1 && idx !== 0) {
+      e.preventDefault();
       handleTabClose(tab.path);
     }
   };
@@ -258,14 +203,9 @@ export default function NavbarTabs({
           height: "100%",
           display: "flex",
           alignItems: "center",
-          bgcolor: "background.paper",
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          minWidth: 0,
-          overflow: "hidden", // this row can NEVER extend page width
+          overflow: "hidden",
         }}
       >
-        {/* Horizontal scroller – tabs + +, all inline */}
         <Box
           ref={scrollRef}
           sx={{
@@ -274,9 +214,9 @@ export default function NavbarTabs({
             height: "100%",
             overflowX: "auto",
             overflowY: "hidden",
-            WebkitOverflowScrolling: "touch",
-            px: 0.5,
             whiteSpace: "nowrap",
+            WebkitOverflowScrolling: "touch",
+
             "&::-webkit-scrollbar": {
               height: 3,
             },
@@ -294,26 +234,24 @@ export default function NavbarTabs({
 
             return (
               <Box
-                key={tab.path || tab.id || idx}
+                key={idx}
                 data-active-tab={active ? "true" : "false"}
+                sx={getTabSx(active)}
                 onClick={() => handleTabChange(null, idx, tab.path)}
                 onContextMenu={(e) => handleContextMenuDesktop(e, idx)}
                 onMouseDown={(e) => handleMouseDown(e, tab, idx)}
                 onTouchStart={(e) => handleTouchStart(e, idx)}
                 onTouchEnd={handleTouchEnd}
-                onTouchCancel={handleTouchEnd}
-                sx={getTabSx(active)}
               >
-                {/* coloured accent bar – slightly slimmer now */}
+                {/* bottom accent line */}
                 <Box
                   sx={{
-                    width: 2,
-                    borderRadius: 1,
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: 2,
                     bgcolor: accent,
-                    mr: 0.5,
-                    alignSelf: "stretch",
-                    my: "25%",
-                    opacity: 0.9,
                   }}
                 />
 
@@ -321,15 +259,14 @@ export default function NavbarTabs({
                   variant="body2"
                   noWrap
                   sx={{
-                    fontSize: 12,
                     flex: 1,
+                    fontSize: 12,
                     pr: idx !== 0 ? 0.5 : 0,
                   }}
                 >
                   {tab.label}
                 </Typography>
 
-                {/* no close on Dashboard (index 0) */}
                 {idx !== 0 && (
                   <IconButton
                     size="small"
@@ -338,7 +275,6 @@ export default function NavbarTabs({
                       handleTabClose(tab.path);
                     }}
                     sx={{
-                      ml: 0.25,
                       p: 0,
                       "& svg": { fontSize: 14 },
                     }}
@@ -350,38 +286,25 @@ export default function NavbarTabs({
             );
           })}
 
-          {/* + Add tab – always just after the last tab, inside scroller */}
+          {/* add tab */}
           <IconButton
             size="small"
             onClick={handleAddTab}
-            sx={{
-              display: "inline-flex",
-              verticalAlign: "middle",
-              ml: 0.5,
-              p: 0.25,
-            }}
+            sx={{ ml: 1, p: 0.25 }}
           >
             <AddIcon sx={{ fontSize: 18 }} />
           </IconButton>
         </Box>
       </Box>
 
-      {/* Context menu (desktop right-click + mobile long-press) */}
+      {/* context menu */}
       <Menu
         anchorEl={contextAnchor}
         open={Boolean(contextAnchor)}
         onClose={closeContextMenu}
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "left",
-        }}
-        transformOrigin={{
-          vertical: "top",
-          horizontal: "left",
-        }}
       >
         <MenuItem
-          disabled={!contextTab || contextTabIndex === 0}
+          disabled={contextTabIndex === 0}
           onClick={handleMenuCloseTab}
         >
           <ListItemIcon>
@@ -391,27 +314,27 @@ export default function NavbarTabs({
         </MenuItem>
 
         <MenuItem
-          disabled={!contextTab || tabs.length <= 1}
+          disabled={tabs.length <= 1}
           onClick={handleMenuCloseOthers}
         >
           <ListItemIcon>
             <CancelPresentationIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Close other tabs</ListItemText>
+          <ListItemText>Close others</ListItemText>
         </MenuItem>
 
         <MenuItem disabled={tabs.length <= 1} onClick={handleMenuCloseAll}>
           <ListItemIcon>
             <ClearAllIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Close all (keep Dashboard)</ListItemText>
+          <ListItemText>Close all</ListItemText>
         </MenuItem>
 
         <MenuItem disabled={!contextTab} onClick={handleMenuDuplicate}>
           <ListItemIcon>
             <FilterNoneIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Duplicate tab</ListItemText>
+          <ListItemText>Duplicate</ListItemText>
         </MenuItem>
       </Menu>
     </>
