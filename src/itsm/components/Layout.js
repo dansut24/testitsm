@@ -302,13 +302,13 @@ const Layout = () => {
         sx={{
           flex: 1,
           minWidth: 0,
-          maxWidth: "100%",       // 🔒 never exceed viewport
+          maxWidth: "100%", // never exceed viewport
           display: "grid",
           gridTemplateRows: isMobile
             ? `${NAVBAR_HEIGHT}px 1fr ${BOTTOM_NAV_HEIGHT}px`
             : `${NAVBAR_HEIGHT}px 1fr`,
           height: "100%",
-          overflow: "hidden",     // 🔒 clamp children horizontally
+          overflow: "hidden", // clamp children horizontally
         }}
       >
         {/* NAVBAR (header + tabs) */}
@@ -320,16 +320,21 @@ const Layout = () => {
             height: NAVBAR_HEIGHT,
             borderBottom: "1px solid",
             borderColor: "divider",
-            zIndex: 1200,
+            zIndex: 1400,
             boxShadow: navbarElevated
               ? theme.palette.mode === "dark"
                 ? "0 2px 5px rgba(0,0,0,0.45)"
                 : "0 2px 5px rgba(0,0,0,0.15)"
               : "none",
             transition: "box-shadow 0.25s ease",
-            minWidth: 0,           // 🔑 let content shrink instead of pushing layout
+            minWidth: 0,
             maxWidth: "100%",
-            overflowX: "hidden",   // 🔒 tabs can't push width
+
+            // sticky so the navbar doesn't move during mobile bounce/viewport changes
+            position: "sticky",
+            top: 0,
+            // ensure it sits above the main scrolling area
+            backdropFilter: "saturate(120%) blur(2px)",
           }}
         >
           {/* Header row */}
@@ -344,15 +349,12 @@ const Layout = () => {
               borderBottom: "1px solid",
               borderColor: "divider",
               pt: isMobile ? 0.5 : 0,
-              minWidth: 0,        // prevents header from expanding width
+              minWidth: 0,
             }}
           >
             {/* Logo / brand / menu */}
             {!isMobile && sidebarMode === "hidden" ? (
-              <IconButton
-                onClick={() => setMobileSidebarOpen(true)}
-                size="small"
-              >
+              <IconButton onClick={() => setMobileSidebarOpen(true)} size="small">
                 <img
                   src="https://www.bing.com/sa/simg/favicon-2x.ico"
                   alt="Logo"
@@ -360,24 +362,10 @@ const Layout = () => {
                 />
               </IconButton>
             ) : (
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0.75,
-                  flexShrink: 0,
-                }}
-              >
-                <img
-                  src="/logo192.png"
-                  alt="Logo"
-                  style={{ width: 22, height: 22, borderRadius: 4 }}
-                />
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexShrink: 0 }}>
+                <img src="/logo192.png" alt="Logo" style={{ width: 22, height: 22, borderRadius: 4 }} />
                 {!isMobile && (
-                  <Typography
-                    variant="subtitle2"
-                    sx={{ fontWeight: 600, letterSpacing: 0.3, fontSize: 13 }}
-                  >
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, letterSpacing: 0.3, fontSize: 13 }}>
                     Hi5Tech ITSM
                   </Typography>
                 )}
@@ -385,16 +373,7 @@ const Layout = () => {
             )}
 
             {/* Search + quick info */}
-            <Box
-              sx={{
-                flex: 1,
-                minWidth: 0,
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                mx: 1,
-              }}
-            >
+            <Box sx={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 1, mx: 1 }}>
               <Box
                 sx={{
                   flex: isMobile ? 1 : 0,
@@ -402,30 +381,15 @@ const Layout = () => {
                   maxWidth: isMobile ? "100%" : 320,
                   display: "flex",
                   alignItems: "center",
-                  bgcolor:
-                    theme.palette.mode === "dark"
-                      ? "rgba(255,255,255,0.04)"
-                      : "rgba(0,0,0,0.03)",
+                  bgcolor: theme.palette.mode === "dark" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
                   borderRadius: 999,
                   px: isMobile ? 1.4 : 1,
                   py: 0,
                   height: isMobile ? 32 : 26,
                 }}
               >
-                <SearchIcon
-                  sx={{
-                    fontSize: isMobile ? 20 : 16,
-                    mr: 1,
-                    opacity: 0.7,
-                  }}
-                />
-                <InputBase
-                  placeholder="Search..."
-                  sx={{
-                    fontSize: isMobile ? 13 : 12,
-                    width: "100%",
-                  }}
-                />
+                <SearchIcon sx={{ fontSize: isMobile ? 20 : 16, mr: 1, opacity: 0.7 }} />
+                <InputBase placeholder="Search..." sx={{ fontSize: isMobile ? 13 : 12, width: "100%" }} />
               </Box>
 
               {!isMobile && (
@@ -442,16 +406,10 @@ const Layout = () => {
                       flexShrink: 0,
                     }}
                   >
-                    <Typography
-                      variant="caption"
-                      sx={{ fontSize: 10, color: "text.secondary" }}
-                    >
+                    <Typography variant="caption" sx={{ fontSize: 10, color: "text.secondary" }}>
                       Tenant:&nbsp;
                     </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{ fontSize: 10, fontWeight: 500 }}
-                    >
+                    <Typography variant="caption" sx={{ fontSize: 10, fontWeight: 500 }}>
                       Hi5Tech
                     </Typography>
                   </Box>
@@ -461,28 +419,15 @@ const Layout = () => {
                       px: 1,
                       py: 0.25,
                       borderRadius: 999,
-                      bgcolor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(46, 125, 50, 0.25)"
-                          : "rgba(76, 175, 80, 0.12)",
+                      bgcolor: theme.palette.mode === "dark" ? "rgba(46, 125, 50, 0.25)" : "rgba(76, 175, 80, 0.12)",
                       display: "flex",
                       alignItems: "center",
                       gap: 0.5,
                       flexShrink: 0,
                     }}
                   >
-                    <Box
-                      sx={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: "50%",
-                        bgcolor: "success.main",
-                      }}
-                    />
-                    <Typography
-                      variant="caption"
-                      sx={{ fontSize: 10, color: "success.main" }}
-                    >
+                    <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "success.main" }} />
+                    <Typography variant="caption" sx={{ fontSize: 10, color: "success.main" }}>
                       All systems operational
                     </Typography>
                   </Box>
@@ -492,34 +437,14 @@ const Layout = () => {
 
             {/* Right actions (desktop) */}
             {!isMobile && (
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  flexShrink: 0,
-                }}
-              >
-                <IconButton
-                  size="small"
-                  onClick={() => setDrawerType("notifications")}
-                >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
+                <IconButton size="small" onClick={() => setDrawerType("notifications")}>
                   <NotificationsIcon sx={{ fontSize: 18 }} />
                 </IconButton>
 
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 0.5,
-                    cursor: "pointer",
-                  }}
-                  onClick={() => setDrawerType("profile")}
-                >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, cursor: "pointer" }} onClick={() => setDrawerType("profile")}>
                   <Box sx={{ position: "relative" }}>
-                    <Avatar sx={getNavbarAvatarSx(userStatus, 24)}>
-                      {userInitial}
-                    </Avatar>
+                    <Avatar sx={getNavbarAvatarSx(userStatus, 24)}>{userInitial}</Avatar>
                     <Box
                       sx={{
                         position: "absolute",
@@ -536,33 +461,12 @@ const Layout = () => {
                   </Box>
 
                   <Box sx={{ display: "flex", flexDirection: "column" }}>
-                    <Typography
-                      variant="caption"
-                      sx={{ lineHeight: 1.2, fontWeight: 500, fontSize: 11 }}
-                    >
+                    <Typography variant="caption" sx={{ lineHeight: 1.2, fontWeight: 500, fontSize: 11 }}>
                       {username}
                     </Typography>
-                    <Stack
-                      direction="row"
-                      spacing={0.5}
-                      alignItems="center"
-                      sx={{ lineHeight: 1.1 }}
-                    >
-                      <Box
-                        sx={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: "50%",
-                          bgcolor: getStatusColor(userStatus),
-                        }}
-                      />
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          color: getStatusColor(userStatus),
-                          fontSize: 10,
-                        }}
-                      >
+                    <Stack direction="row" spacing={0.5} alignItems="center" sx={{ lineHeight: 1.1 }}>
+                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: getStatusColor(userStatus) }} />
+                      <Typography variant="caption" sx={{ color: getStatusColor(userStatus), fontSize: 10 }}>
                         {userStatus}
                       </Typography>
                     </Stack>
@@ -574,17 +478,9 @@ const Layout = () => {
             {/* Mobile profile icon + status dropdown */}
             {isMobile && (
               <>
-                <IconButton
-                  size="small"
-                  onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
-                >
+                <IconButton size="small" onClick={(e) => setStatusMenuAnchor(e.currentTarget)}>
                   <Box sx={{ position: "relative", display: "flex" }}>
-                    <AccountCircleIcon
-                      sx={{
-                        fontSize: 22,
-                        opacity: userStatus === "Offline" ? 0.6 : 1,
-                      }}
-                    />
+                    <AccountCircleIcon sx={{ fontSize: 22, opacity: userStatus === "Offline" ? 0.6 : 1 }} />
                     <Box
                       sx={{
                         position: "absolute",
@@ -596,10 +492,7 @@ const Layout = () => {
                         border: "2px solid",
                         borderColor: "background.paper",
                         bgcolor: getStatusColor(userStatus),
-                        boxShadow:
-                          userStatus === "Busy"
-                            ? "0 0 0 2px rgba(244,67,54,0.4)"
-                            : "none",
+                        boxShadow: userStatus === "Busy" ? "0 0 0 2px rgba(244,67,54,0.4)" : "none",
                       }}
                     />
                   </Box>
@@ -609,14 +502,8 @@ const Layout = () => {
                   anchorEl={statusMenuAnchor}
                   open={Boolean(statusMenuAnchor)}
                   onClose={() => setStatusMenuAnchor(null)}
-                  anchorOrigin={{
-                    vertical: "bottom",
-                    horizontal: "right",
-                  }}
-                  transformOrigin={{
-                    vertical: "top",
-                    horizontal: "right",
-                  }}
+                  anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                  transformOrigin={{ vertical: "top", horizontal: "right" }}
                 >
                   {STATUS_OPTIONS.map((opt) => (
                     <MenuItem
@@ -627,21 +514,8 @@ const Layout = () => {
                         setStatusMenuAnchor(null);
                       }}
                     >
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            width: 10,
-                            height: 10,
-                            borderRadius: "50%",
-                            bgcolor: opt.color,
-                          }}
-                        />
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: opt.color }} />
                         <Typography variant="body2">{opt.key}</Typography>
                       </Box>
                     </MenuItem>
@@ -652,14 +526,7 @@ const Layout = () => {
           </Box>
 
           {/* Tabs row */}
-          <Box
-            sx={{
-              height: TABBAR_HEIGHT,
-              minHeight: TABBAR_HEIGHT,
-              minWidth: 0,          // 🔑 stops tab strip from forcing widen
-              overflowX: "hidden",  // extra protection
-            }}
-          >
+          <Box sx={{ height: TABBAR_HEIGHT, minHeight: TABBAR_HEIGHT, minWidth: 0, overflowX: "hidden" }}>
             <NavbarTabs
               tabs={tabs}
               tabIndex={tabIndex}
@@ -679,9 +546,11 @@ const Layout = () => {
             minHeight: 0,
             height: "100%",
             width: "100%",
-            overflowY: "auto",
-            overflowX: "hidden",       // 🔒 main content never scrolls sideways
+            overflowY: "auto", // only main content scrolls
+            overflowX: "hidden",
             WebkitOverflowScrolling: "touch",
+            overscrollBehavior: "contain", // keep bounce contained to main content
+            touchAction: "pan-y", // allow vertical pans; reduce accidental horizontal gestures
             px: 2,
             pt: 1,
             pb: isMobile ? 1 : 2,
@@ -693,22 +562,11 @@ const Layout = () => {
 
         {/* Bottom nav row (mobile) */}
         {isMobile && (
-          <Box
-            sx={{
-              borderTop: `1px solid ${theme.palette.divider}`,
-              backgroundColor: theme.palette.background.paper,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-around",
-            }}
-          >
+          <Box sx={{ borderTop: `1px solid ${theme.palette.divider}`, backgroundColor: theme.palette.background.paper, display: "flex", alignItems: "center", justifyContent: "space-around" }}>
             <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
             <SearchIcon onClick={() => setDrawerType("search")} />
             <NotificationsIcon onClick={() => setDrawerType("notifications")} />
-            <AccountCircleIcon
-              onClick={() => setDrawerType("profile")}
-              style={{ cursor: "pointer" }}
-            />
+            <AccountCircleIcon onClick={() => setDrawerType("profile")} style={{ cursor: "pointer" }} />
           </Box>
         )}
       </Box>
@@ -761,12 +619,7 @@ const Layout = () => {
         >
           {drawerType === "notifications" && <NotificationDrawer />}
           {drawerType === "profile" && (
-            <ProfileDrawer
-              status={userStatus}
-              onStatusChange={handleStatusChange}
-              onLogout={handleLogout}
-              showStatus
-            />
+            <ProfileDrawer status={userStatus} onStatusChange={handleStatusChange} onLogout={handleLogout} showStatus />
           )}
           {drawerType === "search" && (
             <Box p={2}>
@@ -811,9 +664,7 @@ const Layout = () => {
             </Typography>
           )}
           {drawerType === "notifications" && <NotificationDrawer />}
-          {drawerType === "profile" && (
-            <ProfileDrawer onLogout={handleLogout} showStatus={false} />
-          )}
+          {drawerType === "profile" && <ProfileDrawer onLogout={handleLogout} showStatus={false} />}
         </SwipeableDrawer>
       )}
     </Box>
