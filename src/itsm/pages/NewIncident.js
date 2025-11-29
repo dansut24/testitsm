@@ -1,3 +1,4 @@
+// src/itsm/pages/NewIncident.js
 import React, { useState } from "react";
 import {
   Box,
@@ -57,6 +58,9 @@ const NewIncident = () => {
     description: "",
     category: "",
     priority: "",
+    asset_tag: "",
+    customer_name: "",
+    notifyEmails: [], // optional - extend UI if you want
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -77,12 +81,12 @@ const NewIncident = () => {
     }
 
     try {
+      // safer ilike queries using or string; limit results
+      const orQuery = `username.ilike.%${query}%,email.ilike.%${query}%`;
       const { data, error: supaError } = await supabase
         .from("users")
-        .select("id, username, email")
-        .or(
-          `username.ilike.%${query}%,email.ilike.%${query}%`
-        )
+        .select("id, username, email, full_name")
+        .or(orQuery)
         .limit(10);
 
       if (supaError) throw supaError;
@@ -94,13 +98,16 @@ const NewIncident = () => {
         if (data.length === 1) {
           setSelectedUser(data[0]);
           setStep(2);
+          // prefill customer name from selected user if present
+          setFormData((f) => ({
+            ...f,
+            customer_name: data[0].full_name || data[0].username || data[0].email,
+          }));
         }
       }
     } catch (err) {
       console.error("User search error:", err);
-      setUserError(
-        err?.message || "There was a problem searching for users."
-      );
+      setUserError(err?.message || "There was a problem searching for users.");
     } finally {
       setUserLoading(false);
     }
@@ -109,40 +116,13 @@ const NewIncident = () => {
   const handleUserSelect = (user) => {
     setSelectedUser(user);
     setStep(2);
+    setFormData((f) => ({
+      ...f,
+      customer_name: user.full_name || user.username || user.email,
+    }));
   };
 
-  // --- EMAIL NOTIFICATION (YOUR API) ---
-  const sendNotificationEmail = async (incident, requesterUser, agentUser) => {
-    try {
-      await fetch("/api/send-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "incident",
-          subject: `New Incident Submitted - ${incident.reference_number}`,
-          reference: incident.reference_number,
-          title: incident.title,
-          description: incident.description,
-          priority: incident.priority,
-          category: incident.category,
-          status: incident.status,
-          requester:
-            requesterUser?.username ||
-            requesterUser?.email ||
-            "Unknown",
-          submittedBy:
-            agentUser?.username ||
-            agentUser?.email ||
-            "unknown",
-        }),
-      });
-    } catch (err) {
-      console.error("Email notification error:", err);
-      // Don’t block incident creation on email failure
-    }
-  };
-
-  // --- SUBMIT INCIDENT TO SUPABASE ---
+  // --- SUBMIT INCIDENT TO BACKEND ---
   const handleSubmit = async () => {
     setSubmitting(true);
     setError("");
@@ -165,24 +145,7 @@ const NewIncident = () => {
     }
 
     try {
-      // 1) Get next reference number from RPC
-      const { data: refData, error: refErr } = await supabase.rpc(
-        "get_next_incident_reference"
-      );
-      if (refErr) throw refErr;
-
-      const reference_number =
-        typeof refData === "string"
-          ? refData
-          : refData?.reference_number || refData?.reference;
-
-      if (!reference_number) {
-        throw new Error(
-          "Could not generate incident reference number (check RPC)."
-        );
-      }
-
-      // 2) Look up SLA duration for chosen priority
+      // optional SLA lookup on client (you can move this to backend)
       let sla_due = null;
       try {
         const { data: sla, error: slaError } = await supabase
@@ -191,48 +154,57 @@ const NewIncident = () => {
           .eq("priority", formData.priority)
           .maybeSingle();
 
-        if (slaError) {
-          console.warn("SLA lookup error:", slaError);
-        } else if (sla && sla.duration_minutes) {
+        if (!slaError && sla && sla.duration_minutes) {
           const now = new Date();
-          sla_due = new Date(
-            now.getTime() + sla.duration_minutes * 60000
-          ).toISOString();
+          sla_due = new Date(now.getTime() + sla.duration_minutes * 60000).toISOString();
         }
       } catch (slaErr) {
-        console.warn("SLA calculation error:", slaErr);
+        console.warn("SLA lookup failed:", slaErr);
       }
 
-      // 3) Get current portal user (agent) from localStorage
-      const agentUser = JSON.parse(localStorage.getItem("user") || "null");
+      // Determine submitted_by value — use user id if available; else email/username
+      const submitted_by =
+        selectedUser?.id || selectedUser?.email || selectedUser?.username || "unknown";
 
-      // 4) Insert into incidents table
-      const { data, error: insertError } = await supabase
-        .from("incidents")
-        .insert([
-          {
-            reference_number,
-            title: formData.title,
-            description: formData.description,
-            priority: formData.priority,
-            category: formData.category,
-            status: "New",
-            created_by: selectedUser.id, // requester FK → users.id
-            sla_due,
-          },
-        ])
-        .select()
-        .single();
+      // Payload matches backend controller (controllers/incidents.js)
+      const payload = {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        priority: formData.priority,
+        submitted_by,
+        assignee: null,
+        asset_tag: formData.asset_tag || null,
+        customer_name: formData.customer_name || null,
+        sla_due: sla_due || null,
+        resolution_notes: null,
+        is_breached: false,
+        notifyEmails: formData.notifyEmails || [],
+      };
 
-      if (insertError) throw insertError;
-
-      // 5) Fire email notification (non-blocking failure)
-      await sendNotificationEmail(data, selectedUser, agentUser);
-
-      // 6) Navigate to incident detail page
-      navigate(`/incidents/${data.id}`, {
-        state: { tabName: reference_number },
+      // send to backend API (the backend will generate reference + idx)
+      const resp = await fetch("/api/incidents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
+
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => ({}));
+        throw new Error(errBody?.error || `Server returned ${resp.status}`);
+      }
+
+      const result = await resp.json();
+      const created = result.incident || result;
+
+      // created.incident is expected shape from previous server code
+      if (!created || !created.id) {
+        throw new Error("Server did not return a created incident id.");
+      }
+
+      // navigate to detail page, pass tab name (reference) in state if provided
+      const ref = created.reference || created.reference_number || created.reference_number || created.reference;
+      navigate(`/incidents/${created.id}`, { state: { tabName: ref || created.reference || created.reference_number } });
     } catch (err) {
       console.error("Incident submit error:", err);
       setError(err?.message || "There was a problem submitting the incident.");
@@ -242,7 +214,7 @@ const NewIncident = () => {
   };
 
   return (
-    <Box sx={{ px: 2, py: 4, maxWidth: 600, mx: "auto", position: "relative" }}>
+    <Box sx={{ px: 2, py: 4, maxWidth: 700, mx: "auto", position: "relative" }}>
       <Typography variant="h5" gutterBottom>
         Raise New Incident
       </Typography>
@@ -263,6 +235,7 @@ const NewIncident = () => {
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleUserSearch();
               }}
+              inputProps={{ "aria-label": "Search user by name or email" }}
             />
             <Button
               variant="contained"
@@ -285,15 +258,11 @@ const NewIncident = () => {
 
           {users.length > 0 && (
             <Box sx={{ mt: 2 }}>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 1 }}
-              >
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 Select a user:
               </Typography>
               {users.map((user) => {
-                const name = user.username || user.email || `User #${user.id}`;
+                const name = user.full_name || user.username || user.email || `User #${user.id}`;
                 return (
                   <Paper
                     key={user.id}
@@ -302,13 +271,8 @@ const NewIncident = () => {
                       p: 1.5,
                       mb: 1,
                       cursor: "pointer",
-                      borderColor:
-                        selectedUser?.id === user.id
-                          ? "#4caf50"
-                          : "rgba(0,0,0,0.12)",
-                      "&:hover": {
-                        borderColor: "#4caf50",
-                      },
+                      borderColor: selectedUser?.id === user.id ? "#4caf50" : "rgba(0,0,0,0.12)",
+                      "&:hover": { borderColor: "#4caf50" },
                     }}
                     onClick={() => handleUserSelect(user)}
                   >
@@ -326,7 +290,7 @@ const NewIncident = () => {
 
           {selectedUser && (
             <Typography sx={{ mt: 1 }} color="text.secondary">
-              Selected: {selectedUser.username || selectedUser.email}
+              Selected: {selectedUser.full_name || selectedUser.username || selectedUser.email}
             </Typography>
           )}
         </Paper>
@@ -340,16 +304,16 @@ const NewIncident = () => {
             <Typography variant="subtitle1" gutterBottom>
               Step 2: Incident Details
             </Typography>
+
             <TextField
               required
               fullWidth
               label="Incident Title"
               value={formData.title}
-              onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               sx={{ mb: 2 }}
             />
+
             <TextField
               required
               fullWidth
@@ -357,20 +321,17 @@ const NewIncident = () => {
               rows={4}
               label="Description"
               value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               sx={{ mb: 2 }}
             />
+
             <TextField
               required
               fullWidth
               select
               label="Category"
               value={formData.category}
-              onChange={(e) =>
-                setFormData({ ...formData, category: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               sx={{ mb: 2 }}
             >
               {categoryOptions.map((cat) => (
@@ -379,15 +340,14 @@ const NewIncident = () => {
                 </MenuItem>
               ))}
             </TextField>
+
             <TextField
               required
               fullWidth
               select
               label="Priority"
               value={formData.priority}
-              onChange={(e) =>
-                setFormData({ ...formData, priority: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
               sx={{ mb: 2 }}
             >
               {priorityOptions.map((level) => (
@@ -396,6 +356,22 @@ const NewIncident = () => {
                 </MenuItem>
               ))}
             </TextField>
+
+            <TextField
+              fullWidth
+              label="Asset tag (optional)"
+              value={formData.asset_tag}
+              onChange={(e) => setFormData({ ...formData, asset_tag: e.target.value })}
+              sx={{ mb: 2 }}
+            />
+
+            <TextField
+              fullWidth
+              label="Customer name (optional)"
+              value={formData.customer_name}
+              onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+              sx={{ mb: 2 }}
+            />
 
             {error && (
               <Typography color="error" sx={{ mb: 2 }}>
@@ -408,12 +384,9 @@ const NewIncident = () => {
               fullWidth
               onClick={handleSubmit}
               disabled={submitting}
+              aria-label="Submit incident"
             >
-              {submitting ? (
-                <CircularProgress size={20} color="inherit" />
-              ) : (
-                "Submit Incident"
-              )}
+              {submitting ? <CircularProgress size={20} color="inherit" /> : "Submit Incident"}
             </Button>
           </Paper>
         </Box>
