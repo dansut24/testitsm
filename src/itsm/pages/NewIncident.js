@@ -13,6 +13,9 @@ import {
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 
+/**
+ * Step indicator (unchanged)
+ */
 const StepIndicator = ({ step, active }) => (
   <Box
     sx={{
@@ -40,6 +43,44 @@ const StepIndicator = ({ step, active }) => (
 const categoryOptions = ["Hardware", "Software", "Network", "Access", "Other"];
 const priorityOptions = ["Low", "Medium", "High", "Critical"];
 
+/**
+ * Utility: check candidate user fields for a query substring
+ */
+const userMatchesQuery = (userRow = {}, q = "") => {
+  if (!q) return false;
+  const qLower = q.toLowerCase();
+  // candidate fields we will check (in order). Add any other fields your DB uses.
+  const candidates = [
+    "username",
+    "user_name",
+    "full_name",
+    "name",
+    "email",
+    "contact_email",
+    "useremail",
+    "login",
+    "id",
+  ];
+  return candidates.some((k) => {
+    const v = userRow[k];
+    if (!v) return false;
+    return String(v).toLowerCase().includes(qLower);
+  });
+};
+
+/**
+ * Safe accessor to present user display name
+ */
+const displayName = (userRow = {}) =>
+  userRow.full_name ||
+  userRow.name ||
+  userRow.username ||
+  userRow.user_name ||
+  userRow.email ||
+  userRow.contact_email ||
+  userRow.login ||
+  `User ${userRow.id || ""}`;
+
 const NewIncident = () => {
   const navigate = useNavigate();
 
@@ -60,13 +101,16 @@ const NewIncident = () => {
     priority: "",
     asset_tag: "",
     customer_name: "",
-    notifyEmails: [], // optional - extend UI if you want
+    notifyEmails: [],
   });
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  // --- SEARCH USERS TABLE (ACTING AS CUSTOMER/REQUESTER) ---
+  /**
+   * SEARCH: fetch a safe batch of users and filter client-side
+   * This avoids referencing non-existent columns in the DB (eg email)
+   */
   const handleUserSearch = async () => {
     setUserError("");
     setUserLoading(true);
@@ -81,28 +125,29 @@ const NewIncident = () => {
     }
 
     try {
-      // safer ilike queries using or string; limit results
-      const orQuery = `username.ilike.%${query}%,email.ilike.%${query}%`;
+      // Select * with a modest limit (adjust as needed) — avoid server-side column-specific filtering
+      const LIMIT = 200;
       const { data, error: supaError } = await supabase
         .from("users")
-        .select("id, username, email, full_name")
-        .or(orQuery)
-        .limit(10);
+        .select("*")
+        .limit(LIMIT);
 
       if (supaError) throw supaError;
 
       if (!data || data.length === 0) {
-        setUserError("No users found for that search.");
+        setUserError("No users available to search.");
+        setUsers([]);
       } else {
-        setUsers(data);
-        if (data.length === 1) {
-          setSelectedUser(data[0]);
-          setStep(2);
-          // prefill customer name from selected user if present
-          setFormData((f) => ({
-            ...f,
-            customer_name: data[0].full_name || data[0].username || data[0].email,
-          }));
+        // filter client-side against likely name/email fields
+        const matches = data.filter((row) => userMatchesQuery(row, query));
+        if (!matches.length) {
+          setUserError("No users found for that search.");
+        } else {
+          setUsers(matches);
+          // auto-select if single match
+          if (matches.length === 1) {
+            handleUserSelect(matches[0]);
+          }
         }
       }
     } catch (err) {
@@ -118,11 +163,13 @@ const NewIncident = () => {
     setStep(2);
     setFormData((f) => ({
       ...f,
-      customer_name: user.full_name || user.username || user.email,
+      customer_name: formData.customer_name || displayName(user),
     }));
   };
 
-  // --- SUBMIT INCIDENT TO BACKEND ---
+  /**
+   * SUBMIT: send to backend API (server generates reference + idx)
+   */
   const handleSubmit = async () => {
     setSubmitting(true);
     setError("");
@@ -145,7 +192,7 @@ const NewIncident = () => {
     }
 
     try {
-      // optional SLA lookup on client (you can move this to backend)
+      // compute SLA client-side (optional); backend can also compute
       let sla_due = null;
       try {
         const { data: sla, error: slaError } = await supabase
@@ -162,11 +209,15 @@ const NewIncident = () => {
         console.warn("SLA lookup failed:", slaErr);
       }
 
-      // Determine submitted_by value — use user id if available; else email/username
+      // submitted_by: prefer id if present, fall back to email/username
       const submitted_by =
-        selectedUser?.id || selectedUser?.email || selectedUser?.username || "unknown";
+        selectedUser?.id ||
+        selectedUser?.email ||
+        selectedUser?.contact_email ||
+        selectedUser?.username ||
+        selectedUser?.user_name ||
+        "unknown";
 
-      // Payload matches backend controller (controllers/incidents.js)
       const payload = {
         title: formData.title,
         description: formData.description,
@@ -182,7 +233,6 @@ const NewIncident = () => {
         notifyEmails: formData.notifyEmails || [],
       };
 
-      // send to backend API (the backend will generate reference + idx)
       const resp = await fetch("/api/incidents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -197,12 +247,10 @@ const NewIncident = () => {
       const result = await resp.json();
       const created = result.incident || result;
 
-      // created.incident is expected shape from previous server code
       if (!created || !created.id) {
         throw new Error("Server did not return a created incident id.");
       }
 
-      // navigate to detail page, pass tab name (reference) in state if provided
       const ref = created.reference || created.reference_number || created.reference_number || created.reference;
       navigate(`/incidents/${created.id}`, { state: { tabName: ref || created.reference || created.reference_number } });
     } catch (err) {
@@ -226,6 +274,7 @@ const NewIncident = () => {
           <Typography variant="subtitle1" gutterBottom>
             Step 1: Search for User / Customer
           </Typography>
+
           <Box display="flex" gap={1}>
             <TextField
               fullWidth
@@ -237,16 +286,8 @@ const NewIncident = () => {
               }}
               inputProps={{ "aria-label": "Search user by name or email" }}
             />
-            <Button
-              variant="contained"
-              onClick={handleUserSearch}
-              disabled={userLoading}
-            >
-              {userLoading ? (
-                <CircularProgress size={20} color="inherit" />
-              ) : (
-                "Search"
-              )}
+            <Button variant="contained" onClick={handleUserSearch} disabled={userLoading}>
+              {userLoading ? <CircularProgress size={20} color="inherit" /> : "Search"}
             </Button>
           </Box>
 
@@ -262,10 +303,9 @@ const NewIncident = () => {
                 Select a user:
               </Typography>
               {users.map((user) => {
-                const name = user.full_name || user.username || user.email || `User #${user.id}`;
                 return (
                   <Paper
-                    key={user.id}
+                    key={user.id || JSON.stringify(user).slice(0, 40)}
                     variant="outlined"
                     sx={{
                       p: 1.5,
@@ -276,12 +316,11 @@ const NewIncident = () => {
                     }}
                     onClick={() => handleUserSelect(user)}
                   >
-                    <Typography variant="subtitle2">{name}</Typography>
-                    {user.email && (
-                      <Typography variant="body2" color="text.secondary">
-                        {user.email}
-                      </Typography>
-                    )}
+                    <Typography variant="subtitle2">{displayName(user)}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {/* show best-effort contact info */}
+                      {user.email || user.contact_email || user.username || user.user_name || `ID: ${user.id}`}
+                    </Typography>
                   </Paper>
                 );
               })}
@@ -290,7 +329,7 @@ const NewIncident = () => {
 
           {selectedUser && (
             <Typography sx={{ mt: 1 }} color="text.secondary">
-              Selected: {selectedUser.full_name || selectedUser.username || selectedUser.email}
+              Selected: {displayName(selectedUser)}
             </Typography>
           )}
         </Paper>
