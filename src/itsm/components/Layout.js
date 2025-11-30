@@ -1,14 +1,60 @@
 // src/itsm/layout/Layout.js
 import React, { useState, useEffect } from "react";
-import { Box, useTheme, useMediaQuery } from "@mui/material";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import {
+  Box,
+  useTheme,
+  useMediaQuery,
+  SwipeableDrawer,
+  Typography,
+} from "@mui/material";
+import { useLocation, useNavigate, Outlet } from "react-router-dom";
 
-import Sidebar from "./Sidebar";
-import Navbar from "./Navbar"; // <-- use your Navbar component
+import Navbar from "./Navbar";
 import NavbarTabs from "./NavbarTabs";
+import Sidebar from "./Sidebar";
+
+import NotificationDrawer from "./NotificationDrawer";
+import ProfileDrawer from "./ProfileDrawer";
+
+import SearchIcon from "@mui/icons-material/Search";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import MenuIcon from "@mui/icons-material/Menu";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import ListAltIcon from "@mui/icons-material/ListAlt";
+import StorageIcon from "@mui/icons-material/Storage";
+import SettingsIcon from "@mui/icons-material/Settings";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+import ChangeCircleIcon from "@mui/icons-material/ChangeCircle";
+import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
+import PersonIcon from "@mui/icons-material/Person";
+import ArticleIcon from "@mui/icons-material/Article";
 
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 60;
+
+const BASE_APP_HEADER_HEIGHT = 38;
+const BASE_TABBAR_HEIGHT = 30;
+const BASE_BOTTOM_NAV_HEIGHT = 56;
+
+const routeLabels = {
+  "/dashboard": "Dashboard",
+  "/incidents": "Incidents",
+  "/service-requests": "Service Requests",
+  "/changes": "Changes",
+  "/tasks": "Tasks",
+  "/profile": "Profile",
+  "/knowledge-base": "Knowledge Base",
+  "/settings": "Settings",
+  "/assets": "Assets",
+};
+
+const STATUS_OPTIONS = [
+  { key: "Available", color: "success.main" },
+  { key: "Busy", color: "error.main" },
+  { key: "Away", color: "warning.main" },
+  { key: "Offline", color: "text.disabled" },
+];
 
 const Layout = () => {
   const theme = useTheme();
@@ -16,26 +62,209 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [sidebarPinned, setSidebarPinned] = useState(true);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const APP_HEADER_HEIGHT = isMobile ? 52 : BASE_APP_HEADER_HEIGHT;
+  const TABBAR_HEIGHT = isMobile ? 42 : BASE_TABBAR_HEIGHT;
+  const NAVBAR_HEIGHT = APP_HEADER_HEIGHT + TABBAR_HEIGHT;
+  const BOTTOM_NAV_HEIGHT = isMobile ? 64 : BASE_BOTTOM_NAV_HEIGHT;
 
-  const desktopHasSidebar = !isMobile;
-  const sidebarWidth = desktopHasSidebar
-    ? sidebarPinned
+  const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
+  const [tabIndex, setTabIndex] = useState(0);
+
+  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned");
+  const [sidebarPinned, setSidebarPinned] = useState(true);
+
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [drawerType, setDrawerType] = useState(null);
+  const [navbarElevated, setNavbarElevated] = useState(false);
+
+  const username = "User";
+  const userInitial = username[0]?.toUpperCase() || "U";
+
+  const [userStatus, setUserStatus] = useState(
+    () => localStorage.getItem("userStatus") || "Available"
+  );
+
+  useEffect(() => {
+    localStorage.setItem("userStatus", userStatus);
+  }, [userStatus]);
+
+  // vh fix (mainly mobile)
+  useEffect(() => {
+    const setVh = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty("--vh", `${vh}px`);
+    };
+    setVh();
+    window.addEventListener("resize", setVh);
+    window.addEventListener("orientationchange", setVh);
+    return () => {
+      window.removeEventListener("resize", setVh);
+      window.removeEventListener("orientationchange", setVh);
+    };
+  }, []);
+
+  const getStatusColor = (statusKey) => {
+    const opt = STATUS_OPTIONS.find((o) => o.key === statusKey);
+    return opt ? opt.color : "text.disabled";
+  };
+
+  const getNavbarAvatarSx = (statusKey, size = 24) => {
+    const base = {
+      width: size,
+      height: size,
+      fontSize: size * 0.5,
+      transition: "all 0.2s ease",
+      bgcolor:
+        theme.palette.mode === "dark"
+          ? theme.palette.grey[800]
+          : theme.palette.grey[200],
+      color: theme.palette.text.primary,
+    };
+
+    switch (statusKey) {
+      case "Available":
+        return {
+          ...base,
+          border: "2px solid",
+          borderColor: "success.main",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 0 0 2px rgba(76,175,80,0.25)"
+              : "0 0 0 2px rgba(76,175,80,0.35)",
+        };
+      case "Busy":
+        return {
+          ...base,
+          border: "2px solid",
+          borderColor: "error.main",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 0 0 2px rgba(244,67,54,0.35)"
+              : "0 0 0 2px rgba(244,67,54,0.45)",
+        };
+      case "Away":
+        return {
+          ...base,
+          border: "2px solid",
+          borderColor: "warning.main",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 0 0 2px rgba(255,179,0,0.25)"
+              : "0 0 0 2px rgba(255,179,0,0.35)",
+        };
+      case "Offline":
+      default:
+        return {
+          ...base,
+          border: "1px dashed",
+          borderColor: "text.disabled",
+          filter: "grayscale(100%)",
+          opacity: 0.6,
+        };
+    }
+  };
+
+  const handleStatusChange = (statusKey) => {
+    setUserStatus(statusKey);
+  };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    navigate("/login");
+  };
+
+  // Sync tabs with route
+  useEffect(() => {
+    const currentPath = location.pathname;
+    const tabExists = tabs.some((t) => t.path === currentPath);
+    if (!tabExists) {
+      const label = routeLabels[currentPath] || "Unknown";
+      const newTabs = [...tabs, { label, path: currentPath }];
+      setTabs(newTabs);
+      setTabIndex(newTabs.length - 1);
+    } else {
+      setTabIndex(tabs.findIndex((t) => t.path === currentPath));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  useEffect(() => {
+    sessionStorage.setItem("tabs", JSON.stringify(tabs));
+    sessionStorage.setItem("tabIndex", tabIndex.toString());
+  }, [tabs, tabIndex]);
+
+  const handleTabChange = (_ev, newIndex, path) => {
+    setTabIndex(newIndex);
+    if (path) navigate(path);
+  };
+
+  const handleTabClose = (tabId) => {
+    const closingIndex = tabs.findIndex((t) => t.path === tabId);
+    if (closingIndex === 0) return; // keep Dashboard
+    const newTabs = tabs.filter((t) => t.path !== tabId);
+    setTabs(newTabs);
+    if (location.pathname === tabId) {
+      const fallbackIndex = Math.max(0, closingIndex - 1);
+      navigate(newTabs[fallbackIndex]?.path || "/dashboard");
+    }
+  };
+
+  const handleTabReorder = (tabsReordered) => setTabs(tabsReordered);
+
+  const activateOrAddTab = (label) => {
+    const path = `/${label.toLowerCase().replace(/\s+/g, "-")}`;
+    const existing = tabs.find((t) => t.path === path);
+    if (existing) {
+      const idx = tabs.findIndex((t) => t.path === path);
+      setTabIndex(idx);
+      navigate(existing.path);
+    } else {
+      const newTabs = [...tabs, { label, path }];
+      setTabs(newTabs);
+      setTabIndex(newTabs.length - 1);
+      navigate(path);
+    }
+  };
+
+  const sidebarItems = [
+    { label: "Dashboard", icon: <DashboardIcon /> },
+    { label: "Incidents", icon: <ListAltIcon /> },
+    { label: "Service Requests", icon: <AssignmentIcon /> },
+    { label: "Changes", icon: <ChangeCircleIcon /> },
+    { label: "Tasks", icon: <AssignmentTurnedInIcon /> },
+    { label: "Profile", icon: <PersonIcon /> },
+    { label: "Knowledge Base", icon: <ArticleIcon /> },
+    { label: "Settings", icon: <SettingsIcon /> },
+    { label: "Assets", icon: <StorageIcon /> },
+  ];
+
+  const desktopHasSidebar = !isMobile && sidebarMode !== "hidden";
+  const sidebarWidth =
+    desktopHasSidebar && (sidebarMode === "pinned" || sidebarPinned)
       ? EXPANDED_WIDTH
-      : COLLAPSED_WIDTH
-    : 0;
+      : desktopHasSidebar
+      ? COLLAPSED_WIDTH
+      : 0;
+
+  const handleMainScroll = (e) => {
+    const scrolled = e.currentTarget.scrollTop > 4;
+    setNavbarElevated(scrolled);
+  };
 
   return (
     <Box
       sx={{
-        display: "flex",
+        position: "fixed",
+        inset: 0,
         width: "100%",
-        height: "100vh",
-        overflow: "hidden",
+        height: "calc(var(--vh, 1vh) * 100)",
+        display: "flex",
+        bgcolor: theme.palette.background.default,
+        overflow: "hidden", // no global scroll; only main content scrolls
       }}
     >
-      {/* Sidebar */}
+      {/* Sidebar (desktop) */}
       {desktopHasSidebar && (
         <Box
           sx={{
@@ -46,49 +275,235 @@ const Layout = () => {
             bgcolor: "background.paper",
             display: "flex",
             flexDirection: "column",
+            overflow: "hidden",
           }}
         >
           <Sidebar
-            pinned={sidebarPinned}
-            onToggle={() => setSidebarPinned((p) => !p)}
+            pinned={sidebarMode === "pinned" ? true : sidebarPinned}
+            onToggle={() => {
+              if (sidebarMode === "collapsible") setSidebarPinned((p) => !p);
+            }}
+            items={sidebarItems}
+            onItemClick={activateOrAddTab}
             widthExpanded={EXPANDED_WIDTH}
             widthCollapsed={COLLAPSED_WIDTH}
           />
         </Box>
       )}
 
-      {/* Main content column */}
+      {/* Right-hand column: navbar + scrollable main + bottom nav (mobile) */}
       <Box
         sx={{
           flex: 1,
-          display: "flex",
-          flexDirection: "column",
           minWidth: 0,
           maxWidth: "100%",
+          display: "grid",
+          gridTemplateRows: isMobile
+            ? `${NAVBAR_HEIGHT}px 1fr ${BOTTOM_NAV_HEIGHT}px`
+            : `${NAVBAR_HEIGHT}px 1fr`,
+          height: "100%",
+          overflow: "hidden",
         }}
       >
-        {/* NAVBAR */}
-        <Navbar
-          sidebarWidth={EXPANDED_WIDTH}
-          collapsedWidth={COLLAPSED_WIDTH}
-          sidebarOpen={sidebarPinned}
-        />
+        {/* NAVBAR (header + tabs) */}
+        <Box
+          sx={{
+            bgcolor: "background.paper",
+            display: "flex",
+            flexDirection: "column",
+            height: NAVBAR_HEIGHT,
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            zIndex: 1400,
+            boxShadow: navbarElevated
+              ? theme.palette.mode === "dark"
+                ? "0 2px 5px rgba(0,0,0,0.45)"
+                : "0 2px 5px rgba(0,0,0,0.15)"
+              : "none",
+            transition: "box-shadow 0.25s ease",
+            minWidth: 0,
+            maxWidth: "100%",
+            position: "sticky",
+            top: 0,
+            backdropFilter: "saturate(120%) blur(2px)",
+          }}
+        >
+          {/* Header row via Navbar component */}
+          <Navbar
+            appHeaderHeight={APP_HEADER_HEIGHT}
+            isMobile={isMobile}
+            sidebarMode={sidebarMode}
+            username={username}
+            userInitial={userInitial}
+            userStatus={userStatus}
+            statusOptions={STATUS_OPTIONS}
+            getStatusColor={getStatusColor}
+            getNavbarAvatarSx={getNavbarAvatarSx}
+            onStatusChange={handleStatusChange}
+            onOpenSidebar={() => setMobileSidebarOpen(true)}
+            onOpenDrawer={(type) => setDrawerType(type)}
+          />
 
-        {/* Main scrollable area */}
+          {/* Tabs row via NavbarTabs component */}
+          <Box sx={{ height: TABBAR_HEIGHT, minHeight: TABBAR_HEIGHT, minWidth: 0, overflowX: "hidden" }}>
+            <NavbarTabs
+              tabs={tabs}
+              tabIndex={tabIndex}
+              handleTabChange={handleTabChange}
+              handleTabClose={handleTabClose}
+              handleTabReorder={handleTabReorder}
+              isMobile={isMobile}
+            />
+          </Box>
+        </Box>
+
+        {/* MAIN CONTENT */}
         <Box
           component="main"
+          onScroll={handleMainScroll}
           sx={{
-            flex: 1,
-            overflowY: "auto",
             minHeight: 0,
+            height: "100%",
             width: "100%",
+            overflowY: "auto",
+            overflowX: "hidden",
+            WebkitOverflowScrolling: "touch",
+            overscrollBehavior: "contain",
+            touchAction: "pan-y",
             px: 2,
-            py: 1,
+            pt: 1,
+            pb: isMobile ? BOTTOM_NAV_HEIGHT + 8 : 2,
+            boxSizing: "border-box",
           }}
         >
           <Outlet />
         </Box>
+
+        {/* Bottom nav row (mobile) */}
+        {isMobile && (
+          <Box
+            sx={{
+              borderTop: `1px solid ${theme.palette.divider}`,
+              backgroundColor: theme.palette.background.paper,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-around",
+            }}
+          >
+            <MenuIcon onClick={() => setMobileSidebarOpen(true)} />
+            <SearchIcon onClick={() => setDrawerType("search")} />
+            <NotificationsIcon onClick={() => setDrawerType("notifications")} />
+            <AccountCircleIcon
+              onClick={() => setDrawerType("profile")}
+              style={{ cursor: "pointer" }}
+            />
+          </Box>
+        )}
       </Box>
+
+      {/* Sidebar Drawer (mobile & hidden desktop) */}
+      {(isMobile || sidebarMode === "hidden") && (
+        <SwipeableDrawer
+          anchor="left"
+          open={mobileSidebarOpen}
+          onClose={() => setMobileSidebarOpen(false)}
+          onOpen={() => setMobileSidebarOpen(true)}
+          ModalProps={{ keepMounted: true }}
+          PaperProps={{
+            sx: {
+              width: EXPANDED_WIDTH,
+              backgroundColor: theme.palette.background.paper,
+            },
+          }}
+        >
+          <Sidebar
+            pinned
+            onToggle={() => {}}
+            items={sidebarItems}
+            onItemClick={(label) => {
+              activateOrAddTab(label);
+              setMobileSidebarOpen(false);
+            }}
+            widthExpanded={EXPANDED_WIDTH}
+            widthCollapsed={COLLAPSED_WIDTH}
+          />
+        </SwipeableDrawer>
+      )}
+
+      {/* Desktop right-hand drawer */}
+      {!isMobile && (
+        <SwipeableDrawer
+          anchor="right"
+          open={Boolean(drawerType)}
+          onClose={() => setDrawerType(null)}
+          onOpen={() => {}}
+          disableSwipeToOpen
+          disableDiscovery
+          swipeAreaWidth={0}
+          PaperProps={{
+            sx: {
+              width: 360,
+              maxWidth: "100%",
+            },
+          }}
+        >
+          {drawerType === "notifications" && <NotificationDrawer />}
+          {drawerType === "profile" && (
+            <ProfileDrawer
+              status={userStatus}
+              onStatusChange={handleStatusChange}
+              onLogout={handleLogout}
+              showStatus
+            />
+          )}
+          {drawerType === "search" && (
+            <Box p={2}>
+              <Typography variant="h6" gutterBottom>
+                Search
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Advanced search coming soon.
+              </Typography>
+            </Box>
+          )}
+        </SwipeableDrawer>
+      )}
+
+      {/* Bottom action drawer (mobile) */}
+      {isMobile && (
+        <SwipeableDrawer
+          anchor="bottom"
+          open={Boolean(drawerType)}
+          onClose={() => setDrawerType(null)}
+          onOpen={() => {}}
+          ModalProps={{
+            keepMounted: true,
+            BackdropProps: {
+              sx: { backgroundColor: "transparent", pointerEvents: "none" },
+            },
+          }}
+          PaperProps={{
+            sx: {
+              height: `calc(50dvh - ${BASE_BOTTOM_NAV_HEIGHT}px)`,
+              bottom: `${BASE_BOTTOM_NAV_HEIGHT}px`,
+              p: 2,
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+              pointerEvents: "auto",
+            },
+          }}
+        >
+          {drawerType === "search" && (
+            <Typography variant="h6" gutterBottom>
+              Search
+            </Typography>
+          )}
+          {drawerType === "notifications" && <NotificationDrawer />}
+          {drawerType === "profile" && (
+            <ProfileDrawer onLogout={handleLogout} showStatus={false} />
+          )}
+        </SwipeableDrawer>
+      )}
     </Box>
   );
 };
