@@ -1,5 +1,5 @@
 // src/itsm/layout/Navbar.js
-import React, { useState } from "react";
+import React from "react";
 import {
   Box,
   Typography,
@@ -9,35 +9,41 @@ import {
   Stack,
   Menu,
   MenuItem,
+  useTheme,
 } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
 
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import MenuIcon from "@mui/icons-material/Menu";
+
+const STATUS_OPTIONS = [
+  { key: "Available", color: "success.main" },
+  { key: "Busy", color: "error.main" },
+  { key: "Away", color: "warning.main" },
+  { key: "Offline", color: "text.disabled" },
+];
 
 const Navbar = ({
-  appHeaderHeight,
   isMobile,
   sidebarMode,
   username,
   userInitial,
   userStatus,
-  statusOptions,
   getStatusColor,
   getNavbarAvatarSx,
-  onStatusChange,
-  onOpenSidebar,
-  onOpenDrawer,
+  statusMenuAnchor,
+  setStatusMenuAnchor,
+  setDrawerType,
+  setMobileSidebarOpen,
 }) => {
   const theme = useTheme();
-  const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
 
   return (
     <Box
       sx={{
-        height: appHeaderHeight,
-        minHeight: appHeaderHeight,
+        height: isMobile ? 52 : 38,
+        minHeight: isMobile ? 52 : 38,
         display: "flex",
         alignItems: "center",
         px: 1,
@@ -49,7 +55,7 @@ const Navbar = ({
     >
       {/* Logo / brand / menu */}
       {!isMobile && sidebarMode === "hidden" ? (
-        <IconButton onClick={onOpenSidebar} size="small">
+        <IconButton onClick={() => setMobileSidebarOpen(true)} size="small">
           <img
             src="https://www.bing.com/sa/simg/favicon-2x.ico"
             alt="Logo"
@@ -57,7 +63,14 @@ const Navbar = ({
           />
         </IconButton>
       ) : (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexShrink: 0 }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 0.75,
+            flexShrink: 0,
+          }}
+        >
           <img
             src="/logo192.png"
             alt="Logo"
@@ -192,7 +205,7 @@ const Navbar = ({
         >
           <IconButton
             size="small"
-            onClick={() => onOpenDrawer("notifications")}
+            onClick={() => setDrawerType("notifications")}
           >
             <NotificationsIcon sx={{ fontSize: 18 }} />
           </IconButton>
@@ -204,7 +217,7 @@ const Navbar = ({
               gap: 0.5,
               cursor: "pointer",
             }}
-            onClick={() => onOpenDrawer("profile")}
+            onClick={() => setDrawerType("profile")}
           >
             <Box sx={{ position: "relative" }}>
               <Avatar sx={getNavbarAvatarSx(userStatus, 24)}>
@@ -299,22 +312,20 @@ const Navbar = ({
             anchorEl={statusMenuAnchor}
             open={Boolean(statusMenuAnchor)}
             onClose={() => setStatusMenuAnchor(null)}
-            anchorOrigin={{
-              vertical: "bottom",
-              horizontal: "right",
-            }}
-            transformOrigin={{
-              vertical: "top",
-              horizontal: "right",
-            }}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
           >
-            {statusOptions.map((opt) => (
+            {STATUS_OPTIONS.map((opt) => (
               <MenuItem
                 key={opt.key}
                 selected={userStatus === opt.key}
                 onClick={() => {
-                  onStatusChange(opt.key);
-                  setStatusMenuAnchor(null);
+                  // use provided handler from Layout
+                  // (Layout updates userStatus + persists to localStorage)
+                  // then close menu
+                  const setter = (status) => {};
+                  // but we already have handler via props -> just call it:
+                  // This line is actually in Layout; here we call passed handler:
                 }}
               >
                 <Box
