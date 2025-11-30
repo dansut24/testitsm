@@ -78,7 +78,6 @@ const NewIncident = () => {
     }
 
     try {
-      // Make sure these columns exist in your "users" table
       const { data, error: supaError } = await supabase
         .from("users")
         .select("id, username, email, full_name")
@@ -111,10 +110,14 @@ const NewIncident = () => {
     setStep(2);
   };
 
-  // --- EMAIL NOTIFICATION (Resend via /api/send-email) ---
-  const sendNotificationEmail = async (incident, requesterUser, agentUser) => {
+  // --- EMAIL NOTIFICATION (Resend via /api/send-email with template) ---
+  const sendNotificationEmail = async (
+    incident,
+    requesterUser,
+    agentUser,
+    submittedBy
+  ) => {
     try {
-      // If we don't have a requester email, skip sending
       if (!requesterUser?.email) {
         console.warn("No requester email, skipping notification");
         return;
@@ -136,7 +139,11 @@ const NewIncident = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          to: requesterUser.email,
+          type: "incident",
+          templateKey: "incident_created",     // 🔑 matches email_templates.key
+          recipientEmail: requesterUser.email, // 📨 where to send
+
+          // Fallback + template context
           subject,
           reference,
           title: incident.title,
@@ -150,6 +157,7 @@ const NewIncident = () => {
             requesterUser.email ||
             "Customer",
           submittedBy:
+            submittedBy ||
             agentUser?.username ||
             agentUser?.full_name ||
             agentUser?.email ||
@@ -265,7 +273,8 @@ const NewIncident = () => {
       await sendNotificationEmail(
         { ...data, reference: data.reference || reference },
         selectedUser,
-        agentUser
+        agentUser,
+        submittedBy
       );
 
       // 6) Navigate to incident detail page
