@@ -12,7 +12,6 @@ import {
   Stack,
   Menu,
   MenuItem,
-  Button,
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import NavbarTabs from "./NavbarTabs";
@@ -340,33 +339,9 @@ const Layout = () => {
             {/* keep blank for now; can add quick filters / breadcrumbs */}
           </Box>
 
-          {/* Right - Raise Incident button */}
+          {/* Right - reserved area (button removed as requested) */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            {!isMobile ? (
-              <Button
-                variant="contained"
-                size="small"
-                onClick={() => navigate("/new-incident")}
-                sx={{ whiteSpace: "nowrap" }}
-              >
-                Raise New Incident
-              </Button>
-            ) : (
-              // mobile: a pill full-width style button (but keep it in the action bar)
-              <Button
-                variant="contained"
-                size="medium"
-                onClick={() => navigate("/new-incident")}
-                sx={{
-                  px: 2,
-                  py: 0.5,
-                  borderRadius: 999,
-                  minWidth: 140,
-                }}
-              >
-                New Incident
-              </Button>
-            )}
+            {/* intentionally left blank; the Raise New Incident control has been removed */}
           </Box>
         </Box>
 
