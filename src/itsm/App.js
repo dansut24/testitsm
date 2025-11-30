@@ -1,3 +1,7 @@
+// Global styles for MDEditor
+import "@uiw/react-md-editor/markdown-editor.css";
+import "@uiw/react-markdown-preview/markdown.css";
+
 // src/itsm/App.js
 import React, { useEffect, useState } from "react";
 import { Box } from "@mui/material";
@@ -48,7 +52,7 @@ import NotFound from "./pages/NotFound";
 import SetPassword from "./pages/SetPassword";
 import NewTab from "./pages/NewTab";
 
-// 🔹 Self-Service Pages
+// Self-Service Pages
 import SelfServiceLayout from "../selfservice/layouts/SelfServiceLayout";
 import SelfServiceHome from "../selfservice/pages/SelfServiceHome";
 import RaiseRequest from "../selfservice/pages/RaiseRequest";
@@ -87,7 +91,7 @@ function AppRoutes() {
       <Route path="/not-authorised" element={<NotAuthorised />} />
       <Route path="/set-password" element={<SetPassword />} />
 
-      {/* ITSM Layout — only for ITSM pages */}
+      {/* ITSM Layout */}
       {isLoggedIn && (
         <Route path="/" element={<Layout />}>
           <Route path="dashboard" element={<Dashboard />} />
@@ -133,7 +137,7 @@ function AppRoutes() {
         </Route>
       )}
 
-      {/* 🔹 Self-Service — OUTSIDE ITSM Layout */}
+      {/* Self-Service */}
       {isLoggedIn && (
         <Route path="/self-service" element={<SelfServiceLayout />}>
           <Route index element={<SelfServiceHome />} />
