@@ -18,15 +18,24 @@ import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
+import Image from "@tiptap/extension-image";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 
 import { createLowlight, common } from "lowlight";
+import powershell from "highlight.js/lib/languages/powershell";
+import bash from "highlight.js/lib/languages/bash";
+import javascript from "highlight.js/lib/languages/javascript";
 
-// you can swap this for another highlight.js theme if you like
 import "highlight.js/styles/github.css";
 
-// ✅ create a lowlight instance from the common languages
+// ✅ lowlight instance + extra languages
 const lowlight = createLowlight(common);
+lowlight.registerLanguage("powershell", powershell);
+lowlight.registerLanguage("ps", powershell);
+lowlight.registerLanguage("bash", bash);
+lowlight.registerLanguage("sh", bash);
+lowlight.registerLanguage("javascript", javascript);
+lowlight.registerLanguage("js", javascript);
 
 const CommentSection = ({ comments = [], onAddComment }) => {
   const [submitting, setSubmitting] = useState(false);
@@ -34,7 +43,7 @@ const CommentSection = ({ comments = [], onAddComment }) => {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        codeBlock: false, // we replace with CodeBlockLowlight
+        codeBlock: false, // we provide our own
       }),
       Underline,
       Link.configure({
@@ -43,13 +52,53 @@ const CommentSection = ({ comments = [], onAddComment }) => {
       }),
       Placeholder.configure({
         placeholder:
-          "Type your comment here… Paste tables, code, or rich text. Use ```ps, ```bash, ```js for code.",
+          "Type your comment here… Paste tables, screenshots, or code. Use ```ps, ```bash, ```js for labelled code blocks.",
+      }),
+      Image.configure({
+        inline: false,
+        allowBase64: true, // ✅ allows pasted screenshots as data URLs
       }),
       CodeBlockLowlight.configure({
         lowlight,
       }),
     ],
     content: "",
+    editorProps: {
+      handlePaste(view, event) {
+        const clipboardData = event.clipboardData;
+        if (!clipboardData) return false;
+
+        const items = clipboardData.items;
+        if (!items || items.length === 0) return false;
+
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+
+          if (item.type && item.type.indexOf("image") === 0) {
+            const file = item.getAsFile();
+            if (!file) continue;
+
+            const reader = new FileReader();
+            reader.onload = () => {
+              const { schema } = view.state;
+              const node = schema.nodes.image.create({
+                src: reader.result,
+              });
+
+              const transaction = view.state.tr.replaceSelectionWith(node);
+              view.dispatch(transaction);
+            };
+            reader.readAsDataURL(file);
+
+            event.preventDefault();
+            return true;
+          }
+        }
+
+        // let other paste events continue as normal
+        return false;
+      },
+    },
   });
 
   const handleSubmit = async () => {
@@ -101,7 +150,7 @@ const CommentSection = ({ comments = [], onAddComment }) => {
         Comments
       </Typography>
 
-      {/* Editor container - full-width panel */}
+      {/* Editor container - full-width, big panel */}
       <Paper
         elevation={2}
         sx={{
@@ -184,7 +233,8 @@ const CommentSection = ({ comments = [], onAddComment }) => {
               </IconButton>
             </span>
           </Tooltip>
-          <Tooltip title="Code block">
+
+          <Tooltip title="Code block (labelled if fenced)">
             <span>
               <IconButton
                 size="small"
@@ -195,6 +245,7 @@ const CommentSection = ({ comments = [], onAddComment }) => {
               </IconButton>
             </span>
           </Tooltip>
+
           <Tooltip title="Blockquote">
             <span>
               <IconButton
@@ -233,8 +284,8 @@ const CommentSection = ({ comments = [], onAddComment }) => {
           sx={{
             px: 1.5,
             py: 1,
-            minHeight: 160,
-            maxHeight: 360,
+            minHeight: 200,
+            maxHeight: 380,
             overflowY: "auto",
             "& .tiptap": {
               outline: "none",
@@ -246,18 +297,40 @@ const CommentSection = ({ comments = [], onAddComment }) => {
                 height: 0,
               },
             },
+            // code block styling + language label
             "& pre": {
+              position: "relative",
               borderRadius: 1.5,
               border: "1px solid",
               borderColor: "divider",
               fontSize: "0.8rem",
-              padding: "8px 10px",
+              padding: "16px 10px 10px 10px",
               backgroundColor: "background.default",
               overflowX: "auto",
+            },
+            "& pre[data-language]::before": {
+              content: "attr(data-language)",
+              position: "absolute",
+              top: 2,
+              right: 8,
+              fontSize: "0.65rem",
+              textTransform: "uppercase",
+              letterSpacing: "0.04em",
+              opacity: 0.7,
             },
             "& code": {
               fontFamily:
                 "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+            },
+            // images pasted
+            "& img": {
+              maxWidth: "100%",
+              height: "auto",
+              borderRadius: 1,
+              border: "1px solid",
+              borderColor: "divider",
+              marginTop: 0.5,
+              marginBottom: 0.5,
             },
           }}
         >
@@ -334,17 +407,37 @@ const CommentSection = ({ comments = [], onAddComment }) => {
             <Box
               sx={{
                 "& pre": {
+                  position: "relative",
                   borderRadius: 1.5,
                   border: "1px solid",
                   borderColor: "divider",
                   fontSize: "0.8rem",
-                  padding: "8px 10px",
+                  padding: "16px 10px 10px 10px",
                   backgroundColor: "background.default",
                   overflowX: "auto",
+                },
+                "& pre[data-language]::before": {
+                  content: "attr(data-language)",
+                  position: "absolute",
+                  top: 2,
+                  right: 8,
+                  fontSize: "0.65rem",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                  opacity: 0.7,
                 },
                 "& code": {
                   fontFamily:
                     "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+                },
+                "& img": {
+                  maxWidth: "100%",
+                  height: "auto",
+                  borderRadius: 1,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  marginTop: 0.5,
+                  marginBottom: 0.5,
                 },
               }}
               dangerouslySetInnerHTML={{ __html: c.body || "" }}
