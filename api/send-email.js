@@ -1,52 +1,135 @@
+// /api/send-email.js
+const { Resend } = require("resend");
 
-import sgMail from "@sendgrid/mail";
+// Make sure RESEND_API_KEY is set in Vercel → Project → Settings → Environment Variables
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+    res.setHeader("Allow", ["POST"]);
+    return res.status(405).json({ error: "Method Not Allowed" });
   }
-
-  const { type, reference, title, description, priority, category, submittedBy, customerName } = req.body;
-
-  const capitalizedType = type.charAt(0).toUpperCase() + type.slice(1);
-  const logoUrl = "https://hi5tech.co.uk/assets/logo.png";
-
-  const htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
-      <div style="background-color: #1976d2; padding: 20px; text-align: center;">
-        <img src="${logoUrl}" alt="Hi5Tech Logo" style="height: 40px; margin-bottom: 10px;" />
-        <h1 style="color: #ffffff; margin: 0;">New ${capitalizedType} Submitted</h1>
-      </div>
-      <div style="padding: 20px; background-color: #f9f9f9;">
-        <p><strong>Reference:</strong> ${reference}</p>
-        <p><strong>Title:</strong> ${title}</p>
-        <p><strong>Description:</strong> ${description}</p>
-        <p><strong>Category:</strong> ${category}</p>
-        <p><strong>Priority:</strong> ${priority}</p>
-        <p><strong>Customer:</strong> ${customerName || "N/A"}</p>
-        <p><strong>Submitted By:</strong> ${submittedBy}</p>
-      </div>
-      <div style="background-color: #eeeeee; padding: 20px; text-align: center;">
-        <p style="margin: 0; font-size: 14px;">This is an automated notification from <strong>Hi5Tech ITSM</strong>.</p>
-        <p style="margin: 8px 0 0;"><a href="https://hi5tech.co.uk" style="color: #1976d2;">Visit Website</a> | <a href="https://linkedin.com/company/hi5tech" style="color: #1976d2;">LinkedIn</a></p>
-      </div>
-    </div>
-  `;
-
-  const msg = {
-    to: "danielsuttonsamsung@gmail.com",
-    from: "social@hi5tech.co.uk",
-    subject: `New ${capitalizedType} Raised - ${reference}`,
-    html: htmlContent,
-  };
 
   try {
-    await sgMail.send(msg);
-    res.status(200).json({ message: "Email sent successfully" });
-  } catch (error) {
-    console.error("SendGrid error:", error.response?.body || error.message);
-    res.status(500).json({ error: "Email failed to send" });
+    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+
+    const {
+      to,
+      subject,
+      reference,
+      title,
+      description,
+      priority,
+      category,
+      status,
+      requester,
+      submittedBy,
+    } = body || {};
+
+    if (!to) {
+      return res.status(400).json({ error: "Missing 'to' email address" });
+    }
+
+    const safeSubject =
+      subject || `New Incident Raised${reference ? ` - ${reference}` : ""}`;
+
+    const html = `
+      <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #111827;">
+        <h2 style="margin-bottom: 4px;">New Incident Raised</h2>
+        ${
+          reference
+            ? `<p style="margin: 0 0 12px 0; color: #6b7280;">Reference: <strong>${reference}</strong></p>`
+            : ""
+        }
+
+        <p style="margin: 0 0 8px 0;">
+          Hi ${requester || "there"},
+        </p>
+
+        <p style="margin: 0 0 12px 0;">
+          A new incident has been logged on your behalf in the Hi5Tech ITSM portal.
+        </p>
+
+        <table style="border-collapse: collapse; margin-bottom: 16px;">
+          <tbody>
+            ${
+              title
+                ? `<tr>
+                    <td style="padding: 4px 8px; font-weight: 600;">Title</td>
+                    <td style="padding: 4px 8px;">${title}</td>
+                  </tr>`
+                : ""
+            }
+            ${
+              description
+                ? `<tr>
+                    <td style="padding: 4px 8px; font-weight: 600;">Description</td>
+                    <td style="padding: 4px 8px;">${description}</td>
+                  </tr>`
+                : ""
+            }
+            ${
+              category
+                ? `<tr>
+                    <td style="padding: 4px 8px; font-weight: 600;">Category</td>
+                    <td style="padding: 4px 8px;">${category}</td>
+                  </tr>`
+                : ""
+            }
+            ${
+              priority
+                ? `<tr>
+                    <td style="padding: 4px 8px; font-weight: 600;">Priority</td>
+                    <td style="padding: 4px 8px;">${priority}</td>
+                  </tr>`
+                : ""
+            }
+            ${
+              status
+                ? `<tr>
+                    <td style="padding: 4px 8px; font-weight: 600;">Status</td>
+                    <td style="padding: 4px 8px;">${status}</td>
+                  </tr>`
+                : ""
+            }
+            ${
+              submittedBy
+                ? `<tr>
+                    <td style="padding: 4px 8px; font-weight: 600;">Logged By</td>
+                    <td style="padding: 4px 8px;">${submittedBy}</td>
+                  </tr>`
+                : ""
+            }
+          </tbody>
+        </table>
+
+        <p style="margin: 0 0 8px 0;">
+          You can view and track this incident in your ITSM portal.
+        </p>
+
+        <p style="margin: 0; color: #6b7280; font-size: 12px;">
+          This is an automated notification from Hi5Tech ITSM.
+        </p>
+      </div>
+    `;
+
+    const { error } = await resend.emails.send({
+      from: "Hi5Tech ITSM <noreply@hi5tech.co.uk>", // 🔴 change to your verified sender
+      to,
+      subject: safeSubject,
+      html,
+    });
+
+    if (error) {
+      console.error("Resend error:", error);
+      return res.status(500).json({ error: error.message || "Resend failed" });
+    }
+
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    console.error("send-email handler error:", err);
+    return res
+      .status(500)
+      .json({ error: err.message || "Unexpected server error" });
   }
-}
+};
