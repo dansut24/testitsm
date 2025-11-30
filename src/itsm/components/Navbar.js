@@ -1,438 +1,345 @@
-// Navbar.js
-import React, { useState, useMemo } from "react";
+// src/itsm/layout/Navbar.js
+import React, { useState } from "react";
 import {
-  AppBar,
-  Toolbar,
+  Box,
   Typography,
   IconButton,
-  useMediaQuery,
-  useTheme,
-  Box,
-  Tooltip,
-  Select,
-  MenuItem,
+  InputBase,
   Avatar,
-  SwipeableDrawer,
-  Button,
+  Stack,
   Menu,
+  MenuItem,
 } from "@mui/material";
-import { useThemeMode } from "../../common/context/ThemeContext";
-import { useNavigate } from "react-router-dom";
+import { useTheme } from "@mui/material/styles";
 
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import SearchIcon from "@mui/icons-material/Search";
-import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
-import SettingsIcon from "@mui/icons-material/Settings";
-import HistoryIcon from "@mui/icons-material/History";
-import CloseIcon from "@mui/icons-material/Close";
-import AddIcon from "@mui/icons-material/Add";
-import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
-import NotificationDrawer from "./NotificationDrawer";
-import UserActivityLogDrawer from "./UserActivityLogDrawer";
-import ProfileDrawer from "./ProfileDrawer";
-
-const drawerLabels = {
-  profile: "Profile",
-  notifications: "Notifications",
-  activity: "Activity Log",
-  help: "Help",
-  settings: "Settings",
-};
-
-const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
+const Navbar = ({
+  appHeaderHeight,
+  isMobile,
+  sidebarMode,
+  username,
+  userInitial,
+  userStatus,
+  statusOptions,
+  getStatusColor,
+  getNavbarAvatarSx,
+  onStatusChange,
+  onOpenSidebar,
+  onOpenDrawer,
+}) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const navigate = useNavigate();
-  const { mode, setMode } = useThemeMode();
-
-  const [tabHistory, setTabHistory] = useState([]);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerType, setDrawerType] = useState("profile");
-
-  // Raise-new menu anchor
-  const [raiseAnchorEl, setRaiseAnchorEl] = useState(null);
-  const raiseMenuOpen = Boolean(raiseAnchorEl);
-
-  const storedUser = useMemo(() => {
-    const user = localStorage.getItem("user");
-    return user ? JSON.parse(user) : { username: "User", avatar_url: "" };
-  }, []);
-
-  const goBack = () => {
-    if (!tabHistory.length) return;
-    const nextHistory = [...tabHistory];
-    const previousTab = nextHistory.pop();
-    setTabHistory(nextHistory);
-    console.log("Go back to:", previousTab);
-    // later you can hook this to navigate(previousTab.path || previousTab)
-  };
-
-  const openDrawer = (type) => {
-    setDrawerType(type);
-    setDrawerOpen(true);
-  };
-
-  const closeDrawer = () => setDrawerOpen(false);
-
-  const handleLogout = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    navigate("/login");
-  };
-
-  const renderDrawerContent = () => {
-    switch (drawerType) {
-      case "profile":
-        return <ProfileDrawer onLogout={handleLogout} />;
-      case "notifications":
-        return <NotificationDrawer />;
-      case "activity":
-        return <UserActivityLogDrawer />;
-      case "help":
-        return (
-          <Box p={2}>
-            <Typography variant="h6" gutterBottom>
-              Help & Support
-            </Typography>
-            <Typography variant="body2">
-              Search the knowledge base, raise a ticket, or contact support.
-            </Typography>
-          </Box>
-        );
-      case "settings":
-        return (
-          <Box p={2}>
-            <Typography variant="h6" gutterBottom>
-              Settings
-            </Typography>
-            <Typography variant="body2">
-              Configure theme, layout, and personal preferences here.
-            </Typography>
-          </Box>
-        );
-      default:
-        return null;
-    }
-  };
-
-  const iconButtonSx = {
-    color: "white",
-    mx: 0.25,
-    "&:hover": {
-      bgcolor: "rgba(255,255,255,0.12)",
-    },
-  };
-
-  // --- RAISE NEW MENU LOGIC ---
-  const handleOpenRaiseMenu = (event) => {
-    setRaiseAnchorEl(event.currentTarget);
-  };
-
-  const handleCloseRaiseMenu = () => {
-    setRaiseAnchorEl(null);
-  };
-
-  const handleRaiseSelect = (type) => {
-    switch (type) {
-      case "incident":
-        navigate("/new-incident");
-        break;
-      case "service-request":
-        navigate("/new-service-request");
-        break;
-      case "change":
-        navigate("/new-change"); // adjust if your route differs
-        break;
-      default:
-        break;
-    }
-    handleCloseRaiseMenu();
-  };
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
 
   return (
-    <>
-      <AppBar
-        position="fixed"
-        elevation={2}
+    <Box
+      sx={{
+        height: appHeaderHeight,
+        minHeight: appHeaderHeight,
+        display: "flex",
+        alignItems: "center",
+        px: 1,
+        gap: 1,
+        borderBottom: "1px solid",
+        borderColor: "divider",
+        pt: isMobile ? 0.5 : 0,
+      }}
+    >
+      {/* Logo / brand / menu */}
+      {!isMobile && sidebarMode === "hidden" ? (
+        <IconButton onClick={onOpenSidebar} size="small">
+          <img
+            src="https://www.bing.com/sa/simg/favicon-2x.ico"
+            alt="Logo"
+            style={{ width: 20, height: 20 }}
+          />
+        </IconButton>
+      ) : (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexShrink: 0 }}>
+          <img
+            src="/logo192.png"
+            alt="Logo"
+            style={{ width: 22, height: 22, borderRadius: 4 }}
+          />
+          {!isMobile && (
+            <Typography
+              variant="subtitle2"
+              sx={{ fontWeight: 600, letterSpacing: 0.3, fontSize: 13 }}
+            >
+              Hi5Tech ITSM
+            </Typography>
+          )}
+        </Box>
+      )}
+
+      {/* Search + quick info */}
+      <Box
         sx={{
-          top: 0,
-          width: isMobile
-            ? "100%"
-            : `calc(100% - ${sidebarOpen ? sidebarWidth : collapsedWidth}px)`,
-          bgcolor: theme.palette.primary.main,
-          height: 48,
-          zIndex: (theme) => theme.zIndex.drawer + 2,
+          flex: 1,
+          minWidth: 0,
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          mx: 1,
         }}
       >
-        <Toolbar
-          variant="dense"
+        <Box
           sx={{
-            px: 1,
-            minHeight: 48,
+            flex: isMobile ? 1 : 0,
+            minWidth: 0,
+            maxWidth: isMobile ? "100%" : 320,
+            display: "flex",
+            alignItems: "center",
+            bgcolor:
+              theme.palette.mode === "dark"
+                ? "rgba(255,255,255,0.04)"
+                : "rgba(0,0,0,0.03)",
+            borderRadius: 999,
+            px: isMobile ? 1.4 : 1,
+            py: 0,
+            height: isMobile ? 32 : 26,
+          }}
+        >
+          <SearchIcon
+            sx={{
+              fontSize: isMobile ? 20 : 16,
+              mr: 1,
+              opacity: 0.7,
+            }}
+          />
+          <InputBase
+            placeholder="Search..."
+            sx={{
+              fontSize: isMobile ? 13 : 12,
+              width: "100%",
+            }}
+          />
+        </Box>
+
+        {!isMobile && (
+          <>
+            <Box
+              sx={{
+                px: 1,
+                py: 0.25,
+                borderRadius: 999,
+                border: "1px solid",
+                borderColor: "divider",
+                display: "flex",
+                alignItems: "center",
+                flexShrink: 0,
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{ fontSize: 10, color: "text.secondary" }}
+              >
+                Tenant:&nbsp;
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{ fontSize: 10, fontWeight: 500 }}
+              >
+                Hi5Tech
+              </Typography>
+            </Box>
+
+            <Box
+              sx={{
+                px: 1,
+                py: 0.25,
+                borderRadius: 999,
+                bgcolor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(46, 125, 50, 0.25)"
+                    : "rgba(76, 175, 80, 0.12)",
+                display: "flex",
+                alignItems: "center",
+                gap: 0.5,
+                flexShrink: 0,
+              }}
+            >
+              <Box
+                sx={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  bgcolor: "success.main",
+                }}
+              />
+              <Typography
+                variant="caption"
+                sx={{ fontSize: 10, color: "success.main" }}
+              >
+                All systems operational
+              </Typography>
+            </Box>
+          </>
+        )}
+      </Box>
+
+      {/* Right actions (desktop) */}
+      {!isMobile && (
+        <Box
+          sx={{
             display: "flex",
             alignItems: "center",
             gap: 1,
+            flexShrink: 0,
           }}
         >
-          {/* Left Section: logo + title */}
+          <IconButton
+            size="small"
+            onClick={() => onOpenDrawer("notifications")}
+          >
+            <NotificationsIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
-              gap: 1,
-              minWidth: 0,
+              gap: 0.5,
+              cursor: "pointer",
+            }}
+            onClick={() => onOpenDrawer("profile")}
+          >
+            <Box sx={{ position: "relative" }}>
+              <Avatar sx={getNavbarAvatarSx(userStatus, 24)}>
+                {userInitial}
+              </Avatar>
+              <Box
+                sx={{
+                  position: "absolute",
+                  bottom: -1,
+                  right: -1,
+                  width: 10,
+                  height: 10,
+                  borderRadius: "50%",
+                  border: "2px solid",
+                  borderColor: "background.paper",
+                  bgcolor: getStatusColor(userStatus),
+                }}
+              />
+            </Box>
+
+            <Box sx={{ display: "flex", flexDirection: "column" }}>
+              <Typography
+                variant="caption"
+                sx={{ lineHeight: 1.2, fontWeight: 500, fontSize: 11 }}
+              >
+                {username}
+              </Typography>
+              <Stack
+                direction="row"
+                spacing={0.5}
+                alignItems="center"
+                sx={{ lineHeight: 1.1 }}
+              >
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    bgcolor: getStatusColor(userStatus),
+                  }}
+                />
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: getStatusColor(userStatus),
+                    fontSize: 10,
+                  }}
+                >
+                  {userStatus}
+                </Typography>
+              </Stack>
+            </Box>
+          </Box>
+        </Box>
+      )}
+
+      {/* Mobile profile icon + status dropdown */}
+      {isMobile && (
+        <>
+          <IconButton
+            size="small"
+            onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
+          >
+            <Box sx={{ position: "relative", display: "flex" }}>
+              <AccountCircleIcon
+                sx={{
+                  fontSize: 22,
+                  opacity: userStatus === "Offline" ? 0.6 : 1,
+                }}
+              />
+              <Box
+                sx={{
+                  position: "absolute",
+                  bottom: 0,
+                  right: -1,
+                  width: 10,
+                  height: 10,
+                  borderRadius: "50%",
+                  border: "2px solid",
+                  borderColor: "background.paper",
+                  bgcolor: getStatusColor(userStatus),
+                  boxShadow:
+                    userStatus === "Busy"
+                      ? "0 0 0 2px rgba(244,67,54,0.4)"
+                      : "none",
+                }}
+              />
+            </Box>
+          </IconButton>
+
+          <Menu
+            anchorEl={statusMenuAnchor}
+            open={Boolean(statusMenuAnchor)}
+            onClose={() => setStatusMenuAnchor(null)}
+            anchorOrigin={{
+              vertical: "bottom",
+              horizontal: "right",
+            }}
+            transformOrigin={{
+              vertical: "top",
+              horizontal: "right",
             }}
           >
-            <img
-              src="/logo192.png"
-              alt="Logo"
-              style={{ height: 24, borderRadius: 4 }}
-            />
-            {!isMobile && (
-              <Typography
-                variant="subtitle1"
-                noWrap
-                sx={{
-                  fontSize: 15,
-                  color: "#fff",
-                  fontWeight: 600,
-                  letterSpacing: 0.3,
+            {statusOptions.map((opt) => (
+              <MenuItem
+                key={opt.key}
+                selected={userStatus === opt.key}
+                onClick={() => {
+                  onStatusChange(opt.key);
+                  setStatusMenuAnchor(null);
                 }}
               >
-                Hi5Tech ITSM
-              </Typography>
-            )}
-          </Box>
-
-          {/* Spacer */}
-          <Box flexGrow={1} />
-
-          {/* Search (icon) */}
-          <Tooltip title="Search">
-            <IconButton size="small" sx={iconButtonSx} aria-label="Search">
-              <SearchIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-
-          {/* Raise New (desktop: button, mobile: icon) */}
-          {!isMobile ? (
-            <>
-              <Button
-                size="small"
-                variant="contained"
-                color="secondary"
-                onClick={handleOpenRaiseMenu}
-                startIcon={<AddIcon fontSize="small" />}
-                endIcon={<ArrowDropDownIcon fontSize="small" />}
-                sx={{
-                  textTransform: "none",
-                  fontSize: 12,
-                  ml: 0.5,
-                  px: 1.5,
-                  py: 0.2,
-                  borderRadius: 999,
-                  boxShadow: "none",
-                  "&:hover": {
-                    boxShadow: "none",
-                  },
-                }}
-              >
-                Raise new
-              </Button>
-            </>
-          ) : (
-            <>
-              <Tooltip title="Raise new">
-                <IconButton
-                  size="small"
-                  sx={iconButtonSx}
-                  aria-label="Raise new"
-                  onClick={handleOpenRaiseMenu}
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
                 >
-                  <AddIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </>
-          )}
-
-          {/* Back button */}
-          <Tooltip title={tabHistory.length ? "Go Back" : "No previous tab"}>
-            <span>
-              <IconButton
-                size="small"
-                sx={{
-                  ...iconButtonSx,
-                  opacity: tabHistory.length ? 1 : 0.35,
-                  cursor: tabHistory.length ? "pointer" : "default",
-                }}
-                onClick={tabHistory.length ? goBack : undefined}
-                aria-label="Go back"
-              >
-                <ArrowBackIcon fontSize="small" />
-              </IconButton>
-            </span>
-          </Tooltip>
-
-          {/* Theme Selector */}
-          <Tooltip title="Theme">
-            <Box
-              sx={{
-                mx: 1,
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              <Select
-                value={mode}
-                onChange={(e) => setMode(e.target.value)}
-                size="small"
-                variant="standard"
-                disableUnderline
-                sx={{
-                  fontSize: "0.75rem",
-                  color: "white",
-                  minWidth: 80,
-                  "& .MuiSelect-select": {
-                    py: 0.25,
-                    px: 1,
-                    borderRadius: 999,
-                    border: "1px solid rgba(255,255,255,0.4)",
-                  },
-                  "& .MuiSelect-icon": { color: "white" },
-                }}
-              >
-                <MenuItem value="light">Light</MenuItem>
-                <MenuItem value="dark">Dark</MenuItem>
-                <MenuItem value="system">System</MenuItem>
-                <MenuItem value="ocean">Ocean</MenuItem>
-                <MenuItem value="sunset">Sunset</MenuItem>
-                <MenuItem value="forest">Forest</MenuItem>
-              </Select>
-            </Box>
-          </Tooltip>
-
-          {/* Right Icons / Avatar */}
-          {["activity", "help", "settings", "notifications", "profile"].map(
-            (type) => (
-              <Tooltip
-                key={type}
-                title={
-                  drawerLabels[type] || type[0].toUpperCase() + type.slice(1)
-                }
-              >
-                <IconButton
-                  size="small"
-                  sx={iconButtonSx}
-                  onClick={() => openDrawer(type)}
-                  aria-label={type}
-                >
-                  {{
-                    activity: <HistoryIcon fontSize="small" />,
-                    help: <HelpOutlineIcon fontSize="small" />,
-                    settings: <SettingsIcon fontSize="small" />,
-                    notifications: <NotificationsNoneIcon fontSize="small" />,
-                    profile: (
-                      <Avatar
-                        src={
-                          storedUser.avatar_url?.startsWith("http")
-                            ? storedUser.avatar_url
-                            : ""
-                        }
-                        sx={{ width: 28, height: 28, fontSize: 14 }}
-                      >
-                        {storedUser.username?.[0]?.toUpperCase() || "U"}
-                      </Avatar>
-                    ),
-                  }[type]}
-                </IconButton>
-              </Tooltip>
-            )
-          )}
-        </Toolbar>
-      </AppBar>
-
-      {/* Raise New Menu (shared for desktop + mobile) */}
-      <Menu
-        anchorEl={raiseAnchorEl}
-        open={raiseMenuOpen}
-        onClose={handleCloseRaiseMenu}
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "right",
-        }}
-        transformOrigin={{
-          vertical: "top",
-          horizontal: "right",
-        }}
-      >
-        <MenuItem onClick={() => handleRaiseSelect("incident")}>
-          Incident
-        </MenuItem>
-        <MenuItem onClick={() => handleRaiseSelect("service-request")}>
-          Service Request
-        </MenuItem>
-        <MenuItem onClick={() => handleRaiseSelect("change")}>
-          Change
-        </MenuItem>
-      </Menu>
-
-      {/* Drawer */}
-      <SwipeableDrawer
-        anchor={isMobile ? "bottom" : "right"}
-        open={drawerOpen}
-        onClose={closeDrawer}
-        onOpen={() => {}}
-        disableDiscovery={!isMobile}
-        disableSwipeToOpen={!isMobile}
-        PaperProps={{
-          sx: {
-            position: "fixed",
-            zIndex: (theme) => theme.zIndex.appBar + 10,
-            width: isMobile ? "100%" : 360,
-            height: isMobile ? "55%" : "100%",
-            bottom: isMobile ? 0 : "auto",
-            right: !isMobile ? 0 : "auto",
-            top: !isMobile ? 0 : "auto",
-            display: "flex",
-            flexDirection: "column",
-            borderTopLeftRadius: isMobile ? 16 : 0,
-            borderTopRightRadius: isMobile ? 16 : 0,
-          },
-        }}
-      >
-        {/* Drawer Header */}
-        <Box
-          sx={{
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            px: 1.5,
-            py: 1,
-            borderBottom: "1px solid",
-            borderColor: "divider",
-          }}
-        >
-          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-            {drawerLabels[drawerType] || "Panel"}
-          </Typography>
-          <IconButton
-            onClick={closeDrawer}
-            aria-label="Close drawer"
-            size="small"
-          >
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </Box>
-
-        {/* Drawer Content */}
-        <Box sx={{ overflowY: "auto", flexGrow: 1, p: 2 }}>
-          {renderDrawerContent()}
-        </Box>
-      </SwipeableDrawer>
-    </>
+                  <Box
+                    sx={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      bgcolor: opt.color,
+                    }}
+                  />
+                  <Typography variant="body2">{opt.key}</Typography>
+                </Box>
+              </MenuItem>
+            ))}
+          </Menu>
+        </>
+      )}
+    </Box>
   );
 };
 
