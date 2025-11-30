@@ -21,6 +21,9 @@ import Placeholder from "@tiptap/extension-placeholder";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 
 import { common, createLowlight } from "lowlight";
+import javascript from "highlight.js/lib/languages/javascript";
+import bash from "highlight.js/lib/languages/bash";
+import powershell from "highlight.js/lib/languages/powershell";
 
 import FormatBoldIcon from "@mui/icons-material/FormatBold";
 import FormatItalicIcon from "@mui/icons-material/FormatItalic";
@@ -33,13 +36,21 @@ import FormatQuoteIcon from "@mui/icons-material/FormatQuote";
 
 const lowlight = createLowlight(common);
 
+// Register extra languages explicitly
+lowlight.registerLanguage("javascript", javascript);
+lowlight.registerLanguage("js", javascript);
+lowlight.registerLanguage("bash", bash);
+lowlight.registerLanguage("sh", bash);
+lowlight.registerLanguage("powershell", powershell);
+lowlight.registerLanguage("ps", powershell);
+
 const CommentSection = ({ comments = [], onAddComment }) => {
   const [submitting, setSubmitting] = useState(false);
 
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        codeBlock: false, // we'll use CodeBlockLowlight instead
+        codeBlock: false, // we replace with CodeBlockLowlight
       }),
       Underline,
       Link.configure({
@@ -61,7 +72,6 @@ const CommentSection = ({ comments = [], onAddComment }) => {
   const isEmpty = () => {
     if (!editor) return true;
     const json = editor.getJSON();
-    // very simple empty check
     return (
       !json ||
       !json.content ||
@@ -80,7 +90,7 @@ const CommentSection = ({ comments = [], onAddComment }) => {
     try {
       const html = editor.getHTML();
 
-      // Get current user from localStorage if present
+      // Try to get current user from localStorage
       const storedUser = (() => {
         try {
           return JSON.parse(localStorage.getItem("user") || "null");
@@ -115,16 +125,13 @@ const CommentSection = ({ comments = [], onAddComment }) => {
     const previousUrl = editor.getAttributes("link").href;
     const url = window.prompt("Enter URL", previousUrl || "https://");
 
-    // cancel
     if (url === null) return;
 
-    // empty – remove link
     if (url === "") {
       editor.chain().focus().extendMarkRange("link").unsetLink().run();
       return;
     }
 
-    // set
     editor
       .chain()
       .focus()
@@ -148,13 +155,62 @@ const CommentSection = ({ comments = [], onAddComment }) => {
     },
   });
 
+  // Shared code-block styling for editor & rendered comments
+  const codeBlockStyles = {
+    "& pre": {
+      position: "relative",
+      backgroundColor: "rgba(0,0,0,0.04)",
+      borderRadius: 1.5,
+      padding: "24px 10px 8px 10px", // extra top padding for label
+      fontFamily:
+        "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+      fontSize: "0.8rem",
+      overflowX: "auto",
+      border: "1px solid",
+      borderColor: "divider",
+      margin: "8px 0",
+    },
+    "& pre code": {
+      fontFamily:
+        "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    },
+    "& pre code::before": {
+      content: '"Code"',
+      position: "absolute",
+      top: 4,
+      right: 8,
+      fontSize: "0.7rem",
+      textTransform: "uppercase",
+      letterSpacing: "0.05em",
+      padding: "2px 6px",
+      borderRadius: 999,
+      backgroundColor: "rgba(0,0,0,0.08)",
+      color: "rgba(0,0,0,0.7)",
+    },
+    // JS
+    "& pre code[class*='language-javascript']::before, & pre code[class*='language-js']::before":
+      {
+        content: '"JavaScript"',
+      },
+    // Bash / Shell
+    "& pre code[class*='language-bash']::before, & pre code[class*='language-sh']::before":
+      {
+        content: '"Bash"',
+      },
+    // PowerShell
+    "& pre code[class*='language-powershell']::before, & pre code[class*='language-ps']::before":
+      {
+        content: '"PowerShell"',
+      },
+  };
+
   return (
     <Box sx={{ mt: 3 }}>
       <Typography variant="h6" sx={{ mb: 1 }}>
         Comments
       </Typography>
 
-      {/* Editor container – big section */}
+      {/* Editor container */}
       <Paper
         elevation={2}
         sx={{
@@ -167,6 +223,43 @@ const CommentSection = ({ comments = [], onAddComment }) => {
       >
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           Add a new comment. Use the toolbar for formatting and code blocks.
+          For language labels use fenced code, e.g.{" "}
+          <Box
+            component="span"
+            sx={{
+              fontFamily: "monospace",
+              bgcolor: "action.hover",
+              px: 0.5,
+              borderRadius: 0.75,
+            }}
+          >
+            ```powershell
+          </Box>
+          ,{" "}
+          <Box
+            component="span"
+            sx={{
+              fontFamily: "monospace",
+              bgcolor: "action.hover",
+              px: 0.5,
+              borderRadius: 0.75,
+            }}
+          >
+            ```bash
+          </Box>{" "}
+          or{" "}
+          <Box
+            component="span"
+            sx={{
+              fontFamily: "monospace",
+              bgcolor: "action.hover",
+              px: 0.5,
+              borderRadius: 0.75,
+            }}
+          >
+            ```js
+          </Box>
+          .
         </Typography>
 
         {/* Toolbar */}
@@ -296,7 +389,7 @@ const CommentSection = ({ comments = [], onAddComment }) => {
           </Tooltip>
         </Box>
 
-        {/* Editor content box */}
+        {/* Editor content */}
         <Box
           sx={{
             borderRadius: 1.5,
@@ -314,19 +407,7 @@ const CommentSection = ({ comments = [], onAddComment }) => {
               pointerEvents: "none",
               height: 0,
             },
-            "& .tiptap pre": {
-              backgroundColor: "rgba(0,0,0,0.04)",
-              borderRadius: 1.5,
-              padding: "8px 10px",
-              fontFamily:
-                "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-              fontSize: "0.8rem",
-              overflowX: "auto",
-            },
-            "& .tiptap code": {
-              fontFamily:
-                "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-            },
+            ...codeBlockStyles,
           }}
         >
           <EditorContent editor={editor} />
@@ -392,21 +473,7 @@ const CommentSection = ({ comments = [], onAddComment }) => {
             {c.body ? (
               <Box
                 sx={{
-                  "& pre": {
-                    backgroundColor: "rgba(0,0,0,0.04)",
-                    borderRadius: 1.5,
-                    padding: "8px 10px",
-                    fontFamily:
-                      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-                    fontSize: "0.8rem",
-                    overflowX: "auto",
-                    border: "1px solid",
-                    borderColor: "divider",
-                  },
-                  "& code": {
-                    fontFamily:
-                      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-                  },
+                  ...codeBlockStyles,
                 }}
                 dangerouslySetInnerHTML={{ __html: c.body }}
               />
