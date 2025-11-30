@@ -23,6 +23,7 @@
     "@tiptap/extension-underline": "^2.6.6",
     "@tiptap/extension-link": "^2.6.6",
     "@tiptap/extension-placeholder": "^2.6.6",
+    "@tiptap/extension-image": "^2.6.6",
     "date-fns": "^2.30.0",
     "file-saver": "^2.0.5",
     "highlight.js": "^11.9.0",
