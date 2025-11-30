@@ -1,4 +1,3 @@
-// src/itsm/pages/NewIncident.js
 import React, { useState } from "react";
 import {
   Box,
@@ -43,26 +42,77 @@ const priorityOptions = ["Low", "Medium", "High", "Critical"];
 const NewIncident = () => {
   const navigate = useNavigate();
 
-  // simple 2-step visual, but everything is on one page now
-  const [step] = useState(2);
+  const [step, setStep] = useState(1);
 
+  // STEP 1 – USER (CUSTOMER) SEARCH
+  const [userQuery, setUserQuery] = useState("");
+  const [users, setUsers] = useState([]);
+  const [userLoading, setUserLoading] = useState(false);
+  const [userError, setUserError] = useState("");
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  // STEP 2 – INCIDENT FORM
   const [formData, setFormData] = useState({
-    customer_name: "",
     title: "",
     description: "",
     category: "",
     priority: "",
-    asset_tag: "",
+    // asset_tag: "",  // add if you want this on the form
   });
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const handleChange = (field) => (e) =>
-    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+  // --- SEARCH USERS TABLE (ACTING AS CUSTOMER/REQUESTER) ---
+  const handleUserSearch = async () => {
+    setUserError("");
+    setUserLoading(true);
+    setUsers([]);
+    setSelectedUser(null);
 
-  // --- EMAIL NOTIFICATION (optional, non-blocking) ---
-  const sendNotificationEmail = async (incident, agentUser) => {
+    const query = userQuery.trim();
+    if (!query) {
+      setUserError("Enter a username or email to search.");
+      setUserLoading(false);
+      return;
+    }
+
+    try {
+      // ⚠️ Make sure these columns exist in your "users" table
+      const { data, error: supaError } = await supabase
+        .from("users")
+        .select("id, username, email, full_name")
+        .or(`username.ilike.%${query}%,email.ilike.%${query}%`)
+        .limit(10);
+
+      if (supaError) throw supaError;
+
+      if (!data || data.length === 0) {
+        setUserError("No users found for that search.");
+      } else {
+        setUsers(data);
+        if (data.length === 1) {
+          setSelectedUser(data[0]);
+          setStep(2);
+        }
+      }
+    } catch (err) {
+      console.error("User search error:", err);
+      setUserError(
+        err?.message || "There was a problem searching for users."
+      );
+    } finally {
+      setUserLoading(false);
+    }
+  };
+
+  const handleUserSelect = (user) => {
+    setSelectedUser(user);
+    setStep(2);
+  };
+
+  // --- EMAIL NOTIFICATION (YOUR API) ---
+  const sendNotificationEmail = async (incident, requesterUser, agentUser, submittedBy) => {
     try {
       await fetch("/api/send-email", {
         method: "POST",
@@ -76,14 +126,17 @@ const NewIncident = () => {
           priority: incident.priority,
           category: incident.category,
           status: incident.status,
-          customer_name: incident.customer_name,
-          submittedBy:
-            agentUser?.username || agentUser?.email || incident.submitted_by,
+          requester:
+            requesterUser?.username ||
+            requesterUser?.full_name ||
+            requesterUser?.email ||
+            "Unknown",
+          submittedBy: submittedBy,
         }),
       });
     } catch (err) {
       console.error("Email notification error:", err);
-      // Do not block incident creation on email failure
+      // Don’t block incident creation on email failure
     }
   };
 
@@ -92,8 +145,8 @@ const NewIncident = () => {
     setSubmitting(true);
     setError("");
 
-    if (!formData.customer_name) {
-      setError("Please enter the customer name.");
+    if (!selectedUser) {
+      setError("Please select the user/customer this incident is for.");
       setSubmitting(false);
       return;
     }
@@ -110,7 +163,7 @@ const NewIncident = () => {
     }
 
     try {
-      // 1) Get next reference string from RPC
+      // 1) Get next reference number from RPC
       const { data: refData, error: refErr } = await supabase.rpc(
         "get_next_incident_reference"
       );
@@ -123,11 +176,11 @@ const NewIncident = () => {
 
       if (!reference) {
         throw new Error(
-          "Could not generate incident reference number (check RPC)."
+          "Could not generate incident reference (check get_next_incident_reference RPC)."
         );
       }
 
-      // 2) Look up SLA for chosen priority
+      // 2) Look up SLA duration for chosen priority
       let sla_due = null;
       try {
         const { data: sla, error: slaError } = await supabase
@@ -150,10 +203,23 @@ const NewIncident = () => {
 
       // 3) Get current portal user (agent) from localStorage
       const agentUser = JSON.parse(localStorage.getItem("user") || "null");
-      const submitted_by =
-        agentUser?.username || agentUser?.email || "unknown";
 
-      // 4) Insert into incidents table using your REAL column names
+      const submittedBy =
+        agentUser?.username ||
+        agentUser?.full_name ||
+        agentUser?.email ||
+        "unknown";
+
+      const customerName =
+        selectedUser.username ||
+        selectedUser.full_name ||
+        selectedUser.email ||
+        "Customer";
+
+      // 4) Insert into incidents table – NOTE column names:
+      //    - reference   ✅ (matches your JSON)
+      //    - submitted_by ✅
+      //    - customer_name ✅
       const { data, error: insertError } = await supabase
         .from("incidents")
         .insert([
@@ -161,13 +227,14 @@ const NewIncident = () => {
             reference,
             title: formData.title,
             description: formData.description,
-            priority: formData.priority,
             category: formData.category,
+            priority: formData.priority,
             status: "Open",
-            submitted_by,
-            customer_name: formData.customer_name,
-            asset_tag: formData.asset_tag || null,
+            submitted_by: submittedBy,
+            customer_name: customerName,
+            // asset_tag: formData.asset_tag || null,
             sla_due,
+            is_breached: false,
           },
         ])
         .select()
@@ -176,11 +243,11 @@ const NewIncident = () => {
       if (insertError) throw insertError;
 
       // 5) Fire email notification (non-blocking failure)
-      await sendNotificationEmail(data, agentUser);
+      await sendNotificationEmail(data, selectedUser, agentUser, submittedBy);
 
       // 6) Navigate to incident detail page
       navigate(`/incidents/${data.id}`, {
-        state: { tabName: data.reference },
+        state: { tabName: reference },
       });
     } catch (err) {
       console.error("Incident submit error:", err);
@@ -191,38 +258,121 @@ const NewIncident = () => {
   };
 
   return (
-    <Box sx={{ px: 2, py: 4, maxWidth: 680, mx: "auto", position: "relative" }}>
+    <Box sx={{ px: 2, py: 4, maxWidth: 600, mx: "auto", position: "relative" }}>
       <Typography variant="h5" gutterBottom>
         Raise New Incident
       </Typography>
 
-      {/* STEP 2: INCIDENT DETAILS (we keep the visual stepper for style) */}
-      <Fade in>
-        <Box sx={{ position: "relative", mt: 2 }}>
+      {/* STEP 1: SEARCH USER / CUSTOMER */}
+      <Box sx={{ position: "relative", mb: 5 }}>
+        <StepIndicator step={1} active={step >= 1} />
+        <Paper elevation={3} sx={{ pt: 4, pb: 2, px: 2 }}>
+          <Typography variant="subtitle1" gutterBottom>
+            Step 1: Search for User / Customer
+          </Typography>
+          <Box display="flex" gap={1}>
+            <TextField
+              fullWidth
+              label="Username or Email"
+              value={userQuery}
+              onChange={(e) => setUserQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleUserSearch();
+              }}
+            />
+            <Button
+              variant="contained"
+              onClick={handleUserSearch}
+              disabled={userLoading}
+            >
+              {userLoading ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : (
+                "Search"
+              )}
+            </Button>
+          </Box>
+
+          {userError && (
+            <Typography sx={{ mt: 1 }} color="error">
+              {userError}
+            </Typography>
+          )}
+
+          {users.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 1 }}
+              >
+                Select a user:
+              </Typography>
+              {users.map((user) => {
+                const name =
+                  user.username ||
+                  user.full_name ||
+                  user.email ||
+                  `User #${user.id}`;
+                return (
+                  <Paper
+                    key={user.id}
+                    variant="outlined"
+                    sx={{
+                      p: 1.5,
+                      mb: 1,
+                      cursor: "pointer",
+                      borderColor:
+                        selectedUser?.id === user.id
+                          ? "#4caf50"
+                          : "rgba(0,0,0,0.12)",
+                      "&:hover": {
+                        borderColor: "#4caf50",
+                      },
+                    }}
+                    onClick={() => handleUserSelect(user)}
+                  >
+                    <Typography variant="subtitle2">{name}</Typography>
+                    {user.email && (
+                      <Typography variant="body2" color="text.secondary">
+                        {user.email}
+                      </Typography>
+                    )}
+                  </Paper>
+                );
+              })}
+            </Box>
+          )}
+
+          {selectedUser && (
+            <Typography sx={{ mt: 1 }} color="text.secondary">
+              Selected:{" "}
+              {selectedUser.username ||
+                selectedUser.full_name ||
+                selectedUser.email}
+            </Typography>
+          )}
+        </Paper>
+      </Box>
+
+      {/* STEP 2: INCIDENT DETAILS */}
+      <Fade in={step >= 2}>
+        <Box sx={{ position: "relative" }}>
           <StepIndicator step={2} active={step === 2} />
           <Paper elevation={3} sx={{ pt: 4, pb: 2, px: 2 }}>
             <Typography variant="subtitle1" gutterBottom>
-              Incident Details
+              Step 2: Incident Details
             </Typography>
-
-            <TextField
-              required
-              fullWidth
-              label="Customer Name"
-              value={formData.customer_name}
-              onChange={handleChange("customer_name")}
-              sx={{ mb: 2 }}
-            />
-
             <TextField
               required
               fullWidth
               label="Incident Title"
               value={formData.title}
-              onChange={handleChange("title")}
+              onChange={(e) =>
+                setFormData({ ...formData, title: e.target.value })
+              }
               sx={{ mb: 2 }}
             />
-
             <TextField
               required
               fullWidth
@@ -230,25 +380,20 @@ const NewIncident = () => {
               rows={4}
               label="Description"
               value={formData.description}
-              onChange={handleChange("description")}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               sx={{ mb: 2 }}
             />
-
-            <TextField
-              fullWidth
-              label="Asset Tag (optional)"
-              value={formData.asset_tag}
-              onChange={handleChange("asset_tag")}
-              sx={{ mb: 2 }}
-            />
-
             <TextField
               required
               fullWidth
               select
               label="Category"
               value={formData.category}
-              onChange={handleChange("category")}
+              onChange={(e) =>
+                setFormData({ ...formData, category: e.target.value })
+              }
               sx={{ mb: 2 }}
             >
               {categoryOptions.map((cat) => (
@@ -257,14 +402,15 @@ const NewIncident = () => {
                 </MenuItem>
               ))}
             </TextField>
-
             <TextField
               required
               fullWidth
               select
               label="Priority"
               value={formData.priority}
-              onChange={handleChange("priority")}
+              onChange={(e) =>
+                setFormData({ ...formData, priority: e.target.value })
+              }
               sx={{ mb: 2 }}
             >
               {priorityOptions.map((level) => (
