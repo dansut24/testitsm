@@ -78,7 +78,7 @@ const NewIncident = () => {
     }
 
     try {
-      // ⚠️ Make sure these columns exist in your "users" table
+      // Make sure these columns exist in your "users" table
       const { data, error: supaError } = await supabase
         .from("users")
         .select("id, username, email, full_name")
@@ -111,27 +111,49 @@ const NewIncident = () => {
     setStep(2);
   };
 
-  // --- EMAIL NOTIFICATION (YOUR API) ---
-  const sendNotificationEmail = async (incident, requesterUser, agentUser, submittedBy) => {
+  // --- EMAIL NOTIFICATION (Resend via /api/send-email) ---
+  const sendNotificationEmail = async (incident, requesterUser, agentUser) => {
     try {
+      // If we don't have a requester email, skip sending
+      if (!requesterUser?.email) {
+        console.warn("No requester email, skipping notification");
+        return;
+      }
+
+      const reference =
+        incident.reference ||
+        incident.reference_number ||
+        incident.referenceNumber;
+
+      const subject =
+        reference && incident.title
+          ? `Incident ${reference} - ${incident.title}`
+          : reference
+          ? `New Incident Raised - ${reference}`
+          : "New Incident Raised";
+
       await fetch("/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: "incident",
-          subject: `New Incident Submitted - ${incident.reference}`,
-          reference: incident.reference,
+          to: requesterUser.email,
+          subject,
+          reference,
           title: incident.title,
           description: incident.description,
           priority: incident.priority,
           category: incident.category,
           status: incident.status,
           requester:
-            requesterUser?.username ||
-            requesterUser?.full_name ||
-            requesterUser?.email ||
-            "Unknown",
-          submittedBy: submittedBy,
+            requesterUser.username ||
+            requesterUser.full_name ||
+            requesterUser.email ||
+            "Customer",
+          submittedBy:
+            agentUser?.username ||
+            agentUser?.full_name ||
+            agentUser?.email ||
+            "Service Desk",
         }),
       });
     } catch (err) {
@@ -216,10 +238,7 @@ const NewIncident = () => {
         selectedUser.email ||
         "Customer";
 
-      // 4) Insert into incidents table – NOTE column names:
-      //    - reference   ✅ (matches your JSON)
-      //    - submitted_by ✅
-      //    - customer_name ✅
+      // 4) Insert into incidents table
       const { data, error: insertError } = await supabase
         .from("incidents")
         .insert([
@@ -243,7 +262,11 @@ const NewIncident = () => {
       if (insertError) throw insertError;
 
       // 5) Fire email notification (non-blocking failure)
-      await sendNotificationEmail(data, selectedUser, agentUser, submittedBy);
+      await sendNotificationEmail(
+        { ...data, reference: data.reference || reference },
+        selectedUser,
+        agentUser
+      );
 
       // 6) Navigate to incident detail page
       navigate(`/incidents/${data.id}`, {
