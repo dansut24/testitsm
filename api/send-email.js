@@ -1,21 +1,37 @@
 // /api/send-email.js
-const { Resend } = require("resend");
+import { Resend } from "resend";
+import { createClient } from "@supabase/supabase-js";
 
-// Make sure RESEND_API_KEY is set in Vercel → Project → Settings → Environment Variables
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-module.exports = async (req, res) => {
+// These should be set as *server-side* env vars in Vercel
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Server-side Supabase client
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+// Very simple mustache-style replacer: {{key}}
+function applyTemplate(str, context = {}) {
+  if (!str) return "";
+  return str.replace(/{{\s*([\w.]+)\s*}}/g, (match, key) => {
+    const value = context[key];
+    return value === undefined || value === null ? "" : String(value);
+  });
+}
+
+export default async function handler(req, res) {
   if (req.method !== "POST") {
-    res.setHeader("Allow", ["POST"]);
-    return res.status(405).json({ error: "Method Not Allowed" });
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-
     const {
-      to,
-      subject,
+      type,              // e.g. "incident"
+      templateKey,       // e.g. "incident_created" (optional)
+      recipientEmail,    // where to send
+      subject,           // fallback subject
+      // arbitrary payload for template context:
       reference,
       title,
       description,
@@ -24,112 +40,89 @@ module.exports = async (req, res) => {
       status,
       requester,
       submittedBy,
-    } = body || {};
+      ...rest           // extra fields if needed later
+    } = req.body || {};
 
-    if (!to) {
-      return res.status(400).json({ error: "Missing 'to' email address" });
+    if (!recipientEmail) {
+      return res.status(400).json({ error: "recipientEmail is required" });
     }
 
-    const safeSubject =
-      subject || `New Incident Raised${reference ? ` - ${reference}` : ""}`;
+    // 1) Determine which template to load
+    const key = templateKey || `${type || "generic"}_created`;
 
-    const html = `
-      <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #111827;">
-        <h2 style="margin-bottom: 4px;">New Incident Raised</h2>
-        ${
-          reference
-            ? `<p style="margin: 0 0 12px 0; color: #6b7280;">Reference: <strong>${reference}</strong></p>`
-            : ""
-        }
+    // 2) Try to load from email_templates
+    let template = null;
+    const { data, error: tplError } = await supabase
+      .from("email_templates")
+      .select("subject, body_html")
+      .eq("key", key)
+      .maybeSingle();
 
-        <p style="margin: 0 0 8px 0;">
-          Hi ${requester || "there"},
-        </p>
+    if (tplError) {
+      console.error("Error loading email template:", tplError);
+    } else if (data) {
+      template = data;
+    }
 
-        <p style="margin: 0 0 12px 0;">
-          A new incident has been logged on your behalf in the Hi5Tech ITSM portal.
-        </p>
+    // 3) Build context for placeholder replacement
+    const context = {
+      type,
+      reference,
+      title,
+      description,
+      priority,
+      category,
+      status,
+      requester,
+      submittedBy,
+      ...rest,
+    };
 
-        <table style="border-collapse: collapse; margin-bottom: 16px;">
-          <tbody>
-            ${
-              title
-                ? `<tr>
-                    <td style="padding: 4px 8px; font-weight: 600;">Title</td>
-                    <td style="padding: 4px 8px;">${title}</td>
-                  </tr>`
-                : ""
-            }
-            ${
-              description
-                ? `<tr>
-                    <td style="padding: 4px 8px; font-weight: 600;">Description</td>
-                    <td style="padding: 4px 8px;">${description}</td>
-                  </tr>`
-                : ""
-            }
-            ${
-              category
-                ? `<tr>
-                    <td style="padding: 4px 8px; font-weight: 600;">Category</td>
-                    <td style="padding: 4px 8px;">${category}</td>
-                  </tr>`
-                : ""
-            }
-            ${
-              priority
-                ? `<tr>
-                    <td style="padding: 4px 8px; font-weight: 600;">Priority</td>
-                    <td style="padding: 4px 8px;">${priority}</td>
-                  </tr>`
-                : ""
-            }
-            ${
-              status
-                ? `<tr>
-                    <td style="padding: 4px 8px; font-weight: 600;">Status</td>
-                    <td style="padding: 4px 8px;">${status}</td>
-                  </tr>`
-                : ""
-            }
-            ${
-              submittedBy
-                ? `<tr>
-                    <td style="padding: 4px 8px; font-weight: 600;">Logged By</td>
-                    <td style="padding: 4px 8px;">${submittedBy}</td>
-                  </tr>`
-                : ""
-            }
-          </tbody>
-        </table>
+    // 4) Subject + HTML with fallback if no template
+    const finalSubject = template
+      ? applyTemplate(template.subject, context)
+      : subject || `New ${type || "notification"} - ${reference || ""}`;
 
-        <p style="margin: 0 0 8px 0;">
-          You can view and track this incident in your ITSM portal.
-        </p>
-
-        <p style="margin: 0; color: #6b7280; font-size: 12px;">
-          This is an automated notification from Hi5Tech ITSM.
-        </p>
-      </div>
+    const fallbackHtml = `
+      <h2>${finalSubject}</h2>
+      <p><strong>Reference:</strong> ${reference || ""}</p>
+      <p><strong>Title:</strong> ${title || ""}</p>
+      <p><strong>Description:</strong><br/>${(description || "").replace(
+        /\n/g,
+        "<br/>"
+      )}</p>
+      <p><strong>Priority:</strong> ${priority || ""}</p>
+      <p><strong>Category:</strong> ${category || ""}</p>
+      <p><strong>Status:</strong> ${status || ""}</p>
+      <p><strong>Requester:</strong> ${requester || ""}</p>
+      <p><strong>Submitted by:</strong> ${submittedBy || ""}</p>
     `;
 
-    const { error } = await resend.emails.send({
-      from: "Hi5Tech ITSM <noreply@hi5tech.co.uk>", // 🔴 change to your verified sender
-      to,
-      subject: safeSubject,
-      html,
+    const finalHtml = template
+      ? applyTemplate(template.body_html, context)
+      : fallbackHtml;
+
+    // 5) Send via Resend
+    const { data: sendData, error: sendError } = await resend.emails.send({
+      from: "ITSM <no-reply@your-verified-domain.com>", // 🔁 change to your Resend domain
+      to: [recipientEmail],
+      subject: finalSubject,
+      html: finalHtml,
     });
 
-    if (error) {
-      console.error("Resend error:", error);
-      return res.status(500).json({ error: error.message || "Resend failed" });
+    if (sendError) {
+      console.error("Resend send error:", sendError);
+      return res
+        .status(500)
+        .json({ error: "Failed to send email", details: sendError });
     }
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({ success: true, id: sendData?.id || null });
   } catch (err) {
-    console.error("send-email handler error:", err);
-    return res
-      .status(500)
-      .json({ error: err.message || "Unexpected server error" });
+    console.error("Email handler error:", err);
+    return res.status(500).json({
+      error: "Unexpected server error",
+      details: err?.message || String(err),
+    });
   }
-};
+}
