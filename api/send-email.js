@@ -104,7 +104,7 @@ export default async function handler(req, res) {
 
     // 5) Send via Resend
     const { data: sendData, error: sendError } = await resend.emails.send({
-      from: "ITSM <no-reply@your-verified-domain.com>", // 🔁 change to your Resend domain
+      from: "ITSM <no-reply@hi5tech.co.uk>", // 🔁 change to your Resend domain
       to: [recipientEmail],
       subject: finalSubject,
       html: finalHtml,
