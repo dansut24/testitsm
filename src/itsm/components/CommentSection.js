@@ -18,24 +18,20 @@ import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
-import Image from "@tiptap/extension-image";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 
-import { createLowlight, common } from "lowlight";
-import powershell from "highlight.js/lib/languages/powershell";
-import bash from "highlight.js/lib/languages/bash";
-import javascript from "highlight.js/lib/languages/javascript";
+import { common, createLowlight } from "lowlight";
 
-import "highlight.js/styles/github.css";
+import FormatBoldIcon from "@mui/icons-material/FormatBold";
+import FormatItalicIcon from "@mui/icons-material/FormatItalic";
+import FormatUnderlinedIcon from "@mui/icons-material/FormatUnderlined";
+import CodeIcon from "@mui/icons-material/Code";
+import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
+import FormatListNumberedIcon from "@mui/icons-material/FormatListNumbered";
+import LinkIcon from "@mui/icons-material/Link";
+import FormatQuoteIcon from "@mui/icons-material/FormatQuote";
 
-// ✅ lowlight instance + extra languages
 const lowlight = createLowlight(common);
-lowlight.registerLanguage("powershell", powershell);
-lowlight.registerLanguage("ps", powershell);
-lowlight.registerLanguage("bash", bash);
-lowlight.registerLanguage("sh", bash);
-lowlight.registerLanguage("javascript", javascript);
-lowlight.registerLanguage("js", javascript);
 
 const CommentSection = ({ comments = [], onAddComment }) => {
   const [submitting, setSubmitting] = useState(false);
@@ -43,72 +39,48 @@ const CommentSection = ({ comments = [], onAddComment }) => {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        codeBlock: false, // we provide our own
+        codeBlock: false, // we'll use CodeBlockLowlight instead
       }),
       Underline,
       Link.configure({
         openOnClick: true,
+        autolink: true,
         linkOnPaste: true,
       }),
       Placeholder.configure({
         placeholder:
-          "Type your comment here… Paste tables, screenshots, or code. Use ```ps, ```bash, ```js for labelled code blocks.",
-      }),
-      Image.configure({
-        inline: false,
-        allowBase64: true, // ✅ allows pasted screenshots as data URLs
+          "Type your comment here... Paste tables or code, use the toolbar for formatting.",
       }),
       CodeBlockLowlight.configure({
         lowlight,
       }),
     ],
     content: "",
-    editorProps: {
-      handlePaste(view, event) {
-        const clipboardData = event.clipboardData;
-        if (!clipboardData) return false;
-
-        const items = clipboardData.items;
-        if (!items || items.length === 0) return false;
-
-        for (let i = 0; i < items.length; i++) {
-          const item = items[i];
-
-          if (item.type && item.type.indexOf("image") === 0) {
-            const file = item.getAsFile();
-            if (!file) continue;
-
-            const reader = new FileReader();
-            reader.onload = () => {
-              const { schema } = view.state;
-              const node = schema.nodes.image.create({
-                src: reader.result,
-              });
-
-              const transaction = view.state.tr.replaceSelectionWith(node);
-              view.dispatch(transaction);
-            };
-            reader.readAsDataURL(file);
-
-            event.preventDefault();
-            return true;
-          }
-        }
-
-        // let other paste events continue as normal
-        return false;
-      },
-    },
   });
 
-  const handleSubmit = async () => {
-    if (!editor || !onAddComment) return;
+  const isEmpty = () => {
+    if (!editor) return true;
+    const json = editor.getJSON();
+    // very simple empty check
+    return (
+      !json ||
+      !json.content ||
+      json.content.length === 0 ||
+      (json.content.length === 1 &&
+        json.content[0].type === "paragraph" &&
+        (!json.content[0].content ||
+          json.content[0].content.length === 0))
+    );
+  };
 
-    const html = editor.getHTML().trim();
-    if (!html || html === "<p></p>") return;
+  const handleSubmit = async () => {
+    if (!editor || isEmpty() || !onAddComment) return;
 
     setSubmitting(true);
     try {
+      const html = editor.getHTML();
+
+      // Get current user from localStorage if present
       const storedUser = (() => {
         try {
           return JSON.parse(localStorage.getItem("user") || "null");
@@ -123,13 +95,13 @@ const CommentSection = ({ comments = [], onAddComment }) => {
         storedUser?.email ||
         "User";
 
-      const newComment = {
+      await onAddComment({
         body: html,
         author: authorName,
         created_at: new Date().toISOString(),
-      };
+        format: "tiptap-html",
+      });
 
-      await onAddComment(newComment);
       editor.commands.clearContent();
     } catch (err) {
       console.error("Add comment error:", err);
@@ -138,221 +110,234 @@ const CommentSection = ({ comments = [], onAddComment }) => {
     }
   };
 
-  const run = (cmd) => {
+  const handleSetLink = () => {
     if (!editor) return;
-    cmd();
-    editor.chain().focus().run();
+    const previousUrl = editor.getAttributes("link").href;
+    const url = window.prompt("Enter URL", previousUrl || "https://");
+
+    // cancel
+    if (url === null) return;
+
+    // empty – remove link
+    if (url === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+
+    // set
+    editor
+      .chain()
+      .focus()
+      .extendMarkRange("link")
+      .setLink({ href: url })
+      .run();
   };
 
+  const toolbarButtonSx = (isActive) => ({
+    minWidth: 0,
+    width: 28,
+    height: 28,
+    mx: 0.25,
+    borderRadius: 1,
+    color: isActive ? "primary.main" : "text.secondary",
+    border: "1px solid",
+    borderColor: isActive ? "primary.main" : "divider",
+    bgcolor: isActive ? "primary.light" + "33" : "background.paper",
+    "&:hover": {
+      bgcolor: isActive ? "primary.light" + "55" : "action.hover",
+    },
+  });
+
   return (
-    <Box sx={{ mt: 2 }}>
+    <Box sx={{ mt: 3 }}>
       <Typography variant="h6" sx={{ mb: 1 }}>
         Comments
       </Typography>
 
-      {/* Editor container - full-width, big panel */}
+      {/* Editor container – big section */}
       <Paper
         elevation={2}
         sx={{
+          p: 2,
           mb: 3,
           borderRadius: 2,
           border: "1px solid",
           borderColor: "divider",
-          overflow: "hidden",
         }}
       >
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          Add a new comment. Use the toolbar for formatting and code blocks.
+        </Typography>
+
         {/* Toolbar */}
         <Box
           sx={{
-            px: 1,
-            py: 0.5,
-            borderBottom: "1px solid",
-            borderColor: "divider",
             display: "flex",
             alignItems: "center",
-            gap: 0.5,
             flexWrap: "wrap",
-            bgcolor: "background.default",
+            mb: 1,
+            gap: 0.5,
           }}
         >
           <Tooltip title="Bold">
             <span>
               <IconButton
                 size="small"
-                color={editor?.isActive("bold") ? "primary" : "default"}
-                onClick={() => run(() => editor.chain().toggleBold())}
+                sx={toolbarButtonSx(editor?.isActive("bold"))}
+                onClick={() => editor?.chain().focus().toggleBold().run()}
+                disabled={!editor}
               >
-                <strong>B</strong>
+                <FormatBoldIcon fontSize="small" />
               </IconButton>
             </span>
           </Tooltip>
+
           <Tooltip title="Italic">
             <span>
               <IconButton
                 size="small"
-                color={editor?.isActive("italic") ? "primary" : "default"}
-                onClick={() => run(() => editor.chain().toggleItalic())}
+                sx={toolbarButtonSx(editor?.isActive("italic"))}
+                onClick={() => editor?.chain().focus().toggleItalic().run()}
+                disabled={!editor}
               >
-                <em>I</em>
+                <FormatItalicIcon fontSize="small" />
               </IconButton>
             </span>
           </Tooltip>
+
           <Tooltip title="Underline">
             <span>
               <IconButton
                 size="small"
-                color={editor?.isActive("underline") ? "primary" : "default"}
-                onClick={() => run(() => editor.chain().toggleUnderline())}
+                sx={toolbarButtonSx(editor?.isActive("underline"))}
+                onClick={() => editor?.chain().focus().toggleUnderline().run()}
+                disabled={!editor}
               >
-                <span style={{ textDecoration: "underline" }}>U</span>
+                <FormatUnderlinedIcon fontSize="small" />
               </IconButton>
             </span>
           </Tooltip>
 
-          <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+          <Divider flexItem orientation="vertical" sx={{ mx: 0.5 }} />
 
-          <Tooltip title="Bullet list">
+          <Tooltip title="Bullet List">
             <span>
               <IconButton
                 size="small"
-                color={editor?.isActive("bulletList") ? "primary" : "default"}
-                onClick={() => run(() => editor.chain().toggleBulletList())}
-              >
-                ••
-              </IconButton>
-            </span>
-          </Tooltip>
-          <Tooltip title="Numbered list">
-            <span>
-              <IconButton
-                size="small"
-                color={editor?.isActive("orderedList") ? "primary" : "default"}
-                onClick={() => run(() => editor.chain().toggleOrderedList())}
-              >
-                1.
-              </IconButton>
-            </span>
-          </Tooltip>
-
-          <Tooltip title="Code block (labelled if fenced)">
-            <span>
-              <IconButton
-                size="small"
-                color={editor?.isActive("codeBlock") ? "primary" : "default"}
-                onClick={() => run(() => editor.chain().toggleCodeBlock())}
-              >
-                {"</>"}
-              </IconButton>
-            </span>
-          </Tooltip>
-
-          <Tooltip title="Blockquote">
-            <span>
-              <IconButton
-                size="small"
-                color={editor?.isActive("blockquote") ? "primary" : "default"}
-                onClick={() => run(() => editor.chain().toggleBlockquote())}
-              >
-                “”
-              </IconButton>
-            </span>
-          </Tooltip>
-
-          <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-
-          <Tooltip title="Clear formatting">
-            <span>
-              <IconButton
-                size="small"
+                sx={toolbarButtonSx(editor?.isActive("bulletList"))}
                 onClick={() =>
-                  run(() =>
-                    editor
-                      .chain()
-                      .clearNodes()
-                      .unsetAllMarks()
-                  )
+                  editor?.chain().focus().toggleBulletList().run()
                 }
+                disabled={!editor}
               >
-                ⌫
+                <FormatListBulletedIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+
+          <Tooltip title="Numbered List">
+            <span>
+              <IconButton
+                size="small"
+                sx={toolbarButtonSx(editor?.isActive("orderedList"))}
+                onClick={() =>
+                  editor?.chain().focus().toggleOrderedList().run()
+                }
+                disabled={!editor}
+              >
+                <FormatListNumberedIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+
+          <Tooltip title="Block Quote">
+            <span>
+              <IconButton
+                size="small"
+                sx={toolbarButtonSx(editor?.isActive("blockquote"))}
+                onClick={() =>
+                  editor?.chain().focus().toggleBlockquote().run()
+                }
+                disabled={!editor}
+              >
+                <FormatQuoteIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+
+          <Divider flexItem orientation="vertical" sx={{ mx: 0.5 }} />
+
+          <Tooltip title="Code Block">
+            <span>
+              <IconButton
+                size="small"
+                sx={toolbarButtonSx(editor?.isActive("codeBlock"))}
+                onClick={() =>
+                  editor?.chain().focus().toggleCodeBlock().run()
+                }
+                disabled={!editor}
+              >
+                <CodeIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+
+          <Tooltip title="Insert / Edit Link">
+            <span>
+              <IconButton
+                size="small"
+                sx={toolbarButtonSx(editor?.isActive("link"))}
+                onClick={handleSetLink}
+                disabled={!editor}
+              >
+                <LinkIcon fontSize="small" />
               </IconButton>
             </span>
           </Tooltip>
         </Box>
 
-        {/* Editor content area */}
+        {/* Editor content box */}
         <Box
           sx={{
+            borderRadius: 1.5,
+            border: "1px solid",
+            borderColor: "divider",
+            minHeight: 180,
+            maxHeight: 360,
+            overflowY: "auto",
             px: 1.5,
             py: 1,
-            minHeight: 200,
-            maxHeight: 380,
-            overflowY: "auto",
-            "& .tiptap": {
-              outline: "none",
-              "& p.is-editor-empty:first-of-type::before": {
-                content: "attr(data-placeholder)",
-                color: "text.disabled",
-                float: "left",
-                pointerEvents: "none",
-                height: 0,
-              },
+            "& .tiptap p.is-editor-empty:first-of-type::before": {
+              content: "attr(data-placeholder)",
+              float: "left",
+              color: "text.disabled",
+              pointerEvents: "none",
+              height: 0,
             },
-            // code block styling + language label
-            "& pre": {
-              position: "relative",
+            "& .tiptap pre": {
+              backgroundColor: "rgba(0,0,0,0.04)",
               borderRadius: 1.5,
-              border: "1px solid",
-              borderColor: "divider",
+              padding: "8px 10px",
+              fontFamily:
+                "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
               fontSize: "0.8rem",
-              padding: "16px 10px 10px 10px",
-              backgroundColor: "background.default",
               overflowX: "auto",
             },
-            "& pre[data-language]::before": {
-              content: "attr(data-language)",
-              position: "absolute",
-              top: 2,
-              right: 8,
-              fontSize: "0.65rem",
-              textTransform: "uppercase",
-              letterSpacing: "0.04em",
-              opacity: 0.7,
-            },
-            "& code": {
+            "& .tiptap code": {
               fontFamily:
                 "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
             },
-            // images pasted
-            "& img": {
-              maxWidth: "100%",
-              height: "auto",
-              borderRadius: 1,
-              border: "1px solid",
-              borderColor: "divider",
-              marginTop: 0.5,
-              marginBottom: 0.5,
-            },
           }}
         >
-          <EditorContent editor={editor} className="tiptap" />
+          <EditorContent editor={editor} />
         </Box>
 
-        {/* Footer / submit */}
-        <Box
-          sx={{
-            px: 1.5,
-            py: 1,
-            borderTop: "1px solid",
-            borderColor: "divider",
-            display: "flex",
-            justifyContent: "flex-end",
-          }}
-        >
+        <Box sx={{ textAlign: "right", mt: 1.5 }}>
           <Button
             variant="contained"
             size="small"
             onClick={handleSubmit}
-            disabled={submitting || !editor}
+            disabled={submitting || isEmpty()}
           >
             {submitting ? (
               <CircularProgress size={16} color="inherit" />
@@ -363,7 +348,7 @@ const CommentSection = ({ comments = [], onAddComment }) => {
         </Box>
       </Paper>
 
-      {/* Existing comments */}
+      {/* Existing comments list */}
       <Stack spacing={1.5}>
         {comments.length === 0 && (
           <Typography variant="body2" color="text.secondary">
@@ -404,44 +389,32 @@ const CommentSection = ({ comments = [], onAddComment }) => {
               </Box>
             </Box>
 
-            <Box
-              sx={{
-                "& pre": {
-                  position: "relative",
-                  borderRadius: 1.5,
-                  border: "1px solid",
-                  borderColor: "divider",
-                  fontSize: "0.8rem",
-                  padding: "16px 10px 10px 10px",
-                  backgroundColor: "background.default",
-                  overflowX: "auto",
-                },
-                "& pre[data-language]::before": {
-                  content: "attr(data-language)",
-                  position: "absolute",
-                  top: 2,
-                  right: 8,
-                  fontSize: "0.65rem",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.04em",
-                  opacity: 0.7,
-                },
-                "& code": {
-                  fontFamily:
-                    "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-                },
-                "& img": {
-                  maxWidth: "100%",
-                  height: "auto",
-                  borderRadius: 1,
-                  border: "1px solid",
-                  borderColor: "divider",
-                  marginTop: 0.5,
-                  marginBottom: 0.5,
-                },
-              }}
-              dangerouslySetInnerHTML={{ __html: c.body || "" }}
-            />
+            {c.body ? (
+              <Box
+                sx={{
+                  "& pre": {
+                    backgroundColor: "rgba(0,0,0,0.04)",
+                    borderRadius: 1.5,
+                    padding: "8px 10px",
+                    fontFamily:
+                      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+                    fontSize: "0.8rem",
+                    overflowX: "auto",
+                    border: "1px solid",
+                    borderColor: "divider",
+                  },
+                  "& code": {
+                    fontFamily:
+                      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+                  },
+                }}
+                dangerouslySetInnerHTML={{ __html: c.body }}
+              />
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                (No content)
+              </Typography>
+            )}
           </Paper>
         ))}
       </Stack>
