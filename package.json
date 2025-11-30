@@ -29,7 +29,8 @@
     "@supabase/supabase-js": "^2.39.5",
     "@sendgrid/mail": "^7.7.0",
     "react-draggable": "^4.4.6",
-    "@sinm/react-chrome-tabs": "2.5.1"
+    "@sinm/react-chrome-tabs": "2.5.1",
+    "resend": "^4.0.0"   
   },
   "scripts": {
     "start": "react-scripts start",
