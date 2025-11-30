@@ -13,10 +13,9 @@ import {
   MenuItem,
   Avatar,
   SwipeableDrawer,
+  Button,
+  Menu,
 } from "@mui/material";
-import { useThemeMode } from "../../common/context/ThemeContext";
-import { useNavigate } from "react-router-dom";
-
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
@@ -24,6 +23,10 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import SettingsIcon from "@mui/icons-material/Settings";
 import HistoryIcon from "@mui/icons-material/History";
 import CloseIcon from "@mui/icons-material/Close";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+
+import { useThemeMode } from "../../common/context/ThemeContext";
+import { useNavigate } from "react-router-dom";
 
 import NotificationDrawer from "./NotificationDrawer";
 import UserActivityLogDrawer from "./UserActivityLogDrawer";
@@ -47,6 +50,10 @@ const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerType, setDrawerType] = useState("profile");
 
+  // Raise New menu state
+  const [raiseAnchorEl, setRaiseAnchorEl] = useState(null);
+  const openRaiseMenu = Boolean(raiseAnchorEl);
+
   const storedUser = useMemo(() => {
     const user = localStorage.getItem("user");
     return user ? JSON.parse(user) : { username: "User", avatar_url: "" };
@@ -57,8 +64,7 @@ const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
     const nextHistory = [...tabHistory];
     const previousTab = nextHistory.pop();
     setTabHistory(nextHistory);
-    console.log("Go back to:", previousTab);
-    // later you can hook this to navigate(previousTab.path || previousTab)
+    if (previousTab?.path) navigate(previousTab.path);
   };
 
   const openDrawer = (type) => {
@@ -72,6 +78,28 @@ const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
     localStorage.clear();
     sessionStorage.clear();
     navigate("/login");
+  };
+
+  const handleRaiseClick = (event) => setRaiseAnchorEl(event.currentTarget);
+  const handleRaiseClose = () => setRaiseAnchorEl(null);
+
+  const handleRaiseSelect = (type) => {
+    console.log("Raised new:", type);
+    // Navigate to the correct page for each type
+    switch (type) {
+      case "Incident":
+        navigate("/raise/incident");
+        break;
+      case "SR":
+        navigate("/raise/sr");
+        break;
+      case "Change":
+        navigate("/raise/change");
+        break;
+      default:
+        break;
+    }
+    handleRaiseClose();
   };
 
   const renderDrawerContent = () => {
@@ -112,9 +140,7 @@ const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
   const iconButtonSx = {
     color: "white",
     mx: 0.25,
-    "&:hover": {
-      bgcolor: "rgba(255,255,255,0.12)",
-    },
+    "&:hover": { bgcolor: "rgba(255,255,255,0.12)" },
   };
 
   return (
@@ -142,30 +168,14 @@ const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
             gap: 1,
           }}
         >
-          {/* Left Section: logo + title */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              minWidth: 0,
-            }}
-          >
-            <img
-              src="/logo192.png"
-              alt="Logo"
-              style={{ height: 24, borderRadius: 4 }}
-            />
+          {/* Logo + Title */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
+            <img src="/logo192.png" alt="Logo" style={{ height: 24, borderRadius: 4 }} />
             {!isMobile && (
               <Typography
                 variant="subtitle1"
                 noWrap
-                sx={{
-                  fontSize: 15,
-                  color: "#fff",
-                  fontWeight: 600,
-                  letterSpacing: 0.3,
-                }}
+                sx={{ fontSize: 15, color: "#fff", fontWeight: 600, letterSpacing: 0.3 }}
               >
                 Hi5Tech ITSM
               </Typography>
@@ -177,12 +187,47 @@ const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
 
           {/* Search */}
           <Tooltip title="Search">
-            <IconButton size="small" sx={iconButtonSx} aria-label="Search">
+            <IconButton
+              size="small"
+              sx={{ ...iconButtonSx, ...(isMobile && { mx: 0 }) }}
+              aria-label="Search"
+            >
               <SearchIcon fontSize="small" />
             </IconButton>
           </Tooltip>
 
-          {/* Back button */}
+          {/* Raise New Dropdown */}
+          <Box sx={{ ml: 1 }}>
+            <Button
+              size="small"
+              variant="contained"
+              color="secondary"
+              onClick={handleRaiseClick}
+              endIcon={<ArrowDropDownIcon />}
+              sx={{
+                minWidth: 120,
+                fontSize: "0.75rem",
+                px: 1,
+                py: 0.5,
+                ...(isMobile && { minWidth: 100, fontSize: "0.7rem" }),
+              }}
+            >
+              Raise New...
+            </Button>
+            <Menu
+              anchorEl={raiseAnchorEl}
+              open={openRaiseMenu}
+              onClose={handleRaiseClose}
+              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+              transformOrigin={{ vertical: "top", horizontal: "right" }}
+            >
+              <MenuItem onClick={() => handleRaiseSelect("Incident")}>Incident</MenuItem>
+              <MenuItem onClick={() => handleRaiseSelect("SR")}>SR</MenuItem>
+              <MenuItem onClick={() => handleRaiseSelect("Change")}>Change</MenuItem>
+            </Menu>
+          </Box>
+
+          {/* Back Button */}
           <Tooltip title={tabHistory.length ? "Go Back" : "No previous tab"}>
             <span>
               <IconButton
@@ -202,13 +247,7 @@ const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
 
           {/* Theme Selector */}
           <Tooltip title="Theme">
-            <Box
-              sx={{
-                mx: 1,
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
+            <Box sx={{ mx: 1, display: "flex", alignItems: "center" }}>
               <Select
                 value={mode}
                 onChange={(e) => setMode(e.target.value)}
@@ -316,11 +355,7 @@ const Navbar = ({ sidebarWidth, collapsedWidth, sidebarOpen }) => {
           <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
             {drawerLabels[drawerType] || "Panel"}
           </Typography>
-          <IconButton
-            onClick={closeDrawer}
-            aria-label="Close drawer"
-            size="small"
-          >
+          <IconButton onClick={closeDrawer} aria-label="Close drawer" size="small">
             <CloseIcon fontSize="small" />
           </IconButton>
         </Box>
