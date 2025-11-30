@@ -8,9 +8,10 @@ import {
   Typography,
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
+
+import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 import NavbarTabs from "./NavbarTabs";
-import Sidebar from "./Sidebar";
 
 import NotificationDrawer from "./NotificationDrawer";
 import ProfileDrawer from "./ProfileDrawer";
@@ -46,7 +47,6 @@ const routeLabels = {
   "/knowledge-base": "Knowledge Base",
   "/settings": "Settings",
   "/assets": "Assets",
-  "/new-incident": "New Incident",
 };
 
 const STATUS_OPTIONS = [
@@ -76,6 +76,7 @@ const Layout = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null);
 
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
   const [navbarElevated, setNavbarElevated] = useState(false);
 
   const username = "User";
@@ -89,7 +90,7 @@ const Layout = () => {
     localStorage.setItem("userStatus", userStatus);
   }, [userStatus]);
 
-  // vh fix (mainly mobile)
+  // vh fix (mobile)
   useEffect(() => {
     const setVh = () => {
       const vh = window.innerHeight * 0.01;
@@ -103,11 +104,6 @@ const Layout = () => {
       window.removeEventListener("orientationchange", setVh);
     };
   }, []);
-
-  const getStatusColor = (statusKey) => {
-    const opt = STATUS_OPTIONS.find((o) => o.key === statusKey);
-    return opt ? opt.color : "text.disabled";
-  };
 
   const handleStatusChange = (statusKey) => {
     setUserStatus(statusKey);
@@ -158,8 +154,12 @@ const Layout = () => {
   const handleTabReorder = (tabsReordered) => setTabs(tabsReordered);
 
   const handleNewTab = () => {
-    // + button → open New Incident
-    navigate("/new-incident");
+    const path = "/dashboard";
+    const label = routeLabels[path] || "Dashboard";
+    const newTabs = [...tabs, { label, path }];
+    setTabs(newTabs);
+    setTabIndex(newTabs.length - 1);
+    navigate(path);
   };
 
   const activateOrAddTab = (label) => {
@@ -211,7 +211,7 @@ const Layout = () => {
         height: "calc(var(--vh, 1vh) * 100)",
         display: "flex",
         bgcolor: theme.palette.background.default,
-        overflow: "hidden", // no global scroll; only main content scrolls
+        overflow: "hidden",
       }}
     >
       {/* Sidebar (desktop) */}
@@ -241,18 +241,18 @@ const Layout = () => {
         </Box>
       )}
 
-      {/* Right-hand column: navbar + scrollable main + bottom nav (mobile) */}
+      {/* Right column: navbar + tabs + content + bottom nav (mobile) */}
       <Box
         sx={{
           flex: 1,
           minWidth: 0,
-          maxWidth: "100%", // never exceed viewport
+          maxWidth: "100%",
           display: "grid",
           gridTemplateRows: isMobile
             ? `${NAVBAR_HEIGHT}px 1fr ${BASE_BOTTOM_NAV_HEIGHT}px`
             : `${NAVBAR_HEIGHT}px 1fr`,
           height: "100%",
-          overflow: "hidden", // clamp children horizontally
+          overflow: "hidden",
         }}
       >
         {/* NAVBAR (header + tabs) */}
@@ -278,27 +278,25 @@ const Layout = () => {
             backdropFilter: "saturate(120%) blur(2px)",
           }}
         >
-          {/* Header row (extracted to Navbar component) */}
           <Navbar
             isMobile={isMobile}
             sidebarMode={sidebarMode}
             username={username}
             userInitial={userInitial}
             userStatus={userStatus}
+            statusMenuAnchor={statusMenuAnchor}
+            setStatusMenuAnchor={setStatusMenuAnchor}
+            setDrawerType={setDrawerType}
+            setMobileSidebarOpen={setMobileSidebarOpen}
             onStatusChange={handleStatusChange}
-            getStatusColor={getStatusColor}
-            onOpenDrawer={setDrawerType}
-            onOpenSidebarMobile={() => setMobileSidebarOpen(true)}
-            appHeaderHeight={APP_HEADER_HEIGHT}
           />
 
-          {/* Tabs row */}
           <Box
             sx={{
               height: TABBAR_HEIGHT,
               minHeight: TABBAR_HEIGHT,
               minWidth: 0,
-              overflowX: "hidden",
+              overflow: "hidden",
             }}
           >
             <NavbarTabs
@@ -307,8 +305,8 @@ const Layout = () => {
               handleTabChange={handleTabChange}
               handleTabClose={handleTabClose}
               handleTabReorder={handleTabReorder}
+              handleNewTab={handleNewTab}
               isMobile={isMobile}
-              onNewTab={handleNewTab}
             />
           </Box>
         </Box>
@@ -321,7 +319,7 @@ const Layout = () => {
             minHeight: 0,
             height: "100%",
             width: "100%",
-            overflowY: "auto", // only main content scrolls
+            overflowY: "auto",
             overflowX: "hidden",
             WebkitOverflowScrolling: "touch",
             overscrollBehavior: "contain",
@@ -335,7 +333,7 @@ const Layout = () => {
           <Outlet />
         </Box>
 
-        {/* Bottom nav row (mobile) */}
+        {/* Bottom nav (mobile) */}
         {isMobile && (
           <Box
             sx={{
