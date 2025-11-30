@@ -8,7 +8,6 @@ import {
   Typography,
 } from "@mui/material";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
-
 import Navbar from "./Navbar";
 import NavbarTabs from "./NavbarTabs";
 import Sidebar from "./Sidebar";
@@ -47,6 +46,7 @@ const routeLabels = {
   "/knowledge-base": "Knowledge Base",
   "/settings": "Settings",
   "/assets": "Assets",
+  "/new-incident": "New Incident",
 };
 
 const STATUS_OPTIONS = [
@@ -75,6 +75,7 @@ const Layout = () => {
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null);
+
   const [navbarElevated, setNavbarElevated] = useState(false);
 
   const username = "User";
@@ -106,62 +107,6 @@ const Layout = () => {
   const getStatusColor = (statusKey) => {
     const opt = STATUS_OPTIONS.find((o) => o.key === statusKey);
     return opt ? opt.color : "text.disabled";
-  };
-
-  const getNavbarAvatarSx = (statusKey, size = 24) => {
-    const base = {
-      width: size,
-      height: size,
-      fontSize: size * 0.5,
-      transition: "all 0.2s ease",
-      bgcolor:
-        theme.palette.mode === "dark"
-          ? theme.palette.grey[800]
-          : theme.palette.grey[200],
-      color: theme.palette.text.primary,
-    };
-
-    switch (statusKey) {
-      case "Available":
-        return {
-          ...base,
-          border: "2px solid",
-          borderColor: "success.main",
-          boxShadow:
-            theme.palette.mode === "dark"
-              ? "0 0 0 2px rgba(76,175,80,0.25)"
-              : "0 0 0 2px rgba(76,175,80,0.35)",
-        };
-      case "Busy":
-        return {
-          ...base,
-          border: "2px solid",
-          borderColor: "error.main",
-          boxShadow:
-            theme.palette.mode === "dark"
-              ? "0 0 0 2px rgba(244,67,54,0.35)"
-              : "0 0 0 2px rgba(244,67,54,0.45)",
-        };
-      case "Away":
-        return {
-          ...base,
-          border: "2px solid",
-          borderColor: "warning.main",
-          boxShadow:
-            theme.palette.mode === "dark"
-              ? "0 0 0 2px rgba(255,179,0,0.25)"
-              : "0 0 0 2px rgba(255,179,0,0.35)",
-        };
-      case "Offline":
-      default:
-        return {
-          ...base,
-          border: "1px dashed",
-          borderColor: "text.disabled",
-          filter: "grayscale(100%)",
-          opacity: 0.6,
-        };
-    }
   };
 
   const handleStatusChange = (statusKey) => {
@@ -201,7 +146,7 @@ const Layout = () => {
 
   const handleTabClose = (tabId) => {
     const closingIndex = tabs.findIndex((t) => t.path === tabId);
-    if (closingIndex === 0) return; // keep Dashboard
+    if (closingIndex === 0) return; // keep Dashboard pinned
     const newTabs = tabs.filter((t) => t.path !== tabId);
     setTabs(newTabs);
     if (location.pathname === tabId) {
@@ -211,6 +156,11 @@ const Layout = () => {
   };
 
   const handleTabReorder = (tabsReordered) => setTabs(tabsReordered);
+
+  const handleNewTab = () => {
+    // + button → open New Incident
+    navigate("/new-incident");
+  };
 
   const activateOrAddTab = (label) => {
     const path = `/${label.toLowerCase().replace(/\s+/g, "-")}`;
@@ -296,13 +246,13 @@ const Layout = () => {
         sx={{
           flex: 1,
           minWidth: 0,
-          maxWidth: "100%",
+          maxWidth: "100%", // never exceed viewport
           display: "grid",
           gridTemplateRows: isMobile
-            ? `${NAVBAR_HEIGHT}px 1fr ${BOTTOM_NAV_HEIGHT}px`
+            ? `${NAVBAR_HEIGHT}px 1fr ${BASE_BOTTOM_NAV_HEIGHT}px`
             : `${NAVBAR_HEIGHT}px 1fr`,
           height: "100%",
-          overflow: "hidden",
+          overflow: "hidden", // clamp children horizontally
         }}
       >
         {/* NAVBAR (header + tabs) */}
@@ -328,24 +278,29 @@ const Layout = () => {
             backdropFilter: "saturate(120%) blur(2px)",
           }}
         >
-          {/* Header row via Navbar component */}
+          {/* Header row (extracted to Navbar component) */}
           <Navbar
-            appHeaderHeight={APP_HEADER_HEIGHT}
             isMobile={isMobile}
             sidebarMode={sidebarMode}
             username={username}
             userInitial={userInitial}
             userStatus={userStatus}
-            statusOptions={STATUS_OPTIONS}
-            getStatusColor={getStatusColor}
-            getNavbarAvatarSx={getNavbarAvatarSx}
             onStatusChange={handleStatusChange}
-            onOpenSidebar={() => setMobileSidebarOpen(true)}
-            onOpenDrawer={(type) => setDrawerType(type)}
+            getStatusColor={getStatusColor}
+            onOpenDrawer={setDrawerType}
+            onOpenSidebarMobile={() => setMobileSidebarOpen(true)}
+            appHeaderHeight={APP_HEADER_HEIGHT}
           />
 
-          {/* Tabs row via NavbarTabs component */}
-          <Box sx={{ height: TABBAR_HEIGHT, minHeight: TABBAR_HEIGHT, minWidth: 0, overflowX: "hidden" }}>
+          {/* Tabs row */}
+          <Box
+            sx={{
+              height: TABBAR_HEIGHT,
+              minHeight: TABBAR_HEIGHT,
+              minWidth: 0,
+              overflowX: "hidden",
+            }}
+          >
             <NavbarTabs
               tabs={tabs}
               tabIndex={tabIndex}
@@ -353,6 +308,7 @@ const Layout = () => {
               handleTabClose={handleTabClose}
               handleTabReorder={handleTabReorder}
               isMobile={isMobile}
+              onNewTab={handleNewTab}
             />
           </Box>
         </Box>
@@ -365,14 +321,14 @@ const Layout = () => {
             minHeight: 0,
             height: "100%",
             width: "100%",
-            overflowY: "auto",
+            overflowY: "auto", // only main content scrolls
             overflowX: "hidden",
             WebkitOverflowScrolling: "touch",
             overscrollBehavior: "contain",
             touchAction: "pan-y",
             px: 2,
             pt: 1,
-            pb: isMobile ? BOTTOM_NAV_HEIGHT + 8 : 2,
+            pb: isMobile ? 1 : 2,
             boxSizing: "border-box",
           }}
         >
