@@ -15,7 +15,6 @@ import {
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import MenuIcon from "@mui/icons-material/Menu";
 
 const STATUS_OPTIONS = [
   { key: "Available", color: "success.main" },
@@ -30,14 +29,74 @@ const Navbar = ({
   username,
   userInitial,
   userStatus,
-  getStatusColor,
-  getNavbarAvatarSx,
   statusMenuAnchor,
   setStatusMenuAnchor,
   setDrawerType,
   setMobileSidebarOpen,
+  onStatusChange,
 }) => {
   const theme = useTheme();
+
+  const getStatusColor = (statusKey) => {
+    const opt = STATUS_OPTIONS.find((o) => o.key === statusKey);
+    return opt ? opt.color : "text.disabled";
+  };
+
+  const getNavbarAvatarSx = (statusKey, size = 24) => {
+    const base = {
+      width: size,
+      height: size,
+      fontSize: size * 0.5,
+      transition: "all 0.2s ease",
+      bgcolor:
+        theme.palette.mode === "dark"
+          ? theme.palette.grey[800]
+          : theme.palette.grey[200],
+      color: theme.palette.text.primary,
+    };
+
+    switch (statusKey) {
+      case "Available":
+        return {
+          ...base,
+          border: "2px solid",
+          borderColor: "success.main",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 0 0 2px rgba(76,175,80,0.25)"
+              : "0 0 0 2px rgba(76,175,80,0.35)",
+        };
+      case "Busy":
+        return {
+          ...base,
+          border: "2px solid",
+          borderColor: "error.main",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 0 0 2px rgba(244,67,54,0.35)"
+              : "0 0 0 2px rgba(244,67,54,0.45)",
+        };
+      case "Away":
+        return {
+          ...base,
+          border: "2px solid",
+          borderColor: "warning.main",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 0 0 2px rgba(255,179,0,0.25)"
+              : "0 0 0 2px rgba(255,179,0,0.35)",
+        };
+      case "Offline":
+      default:
+        return {
+          ...base,
+          border: "1px dashed",
+          borderColor: "text.disabled",
+          filter: "grayscale(100%)",
+          opacity: 0.6,
+        };
+    }
+  };
 
   return (
     <Box
@@ -320,12 +379,8 @@ const Navbar = ({
                 key={opt.key}
                 selected={userStatus === opt.key}
                 onClick={() => {
-                  // use provided handler from Layout
-                  // (Layout updates userStatus + persists to localStorage)
-                  // then close menu
-                  const setter = (status) => {};
-                  // but we already have handler via props -> just call it:
-                  // This line is actually in Layout; here we call passed handler:
+                  onStatusChange?.(opt.key);
+                  setStatusMenuAnchor(null);
                 }}
               >
                 <Box
