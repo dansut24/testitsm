@@ -37,7 +37,6 @@ import ArticleIcon from "@mui/icons-material/Article";
 const EXPANDED_WIDTH = 260;
 const COLLAPSED_WIDTH = 60;
 
-const BASE_ACTION_BAR_HEIGHT = 36; // new action bar above navbar
 const BASE_APP_HEADER_HEIGHT = 38;
 const BASE_TABBAR_HEIGHT = 30;
 const BASE_BOTTOM_NAV_HEIGHT = 56;
@@ -67,7 +66,6 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const ACTION_BAR_HEIGHT = isMobile ? 56 : BASE_ACTION_BAR_HEIGHT;
   const APP_HEADER_HEIGHT = isMobile ? 52 : BASE_APP_HEADER_HEIGHT;
   const TABBAR_HEIGHT = isMobile ? 42 : BASE_TABBAR_HEIGHT;
   const NAVBAR_HEIGHT = APP_HEADER_HEIGHT + TABBAR_HEIGHT;
@@ -299,52 +297,20 @@ const Layout = () => {
         </Box>
       )}
 
-      {/* Right-hand column: action bar + navbar + scrollable main + bottom nav (mobile) */}
+      {/* Right-hand column: navbar + scrollable main + bottom nav (mobile) */}
       <Box
         sx={{
           flex: 1,
           minWidth: 0,
+          maxWidth: "100%", // never exceed viewport
           display: "grid",
           gridTemplateRows: isMobile
-            ? `${ACTION_BAR_HEIGHT}px ${NAVBAR_HEIGHT}px 1fr ${BOTTOM_NAV_HEIGHT}px`
-            : `${ACTION_BAR_HEIGHT}px ${NAVBAR_HEIGHT}px 1fr`,
+            ? `${NAVBAR_HEIGHT}px 1fr ${BOTTOM_NAV_HEIGHT}px`
+            : `${NAVBAR_HEIGHT}px 1fr`,
           height: "100%",
+          overflow: "hidden", // clamp children horizontally
         }}
       >
-        {/* ACTION BAR (above navbar) */}
-        <Box
-          sx={{
-            height: ACTION_BAR_HEIGHT,
-            minHeight: ACTION_BAR_HEIGHT,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            px: 1.25,
-            gap: 1,
-            borderBottom: "1px solid",
-            borderColor: "divider",
-            bgcolor: "background.paper",
-            zIndex: 1300,
-          }}
-        >
-          {/* Left - small label or nothing */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Typography variant="caption" sx={{ color: "text.secondary", fontSize: 12 }}>
-              Hi5Tech
-            </Typography>
-          </Box>
-
-          {/* Center - optional (empty) */}
-          <Box sx={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
-            {/* keep blank for now; can add quick filters / breadcrumbs */}
-          </Box>
-
-          {/* Right - reserved area (button removed as requested) */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            {/* intentionally left blank; the Raise New Incident control has been removed */}
-          </Box>
-        </Box>
-
         {/* NAVBAR (header + tabs) */}
         <Box
           sx={{
@@ -354,13 +320,21 @@ const Layout = () => {
             height: NAVBAR_HEIGHT,
             borderBottom: "1px solid",
             borderColor: "divider",
-            zIndex: 1200,
+            zIndex: 1400,
             boxShadow: navbarElevated
               ? theme.palette.mode === "dark"
                 ? "0 2px 5px rgba(0,0,0,0.45)"
                 : "0 2px 5px rgba(0,0,0,0.15)"
               : "none",
             transition: "box-shadow 0.25s ease",
+            minWidth: 0,
+            maxWidth: "100%",
+
+            // sticky so the navbar doesn't move during mobile bounce/viewport changes
+            position: "sticky",
+            top: 0,
+            // ensure it sits above the main scrolling area
+            backdropFilter: "saturate(120%) blur(2px)",
           }}
         >
           {/* Header row */}
@@ -375,6 +349,7 @@ const Layout = () => {
               borderBottom: "1px solid",
               borderColor: "divider",
               pt: isMobile ? 0.5 : 0,
+              minWidth: 0,
             }}
           >
             {/* Logo / brand / menu */}
@@ -387,7 +362,7 @@ const Layout = () => {
                 />
               </IconButton>
             ) : (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexShrink: 0 }}>
                 <img src="/logo192.png" alt="Logo" style={{ width: 22, height: 22, borderRadius: 4 }} />
                 {!isMobile && (
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, letterSpacing: 0.3, fontSize: 13 }}>
@@ -419,7 +394,18 @@ const Layout = () => {
 
               {!isMobile && (
                 <>
-                  <Box sx={{ px: 1, py: 0.25, borderRadius: 999, border: "1px solid", borderColor: "divider", display: "flex", alignItems: "center" }}>
+                  <Box
+                    sx={{
+                      px: 1,
+                      py: 0.25,
+                      borderRadius: 999,
+                      border: "1px solid",
+                      borderColor: "divider",
+                      display: "flex",
+                      alignItems: "center",
+                      flexShrink: 0,
+                    }}
+                  >
                     <Typography variant="caption" sx={{ fontSize: 10, color: "text.secondary" }}>
                       Tenant:&nbsp;
                     </Typography>
@@ -428,7 +414,18 @@ const Layout = () => {
                     </Typography>
                   </Box>
 
-                  <Box sx={{ px: 1, py: 0.25, borderRadius: 999, bgcolor: theme.palette.mode === "dark" ? "rgba(46, 125, 50, 0.25)" : "rgba(76, 175, 80, 0.12)", display: "flex", alignItems: "center", gap: 0.5 }}>
+                  <Box
+                    sx={{
+                      px: 1,
+                      py: 0.25,
+                      borderRadius: 999,
+                      bgcolor: theme.palette.mode === "dark" ? "rgba(46, 125, 50, 0.25)" : "rgba(76, 175, 80, 0.12)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 0.5,
+                      flexShrink: 0,
+                    }}
+                  >
                     <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "success.main" }} />
                     <Typography variant="caption" sx={{ fontSize: 10, color: "success.main" }}>
                       All systems operational
@@ -440,7 +437,7 @@ const Layout = () => {
 
             {/* Right actions (desktop) */}
             {!isMobile && (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
                 <IconButton size="small" onClick={() => setDrawerType("notifications")}>
                   <NotificationsIcon sx={{ fontSize: 18 }} />
                 </IconButton>
@@ -448,7 +445,19 @@ const Layout = () => {
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, cursor: "pointer" }} onClick={() => setDrawerType("profile")}>
                   <Box sx={{ position: "relative" }}>
                     <Avatar sx={getNavbarAvatarSx(userStatus, 24)}>{userInitial}</Avatar>
-                    <Box sx={{ position: "absolute", bottom: -1, right: -1, width: 10, height: 10, borderRadius: "50%", border: "2px solid", borderColor: "background.paper", bgcolor: getStatusColor(userStatus) }} />
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        bottom: -1,
+                        right: -1,
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        border: "2px solid",
+                        borderColor: "background.paper",
+                        bgcolor: getStatusColor(userStatus),
+                      }}
+                    />
                   </Box>
 
                   <Box sx={{ display: "flex", flexDirection: "column" }}>
@@ -472,13 +481,39 @@ const Layout = () => {
                 <IconButton size="small" onClick={(e) => setStatusMenuAnchor(e.currentTarget)}>
                   <Box sx={{ position: "relative", display: "flex" }}>
                     <AccountCircleIcon sx={{ fontSize: 22, opacity: userStatus === "Offline" ? 0.6 : 1 }} />
-                    <Box sx={{ position: "absolute", bottom: 0, right: -1, width: 10, height: 10, borderRadius: "50%", border: "2px solid", borderColor: "background.paper", bgcolor: getStatusColor(userStatus), boxShadow: userStatus === "Busy" ? "0 0 0 2px rgba(244,67,54,0.4)" : "none" }} />
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        bottom: 0,
+                        right: -1,
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        border: "2px solid",
+                        borderColor: "background.paper",
+                        bgcolor: getStatusColor(userStatus),
+                        boxShadow: userStatus === "Busy" ? "0 0 0 2px rgba(244,67,54,0.4)" : "none",
+                      }}
+                    />
                   </Box>
                 </IconButton>
 
-                <Menu anchorEl={statusMenuAnchor} open={Boolean(statusMenuAnchor)} onClose={() => setStatusMenuAnchor(null)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }} transformOrigin={{ vertical: "top", horizontal: "right" }}>
+                <Menu
+                  anchorEl={statusMenuAnchor}
+                  open={Boolean(statusMenuAnchor)}
+                  onClose={() => setStatusMenuAnchor(null)}
+                  anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                  transformOrigin={{ vertical: "top", horizontal: "right" }}
+                >
                   {STATUS_OPTIONS.map((opt) => (
-                    <MenuItem key={opt.key} selected={userStatus === opt.key} onClick={() => { handleStatusChange(opt.key); setStatusMenuAnchor(null); }}>
+                    <MenuItem
+                      key={opt.key}
+                      selected={userStatus === opt.key}
+                      onClick={() => {
+                        handleStatusChange(opt.key);
+                        setStatusMenuAnchor(null);
+                      }}
+                    >
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                         <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: opt.color }} />
                         <Typography variant="body2">{opt.key}</Typography>
@@ -491,7 +526,7 @@ const Layout = () => {
           </Box>
 
           {/* Tabs row */}
-          <Box sx={{ height: TABBAR_HEIGHT, minHeight: TABBAR_HEIGHT }}>
+          <Box sx={{ height: TABBAR_HEIGHT, minHeight: TABBAR_HEIGHT, minWidth: 0, overflowX: "hidden" }}>
             <NavbarTabs
               tabs={tabs}
               tabIndex={tabIndex}
@@ -506,18 +541,19 @@ const Layout = () => {
         {/* MAIN CONTENT */}
         <Box
           component="main"
-          className="scrollable"
           onScroll={handleMainScroll}
           sx={{
             minHeight: 0,
             height: "100%",
             width: "100%",
-            overflowY: "auto",
+            overflowY: "auto", // only main content scrolls
             overflowX: "hidden",
             WebkitOverflowScrolling: "touch",
+            overscrollBehavior: "contain", // keep bounce contained to main content
+            touchAction: "pan-y", // allow vertical pans; reduce accidental horizontal gestures
             px: 2,
             pt: 1,
-            pb: isMobile ? BOTTOM_NAV_HEIGHT + 8 : 2,
+            pb: isMobile ? 1 : 2,
             boxSizing: "border-box",
           }}
         >
@@ -543,9 +579,24 @@ const Layout = () => {
           onClose={() => setMobileSidebarOpen(false)}
           onOpen={() => setMobileSidebarOpen(true)}
           ModalProps={{ keepMounted: true }}
-          PaperProps={{ sx: { width: EXPANDED_WIDTH, backgroundColor: theme.palette.background.paper } }}
+          PaperProps={{
+            sx: {
+              width: EXPANDED_WIDTH,
+              backgroundColor: theme.palette.background.paper,
+            },
+          }}
         >
-          <Sidebar pinned onToggle={() => {}} items={sidebarItems} onItemClick={(label) => { activateOrAddTab(label); setMobileSidebarOpen(false); }} widthExpanded={EXPANDED_WIDTH} widthCollapsed={COLLAPSED_WIDTH} />
+          <Sidebar
+            pinned
+            onToggle={() => {}}
+            items={sidebarItems}
+            onItemClick={(label) => {
+              activateOrAddTab(label);
+              setMobileSidebarOpen(false);
+            }}
+            widthExpanded={EXPANDED_WIDTH}
+            widthCollapsed={COLLAPSED_WIDTH}
+          />
         </SwipeableDrawer>
       )}
 
@@ -559,10 +610,17 @@ const Layout = () => {
           disableSwipeToOpen
           disableDiscovery
           swipeAreaWidth={0}
-          PaperProps={{ sx: { width: 360, maxWidth: "100%" } }}
+          PaperProps={{
+            sx: {
+              width: 360,
+              maxWidth: "100%",
+            },
+          }}
         >
           {drawerType === "notifications" && <NotificationDrawer />}
-          {drawerType === "profile" && <ProfileDrawer status={userStatus} onStatusChange={handleStatusChange} onLogout={handleLogout} showStatus />}
+          {drawerType === "profile" && (
+            <ProfileDrawer status={userStatus} onStatusChange={handleStatusChange} onLogout={handleLogout} showStatus />
+          )}
           {drawerType === "search" && (
             <Box p={2}>
               <Typography variant="h6" gutterBottom>
@@ -585,7 +643,9 @@ const Layout = () => {
           onOpen={() => {}}
           ModalProps={{
             keepMounted: true,
-            BackdropProps: { sx: { backgroundColor: "transparent", pointerEvents: "none" } },
+            BackdropProps: {
+              sx: { backgroundColor: "transparent", pointerEvents: "none" },
+            },
           }}
           PaperProps={{
             sx: {
@@ -598,7 +658,11 @@ const Layout = () => {
             },
           }}
         >
-          {drawerType === "search" && <Typography variant="h6" gutterBottom>Search</Typography>}
+          {drawerType === "search" && (
+            <Typography variant="h6" gutterBottom>
+              Search
+            </Typography>
+          )}
           {drawerType === "notifications" && <NotificationDrawer />}
           {drawerType === "profile" && <ProfileDrawer onLogout={handleLogout} showStatus={false} />}
         </SwipeableDrawer>
