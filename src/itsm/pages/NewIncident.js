@@ -1,3 +1,4 @@
+// src/itsm/incidents/NewIncident.js
 import React, { useState } from "react";
 import {
   Box,
@@ -110,16 +111,24 @@ const NewIncident = () => {
     setStep(2);
   };
 
-  // --- EMAIL NOTIFICATION (Resend via /api/send-email with template) ---
+  // --- EMAIL NOTIFICATION (Resend via /api/send-email with template, with logging) ---
   const sendNotificationEmail = async (
     incident,
     requesterUser,
     agentUser,
     submittedBy
   ) => {
+    // 🔍 Debug: what we're about to send
+    console.log("[Email] Preparing to send incident email:", {
+      incident,
+      requesterUser,
+      agentUser,
+      submittedBy,
+    });
+
     try {
       if (!requesterUser?.email) {
-        console.warn("No requester email, skipping notification");
+        console.warn("[Email] No requester email, skipping notification");
         return;
       }
 
@@ -135,38 +144,73 @@ const NewIncident = () => {
           ? `New Incident Raised - ${reference}`
           : "New Incident Raised";
 
-      await fetch("/api/send-email", {
+      const payload = {
+        type: "incident",
+        templateKey: "incident_created", // 🔑 matches email_templates.key
+        recipientEmail: requesterUser.email, // 📨 where to send
+
+        // Fallback + template context
+        subject,
+        reference,
+        title: incident.title,
+        description: incident.description,
+        priority: incident.priority,
+        category: incident.category,
+        status: incident.status,
+        requester:
+          requesterUser.username ||
+          requesterUser.full_name ||
+          requesterUser.email ||
+          "Customer",
+        submittedBy:
+          submittedBy ||
+          agentUser?.username ||
+          agentUser?.full_name ||
+          agentUser?.email ||
+          "Service Desk",
+      };
+
+      console.log("[Email] Sending POST /api/send-email with payload:", payload);
+
+      const response = await fetch("/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "incident",
-          templateKey: "incident_created",     // 🔑 matches email_templates.key
-          recipientEmail: requesterUser.email, // 📨 where to send
-
-          // Fallback + template context
-          subject,
-          reference,
-          title: incident.title,
-          description: incident.description,
-          priority: incident.priority,
-          category: incident.category,
-          status: incident.status,
-          requester:
-            requesterUser.username ||
-            requesterUser.full_name ||
-            requesterUser.email ||
-            "Customer",
-          submittedBy:
-            submittedBy ||
-            agentUser?.username ||
-            agentUser?.full_name ||
-            agentUser?.email ||
-            "Service Desk",
-        }),
+        body: JSON.stringify(payload),
       });
+
+      console.log("[Email] /api/send-email response:", {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+      });
+
+      let responseBody = null;
+      try {
+        responseBody = await response.json();
+        console.log("[Email] /api/send-email response body:", responseBody);
+      } catch (parseErr) {
+        console.warn("[Email] Could not parse JSON response:", parseErr);
+      }
+
+      if (!response.ok) {
+        console.error("[Email] Email send FAILED", {
+          status: response.status,
+          statusText: response.statusText,
+          body: responseBody,
+        });
+
+        // Optional: testing-time alert (remove later if you don't want this)
+        alert(
+          `Email failed to send.\nStatus: ${response.status} ${response.statusText}\n` +
+            `Details: ${responseBody?.error || "no error message"}`
+        );
+      } else {
+        console.log("[Email] Email sent successfully 🎉", responseBody);
+      }
     } catch (err) {
-      console.error("Email notification error:", err);
-      // Don’t block incident creation on email failure
+      console.error("[Email] Email notification error (frontend catch):", err);
+      // Optional visible hint while debugging
+      alert(`Email error in frontend: ${err.message || err}`);
     }
   };
 
