@@ -367,7 +367,7 @@ This is an automated notification from ${BRAND_NAME}.
 `;
 
     const { data: sendResult, error: sendError } = await resend.emails.send({
-      from: `Service Desk <notifications@hi5tech.co.uk>`, // adjust domain to your Resend-approved from
+      from: `Service Desk <noreply@hi5tech.co.uk>`, // adjust domain to your Resend-approved from
       to,
       subject,
       html: finalHtml,
