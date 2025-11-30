@@ -71,14 +71,44 @@ const Login = () => {
       return;
     }
 
+    // Clear any previous user on a fresh login attempt
+    localStorage.removeItem("user");
+
     const { data, error: loginError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (loginError || !data.session) {
+      console.error("Login error:", loginError);
       setError("Invalid login credentials.");
       return;
+    }
+
+    try {
+      // Fetch the authenticated user details
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) {
+        console.warn("getUser error:", userError);
+      }
+
+      if (user) {
+        // Build a simple profile object for the ITSM app
+        const profile = {
+          id: user.id,
+          email: user.email,
+          username: user.user_metadata?.username || user.email,
+          full_name: user.user_metadata?.full_name || null,
+        };
+
+        localStorage.setItem("user", JSON.stringify(profile));
+      }
+    } catch (e) {
+      console.warn("Error building local user profile:", e);
     }
 
     navigate("/dashboard");
@@ -86,7 +116,12 @@ const Login = () => {
 
   const handleSocialLogin = async (provider) => {
     const { error } = await supabase.auth.signInWithOAuth({ provider });
-    if (error) setError(`${provider.charAt(0).toUpperCase() + provider.slice(1)} sign-in failed.`);
+    if (error) {
+      console.error("OAuth error:", error);
+      setError(
+        `${provider.charAt(0).toUpperCase() + provider.slice(1)} sign-in failed.`
+      );
+    }
   };
 
   return (
