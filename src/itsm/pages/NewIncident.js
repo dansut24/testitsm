@@ -111,15 +111,14 @@ const NewIncident = () => {
     setStep(2);
   };
 
-  // --- EMAIL NOTIFICATION (Resend via /api/send-email with template, with logging) ---
+  // --- EMAIL NOTIFICATION (Resend via /api/send-email with template) ---
   const sendNotificationEmail = async (
     incident,
     requesterUser,
     agentUser,
     submittedBy
   ) => {
-    // 🔍 Debug: what we're about to send
-    console.log("[Email] Preparing to send incident email:", {
+    console.log("[Email] Preparing to send:", {
       incident,
       requesterUser,
       agentUser,
@@ -128,7 +127,7 @@ const NewIncident = () => {
 
     try {
       if (!requesterUser?.email) {
-        console.warn("[Email] No requester email, skipping notification");
+        console.warn("[Email] No requester email → skipping notification");
         return;
       }
 
@@ -146,10 +145,14 @@ const NewIncident = () => {
 
       const payload = {
         type: "incident",
-        templateKey: "incident_created", // 🔑 matches email_templates.key
-        recipientEmail: requesterUser.email, // 📨 where to send
+        templateKey: "incident_created",
 
-        // Fallback + template context
+        // 🔥 Backend expects "to"
+        to: requesterUser.email,
+
+        // Extra copy if backend ever uses this name
+        recipientEmail: requesterUser.email,
+
         subject,
         reference,
         title: incident.title,
@@ -170,7 +173,7 @@ const NewIncident = () => {
           "Service Desk",
       };
 
-      console.log("[Email] Sending POST /api/send-email with payload:", payload);
+      console.log("[Email] Sending payload to /api/send-email:", payload);
 
       const response = await fetch("/api/send-email", {
         method: "POST",
@@ -178,39 +181,19 @@ const NewIncident = () => {
         body: JSON.stringify(payload),
       });
 
-      console.log("[Email] /api/send-email response:", {
-        ok: response.ok,
-        status: response.status,
-        statusText: response.statusText,
-      });
-
-      let responseBody = null;
-      try {
-        responseBody = await response.json();
-        console.log("[Email] /api/send-email response body:", responseBody);
-      } catch (parseErr) {
-        console.warn("[Email] Could not parse JSON response:", parseErr);
-      }
+      const raw = await response.text();
+      console.log("[Email] Response status:", response.status);
+      console.log("[Email] Response body:", raw);
 
       if (!response.ok) {
-        console.error("[Email] Email send FAILED", {
-          status: response.status,
-          statusText: response.statusText,
-          body: responseBody,
-        });
-
-        // Optional: testing-time alert (remove later if you don't want this)
-        alert(
-          `Email failed to send.\nStatus: ${response.status} ${response.statusText}\n` +
-            `Details: ${responseBody?.error || "no error message"}`
-        );
-      } else {
-        console.log("[Email] Email sent successfully 🎉", responseBody);
+        console.error("[Email] send-email failed:", raw);
+        // optional UI feedback:
+        // alert(`Email failed (${response.status}): ${raw}`);
       }
     } catch (err) {
-      console.error("[Email] Email notification error (frontend catch):", err);
-      // Optional visible hint while debugging
-      alert(`Email error in frontend: ${err.message || err}`);
+      console.error("[Email] Frontend error:", err);
+      // optional UI feedback:
+      // alert(`Frontend email error: ${err.message}`);
     }
   };
 
