@@ -47,6 +47,7 @@ const routeLabels = {
   "/knowledge-base": "Knowledge Base",
   "/settings": "Settings",
   "/assets": "Assets",
+  "/new-tab": "New Tab",          // 🔹 added for NewTab page
 };
 
 const STATUS_OPTIONS = [
@@ -153,9 +154,20 @@ const Layout = () => {
 
   const handleTabReorder = (tabsReordered) => setTabs(tabsReordered);
 
+  // 🔹 "+" new tab → open /new-tab (NewTab page)
   const handleNewTab = () => {
-    const path = "/dashboard";
-    const label = routeLabels[path] || "Dashboard";
+    const path = "/new-tab";
+    const label = routeLabels[path] || "New Tab";
+
+    // If New Tab already open, just focus it
+    const existingIndex = tabs.findIndex((t) => t.path === path);
+    if (existingIndex !== -1) {
+      setTabIndex(existingIndex);
+      navigate(path);
+      return;
+    }
+
+    // Otherwise add a single New Tab
     const newTabs = [...tabs, { label, path }];
     setTabs(newTabs);
     setTabIndex(newTabs.length - 1);
@@ -305,7 +317,7 @@ const Layout = () => {
               handleTabChange={handleTabChange}
               handleTabClose={handleTabClose}
               handleTabReorder={handleTabReorder}
-              handleNewTab={handleNewTab}
+              handleNewTab={handleNewTab}  // 🔹 "+" uses NewTab route
               isMobile={isMobile}
             />
           </Box>
