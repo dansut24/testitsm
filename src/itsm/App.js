@@ -30,6 +30,9 @@ import UserProfile from "./pages/UserProfile";
 import Settings from "./pages/Settings";
 import AdminSettings from "./pages/AdminSettings";
 
+// 🔹 Tenant onboarding page
+import TenantOnboardingPage from "./pages/TenantOnboardingPage";
+
 // Create Pages
 import NewIncident from "./pages/NewIncident";
 import NewServiceRequest from "./pages/NewServiceRequest";
@@ -111,6 +114,16 @@ function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <AdminSettings />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* 🔹 Tenant onboarding (admin only) */}
+          <Route
+            path="tenant-onboarding"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <TenantOnboardingPage />
               </ProtectedRoute>
             }
           />
