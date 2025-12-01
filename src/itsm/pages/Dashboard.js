@@ -1,3 +1,4 @@
+// src/itsm/pages/Dashboard.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -28,6 +29,9 @@ import {
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useTheme } from "@mui/material/styles";
+
+// ✅ Onboarding banner
+import TenantOnboardingBanner from "../components/TenantOnboardingBanner";
 
 const predefinedLayouts = {
   default: ["pie", "bar", "line", "table"],
@@ -148,7 +152,11 @@ const Dashboard = () => {
                 Example description for Incident #{i + 1}.
               </Typography>
               <Typography
-                sx={{ fontSize: "0.8em", color: theme.palette.text.secondary, mt: 1 }}
+                sx={{
+                  fontSize: "0.8em",
+                  color: theme.palette.text.secondary,
+                  mt: 1,
+                }}
               >
                 Created: {new Date().toLocaleString()}
               </Typography>
@@ -162,9 +170,18 @@ const Dashboard = () => {
       return (
         <ChartWrapper>
           <PieChart>
-            <Pie data={samplePieData} cx="50%" cy="50%" outerRadius="80%" dataKey="value">
+            <Pie
+              data={samplePieData}
+              cx="50%"
+              cy="50%"
+              outerRadius="80%"
+              dataKey="value"
+            >
               {samplePieData.map((_, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                <Cell
+                  key={`cell-${index}`}
+                  fill={COLORS[index % COLORS.length]}
+                />
               ))}
             </Pie>
             <RechartTooltip />
@@ -177,7 +194,10 @@ const Dashboard = () => {
       return (
         <ChartWrapper>
           <BarChart data={sampleBarData}>
-            <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke={theme.palette.divider}
+            />
             <XAxis dataKey="name" />
             <YAxis />
             <Bar
@@ -195,7 +215,10 @@ const Dashboard = () => {
       return (
         <ChartWrapper>
           <LineChart data={sampleLineData}>
-            <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke={theme.palette.divider}
+            />
             <XAxis dataKey="name" />
             <YAxis />
             <Line
@@ -211,8 +234,14 @@ const Dashboard = () => {
             {useGradient && (
               <defs>
                 <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={theme.palette.primary.light} />
-                  <stop offset="100%" stopColor={theme.palette.primary.dark} />
+                  <stop
+                    offset="0%"
+                    stopColor={theme.palette.primary.light}
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor={theme.palette.primary.dark}
+                  />
                 </linearGradient>
               </defs>
             )}
@@ -220,10 +249,18 @@ const Dashboard = () => {
         </ChartWrapper>
       );
     }
+
+    return null;
   };
 
   return (
     <Box sx={{ px: { xs: 1, sm: 2 }, py: 2 }}>
+      {/* 🔹 Onboarding banner row */}
+      <Box sx={{ maxWidth: 1400, mx: "auto", mb: 2 }}>
+        <TenantOnboardingBanner />
+      </Box>
+
+      {/* Main dashboard card */}
       <Box
         sx={{
           maxWidth: 1400,
@@ -316,7 +353,9 @@ const Dashboard = () => {
                             position: "relative",
                             backgroundColor: theme.palette.background.paper,
                             transition: "all 0.2s ease",
-                            "&:hover": { boxShadow: "0 4px 12px rgba(0,0,0,0.12)" },
+                            "&:hover": {
+                              boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                            },
                           }}
                         >
                           {!isPreview && (
