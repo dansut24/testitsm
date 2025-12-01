@@ -10,6 +10,7 @@ import {
   StepLabel,
   Container,
   Alert,
+  Paper,
 } from "@mui/material";
 import { supabase } from "../../common/utils/supabaseClient";
 
@@ -28,7 +29,13 @@ const TenantSetupWizard = () => {
   });
   const [status, setStatus] = useState(null);
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [checkingSubdomain, setCheckingSubdomain] = useState(false);
+
+  // 🔹 Live subdomain status
+  const [subdomainStatus, setSubdomainStatus] = useState("idle"); // idle | checking | available | taken | invalid | error
+  const [subdomainMessage, setSubdomainMessage] = useState("");
+
+  // 🔹 Logo preview
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -37,15 +44,50 @@ const TenantSetupWizard = () => {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
+  // Clean up object URL when logo changes
+  useEffect(() => {
+    return () => {
+      if (logoPreviewUrl) URL.revokeObjectURL(logoPreviewUrl);
+    };
+  }, [logoPreviewUrl]);
+
   const handleChange = (e) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
-  const handleFileChange = (e) =>
-    setFormData((prev) => ({ ...prev, logoFile: e.target.files[0] }));
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    setFormData((prev) => ({ ...prev, logoFile: file || null }));
+
+    if (logoPreviewUrl) {
+      URL.revokeObjectURL(logoPreviewUrl);
+    }
+
+    if (file) {
+      const preview = URL.createObjectURL(file);
+      setLogoPreviewUrl(preview);
+    } else {
+      setLogoPreviewUrl("");
+    }
+  };
 
   /**
-   * Normalise & validate subdomain, and ensure it is not already taken.
-   * Returns true if OK, false if not.
+   * Low-level DB check used by both live-check and final validation
+   */
+  const querySubdomainInDb = async (normalisedSubdomain) => {
+    const { data, error } = await supabase
+      .from("tenants")
+      .select("id")
+      .eq("subdomain", normalisedSubdomain)
+      .maybeSingle();
+
+    if (error && error.code !== "PGRST116") {
+      throw error;
+    }
+    return !!data; // true if taken
+  };
+
+  /**
+   * FINAL validation when moving on / submitting.
    */
   const checkSubdomainAvailable = async () => {
     setStatus(null);
@@ -67,13 +109,11 @@ const TenantSetupWizard = () => {
       return false;
     }
 
-    // Normalise: lowercase, keep only a–z, 0–9 and hyphens
     const normalised = subdomain.toLowerCase().replace(/[^a-z0-9-]/g, "");
     if (normalised !== subdomain) {
       setFormData((prev) => ({ ...prev, subdomain: normalised }));
     }
 
-    // Optional: basic length checks
     if (normalised.length < 3) {
       setStatus({
         type: "error",
@@ -82,25 +122,9 @@ const TenantSetupWizard = () => {
       return false;
     }
 
-    setCheckingSubdomain(true);
     try {
-      const { data, error } = await supabase
-        .from("tenants")
-        .select("id")
-        .eq("subdomain", normalised)
-        .maybeSingle();
-
-      if (error && error.code !== "PGRST116") {
-        console.error("Subdomain check error:", error);
-        setStatus({
-          type: "error",
-          message:
-            "Unable to verify subdomain uniqueness. Please try again.",
-        });
-        return false;
-      }
-
-      if (data) {
+      const taken = await querySubdomainInDb(normalised);
+      if (taken) {
         setStatus({
           type: "error",
           message:
@@ -108,10 +132,15 @@ const TenantSetupWizard = () => {
         });
         return false;
       }
-
       return true;
-    } finally {
-      setCheckingSubdomain(false);
+    } catch (err) {
+      console.error("Subdomain check error:", err);
+      setStatus({
+        type: "error",
+        message:
+          "Unable to verify subdomain uniqueness. Please try again.",
+      });
+      return false;
     }
   };
 
@@ -120,11 +149,68 @@ const TenantSetupWizard = () => {
     if (ok) setStep(1);
   };
 
+  /**
+   * 🔹 LIVE subdomain checks while the user types
+   */
+  useEffect(() => {
+    const raw = formData.subdomain;
+
+    if (!raw) {
+      setSubdomainStatus("idle");
+      setSubdomainMessage("");
+      return;
+    }
+
+    const normalised = raw.toLowerCase().replace(/[^a-z0-9-]/g, "");
+    if (normalised !== raw) {
+      setFormData((prev) => ({ ...prev, subdomain: normalised }));
+      return;
+    }
+
+    if (normalised.length < 3) {
+      setSubdomainStatus("invalid");
+      setSubdomainMessage("Subdomain must be at least 3 characters.");
+      return;
+    }
+
+    let cancelled = false;
+
+    const run = async () => {
+      setSubdomainStatus("checking");
+      setSubdomainMessage("Checking availability…");
+
+      try {
+        const taken = await querySubdomainInDb(normalised);
+        if (cancelled) return;
+
+        if (taken) {
+          setSubdomainStatus("taken");
+          setSubdomainMessage("This subdomain is already in use.");
+        } else {
+          setSubdomainStatus("available");
+          setSubdomainMessage("This subdomain is available.");
+        }
+      } catch (err) {
+        console.error("Live subdomain check error:", err);
+        if (!cancelled) {
+          setSubdomainStatus("error");
+          setSubdomainMessage("Could not check availability right now.");
+        }
+      }
+    };
+
+    const timeout = setTimeout(run, 500); // debounce 500ms
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [formData.subdomain]);
+
   const sendOtp = async () => {
     setStatus(null);
     const { adminEmail, adminPassword, confirmPassword } = formData;
 
-    // Basic validation
     if (!adminEmail || !adminPassword || !confirmPassword) {
       setStatus({
         type: "error",
@@ -153,9 +239,8 @@ const TenantSetupWizard = () => {
       const { data, error } = await supabase.auth.signInWithOtp({
         email: adminEmail,
         options: {
-          data: { role: "owner" }, // super admin / tenant owner
+          data: { role: "owner" },
           shouldCreateUser: true,
-          // emailRedirectTo: `${window.location.origin}/verify`, // optional
         },
       });
 
@@ -164,8 +249,7 @@ const TenantSetupWizard = () => {
         setStatus({
           type: "error",
           message:
-            error.message ||
-            "Unable to send verification code. Please try again.",
+            error.message || "Unable to send verification code. Please try again.",
         });
         return;
       }
@@ -218,7 +302,6 @@ const TenantSetupWizard = () => {
         message: "Email verified successfully.",
       });
 
-      // After verifying OTP, there should be a logged-in user
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData?.session?.user) {
         const { error: pwError } = await supabase.auth.updateUser({
@@ -251,11 +334,9 @@ const TenantSetupWizard = () => {
     const domain = `${subdomain}-itsm.hi5tech.co.uk`;
 
     try {
-      // 1) Ensure the subdomain is STILL available (protect against races)
-      const subdomainOk = await checkSubdomainAvailable();
-      if (!subdomainOk) return;
+      const ok = await checkSubdomainAvailable();
+      if (!ok) return;
 
-      // 2) Ensure we still have a valid, verified user
       const { data: userData, error: userErr } = await supabase.auth.getUser();
       if (userErr || !userData?.user) {
         console.error("No authenticated user for tenant creation:", userErr);
@@ -269,20 +350,20 @@ const TenantSetupWizard = () => {
 
       const user = userData.user;
 
-      // Supabase sets email_confirmed_at / confirmed_at when email is verified.
       const isVerified =
-        user.email_confirmed_at || user.confirmed_at || user.app_metadata?.provider;
+        user.email_confirmed_at ||
+        user.confirmed_at ||
+        user.app_metadata?.provider;
 
       if (!isVerified) {
         setStatus({
           type: "error",
           message:
-            "Your email address is not verified. Please complete email verification before creating your tenant.",
+            "Your email address is not verified. Please complete verification before creating your tenant.",
         });
         return;
       }
 
-      // 3) Create tenant
       const { data: tenant, error: tenantError } = await supabase
         .from("tenants")
         .insert([
@@ -302,14 +383,11 @@ const TenantSetupWizard = () => {
         return;
       }
 
-      // 4) Attach profile/user to tenant (existing main-site behaviour).
-      // If your "profiles" table changed to "users" later, update this accordingly.
       await supabase
         .from("profiles")
         .update({ tenant_id: tenant.id })
         .eq("id", user.id);
 
-      // 5) Upload logo if present
       let logo_url = "";
       if (logoFile) {
         const { error: uploadError } = await supabase.storage
@@ -323,15 +401,12 @@ const TenantSetupWizard = () => {
         }
       }
 
-      // 6) Insert tenant_settings with logo + onboarding flag
       await supabase.from("tenant_settings").insert({
         tenant_id: tenant.id,
         logo_url,
-        // Mark onboarding not-complete yet for in-portal wizard (if you want)
-        onboarding_complete: false,
+        onboarding_complete: false, // 🔹 used for post-setup wizard
       });
 
-      // 7) Redirect to tenant portal
       window.location.href = `https://${domain}/dashboard`;
     } catch (err) {
       console.error("Unexpected error in handleSubmit:", err);
@@ -392,21 +467,33 @@ const TenantSetupWizard = () => {
                   </Typography>
                 ),
               }}
-              helperText="This will become your ITSM URL, e.g. mycompany-itsm.hi5tech.co.uk"
+              helperText={
+                subdomainMessage ||
+                "This will become your ITSM URL, e.g. mycompany-itsm.hi5tech.co.uk"
+              }
+              FormHelperTextProps={{
+                sx: {
+                  color:
+                    subdomainStatus === "taken" || subdomainStatus === "invalid"
+                      ? "error.main"
+                      : subdomainStatus === "available"
+                      ? "success.main"
+                      : "text.secondary",
+                },
+              }}
             />
             <Button
               fullWidth
               variant="contained"
               sx={{ mt: 2 }}
               onClick={handleStep0Next}
-              disabled={checkingSubdomain}
             >
-              {checkingSubdomain ? "Checking..." : "Next"}
+              Next
             </Button>
           </>
         )}
 
-        {/* STEP 1: Admin Email & Password */}
+        {/* STEP 1: Admin */}
         {step === 1 && (
           <>
             <TextField
@@ -458,7 +545,7 @@ const TenantSetupWizard = () => {
           </>
         )}
 
-        {/* STEP 2: Verify OTP */}
+        {/* STEP 2: Verify Email */}
         {step === 2 && (
           <>
             <TextField
@@ -480,11 +567,47 @@ const TenantSetupWizard = () => {
           </>
         )}
 
-        {/* STEP 3: Logo Upload */}
+        {/* STEP 3: Logo + Preview */}
         {step === 3 && (
           <>
             <Typography gutterBottom>Upload Company Logo</Typography>
             <input type="file" accept="image/*" onChange={handleFileChange} />
+
+            {logoPreviewUrl && (
+              <Paper
+                elevation={1}
+                sx={{
+                  mt: 2,
+                  p: 2,
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                }}
+              >
+                <Box sx={{ textAlign: "center" }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ mb: 1, display: "block" }}
+                  >
+                    Logo Preview
+                  </Typography>
+                  <img
+                    src={logoPreviewUrl}
+                    alt="Logo preview"
+                    style={{
+                      maxWidth: 200,
+                      maxHeight: 80,
+                      objectFit: "contain",
+                    }}
+                  />
+                </Box>
+              </Paper>
+            )}
+
             <Button
               variant="contained"
               fullWidth
@@ -496,7 +619,7 @@ const TenantSetupWizard = () => {
           </>
         )}
 
-        {/* STEP 4: Create Tenant */}
+        {/* STEP 4: Finish */}
         {step === 4 && (
           <>
             <Typography gutterBottom>
