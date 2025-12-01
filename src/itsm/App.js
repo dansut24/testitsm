@@ -146,7 +146,7 @@ function AppRoutes() {
           {/* Other */}
           <Route path="announcements" element={<Announcements />} />
           <Route path="work-scheduler" element={<WorkScheduler />} />
-          <Route path="new-tab/:id" element={<NewTab />} />
+          <Route path="newtab/:id" element={<NewTab />} />
         </Route>
       )}
 
