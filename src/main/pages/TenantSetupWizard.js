@@ -13,6 +13,8 @@ import {
 } from "@mui/material";
 import { supabase } from "../../common/utils/supabaseClient";
 
+const steps = ["Company Info", "Admin", "Verify Email", "Logo", "Finish"];
+
 const TenantSetupWizard = () => {
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState({
@@ -26,6 +28,7 @@ const TenantSetupWizard = () => {
   });
   const [status, setStatus] = useState(null);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [checkingSubdomain, setCheckingSubdomain] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -35,10 +38,87 @@ const TenantSetupWizard = () => {
   }, [resendCooldown]);
 
   const handleChange = (e) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleFileChange = (e) =>
-    setFormData({ ...formData, logoFile: e.target.files[0] });
+    setFormData((prev) => ({ ...prev, logoFile: e.target.files[0] }));
+
+  /**
+   * Normalise & validate subdomain, and ensure it is not already taken.
+   * Returns true if OK, false if not.
+   */
+  const checkSubdomainAvailable = async () => {
+    setStatus(null);
+    const { companyName, subdomain } = formData;
+
+    if (!companyName.trim()) {
+      setStatus({
+        type: "error",
+        message: "Please enter your company name.",
+      });
+      return false;
+    }
+
+    if (!subdomain.trim()) {
+      setStatus({
+        type: "error",
+        message: "Please enter a subdomain.",
+      });
+      return false;
+    }
+
+    // Normalise: lowercase, keep only a–z, 0–9 and hyphens
+    const normalised = subdomain.toLowerCase().replace(/[^a-z0-9-]/g, "");
+    if (normalised !== subdomain) {
+      setFormData((prev) => ({ ...prev, subdomain: normalised }));
+    }
+
+    // Optional: basic length checks
+    if (normalised.length < 3) {
+      setStatus({
+        type: "error",
+        message: "Subdomain should be at least 3 characters.",
+      });
+      return false;
+    }
+
+    setCheckingSubdomain(true);
+    try {
+      const { data, error } = await supabase
+        .from("tenants")
+        .select("id")
+        .eq("subdomain", normalised)
+        .maybeSingle();
+
+      if (error && error.code !== "PGRST116") {
+        console.error("Subdomain check error:", error);
+        setStatus({
+          type: "error",
+          message:
+            "Unable to verify subdomain uniqueness. Please try again.",
+        });
+        return false;
+      }
+
+      if (data) {
+        setStatus({
+          type: "error",
+          message:
+            "That subdomain is already in use. Please choose another.",
+        });
+        return false;
+      }
+
+      return true;
+    } finally {
+      setCheckingSubdomain(false);
+    }
+  };
+
+  const handleStep0Next = async () => {
+    const ok = await checkSubdomainAvailable();
+    if (ok) setStep(1);
+  };
 
   const sendOtp = async () => {
     setStatus(null);
@@ -73,10 +153,9 @@ const TenantSetupWizard = () => {
       const { data, error } = await supabase.auth.signInWithOtp({
         email: adminEmail,
         options: {
-          data: { role: "admin" },
+          data: { role: "owner" }, // super admin / tenant owner
           shouldCreateUser: true,
-          // Optional: where you want the magic link to land
-          // emailRedirectTo: `${window.location.origin}/verify`,
+          // emailRedirectTo: `${window.location.origin}/verify`, // optional
         },
       });
 
@@ -85,7 +164,8 @@ const TenantSetupWizard = () => {
         setStatus({
           type: "error",
           message:
-            error.message || "Unable to send verification code. Please try again.",
+            error.message ||
+            "Unable to send verification code. Please try again.",
         });
         return;
       }
@@ -95,7 +175,8 @@ const TenantSetupWizard = () => {
       setResendCooldown(60);
       setStatus({
         type: "success",
-        message: "Verification code sent to your email.",
+        message:
+          "Verification code sent to your email. It will expire after a short time, so please verify promptly.",
       });
       setStep(2);
     } catch (err) {
@@ -112,7 +193,10 @@ const TenantSetupWizard = () => {
     const { adminEmail, otp, adminPassword } = formData;
 
     if (!otp) {
-      setStatus({ type: "error", message: "Please enter the verification code." });
+      setStatus({
+        type: "error",
+        message: "Please enter the verification code.",
+      });
       return;
     }
 
@@ -129,8 +213,12 @@ const TenantSetupWizard = () => {
         return;
       }
 
-      setStatus({ type: "success", message: "Email verified!" });
+      setStatus({
+        type: "success",
+        message: "Email verified successfully.",
+      });
 
+      // After verifying OTP, there should be a logged-in user
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData?.session?.user) {
         const { error: pwError } = await supabase.auth.updateUser({
@@ -140,7 +228,8 @@ const TenantSetupWizard = () => {
           console.error("Password update failed:", pwError.message);
           setStatus({
             type: "error",
-            message: "Email verified, but password could not be set.",
+            message:
+              "Email verified, but password could not be set. Please try again.",
           });
           return;
         }
@@ -161,56 +250,97 @@ const TenantSetupWizard = () => {
     const { companyName, subdomain, logoFile } = formData;
     const domain = `${subdomain}-itsm.hi5tech.co.uk`;
 
-    const { data: sessionData, error: sessionError } =
-      await supabase.auth.getSession();
-    if (sessionError || !sessionData.session || !sessionData.session.user) {
-      return setStatus({
+    try {
+      // 1) Ensure the subdomain is STILL available (protect against races)
+      const subdomainOk = await checkSubdomainAvailable();
+      if (!subdomainOk) return;
+
+      // 2) Ensure we still have a valid, verified user
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userData?.user) {
+        console.error("No authenticated user for tenant creation:", userErr);
+        setStatus({
+          type: "error",
+          message:
+            "User session not found. Please verify your email and log in again.",
+        });
+        return;
+      }
+
+      const user = userData.user;
+
+      // Supabase sets email_confirmed_at / confirmed_at when email is verified.
+      const isVerified =
+        user.email_confirmed_at || user.confirmed_at || user.app_metadata?.provider;
+
+      if (!isVerified) {
+        setStatus({
+          type: "error",
+          message:
+            "Your email address is not verified. Please complete email verification before creating your tenant.",
+        });
+        return;
+      }
+
+      // 3) Create tenant
+      const { data: tenant, error: tenantError } = await supabase
+        .from("tenants")
+        .insert([
+          {
+            name: companyName,
+            subdomain,
+            domain,
+            created_by: user.id,
+          },
+        ])
+        .select()
+        .single();
+
+      if (tenantError) {
+        console.error("❌ Tenant insert failed:", tenantError);
+        setStatus({ type: "error", message: tenantError.message });
+        return;
+      }
+
+      // 4) Attach profile/user to tenant (existing main-site behaviour).
+      // If your "profiles" table changed to "users" later, update this accordingly.
+      await supabase
+        .from("profiles")
+        .update({ tenant_id: tenant.id })
+        .eq("id", user.id);
+
+      // 5) Upload logo if present
+      let logo_url = "";
+      if (logoFile) {
+        const { error: uploadError } = await supabase.storage
+          .from("tenant-logos")
+          .upload(`${subdomain}/logo.png`, logoFile, { upsert: true });
+
+        if (!uploadError) {
+          logo_url = `${subdomain}/logo.png`;
+        } else {
+          console.warn("Logo upload failed:", uploadError);
+        }
+      }
+
+      // 6) Insert tenant_settings with logo + onboarding flag
+      await supabase.from("tenant_settings").insert({
+        tenant_id: tenant.id,
+        logo_url,
+        // Mark onboarding not-complete yet for in-portal wizard (if you want)
+        onboarding_complete: false,
+      });
+
+      // 7) Redirect to tenant portal
+      window.location.href = `https://${domain}/dashboard`;
+    } catch (err) {
+      console.error("Unexpected error in handleSubmit:", err);
+      setStatus({
         type: "error",
-        message: "User session not found. Please log in again.",
+        message:
+          err?.message || "Unexpected error while creating the tenant.",
       });
     }
-
-    const user = sessionData.session.user;
-
-    const { data: tenant, error: tenantError } = await supabase
-      .from("tenants")
-      .insert([
-        {
-          name: companyName,
-          subdomain,
-          domain,
-          created_by: user.id,
-        },
-      ])
-      .select()
-      .single();
-
-    if (tenantError) {
-      console.error("❌ Tenant insert failed:", tenantError);
-      return setStatus({ type: "error", message: tenantError.message });
-    }
-
-    await supabase
-      .from("profiles")
-      .update({ tenant_id: tenant.id })
-      .eq("id", user.id);
-
-    let logo_url = "";
-    if (logoFile) {
-      const { error: uploadError } = await supabase.storage
-        .from("tenant-logos")
-        .upload(`${subdomain}/logo.png`, logoFile, { upsert: true });
-
-      if (!uploadError) {
-        logo_url = `${subdomain}/logo.png`;
-      }
-    }
-
-    await supabase
-      .from("tenant_settings")
-      .insert({ tenant_id: tenant.id, logo_url });
-
-    window.location.href = `https://${domain}/dashboard`;
   };
 
   return (
@@ -220,16 +350,15 @@ const TenantSetupWizard = () => {
       </Typography>
 
       <Stepper activeStep={step} alternativeLabel>
-        {["Company Info", "Admin", "Verify Email", "Logo", "Finish"].map(
-          (label) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          )
-        )}
+        {steps.map((label) => (
+          <Step key={label}>
+            <StepLabel>{label}</StepLabel>
+          </Step>
+        ))}
       </Stepper>
 
       <Box sx={{ mt: 4 }}>
+        {/* STEP 0: Company Info */}
         {step === 0 && (
           <>
             <TextField
@@ -240,11 +369,13 @@ const TenantSetupWizard = () => {
               value={formData.companyName}
               onChange={(e) => {
                 const name = e.target.value;
-                setFormData({
-                  ...formData,
+                setFormData((prev) => ({
+                  ...prev,
                   companyName: name,
-                  subdomain: name.toLowerCase().replace(/\s+/g, ""),
-                });
+                  subdomain: name
+                    ? name.toLowerCase().replace(/\s+/g, "")
+                    : prev.subdomain,
+                }));
               }}
             />
             <TextField
@@ -256,23 +387,26 @@ const TenantSetupWizard = () => {
               onChange={handleChange}
               InputProps={{
                 endAdornment: (
-                  <Typography color="text.secondary">
+                  <Typography color="text.secondary" sx={{ ml: 0.5 }}>
                     .hi5tech.co.uk
                   </Typography>
                 ),
               }}
+              helperText="This will become your ITSM URL, e.g. mycompany-itsm.hi5tech.co.uk"
             />
             <Button
               fullWidth
               variant="contained"
               sx={{ mt: 2 }}
-              onClick={() => setStep(1)}
+              onClick={handleStep0Next}
+              disabled={checkingSubdomain}
             >
-              Next
+              {checkingSubdomain ? "Checking..." : "Next"}
             </Button>
           </>
         )}
 
+        {/* STEP 1: Admin Email & Password */}
         {step === 1 && (
           <>
             <TextField
@@ -312,9 +446,19 @@ const TenantSetupWizard = () => {
                 ? `Resend in ${resendCooldown}s`
                 : "Send Verification Code"}
             </Button>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ mt: 1, display: "block" }}
+            >
+              A one-time code will be emailed to you. It will expire after a
+              short period; if it does, you will need to request a new code
+              before completing setup.
+            </Typography>
           </>
         )}
 
+        {/* STEP 2: Verify OTP */}
         {step === 2 && (
           <>
             <TextField
@@ -336,6 +480,7 @@ const TenantSetupWizard = () => {
           </>
         )}
 
+        {/* STEP 3: Logo Upload */}
         {step === 3 && (
           <>
             <Typography gutterBottom>Upload Company Logo</Typography>
@@ -351,13 +496,26 @@ const TenantSetupWizard = () => {
           </>
         )}
 
+        {/* STEP 4: Create Tenant */}
         {step === 4 && (
           <>
-            <Typography gutterBottom>Ready to create your tenant!</Typography>
+            <Typography gutterBottom>
+              Your email is verified and you’re ready to create your tenant.
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Clicking &quot;Create Tenant&quot; will provision your dedicated
+              ITSM environment at:
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ fontWeight: 600, mt: 0.5, mb: 2 }}
+            >
+              {formData.subdomain}-itsm.hi5tech.co.uk
+            </Typography>
             <Button
               variant="contained"
               fullWidth
-              sx={{ mt: 2 }}
+              sx={{ mt: 1 }}
               onClick={handleSubmit}
             >
               Create Tenant
