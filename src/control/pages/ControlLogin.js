@@ -11,7 +11,7 @@ import {
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 import defaultLogo from "../../assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
-import AuthService from "../../common/services/AuthService";
+// import AuthService from "../../common/services/AuthService";
 
 const ControlLogin = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -24,59 +24,66 @@ const ControlLogin = () => {
 
   useEffect(() => {
     const fetchLogo = async () => {
-      const { data: tenantData } = await supabase
-        .from("tenants")
-        .select("id")
-        .eq("subdomain", baseSubdomain)
-        .maybeSingle();
+      try {
+        const { data: tenantData } = await supabase
+          .from("tenants")
+          .select("id")
+          .eq("subdomain", baseSubdomain)
+          .maybeSingle();
 
-      if (!tenantData) return;
+        if (!tenantData) return;
 
-      const { data: settings } = await supabase
-        .from("tenant_settings")
-        .select("logo_url")
-        .eq("tenant_id", tenantData.id)
-        .maybeSingle();
+        const { data: settings } = await supabase
+          .from("tenant_settings")
+          .select("logo_url")
+          .eq("tenant_id", tenantData.id)
+          .maybeSingle();
 
-      const { data: publicData } = supabase.storage
-        .from("tenant-logos")
-        .getPublicUrl(settings?.logo_url || "");
+        const { data: publicData } = supabase.storage
+          .from("tenant-logos")
+          .getPublicUrl(settings?.logo_url || "");
 
-      if (publicData?.publicUrl) setLogoUrl(publicData.publicUrl);
+        if (publicData?.publicUrl) setLogoUrl(publicData.publicUrl);
+      } catch {
+        // ignore logo errors for now
+      }
     };
 
     fetchLogo();
   }, [baseSubdomain]);
+
+  // Optional: auto-bypass when you visit /login?bypass=1 (handy in dev)
+  useEffect(() => {
+    const bypass = searchParams.get("bypass");
+    if (bypass === "1" || bypass === "true") {
+      const redirect = searchParams.get("redirect");
+      window.location.href = redirect || "/";
+    }
+  }, [searchParams]);
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleLogin = async () => {
     setError("");
+
+    // TEMP BYPASS:
+    // If you still want the form to feel "required", keep this check.
+    // If you want true bypass (no fields required), delete this block.
     const { email, password } = formData;
     if (!email || !password) {
       setError("Please enter both email and password.");
       return;
     }
 
-    const { error: loginError } = await AuthService.signIn(email, password);
-    if (loginError) {
-      setError("Invalid login credentials.");
-      return;
-    }
-
-    // Ensure session is available and force re-evaluation of AuthContext
-    await supabase.auth.getSession();
+    // Skip AuthService + Supabase session creation entirely
     const redirect = searchParams.get("redirect");
     window.location.href = redirect || "/";
   };
 
   return (
     <Container maxWidth="sm" sx={{ mt: 10 }}>
-      <Paper
-        elevation={4}
-        sx={{ p: 4, textAlign: "center", borderRadius: 4 }}
-      >
+      <Paper elevation={4} sx={{ p: 4, textAlign: "center", borderRadius: 4 }}>
         <img
           src={logoUrl}
           alt="Tenant Logo"
@@ -107,6 +114,7 @@ const ControlLogin = () => {
           onChange={handleChange}
           margin="dense"
         />
+
         <Box sx={{ textAlign: "right", mt: 1 }}>
           <MuiLink
             component={Link}
@@ -132,6 +140,11 @@ const ControlLogin = () => {
         >
           Login
         </Button>
+
+        {/* Optional helper hint (remove whenever) */}
+        <Typography variant="caption" display="block" sx={{ mt: 1, opacity: 0.7 }}>
+          (Auth bypass enabled)
+        </Typography>
       </Paper>
 
       <Typography
