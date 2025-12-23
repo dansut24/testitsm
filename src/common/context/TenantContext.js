@@ -1,21 +1,32 @@
-// TenantContext.js
+// src/common/context/TenantContext.js
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "../../supabaseClient";
+import { supabase } from "../utils/supabaseClient"; // ✅ match AuthContext location
 
 const TenantContext = createContext();
 
 export const useTenant = () => useContext(TenantContext);
 
-const getSubdomain = () => {
-  const host = window.location.hostname;
-  const parts = host.split(".");
-  if (parts.length >= 3) return parts[0];
-  return null;
-};
-
 const isRootDomain = () => {
   const host = window.location.hostname;
   return host === "hi5tech.co.uk" || host === "www.hi5tech.co.uk";
+};
+
+// Extract tenant slug from host like:
+// demoitsm-control.hi5tech.co.uk -> demoitsm
+// demoitsm-itsm.hi5tech.co.uk    -> demoitsm
+// demoitsm-self.hi5tech.co.uk   -> demoitsm
+const getTenantSlugFromHost = () => {
+  const host = window.location.hostname || "";
+  if (host.includes("localhost")) return "local";
+
+  const first = host.split(".")[0] || ""; // "demoitsm-control"
+  // strip known suffixes
+  const slug = first
+    .replace("-control", "")
+    .replace("-itsm", "")
+    .replace("-self", "");
+
+  return slug || null;
 };
 
 export const TenantProvider = ({ children }) => {
@@ -24,65 +35,96 @@ export const TenantProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     const loadTenant = async () => {
-      if (isRootDomain()) {
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-
-      const rawSubdomain = getSubdomain();
-      const subdomain = rawSubdomain?.replace("-itsm", "");
-
-      if (!subdomain) {
-        console.warn("No subdomain found.");
-        setLoading(false);
-        return;
-      }
-
-      const { data: tenantData, error: tenantError } = await supabase
-        .from("tenants")
-        .select("*")
-        .eq("subdomain", subdomain)
-        .maybeSingle();
-
-      if (tenantError || !tenantData) {
-        console.error("❌ Failed to load tenant:", tenantError?.message);
-        setLoading(false);
-        return;
-      }
-
-      setTenant(tenantData);
-
-      const { data: settingsData, error: settingsError } = await supabase
-        .from("tenant_settings")
-        .select("*")
-        .eq("tenant_id", tenantData.id)
-        .maybeSingle();
-
-      if (settingsError || !settingsData) {
-        if (window.location.pathname !== "/tenant-setup") {
-          console.warn("⚠️ No settings found for tenant");
+      try {
+        if (isRootDomain()) {
+          if (!mounted) return;
+          setLoading(false);
+          return;
         }
-      } else {
-        // Handle both full URLs and relative paths
+
+        setLoading(true);
+
+        const subdomain = getTenantSlugFromHost();
+
+        if (!subdomain || subdomain === "local") {
+          console.warn("[Tenant] No tenant subdomain found from host:", window.location.hostname);
+          if (!mounted) return;
+          setLoading(false);
+          return;
+        }
+
+        // ✅ Load tenant record
+        const { data: tenantData, error: tenantError } = await supabase
+          .from("tenants")
+          .select("*")
+          .eq("subdomain", subdomain)
+          .maybeSingle();
+
+        if (!mounted) return;
+
+        if (tenantError || !tenantData) {
+          console.error("[Tenant] Failed to load tenant", {
+            host: window.location.hostname,
+            subdomain,
+            tenantError: tenantError?.message || tenantError || "no error object",
+          });
+          setTenant(null);
+          setTenantSettings(null);
+          setLoading(false);
+          return;
+        }
+
+        setTenant(tenantData);
+
+        // ✅ Load tenant settings
+        const { data: settingsData, error: settingsError } = await supabase
+          .from("tenant_settings")
+          .select("*")
+          .eq("tenant_id", tenantData.id)
+          .maybeSingle();
+
+        if (!mounted) return;
+
+        if (settingsError || !settingsData) {
+          if (window.location.pathname !== "/tenant-setup") {
+            console.warn("[Tenant] No settings found for tenant", {
+              tenant_id: tenantData.id,
+              settingsError: settingsError?.message || settingsError || "no error object",
+            });
+          }
+          setTenantSettings(null);
+          setLoading(false);
+          return;
+        }
+
+        // ✅ Normalize logo_url
         const logoUrl = settingsData.logo_url;
-        if (logoUrl?.startsWith("http")) {
-          settingsData.logo_url = logoUrl;
-        } else {
+        if (logoUrl && !logoUrl.startsWith("http")) {
           const { data: publicData } = supabase.storage
             .from("tenant-logos")
             .getPublicUrl(logoUrl);
           settingsData.logo_url = publicData?.publicUrl || "";
         }
-        setTenantSettings(settingsData);
-      }
 
-      setLoading(false);
+        setTenantSettings(settingsData);
+        setLoading(false);
+      } catch (e) {
+        console.error("[Tenant] Exception while loading tenant:", e);
+        if (!mounted) return;
+        setTenant(null);
+        setTenantSettings(null);
+        setLoading(false);
+      }
     };
 
     loadTenant();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   return (
