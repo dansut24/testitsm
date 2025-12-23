@@ -1,11 +1,22 @@
 // src/components/ProtectedRoute.js
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import NotAuthorised from "../pages/NotAuthorised";
-import { useAuth } from "../../common/context/AuthContext"; // ✅ Corrected relative path
+import { useAuth } from "../../common/context/AuthContext";
 
-const ProtectedRoute = ({ allowedRoles, children }) => {
-  const { user, authLoading } = useAuth(); // ✅ Use context
+const ProtectedRoute = ({ allowedRoles = [], children }) => {
+  const { user, authLoading } = useAuth();
+  const location = useLocation();
+
+  // ✅ TEMP BYPASS (testing only)
+  // Use either env flag OR URL param:
+  const bypassEnv = import.meta.env.VITE_BYPASS_AUTH === "true";
+  const bypassParam = new URLSearchParams(location.search).get("bypass");
+  const bypass = bypassEnv || bypassParam === "1" || bypassParam === "true";
+
+  if (bypass) {
+    return children;
+  }
 
   if (authLoading) {
     return <div>Loading...</div>;
@@ -15,7 +26,8 @@ const ProtectedRoute = ({ allowedRoles, children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (!allowedRoles.includes(user.role)) {
+  // If allowedRoles not provided, treat as "any logged-in user"
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
     return <NotAuthorised />;
   }
 
