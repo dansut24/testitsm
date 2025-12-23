@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../../common/utils/supabaseClient";
 import { useNavigate } from "react-router-dom";
 
@@ -24,17 +24,16 @@ export const AuthProvider = ({ children }) => {
     return host === "hi5tech.co.uk" || host === "www.hi5tech.co.uk";
   };
 
-  // If you ever want to enforce tenant scoping, flip this to true.
-  // For now (testing), leaving false avoids "logged in but blocked".
+  // Turn on later if you want strict tenant enforcement
   const ENFORCE_TENANT_MATCH = false;
 
-  const safeSetLoggedOut = () => {
+  const safeLogoutLocal = () => {
     setUser(null);
     setAuthLoading(false);
   };
 
-  const fetchUserProfile = async (supabaseUser, currentTenant) => {
-    // Always start from a base user so you don't get bounced to login
+  const fetchUserProfile = async (supabaseUser, resolvedTenant) => {
+    // Base user so ProtectedRoute doesn't bounce while profile loads (or if it fails)
     const baseUser = {
       id: supabaseUser.id,
       email: supabaseUser.email,
@@ -51,9 +50,12 @@ export const AuthProvider = ({ children }) => {
         .eq("id", supabaseUser.id)
         .maybeSingle();
 
-      // If profile fetch fails (common with RLS), DO NOT log out.
+      // IMPORTANT: do NOT setUser(null) on profile failure
       if (error || !profile) {
-        console.warn("Profile fetch failed; continuing with base user.", error?.message);
+        console.warn(
+          "Profile fetch failed; continuing with base user.",
+          error?.message
+        );
         setUser(baseUser);
         setAuthLoading(false);
         return;
@@ -69,19 +71,18 @@ export const AuthProvider = ({ children }) => {
         tenant_id: profile.tenant_id,
       };
 
-      // Optional tenant enforcement (off by default for now)
       if (
         ENFORCE_TENANT_MATCH &&
-        currentTenant?.id &&
+        resolvedTenant?.id &&
         resolvedUser.tenant_id &&
-        resolvedUser.tenant_id !== currentTenant.id
+        resolvedUser.tenant_id !== resolvedTenant.id
       ) {
-        console.warn("Tenant mismatch; logging out for safety.", {
-          currentTenant: currentTenant.id,
+        console.warn("Tenant mismatch; signing out.", {
+          currentTenant: resolvedTenant.id,
           userTenant: resolvedUser.tenant_id,
         });
         await supabase.auth.signOut();
-        safeSetLoggedOut();
+        safeLogoutLocal();
         return;
       }
 
@@ -95,13 +96,13 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    let isMounted = true;
+    let mounted = true;
 
     const init = async () => {
       setAuthLoading(true);
       setTenantError(null);
 
-      // 1) Resolve tenant from subdomain (Control + ITSM both use this)
+      // 1) Resolve tenant by subdomain
       let resolvedTenant = null;
       const subdomain = getSubdomain();
 
@@ -112,8 +113,9 @@ export const AuthProvider = ({ children }) => {
           .eq("subdomain", subdomain)
           .maybeSingle();
 
+        if (!mounted) return;
+
         if (error || !data) {
-          if (!isMounted) return;
           setTenant(null);
           setTenantError("🚫 Tenant not found for this subdomain.");
           setAuthLoading(false);
@@ -121,30 +123,34 @@ export const AuthProvider = ({ children }) => {
         }
 
         resolvedTenant = data;
-        if (!isMounted) return;
         setTenant(data);
       } else {
-        if (!isMounted) return;
+        if (!mounted) return;
         setTenant(null);
       }
 
-      // 2) Resolve auth session user
+      // 2) Resolve supabase user (session)
       const {
         data: { user: supabaseUser },
         error: userError,
       } = await supabase.auth.getUser();
 
-      if (!isMounted) return;
+      if (!mounted) return;
 
       if (userError || !supabaseUser) {
-        safeSetLoggedOut();
+        safeLogoutLocal();
         return;
       }
 
-      // Set base user immediately so ProtectedRoute doesn't bounce while profile loads
-      setUser({ id: supabaseUser.id, email: supabaseUser.email, role: "user", roles: ["user"] });
+      // Set base user immediately so routes can render while we fetch profile
+      setUser({
+        id: supabaseUser.id,
+        email: supabaseUser.email,
+        role: "user",
+        roles: ["user"],
+      });
 
-      // 3) Load profile (role/tenant/name) but do not log out if it fails
+      // 3) Fetch profile (role/tenant)
       await fetchUserProfile(supabaseUser, resolvedTenant);
     };
 
@@ -153,7 +159,7 @@ export const AuthProvider = ({ children }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!isMounted) return;
+      if (!mounted) return;
 
       if (!session?.user) {
         setUser(null);
@@ -161,7 +167,7 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      // Keep UI responsive: base user first, then profile
+      // Base user first
       setAuthLoading(true);
       setUser({
         id: session.user.id,
@@ -170,11 +176,12 @@ export const AuthProvider = ({ children }) => {
         roles: ["user"],
       });
 
+      // Use latest tenant from state (fine for most cases)
       await fetchUserProfile(session.user, tenant);
     });
 
     return () => {
-      isMounted = false;
+      mounted = false;
       subscription?.unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -187,6 +194,7 @@ export const AuthProvider = ({ children }) => {
     navigate("/login");
   };
 
+  // Tenant error gate (no hooks below this line)
   if (!isRootDomain() && tenantError) {
     return (
       <div style={{ padding: 40 }}>
@@ -196,9 +204,11 @@ export const AuthProvider = ({ children }) => {
     );
   }
 
-  const value = useMemo(() => ({ user, authLoading, logout, tenant }), [user, authLoading, tenant]);
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, authLoading, logout, tenant }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => useContext(AuthContext);
