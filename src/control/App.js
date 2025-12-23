@@ -9,6 +9,7 @@ import ControlSettings from "./pages/Settings";
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/ControlLogin";
+import DeviceRemote from "./pages/DeviceRemote";
 
 import { useAuth } from "../common/context/AuthContext";
 
@@ -41,6 +42,7 @@ function App() {
             <Route path="devices" element={<Devices />} />
             <Route path="reports" element={<Reports />} />
             <Route path="settings" element={<ControlSettings />} />
+            <Route path="devices/:deviceId/remote" element={<DeviceRemote />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
