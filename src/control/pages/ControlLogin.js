@@ -65,21 +65,32 @@ const ControlLogin = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleLogin = async () => {
-    setError("");
+  setError("");
 
-    // TEMP BYPASS:
-    // If you still want the form to feel "required", keep this check.
-    // If you want true bypass (no fields required), delete this block.
-    const { email, password } = formData;
-    if (!email || !password) {
-      setError("Please enter both email and password.");
+  const { email, password } = formData;
+  if (!email || !password) {
+    setError("Please enter both email and password.");
+    return;
+  }
+
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setError(error.message || "Login failed");
       return;
     }
 
-    // Skip AuthService + Supabase session creation entirely
+    // data.session should exist if login succeeded
     const redirect = searchParams.get("redirect");
     window.location.href = redirect || "/";
-  };
+  } catch (e) {
+    setError(e?.message || "Login failed");
+  }
+};
 
   return (
     <Container maxWidth="sm" sx={{ mt: 10 }}>
