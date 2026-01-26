@@ -124,20 +124,21 @@ const CommentSection = ({ comments = [], onAddComment }) => {
       .run();
   };
 
-  const toolbarButtonSx = (isActive) => ({
-    minWidth: 0,
-    width: 28,
-    height: 28,
-    mx: 0.25,
-    borderRadius: 1,
-    color: isActive ? "primary.main" : "text.secondary",
-    border: "1px solid",
-    borderColor: isActive ? "primary.main" : "divider",
-    bgcolor: isActive ? "primary.light" + "33" : "background.paper",
-    "&:hover": {
-      bgcolor: isActive ? "primary.light" + "55" : "action.hover",
-    },
-  });
+ const toolbarButtonSx = (isActive) => ({
+  minWidth: 0,
+  width: 28,
+  height: 28,
+  mx: 0.25,
+  borderRadius: 1,
+  color: isActive ? "primary.main" : "text.secondary",
+  border: "1px solid",
+  borderColor: isActive ? "primary.main" : "divider",
+  // Avoid string concatenation warnings in CRA CI (process.env.CI=true)
+  bgcolor: isActive ? "rgba(124, 92, 255, 0.20)" : "background.paper",
+  "&:hover": {
+    bgcolor: isActive ? "rgba(124, 92, 255, 0.30)" : "action.hover",
+  },
+});
 
   // 🔹 Handle pasted screenshots/images
   const handlePaste = (event) => {
