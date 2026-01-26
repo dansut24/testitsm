@@ -50,13 +50,6 @@ const routeLabels = {
   "/new-tab": "New Tab",          // 🔹 added for NewTab page
 };
 
-const STATUS_OPTIONS = [
-  { key: "Available", color: "success.main" },
-  { key: "Busy", color: "error.main" },
-  { key: "Away", color: "warning.main" },
-  { key: "Offline", color: "text.disabled" },
-];
-
 const Layout = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -66,7 +59,6 @@ const Layout = () => {
   const APP_HEADER_HEIGHT = isMobile ? 52 : BASE_APP_HEADER_HEIGHT;
   const TABBAR_HEIGHT = isMobile ? 42 : BASE_TABBAR_HEIGHT;
   const NAVBAR_HEIGHT = APP_HEADER_HEIGHT + TABBAR_HEIGHT;
-  const BOTTOM_NAV_HEIGHT = isMobile ? 64 : BASE_BOTTOM_NAV_HEIGHT;
 
   const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
