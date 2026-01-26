@@ -11,7 +11,6 @@ import {
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../../common/utils/supabaseClient";
 import defaultLogo from "../../assets/865F7924-3016-4B89-8DF4-F881C33D72E6.png";
-// import AuthService from "../../common/services/AuthService";
 
 const ControlLogin = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -65,44 +64,38 @@ const ControlLogin = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleLogin = async () => {
-  setError("");
+    setError("");
 
-  const { email, password } = formData;
-  if (!email || !password) {
-    setError("Please enter both email and password.");
-    return;
-  }
-
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      setError(error.message || "Login failed");
+    const { email, password } = formData;
+    if (!email || !password) {
+      setError("Please enter both email and password.");
       return;
     }
 
-    // data.session should exist if login succeeded
-    const redirect = searchParams.get("redirect");
-    window.location.href = redirect || "/";
-  } catch (e) {
-    setError(e?.message || "Login failed");
-  }
-};
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        setError(error.message || "Login failed");
+        return;
+      }
+
+      const redirect = searchParams.get("redirect");
+      window.location.href = redirect || "/";
+    } catch (e) {
+      setError(e?.message || "Login failed");
+    }
+  };
 
   return (
     <Container maxWidth="sm" sx={{ mt: 10 }}>
       <Paper elevation={4} sx={{ p: 4, textAlign: "center", borderRadius: 4 }}>
-        <img
-          src={logoUrl}
-          alt="Tenant Logo"
-          style={{ height: 60, marginBottom: 16 }}
-        />
+        <img src={logoUrl} alt="Tenant Logo" style={{ height: 60, marginBottom: 16 }} />
+
         <Typography variant="h5" fontWeight={600} gutterBottom>
           Welcome to Hi5Tech Control
         </Typography>
+
         <Typography variant="body2" color="text.secondary" mb={3}>
           Sign in to your workspace
         </Typography>
@@ -127,12 +120,7 @@ const ControlLogin = () => {
         />
 
         <Box sx={{ textAlign: "right", mt: 1 }}>
-          <MuiLink
-            component={Link}
-            to="/reset-password"
-            underline="hover"
-            fontSize="0.875rem"
-          >
+          <MuiLink component={Link} to="/reset-password" underline="hover" fontSize="0.875rem">
             Forgot password?
           </MuiLink>
         </Box>
@@ -152,7 +140,6 @@ const ControlLogin = () => {
           Login
         </Button>
 
-        {/* Optional helper hint (remove whenever) */}
         <Typography variant="caption" display="block" sx={{ mt: 1, opacity: 0.7 }}>
           (Auth bypass enabled)
         </Typography>
