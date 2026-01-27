@@ -1,8 +1,9 @@
+// src/control/App.js
 import React from "react";
 import { CssBaseline, Box } from "@mui/material";
 import { Routes, Route, Navigate } from "react-router-dom";
-
 import ControlLayout from "./layouts/ControlLayout";
+
 import Devices from "./pages/Devices";
 import Reports from "./pages/Reports";
 import ControlSettings from "./pages/Settings";
@@ -12,9 +13,11 @@ import DeviceRemote from "./pages/DeviceRemote";
 
 import { useAuth } from "../common/context/AuthContext";
 import { getCentralLoginUrl } from "../common/utils/portalUrl";
+import ExternalRedirect from "../common/components/ExternalRedirect";
 
 function App() {
   const { authLoading, user } = useAuth();
+  const centralLogin = getCentralLoginUrl("/control");
 
   if (authLoading) {
     return (
@@ -24,19 +27,17 @@ function App() {
     );
   }
 
-  const centralLogin = getCentralLoginUrl("/control");
-
   return (
     <>
       <CssBaseline />
       <Box sx={{ minHeight: "100vh", overflow: "auto" }}>
         <Routes>
-          {/* IMPORTANT: never show a control login page now */}
-          <Route path="/login" element={<Navigate to={centralLogin} replace />} />
+          {/* Control should never render a local login page */}
+          <Route path="/login" element={<ExternalRedirect to={centralLogin} />} />
 
           <Route
             path="/"
-            element={user ? <ControlLayout /> : <Navigate to={centralLogin} replace />}
+            element={user ? <ControlLayout /> : <ExternalRedirect to={centralLogin} />}
           >
             <Route index element={<Home />} />
             <Route path="devices" element={<Devices />} />
@@ -45,7 +46,7 @@ function App() {
             <Route path="devices/:deviceId/remote" element={<DeviceRemote />} />
           </Route>
 
-          <Route path="*" element={<NotFound />} />
+          <Route path="*" element={user ? <NotFound /> : <ExternalRedirect to={centralLogin} />} />
         </Routes>
       </Box>
     </>
