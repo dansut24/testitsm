@@ -2,16 +2,14 @@
 import "@uiw/react-md-editor/markdown-editor.css";
 import "@uiw/react-markdown-preview/markdown.css";
 
-// src/itsm/App.js
 import React, { useEffect, useState } from "react";
 import { Box } from "@mui/material";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "../common/utils/supabaseClient";
 import { ThemeModeProvider } from "./theme/ThemeContext";
 
 // Layout & Auth
 import Layout from "./components/Layout";
-import Login from "./pages/Login";
 import Loading from "./pages/Loading";
 import NotAuthorised from "./pages/NotAuthorised";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -30,7 +28,6 @@ import UserProfile from "./pages/UserProfile";
 import Settings from "./pages/Settings";
 import AdminSettings from "./pages/AdminSettings";
 
-// 🔹 Tenant onboarding page
 import TenantOnboardingPage from "./pages/TenantOnboardingPage";
 
 // Create Pages
@@ -55,7 +52,7 @@ import NotFound from "./pages/NotFound";
 import SetPassword from "./pages/SetPassword";
 import NewTab from "./pages/NewTab";
 
-// Self-Service Pages
+// Self-Service Pages (these stay separate under /self-service in top router)
 import SelfServiceLayout from "../selfservice/layouts/SelfServiceLayout";
 import SelfServiceHome from "../selfservice/pages/SelfServiceHome";
 import RaiseRequest from "../selfservice/pages/RaiseRequest";
@@ -65,7 +62,7 @@ import Checkout from "../selfservice/pages/Checkout";
 import SelfServiceConfirmation from "../selfservice/pages/CheckoutConfirmation";
 import SelfServiceKnowledgeBase from "../selfservice/pages/KnowledgeBase";
 
-function AppRoutes() {
+function ITSMRoutes() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -75,8 +72,8 @@ function AppRoutes() {
       setLoading(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => setSession(session)
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) =>
+      setSession(session)
     );
 
     return () => listener.subscription.unsubscribe();
@@ -88,69 +85,70 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Public Pages */}
-      <Route path="/login" element={<Login />} />
+      {/* Public pages (centralised login) */}
+      <Route path="/login" element={<Navigate to="/login?redirect=/itsm" replace />} />
       <Route path="/loading" element={<Loading />} />
       <Route path="/not-authorised" element={<NotAuthorised />} />
       <Route path="/set-password" element={<SetPassword />} />
 
-      {/* ITSM Layout */}
-      {isLoggedIn && (
-        <Route path="/" element={<Layout />}>
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="incidents" element={<Incidents />} />
-          <Route path="service-requests" element={<ServiceRequests />} />
-          <Route path="changes" element={<Changes />} />
-          <Route path="problems" element={<Problems />} />
-          <Route path="assets" element={<Assets />} />
-          <Route path="knowledge-base" element={<KnowledgeBase />} />
-          <Route path="reports" element={<Reports />} />
-          <Route path="approvals" element={<Approvals />} />
-          <Route path="profile" element={<UserProfile />} />
-          <Route path="settings" element={<Settings />} />
+      {/* ITSM base */}
+      <Route
+        path="/"
+        element={isLoggedIn ? <Layout /> : <Navigate to="/login?redirect=/itsm" replace />}
+      >
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="incidents" element={<Incidents />} />
+        <Route path="service-requests" element={<ServiceRequests />} />
+        <Route path="changes" element={<Changes />} />
+        <Route path="problems" element={<Problems />} />
+        <Route path="assets" element={<Assets />} />
+        <Route path="knowledge-base" element={<KnowledgeBase />} />
+        <Route path="reports" element={<Reports />} />
+        <Route path="approvals" element={<Approvals />} />
+        <Route path="profile" element={<UserProfile />} />
+        <Route path="settings" element={<Settings />} />
 
-          <Route
-            path="admin-settings"
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <AdminSettings />
-              </ProtectedRoute>
-            }
-          />
+        <Route
+          path="admin-settings"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminSettings />
+            </ProtectedRoute>
+          }
+        />
 
-          {/* 🔹 Tenant onboarding (admin only) */}
-          <Route
-            path="tenant-onboarding"
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <TenantOnboardingPage />
-              </ProtectedRoute>
-            }
-          />
+        <Route
+          path="tenant-onboarding"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <TenantOnboardingPage />
+            </ProtectedRoute>
+          }
+        />
 
-          {/* Create */}
-          <Route path="new-incident" element={<NewIncident />} />
-          <Route path="new-service-request" element={<NewServiceRequest />} />
-          <Route path="new-change" element={<NewChange />} />
-          <Route path="new-problem" element={<NewProblem />} />
-          <Route path="new-asset" element={<NewAsset />} />
+        {/* Create */}
+        <Route path="new-incident" element={<NewIncident />} />
+        <Route path="new-service-request" element={<NewServiceRequest />} />
+        <Route path="new-change" element={<NewChange />} />
+        <Route path="new-problem" element={<NewProblem />} />
+        <Route path="new-asset" element={<NewAsset />} />
 
-          {/* Detail */}
-          <Route path="incidents/:id" element={<IncidentDetail />} />
-          <Route path="service-requests/:id" element={<ServiceRequestDetail />} />
-          <Route path="changes/:id" element={<ChangeDetail />} />
-          <Route path="problems/:id" element={<ProblemDetail />} />
-          <Route path="assets/:id" element={<AssetDetail />} />
-          <Route path="knowledge-base/:id" element={<ArticleDetail />} />
+        {/* Detail */}
+        <Route path="incidents/:id" element={<IncidentDetail />} />
+        <Route path="service-requests/:id" element={<ServiceRequestDetail />} />
+        <Route path="changes/:id" element={<ChangeDetail />} />
+        <Route path="problems/:id" element={<ProblemDetail />} />
+        <Route path="assets/:id" element={<AssetDetail />} />
+        <Route path="knowledge-base/:id" element={<ArticleDetail />} />
 
-          {/* Other */}
-          <Route path="announcements" element={<Announcements />} />
-          <Route path="work-scheduler" element={<WorkScheduler />} />
-          <Route path="newtab/:id" element={<NewTab />} />
-        </Route>
-      )}
+        {/* Other */}
+        <Route path="announcements" element={<Announcements />} />
+        <Route path="work-scheduler" element={<WorkScheduler />} />
+        <Route path="newtab/:id" element={<NewTab />} />
+      </Route>
 
-      {/* Self-Service */}
+      {/* Self-Service (kept for backwards compatibility if anyone hits /itsm/self-service) */}
       {isLoggedIn && (
         <Route path="/self-service" element={<SelfServiceLayout />}>
           <Route index element={<SelfServiceHome />} />
@@ -163,8 +161,7 @@ function AppRoutes() {
         </Route>
       )}
 
-      {/* Catch All */}
-      <Route path="*" element={isLoggedIn ? <NotFound /> : <Login />} />
+      <Route path="*" element={isLoggedIn ? <NotFound /> : <Navigate to="/login" replace />} />
     </Routes>
   );
 }
@@ -175,13 +172,13 @@ function App() {
       <Box
         sx={{
           minHeight: "100vh",
-          width: "100vw",
+          width: "100%",
           overflowX: "hidden",
           display: "flex",
           flexDirection: "column",
         }}
       >
-        <AppRoutes />
+        <ITSMRoutes />
       </Box>
     </ThemeModeProvider>
   );
