@@ -1,8 +1,8 @@
 import React from "react";
 import { CssBaseline, Box } from "@mui/material";
 import { Routes, Route, Navigate } from "react-router-dom";
-import ControlLayout from "./layouts/ControlLayout";
 
+import ControlLayout from "./layouts/ControlLayout";
 import Devices from "./pages/Devices";
 import Reports from "./pages/Reports";
 import ControlSettings from "./pages/Settings";
@@ -11,7 +11,7 @@ import NotFound from "./pages/NotFound";
 import DeviceRemote from "./pages/DeviceRemote";
 
 import { useAuth } from "../common/context/AuthContext";
-import CentralLogin from "../common/pages/CentralLogin";
+import { getCentralLoginUrl } from "../common/utils/portalUrl";
 
 function App() {
   const { authLoading, user } = useAuth();
@@ -24,19 +24,19 @@ function App() {
     );
   }
 
+  const centralLogin = getCentralLoginUrl("/control");
+
   return (
     <>
       <CssBaseline />
       <Box sx={{ minHeight: "100vh", overflow: "auto" }}>
         <Routes>
-          <Route
-            path="/login"
-            element={user ? <Navigate to="/" replace /> : <CentralLogin />}
-          />
+          {/* IMPORTANT: never show a control login page now */}
+          <Route path="/login" element={<Navigate to={centralLogin} replace />} />
 
           <Route
             path="/"
-            element={user ? <ControlLayout /> : <Navigate to="/login" replace />}
+            element={user ? <ControlLayout /> : <Navigate to={centralLogin} replace />}
           >
             <Route index element={<Home />} />
             <Route path="devices" element={<Devices />} />
