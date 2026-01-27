@@ -8,6 +8,17 @@ const MODULE_HOST_SUFFIXES = [
   { module: "self", token: "-self" },
 ];
 
+// Minimal public-suffix handling (enough to fix .co.uk etc)
+const MULTI_PART_TLDS = new Set([
+  "co.uk",
+  "org.uk",
+  "ac.uk",
+  "gov.uk",
+  "ltd.uk",
+  "plc.uk",
+  "net.uk",
+]);
+
 function getHost() {
   return window.location.hostname || "";
 }
@@ -16,23 +27,35 @@ function getProtocol() {
   return window.location.protocol || "https:";
 }
 
-function getRootDomainFromHost(host) {
-  // e.g. demoitsm.hi5tech.co.uk -> hi5tech.co.uk
+function getRegistrableDomain(host) {
+  // Returns the base domain:
+  // demoitsm.hi5tech.co.uk -> hi5tech.co.uk
+  // demoitsm-control.hi5tech.com -> hi5tech.com
   const parts = String(host || "").split(".").filter(Boolean);
-  if (parts.length < 2) return host;
-  return parts.slice(-2).join(".");
+  if (parts.length <= 2) return host;
+
+  const last2 = parts.slice(-2).join(".");
+  const last3 = parts.slice(-3).join(".");
+
+  // If TLD is multi-part (co.uk), registrable domain uses last 3 labels
+  if (MULTI_PART_TLDS.has(last2)) {
+    return last3; // e.g. hi5tech.co.uk
+  }
+
+  // Normal TLD (com/net/etc) uses last 2 labels
+  return last2;
 }
 
 function parseTenantFromHost(host) {
-  const h = String(host || "");
+  const h = String(host || "").trim();
   if (!h) return { tenantSlug: null, module: null, rootDomain: null };
 
   if (ROOT_HOSTS.has(h)) return { tenantSlug: null, module: null, rootDomain: h };
 
-  const rootDomain = getRootDomainFromHost(h);
+  const rootDomain = getRegistrableDomain(h);
 
-  // If host is something like demoitsm-itsm.hi5tech.co.uk -> tenantSlug=demoitsm module=itsm
-  const firstLabel = h.split(".")[0] || ""; // demoitsm-itsm OR demoitsm
+  // first label: demoitsm-itsm OR demoitsm
+  const firstLabel = h.split(".")[0] || "";
   const found = MODULE_HOST_SUFFIXES.find((x) => firstLabel.endsWith(x.token));
 
   if (found) {
@@ -73,7 +96,7 @@ export function getModuleBaseUrl(module) {
  * Central login URL on tenant base host.
  * redirectPath can be:
  *  - "/" (landing)
- *  - "/itsm" | "/control" | "/self" (meaning: go to that module host after login)
+ *  - "/itsm" | "/control" | "/self"
  */
 export function getCentralLoginUrl(redirectPath = "/") {
   const base = getTenantBaseUrl();
