@@ -27,20 +27,14 @@ const renderWithProviders = (AppComponent) => {
   );
 };
 
+// Subdomain routing
 if (host.includes("-control.")) {
-  import("./control").then(({ default: ControlApp }) => {
-    renderWithProviders(ControlApp);
-  });
+  import("./control").then(({ default: ControlApp }) => renderWithProviders(ControlApp));
 } else if (host.includes("-self.")) {
-  import("./selfservice").then(({ default: SelfServiceApp }) => {
-    renderWithProviders(SelfServiceApp);
-  });
+  import("./selfservice").then(({ default: SelfServiceApp }) => renderWithProviders(SelfServiceApp));
 } else if (host.includes("-itsm.")) {
-  import("./itsm").then(({ default: ITSMApp }) => {
-    renderWithProviders(ITSMApp);
-  });
+  import("./itsm").then(({ default: ITSMApp }) => renderWithProviders(ITSMApp));
 } else {
-  import("./main").then(({ default: MarketingApp }) => {
-    renderWithProviders(MarketingApp);
-  });
+  // ✅ tenant.hi5tech.co.uk becomes the PORTAL (central login + landing chooser)
+  import("./portal").then(({ default: PortalApp }) => renderWithProviders(PortalApp));
 }
