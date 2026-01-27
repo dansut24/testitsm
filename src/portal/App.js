@@ -48,7 +48,6 @@ function buildModuleUrl(tenantBase, moduleKey) {
 }
 
 async function loadTenantByBaseHost(tenantBase) {
-  // assumes tenants.subdomain exists (your TenantContext already uses this)
   const { data, error } = await supabase
     .from("tenants")
     .select("id, subdomain, name")
@@ -59,13 +58,21 @@ async function loadTenantByBaseHost(tenantBase) {
   return data || null;
 }
 
-// ====== Access mapping helpers (kept resilient to column naming) ======
+function normalizeModuleValue(v) {
+  const m = String(v || "").toLowerCase().trim();
+  if (!m) return null;
+  if (m === "itsm" || m.includes("itsm")) return "itsm";
+  if (m === "control" || m.includes("control")) return "control";
+  if (m === "self" || m.includes("selfservice") || m.includes("self-service")) return "self";
+  return null;
+}
 
 async function loadProfileRole(userId, tenantId) {
+  // IMPORTANT: profiles.id is the user id
   const { data, error } = await supabase
     .from("profiles")
     .select("role")
-    .eq("user_id", userId)
+    .eq("id", userId)
     .eq("tenant_id", tenantId)
     .maybeSingle();
 
@@ -73,65 +80,54 @@ async function loadProfileRole(userId, tenantId) {
   return data?.role || null;
 }
 
-function normalizeModuleValue(v) {
-  const m = String(v || "").toLowerCase();
-  if (!m) return null;
-  if (m.includes("itsm")) return "itsm";
-  if (m.includes("control")) return "control";
-  if (m.includes("selfservice")) return "self";
-  if (m.includes("self")) return "self";
-  return null;
-}
-
-async function loadUserModules(userId, tenantId) {
-  const { data, error } = await supabase
-    .from("user_module_access")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("tenant_id", tenantId);
-
-  if (error) throw error;
-
-  const rows = Array.isArray(data) ? data : [];
-  const modules = new Set();
-
-  for (const r of rows) {
-    const moduleVal = r.module || r.module_key || r.app || r.product;
-    const allowedVal = r.allowed ?? r.enabled ?? r.has_access ?? r.active ?? true;
-
-    const norm = normalizeModuleValue(moduleVal);
-    if (norm && allowedVal) modules.add(norm);
-  }
-
-  return Array.from(modules);
-}
-
 async function loadRoleModules(role, tenantId) {
   if (!role) return [];
-
   const { data, error } = await supabase
     .from("role_module_access")
-    .select("*")
+    .select("module, allowed")
     .eq("tenant_id", tenantId)
     .eq("role", role);
 
   if (error) throw error;
 
   const rows = Array.isArray(data) ? data : [];
-  const modules = new Set();
+  const allow = new Set();
 
   for (const r of rows) {
-    const moduleVal = r.module || r.module_key || r.app || r.product;
-    const allowedVal = r.allowed ?? r.enabled ?? r.has_access ?? r.active ?? true;
-
-    const norm = normalizeModuleValue(moduleVal);
-    if (norm && allowedVal) modules.add(norm);
+    if (!r?.allowed) continue;
+    const mod = normalizeModuleValue(r.module);
+    if (mod) allow.add(mod);
   }
 
-  return Array.from(modules);
+  return Array.from(allow);
 }
 
-// ====== UI bits ======
+async function loadUserOverrides(userId, tenantId) {
+  const { data, error } = await supabase
+    .from("user_module_access")
+    .select("module, effect")
+    .eq("tenant_id", tenantId)
+    .eq("user_id", userId);
+
+  if (error) throw error;
+
+  const rows = Array.isArray(data) ? data : [];
+  const allow = new Set();
+  const deny = new Set();
+
+  for (const r of rows) {
+    const mod = normalizeModuleValue(r.module);
+    if (!mod) continue;
+
+    const eff = String(r.effect || "").toLowerCase().trim();
+    if (eff === "deny" || eff === "block" || eff === "remove") deny.add(mod);
+    if (eff === "allow" || eff === "grant" || eff === "add") allow.add(mod);
+  }
+
+  return { allow: Array.from(allow), deny: Array.from(deny) };
+}
+
+// ===== UI helpers =====
 
 function GlassPanel({ children, sx }) {
   return (
@@ -287,17 +283,23 @@ function PortalHome() {
           return;
         }
 
-        // 1) user_module_access
-        let allowed = await loadUserModules(u.id, t.id);
+        const role = await loadProfileRole(u.id, t.id);
+        const roleAllowed = await loadRoleModules(role, t.id);
+        const { allow: userAllow, deny: userDeny } = await loadUserOverrides(u.id, t.id);
 
-        // 2) fallback role_module_access via profiles.role
-        if (!allowed.length) {
-          const role = await loadProfileRole(u.id, t.id);
-          allowed = await loadRoleModules(role, t.id);
-        }
+        // Merge rules:
+        // 1) start with roleAllowed
+        // 2) apply user allow adds
+        // 3) apply user deny removes
+        const set = new Set(roleAllowed);
+        userAllow.forEach((m) => set.add(m));
+        userDeny.forEach((m) => set.delete(m));
 
-        if (!mounted) return;
-        setModules(allowed.length ? allowed : ["itsm"]);
+        const finalAllowed = Array.from(set);
+
+        // If still empty, safe default (don’t brick the user)
+        setModules(finalAllowed.length ? finalAllowed : ["itsm"]);
+
         setBusy(false);
       } catch (e) {
         console.error("[Portal] error:", e);
@@ -329,7 +331,7 @@ function PortalHome() {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  // Auto-route if only one
+  // Auto-route ONLY if exactly one module remains after proper access evaluation
   if (modules.length === 1 && tenantBase) {
     window.location.href = buildModuleUrl(tenantBase, modules[0]);
     return null;
@@ -364,6 +366,7 @@ function PortalHome() {
 
   const allowedSet = new Set(modules);
   const q = query.trim().toLowerCase();
+
   const visible = catalog
     .filter((m) => allowedSet.has(m.key))
     .filter((m) => {
@@ -389,7 +392,6 @@ function PortalHome() {
       }}
     >
       <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 } }}>
-        {/* Top header */}
         <GlassPanel sx={{ p: 2.2 }}>
           <Stack
             direction={{ xs: "column", md: "row" }}
@@ -413,7 +415,7 @@ function PortalHome() {
 
               <Box sx={{ minWidth: 0 }}>
                 <Typography sx={{ fontWeight: 950, fontSize: 20 }} noWrap>
-                  Welcome back, {displayName.split(" ")[0]}
+                  Choose a module
                 </Typography>
                 <Typography sx={{ opacity: 0.72, fontSize: 13 }} noWrap>
                   {tenant?.name ? tenant.name : tenantBase} • {user.email}
@@ -454,6 +456,7 @@ function PortalHome() {
                 startIcon={<LogoutIcon />}
                 onClick={async () => {
                   await supabase.auth.signOut();
+                  // Always back to central login
                   navigate("/login", { replace: true });
                 }}
                 sx={{
@@ -471,7 +474,6 @@ function PortalHome() {
           </Stack>
         </GlassPanel>
 
-        {/* Module grid */}
         <Box
           sx={{
             mt: 2.2,
@@ -499,7 +501,6 @@ function PortalHome() {
           ))}
         </Box>
 
-        {/* Empty state */}
         {!visible.length ? (
           <GlassPanel sx={{ mt: 2.2, p: 3 }}>
             <Typography sx={{ fontWeight: 950, fontSize: 18 }}>
