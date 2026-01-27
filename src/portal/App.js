@@ -1,3 +1,4 @@
+// src/portal/App.js
 import React, { useEffect, useMemo, useState } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import {
@@ -25,6 +26,10 @@ import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import CentralLogin from "../common/pages/CentralLogin";
 import { supabase } from "../common/utils/supabaseClient";
 
+// -------------------------
+// Host + URL helpers
+// -------------------------
+
 function getTenantBaseHost() {
   const host = window.location.hostname || "";
   return host.split(".")[0] || "";
@@ -37,6 +42,7 @@ function getParentDomain() {
 
 function buildModuleUrl(tenantBase, moduleKey) {
   const parent = getParentDomain();
+
   const sub =
     moduleKey === "itsm"
       ? `${tenantBase}-itsm`
@@ -63,7 +69,8 @@ function normalizeModuleValue(v) {
   if (!m) return null;
   if (m === "itsm" || m.includes("itsm")) return "itsm";
   if (m === "control" || m.includes("control")) return "control";
-  if (m === "self" || m.includes("selfservice") || m.includes("self-service")) return "self";
+  if (m === "self" || m.includes("selfservice") || m.includes("self-service"))
+    return "self";
   return null;
 }
 
@@ -127,7 +134,9 @@ async function loadUserOverrides(userId, tenantId) {
   return { allow: Array.from(allow), deny: Array.from(deny) };
 }
 
-// ===== UI helpers =====
+// -------------------------
+// UI helpers
+// -------------------------
 
 function GlassPanel({ children, sx }) {
   return (
@@ -197,7 +206,12 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
 
       <Divider sx={{ my: 1.8, borderColor: "rgba(255,255,255,0.10)" }} />
 
-      <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+      <Stack
+        direction="row"
+        spacing={1}
+        justifyContent="space-between"
+        alignItems="center"
+      >
         <Button
           variant="contained"
           onClick={onOpen}
@@ -231,6 +245,10 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
     </GlassPanel>
   );
 }
+
+// -------------------------
+// Portal pages
+// -------------------------
 
 function PortalHome() {
   const navigate = useNavigate();
@@ -297,14 +315,16 @@ function PortalHome() {
 
         const finalAllowed = Array.from(set);
 
-        // If still empty, safe default (don’t brick the user)
-        setModules(finalAllowed.length ? finalAllowed : ["itsm"]);
+        // IMPORTANT:
+        // No silent "default to ITSM" here.
+        // If access resolves to empty, show nothing and tell user to contact admin.
+        setModules(finalAllowed);
 
         setBusy(false);
       } catch (e) {
         console.error("[Portal] error:", e);
         if (!mounted) return;
-        setModules(["itsm"]);
+        setModules([]);
         setBusy(false);
       }
     }
@@ -454,11 +474,7 @@ function PortalHome() {
               <Button
                 variant="outlined"
                 startIcon={<LogoutIcon />}
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  // Always back to central login
-                  navigate("/login", { replace: true });
-                }}
+                onClick={() => navigate("/logout")}
                 sx={{
                   borderRadius: 999,
                   fontWeight: 950,
@@ -504,10 +520,11 @@ function PortalHome() {
         {!visible.length ? (
           <GlassPanel sx={{ mt: 2.2, p: 3 }}>
             <Typography sx={{ fontWeight: 950, fontSize: 18 }}>
-              No modules matched your search
+              No modules available
             </Typography>
             <Typography sx={{ opacity: 0.72, mt: 0.6 }}>
-              Try searching for “tickets”, “devices”, or “catalog”.
+              Your account doesn’t have access to any modules for this tenant yet.
+              Contact an administrator to grant ITSM / Control / Self Service.
             </Typography>
           </GlassPanel>
         ) : null}
@@ -518,12 +535,45 @@ function PortalHome() {
   );
 }
 
+function PortalLogout() {
+  useEffect(() => {
+    (async () => {
+      try {
+        await supabase.auth.signOut();
+      } finally {
+        // Always back to portal login (tenant root)
+        window.location.href = "/login";
+      }
+    })();
+  }, []);
+
+  return (
+    <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+      <Typography sx={{ fontWeight: 950, opacity: 0.8 }}>Signing out…</Typography>
+    </Box>
+  );
+}
+
 export default function PortalApp() {
   return (
     <Routes>
-      <Route path="/login" element={<CentralLogin title="Sign in" afterLogin="/" />} />
-      <Route path="/" element={<PortalHome />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* ✅ central login: if already logged in, go to /app */}
+      <Route
+        path="/login"
+        element={<CentralLogin title="Sign in" afterLogin="/app" />}
+      />
+
+      {/* ✅ central landing chooser */}
+      <Route path="/app" element={<PortalHome />} />
+
+      {/* ✅ central logout */}
+      <Route path="/logout" element={<PortalLogout />} />
+
+      {/* ✅ root -> /app */}
+      <Route path="/" element={<Navigate to="/app" replace />} />
+
+      {/* ✅ catch-all -> /app */}
+      <Route path="*" element={<Navigate to="/app" replace />} />
     </Routes>
   );
 }
