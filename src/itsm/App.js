@@ -8,6 +8,9 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "../common/utils/supabaseClient";
 import { ThemeModeProvider } from "./theme/ThemeContext";
 
+// ✅ Central login (shared across apps)
+import CentralLogin from "../common/pages/CentralLogin";
+
 // Layout & Auth
 import Layout from "./components/Layout";
 import Loading from "./pages/Loading";
@@ -52,7 +55,7 @@ import NotFound from "./pages/NotFound";
 import SetPassword from "./pages/SetPassword";
 import NewTab from "./pages/NewTab";
 
-// Self-Service Pages (these stay separate under /self-service in top router)
+// Self-Service Pages (kept for backwards compatibility if anyone hits /self-service on the ITSM host)
 import SelfServiceLayout from "../selfservice/layouts/SelfServiceLayout";
 import SelfServiceHome from "../selfservice/pages/SelfServiceHome";
 import RaiseRequest from "../selfservice/pages/RaiseRequest";
@@ -85,8 +88,12 @@ function ITSMRoutes() {
 
   return (
     <Routes>
-      {/* Public pages (centralised login) */}
-      <Route path="/login" element={<Navigate to="/login?redirect=/itsm" replace />} />
+      {/* ✅ Central login (on this subdomain) */}
+      <Route
+        path="/login"
+        element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <CentralLogin />}
+      />
+
       <Route path="/loading" element={<Loading />} />
       <Route path="/not-authorised" element={<NotAuthorised />} />
       <Route path="/set-password" element={<SetPassword />} />
@@ -94,7 +101,7 @@ function ITSMRoutes() {
       {/* ITSM base */}
       <Route
         path="/"
-        element={isLoggedIn ? <Layout /> : <Navigate to="/login?redirect=/itsm" replace />}
+        element={isLoggedIn ? <Layout /> : <Navigate to="/login" replace />}
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
@@ -148,7 +155,7 @@ function ITSMRoutes() {
         <Route path="newtab/:id" element={<NewTab />} />
       </Route>
 
-      {/* Self-Service (kept for backwards compatibility if anyone hits /itsm/self-service) */}
+      {/* Self-Service (optional inside ITSM host) */}
       {isLoggedIn && (
         <Route path="/self-service" element={<SelfServiceLayout />}>
           <Route index element={<SelfServiceHome />} />
