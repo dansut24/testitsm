@@ -1,3 +1,5 @@
+// src/itsm/App.js
+
 // Global styles for MDEditor
 import "@uiw/react-md-editor/markdown-editor.css";
 import "@uiw/react-markdown-preview/markdown.css";
@@ -8,8 +10,11 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "../common/utils/supabaseClient";
 import { ThemeModeProvider } from "./theme/ThemeContext";
 
-// ✅ Central login (shared across apps)
+// ✅ Central login page component (UI)
 import CentralLogin from "../common/pages/CentralLogin";
+
+// ✅ URL helpers to ALWAYS bounce to tenant central domain
+import { getCentralLoginUrl } from "../common/utils/portalUrl";
 
 // Layout & Auth
 import Layout from "./components/Layout";
@@ -55,7 +60,7 @@ import NotFound from "./pages/NotFound";
 import SetPassword from "./pages/SetPassword";
 import NewTab from "./pages/NewTab";
 
-// Self-Service Pages (kept for backwards compatibility if anyone hits /self-service on the ITSM host)
+// Self-Service Pages (backwards compatibility if anyone hits /self-service on the ITSM host)
 import SelfServiceLayout from "../selfservice/layouts/SelfServiceLayout";
 import SelfServiceHome from "../selfservice/pages/SelfServiceHome";
 import RaiseRequest from "../selfservice/pages/RaiseRequest";
@@ -69,17 +74,27 @@ function ITSMRoutes() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // After login, we want to return to THIS module
+  const centralLogin = getCentralLoginUrl("/itsm");
+
   useEffect(() => {
+    let mounted = true;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
       setSession(session);
       setLoading(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) =>
-      setSession(session)
-    );
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      setSession(session);
+    });
 
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   if (loading) return <div>Loading...</div>;
@@ -88,12 +103,14 @@ function ITSMRoutes() {
 
   return (
     <Routes>
-      {/* ✅ Central login (on this subdomain) */}
-      <Route
-        path="/login"
-        element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <CentralLogin />}
-      />
+      /**
+       * ✅ IMPORTANT:
+       * - /login should NEVER be handled on the -itsm host.
+       * - If someone hits /login here, send them to tenant central login with redirect=/itsm
+       */
+      <Route path="/login" element={<Navigate to={centralLogin} replace />} />
 
+      {/* These can stay on-module */}
       <Route path="/loading" element={<Loading />} />
       <Route path="/not-authorised" element={<NotAuthorised />} />
       <Route path="/set-password" element={<SetPassword />} />
@@ -101,7 +118,7 @@ function ITSMRoutes() {
       {/* ITSM base */}
       <Route
         path="/"
-        element={isLoggedIn ? <Layout /> : <Navigate to="/login" replace />}
+        element={isLoggedIn ? <Layout /> : <Navigate to={centralLogin} replace />}
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
@@ -168,7 +185,11 @@ function ITSMRoutes() {
         </Route>
       )}
 
-      <Route path="*" element={isLoggedIn ? <NotFound /> : <Navigate to="/login" replace />} />
+      {/* Catch-all */}
+      <Route
+        path="*"
+        element={isLoggedIn ? <NotFound /> : <Navigate to={centralLogin} replace />}
+      />
     </Routes>
   );
 }
