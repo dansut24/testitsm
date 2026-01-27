@@ -1,4 +1,3 @@
-// src/common/pages/CentralLogin.js
 import React, { useMemo, useState } from "react";
 import {
   Box,
@@ -9,25 +8,27 @@ import {
   Typography,
   Stack,
 } from "@mui/material";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient";
-import { buildTenantLoginUrl, getTenantBaseHost, isModuleHost } from "../utils/tenantHost";
+
+function getDefaultAfterLogin() {
+  // Portal controls routing; default to /app if present
+  const host = window.location.hostname || "";
+  if (!host.includes("-control.") && !host.includes("-itsm.") && !host.includes("-self.")) {
+    return "/app";
+  }
+  return "/";
+}
 
 function getDefaultTitle() {
   const host = window.location.hostname || "";
   if (host.includes("-control.")) return "Sign in to Control";
   if (host.includes("-self.")) return "Sign in to Self Service";
   if (host.includes("-itsm.")) return "Sign in to ITSM";
-  return "Sign in to Hi5Tech";
+  return "Sign in";
 }
 
-/**
- * CentralLogin rules:
- * - If you're on a module host, redirect the browser to tenant login host.
- * - If you're on tenant host, sign in and navigate to redirect (default /app).
- */
-export default function CentralLogin({ title }) {
-  const navigate = useNavigate();
+export default function CentralLogin({ title, afterLogin }) {
   const location = useLocation();
 
   const [email, setEmail] = useState("");
@@ -35,21 +36,15 @@ export default function CentralLogin({ title }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  const computedAfterLogin = useMemo(
+    () => afterLogin || getDefaultAfterLogin(),
+    [afterLogin]
+  );
+
   const computedTitle = useMemo(() => title || getDefaultTitle(), [title]);
 
   const redirect =
-    new URLSearchParams(location.search).get("redirect") || "/app";
-
-  // If user lands on /login on a module host, bounce to tenant login.
-  // IMPORTANT: This must be a hard redirect (different host).
-  if (isModuleHost()) {
-    const target = buildTenantLoginUrl(
-      // if module asked for /control or /itsm, preserve it, else go /app
-      redirect && redirect.startsWith("/") ? redirect : "/app"
-    );
-    window.location.replace(target);
-    return null;
-  }
+    new URLSearchParams(location.search).get("redirect") || computedAfterLogin;
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -67,8 +62,15 @@ export default function CentralLogin({ title }) {
         return;
       }
 
-      // We are on TENANT host here. After login go to landing (/app) or requested redirect.
-      navigate(redirect, { replace: true });
+      // ✅ Always use getSession immediately after login to confirm persistence
+      const { data } = await supabase.auth.getSession();
+      if (!data?.session) {
+        setError("Signed in, but session was not created. Please try again.");
+        return;
+      }
+
+      // ✅ Use hard navigation (more reliable for auth cookie + hydration)
+      window.location.assign(redirect);
     } catch (e2) {
       setError(e2?.message || "Login failed");
     } finally {
@@ -123,10 +125,6 @@ export default function CentralLogin({ title }) {
               {busy ? "Signing in…" : "Sign in"}
             </Button>
           </Box>
-
-          <Typography sx={{ mt: 2, opacity: 0.6, fontSize: 12 }}>
-            Tenant: {getTenantBaseHost(window.location.hostname)}
-          </Typography>
         </Paper>
       </Container>
     </Box>
