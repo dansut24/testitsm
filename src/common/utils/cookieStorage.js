@@ -1,54 +1,114 @@
-// A minimal cookie storage adapter for supabase-js.
-// Stores tokens in a cookie scoped to the parent domain so all subdomains can read it.
+// src/common/utils/cookieStorage.js
+
+// Cookie limits are ~4096 bytes per cookie. Supabase session JSON can exceed this,
+// especially for admin users / larger JWTs. So we chunk into multiple cookies.
 //
-// IMPORTANT:
-// - Works only when everything is under the same parent domain (e.g. *.hi5tech.co.uk)
-// - Requires HTTPS in production (Secure cookies)
+// Stored cookies:
+//   <key>.0, <key>.1, <key>.2, ...
+//
+// Notes:
+// - We use encodeURIComponent to keep cookie-safe
+// - We set Domain=.hi5tech.co.uk when on that domain so subdomains share auth
+// - SameSite=None; Secure to avoid modern browser restrictions
+
+function isHi5TechDomain(hostname) {
+  return typeof hostname === "string" && hostname.endsWith("hi5tech.co.uk");
+}
+
+function cookieDomainAttr() {
+  const host = window.location.hostname || "";
+  if (isHi5TechDomain(host)) return "Domain=.hi5tech.co.uk; ";
+  // For localhost / preview domains, don't set Domain
+  return "";
+}
+
+function baseAttrs() {
+  // SameSite=None requires Secure
+  return `${cookieDomainAttr()}Path=/; Secure; SameSite=None;`;
+}
+
+function setCookie(name, value, maxAgeSeconds) {
+  const maxAge = typeof maxAgeSeconds === "number" ? ` Max-Age=${maxAgeSeconds};` : "";
+  document.cookie = `${name}=${value}; ${baseAttrs()}${maxAge}`;
+}
+
+function deleteCookie(name) {
+  document.cookie = `${name}=; ${baseAttrs()} Max-Age=0;`;
+}
 
 function getCookie(name) {
-  const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
-  return match ? decodeURIComponent(match[2]) : null;
+  const cookies = document.cookie ? document.cookie.split("; ") : [];
+  const prefix = `${name}=`;
+  for (const c of cookies) {
+    if (c.startsWith(prefix)) return c.substring(prefix.length);
+  }
+  return null;
 }
 
-function setCookie(name, value, options = {}) {
-  const {
-    days = 7,
-    path = "/",
-    domain = ".hi5tech.co.uk",
-    secure = true,
-    sameSite = "Lax",
-  } = options;
-
-  const expires = new Date(Date.now() + days * 864e5).toUTCString();
-  let cookie = `${name}=${encodeURIComponent(value)}; Expires=${expires}; Path=${path}; Domain=${domain}; SameSite=${sameSite}`;
-  if (secure) cookie += "; Secure";
-  document.cookie = cookie;
+function listChunkKeys(baseKey) {
+  // read <baseKey>.0,1,2... until missing
+  const keys = [];
+  for (let i = 0; i < 50; i++) {
+    const k = `${baseKey}.${i}`;
+    const v = getCookie(k);
+    if (v == null) break;
+    keys.push(k);
+  }
+  return keys;
 }
 
-function deleteCookie(name, options = {}) {
-  const { path = "/", domain = ".hi5tech.co.uk" } = options;
-  document.cookie = `${name}=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=${path}; Domain=${domain}; SameSite=Lax; Secure`;
-}
+export function cookieStorage(baseKey, opts = {}) {
+  const chunkSize = opts.chunkSize || 3800; // safe under 4KB after attrs
+  const maxAgeSeconds = opts.maxAgeSeconds || 60 * 60 * 24 * 7; // 7 days
 
-// supabase-js expects: getItem/setItem/removeItem
-export function cookieStorage(cookieKey = "hi5tech_sb_session") {
   return {
     getItem: (key) => {
-      if (key !== cookieKey) return null;
-      return getCookie(cookieKey);
+      try {
+        const keys = listChunkKeys(key);
+        if (!keys.length) return null;
+
+        const joined = keys
+          .map((k) => getCookie(k) || "")
+          .join("");
+
+        if (!joined) return null;
+
+        return decodeURIComponent(joined);
+      } catch (e) {
+        console.warn("[cookieStorage] getItem failed:", e);
+        return null;
+      }
     },
+
     setItem: (key, value) => {
-      if (key !== cookieKey) return;
-      setCookie(cookieKey, value, {
-        // local dev: you might not have https, so allow non-secure on localhost
-        secure: window.location.hostname !== "localhost" && !window.location.hostname.startsWith("127."),
-      });
+      try {
+        // Clear old chunks first
+        const old = listChunkKeys(key);
+        old.forEach(deleteCookie);
+
+        if (value == null) return;
+
+        const enc = encodeURIComponent(String(value));
+
+        // Chunk and write
+        let i = 0;
+        for (let pos = 0; pos < enc.length; pos += chunkSize) {
+          const chunk = enc.slice(pos, pos + chunkSize);
+          setCookie(`${key}.${i}`, chunk, maxAgeSeconds);
+          i++;
+        }
+      } catch (e) {
+        console.warn("[cookieStorage] setItem failed:", e);
+      }
     },
+
     removeItem: (key) => {
-      if (key !== cookieKey) return;
-      deleteCookie(cookieKey, {
-        secure: window.location.hostname !== "localhost" && !window.location.hostname.startsWith("127."),
-      });
+      try {
+        const keys = listChunkKeys(key);
+        keys.forEach(deleteCookie);
+      } catch (e) {
+        console.warn("[cookieStorage] removeItem failed:", e);
+      }
     },
   };
 }
