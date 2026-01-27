@@ -10,9 +10,6 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "../common/utils/supabaseClient";
 import { ThemeModeProvider } from "./theme/ThemeContext";
 
-// ✅ Central login page component (UI)
-import CentralLogin from "../common/pages/CentralLogin";
-
 // ✅ URL helpers to ALWAYS bounce to tenant central domain
 import { getCentralLoginUrl } from "../common/utils/portalUrl";
 
@@ -103,11 +100,10 @@ function ITSMRoutes() {
 
   return (
     <Routes>
-      /**
-       * ✅ IMPORTANT:
-       * - /login should NEVER be handled on the -itsm host.
-       * - If someone hits /login here, send them to tenant central login with redirect=/itsm
-       */
+      {/* ✅ IMPORTANT:
+          - /login should NEVER be handled on the -itsm host.
+          - If someone hits /login here, send them to tenant central login with redirect=/itsm
+      */}
       <Route path="/login" element={<Navigate to={centralLogin} replace />} />
 
       {/* These can stay on-module */}
