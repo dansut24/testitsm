@@ -23,7 +23,6 @@ function App() {
     );
   }
 
-  // If not logged in, always send to central login
   if (!user) {
     return <Navigate to="/login?redirect=/control" replace />;
   }
@@ -33,7 +32,6 @@ function App() {
       <CssBaseline />
       <Box sx={{ minHeight: "100vh", overflow: "auto" }}>
         <Routes>
-          {/* Control routes (assumes mounted at /control by the top-level router) */}
           <Route path="/" element={<ControlLayout />}>
             <Route index element={<Home />} />
             <Route path="devices" element={<Devices />} />
