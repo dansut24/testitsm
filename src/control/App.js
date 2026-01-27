@@ -31,13 +31,7 @@ function App() {
         <Routes>
           <Route
             path="/login"
-            element={
-              user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <CentralLogin title="Sign in to Control" afterLogin="/" />
-              )
-            }
+            element={user ? <Navigate to="/" replace /> : <CentralLogin />}
           />
 
           <Route
