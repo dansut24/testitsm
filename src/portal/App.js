@@ -1,6 +1,12 @@
 // src/portal/App.js
-import React, { useEffect, useMemo, useState } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 import {
   Box,
   Button,
@@ -33,8 +39,14 @@ import { supabase } from "../common/utils/supabaseClient";
 function getTenantBaseHost() {
   const host = window.location.hostname || "";
   const firstLabel = host.split(".")[0] || "";
+
+  // ✅ if you're on a "central" host (tenant.hi5tech... / portal.hi5tech...),
+  // allow explicit tenant resolution via query param.
+  const qpTenant = new URLSearchParams(window.location.search).get("tenant");
+  if (qpTenant) return String(qpTenant).toLowerCase().trim();
+
   // Robust: if user accidentally hits demoitsm-itsm.hi5tech... treat tenant as demoitsm
-  return firstLabel.split("-")[0] || "";
+  return (firstLabel.split("-")[0] || "").toLowerCase().trim();
 }
 
 function getParentDomain() {
@@ -74,22 +86,14 @@ function normalizeModuleValue(v) {
   // self-service, self_service, Self Service => self_service
   const m = raw.replaceAll("-", "_").replaceAll(" ", "_");
 
-  // Ignore admin as a "module card" (otherwise modules contain values the UI never displays)
+  // Ignore admin as a "module card"
   if (m === "admin") return null;
 
   if (m === "itsm" || m.includes("itsm")) return "itsm";
   if (m === "control" || m.includes("control")) return "control";
 
-  // ✅ IMPORTANT: support self_service from DB
-  if (
-    m === "self" ||
-    m === "self_service" ||
-    m.includes("selfservice") ||
-    m.includes("self_service") ||
-    m.includes("self")
-  ) {
-    return "self";
-  }
+  // ✅ support self_service from DB + other variants
+  if (m === "self" || m === "self_service" || m.includes("self")) return "self";
 
   return null;
 }
@@ -114,7 +118,7 @@ async function loadProfileRole(userId, tenantId) {
     // ignore and try fallback below
   }
 
-  // 2) Fallback: global profile row (some setups have tenant_id null or only one profile row)
+  // 2) Fallback: global profile row
   const { data: fallback, error: fallbackErr } = await supabase
     .from("profiles")
     .select("role")
@@ -173,7 +177,11 @@ async function loadUserOverrides(userId, tenantId) {
     }
 
     const msg = String(res.error?.message || "").toLowerCase();
-    if (msg.includes("does not exist") || msg.includes("column") || msg.includes("parse")) {
+    if (
+      msg.includes("does not exist") ||
+      msg.includes("column") ||
+      msg.includes("parse")
+    ) {
       continue;
     }
 
@@ -275,7 +283,12 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
 
       <Divider sx={{ my: 1.8, borderColor: "rgba(255,255,255,0.10)" }} />
 
-      <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+      <Stack
+        direction="row"
+        spacing={1}
+        justifyContent="space-between"
+        alignItems="center"
+      >
         <Button
           variant="contained"
           onClick={onOpen}
@@ -316,6 +329,8 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
 
 function PortalHome() {
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [busy, setBusy] = useState(true);
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
@@ -339,19 +354,24 @@ function PortalHome() {
     return (s[0] || "U").toUpperCase();
   }, [displayName]);
 
+  // prevent double-run racing (StrictMode in dev) + allow manual reruns safely
+  const runSeq = useRef(0);
+
   useEffect(() => {
     let mounted = true;
 
     const run = async () => {
+      const seq = ++runSeq.current;
+
       try {
         setBusy(true);
 
-        // ✅ Session is source of truth
         const { data } = await supabase.auth.getSession();
         const sess = data?.session || null;
         const u = sess?.user || null;
 
-        if (!mounted) return;
+        if (!mounted || seq !== runSeq.current) return;
+
         setSession(sess);
         setUser(u);
 
@@ -363,7 +383,9 @@ function PortalHome() {
         }
 
         const t = await loadTenantByBaseHost(tenantBase);
-        if (!mounted) return;
+
+        if (!mounted || seq !== runSeq.current) return;
+
         setTenant(t);
 
         if (!t?.id) {
@@ -382,7 +404,7 @@ function PortalHome() {
           userAllow = o.allow || [];
           userDeny = o.deny || [];
         } catch (e) {
-          console.warn("[Portal] user overrides failed:", e?.message || e);
+          // overrides are optional; don't brick portal
         }
 
         const set = new Set(roleAllowed);
@@ -391,9 +413,9 @@ function PortalHome() {
 
         const finalAllowed = Array.from(set);
 
-        // No silent fallback. If empty -> show "No modules available".
-        setModules(finalAllowed);
+        if (!mounted || seq !== runSeq.current) return;
 
+        setModules(finalAllowed);
         setBusy(false);
       } catch (e) {
         console.error("[Portal] error:", e);
@@ -405,26 +427,22 @@ function PortalHome() {
 
     run();
 
-    // ✅ Key fix: after login/logout, re-run access calc
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, sess) => {
       const s = sess || null;
       const u = s?.user || null;
       setSession(s);
       setUser(u);
 
-      if (u) {
-        run();
-      } else {
-        setTenant(null);
-        setModules([]);
-      }
+      // rerun access calc after auth changes
+      run();
     });
 
     return () => {
       mounted = false;
-      sub.subscription.unsubscribe();
+      sub?.subscription?.unsubscribe?.();
     };
-  }, [tenantBase]);
+    // ✅ key fix: rerun if route changes back to /app
+  }, [tenantBase, location.key]);
 
   if (busy) {
     return (
@@ -624,7 +642,9 @@ function PortalLogout() {
       try {
         await supabase.auth.signOut();
       } finally {
-        window.location.assign("/login");
+        // keep tenant query param if present (nice UX on central host)
+        const qpTenant = new URLSearchParams(window.location.search).get("tenant");
+        window.location.assign(qpTenant ? `/login?tenant=${encodeURIComponent(qpTenant)}` : "/login");
       }
     })();
   }, []);
@@ -637,13 +657,21 @@ function PortalLogout() {
 }
 
 export default function PortalApp() {
+  // keep tenant query param when bouncing between / and /app
+  const qpTenant = new URLSearchParams(window.location.search).get("tenant");
+  const withTenant = (path) =>
+    qpTenant ? `${path}?tenant=${encodeURIComponent(qpTenant)}` : path;
+
   return (
     <Routes>
-      <Route path="/login" element={<CentralLogin title="Sign in" afterLogin="/app" />} />
+      <Route
+        path="/login"
+        element={<CentralLogin title="Sign in" afterLogin={withTenant("/app")} />}
+      />
       <Route path="/app" element={<PortalHome />} />
       <Route path="/logout" element={<PortalLogout />} />
-      <Route path="/" element={<Navigate to="/app" replace />} />
-      <Route path="*" element={<Navigate to="/app" replace />} />
+      <Route path="/" element={<Navigate to={withTenant("/app")} replace />} />
+      <Route path="*" element={<Navigate to={withTenant("/app")} replace />} />
     </Routes>
   );
 }
