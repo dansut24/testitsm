@@ -1,7 +1,7 @@
 // src/control/App.js
 import React from "react";
 import { CssBaseline, Box } from "@mui/material";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import ControlLayout from "./layouts/ControlLayout";
 
 import Devices from "./pages/Devices";
@@ -46,7 +46,10 @@ function App() {
             <Route path="devices/:deviceId/remote" element={<DeviceRemote />} />
           </Route>
 
-          <Route path="*" element={user ? <NotFound /> : <ExternalRedirect to={centralLogin} />} />
+          <Route
+            path="*"
+            element={user ? <NotFound /> : <ExternalRedirect to={centralLogin} />}
+          />
         </Routes>
       </Box>
     </>
