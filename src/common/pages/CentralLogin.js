@@ -1,9 +1,32 @@
-import React, { useState } from "react";
-import { Box, Button, Container, Paper, TextField, Typography } from "@mui/material";
+import React, { useMemo, useState } from "react";
+import {
+  Box,
+  Button,
+  Container,
+  Paper,
+  TextField,
+  Typography,
+  Stack,
+} from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient";
 
-export default function CentralLogin({ title = "Sign in", afterLogin = "/" }) {
+function getDefaultAfterLogin() {
+  const host = window.location.hostname || "";
+  if (host.includes("-control.")) return "/";
+  if (host.includes("-self.")) return "/"; // selfservice typically index route
+  // itsm
+  return "/dashboard";
+}
+
+function getDefaultTitle() {
+  const host = window.location.hostname || "";
+  if (host.includes("-control.")) return "Sign in to Control";
+  if (host.includes("-self.")) return "Sign in to Self Service";
+  return "Sign in to ITSM";
+}
+
+export default function CentralLogin({ title, afterLogin }) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -12,7 +35,15 @@ export default function CentralLogin({ title = "Sign in", afterLogin = "/" }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const redirect = new URLSearchParams(location.search).get("redirect") || afterLogin;
+  const computedAfterLogin = useMemo(
+    () => afterLogin || getDefaultAfterLogin(),
+    [afterLogin]
+  );
+
+  const computedTitle = useMemo(() => title || getDefaultTitle(), [title]);
+
+  const redirect =
+    new URLSearchParams(location.search).get("redirect") || computedAfterLogin;
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -20,11 +51,16 @@ export default function CentralLogin({ title = "Sign in", afterLogin = "/" }) {
     setError("");
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
       if (error) {
         setError(error.message || "Login failed");
         return;
       }
+
       navigate(redirect, { replace: true });
     } catch (e2) {
       setError(e2?.message || "Login failed");
@@ -37,12 +73,14 @@ export default function CentralLogin({ title = "Sign in", afterLogin = "/" }) {
     <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", px: 2 }}>
       <Container maxWidth="sm">
         <Paper elevation={6} sx={{ p: 4, borderRadius: 4 }}>
-          <Typography variant="h5" fontWeight={950}>
-            {title}
-          </Typography>
-          <Typography sx={{ opacity: 0.7, mt: 0.6 }}>
-            Use your Hi5Tech account to continue.
-          </Typography>
+          <Stack spacing={0.8}>
+            <Typography variant="h5" fontWeight={950}>
+              {computedTitle}
+            </Typography>
+            <Typography sx={{ opacity: 0.7 }}>
+              Use your Hi5Tech account to continue.
+            </Typography>
+          </Stack>
 
           <Box component="form" onSubmit={onSubmit} sx={{ mt: 3 }}>
             <TextField
