@@ -32,7 +32,9 @@ import { supabase } from "../common/utils/supabaseClient";
 
 function getTenantBaseHost() {
   const host = window.location.hostname || "";
-  return host.split(".")[0] || "";
+  const firstLabel = host.split(".")[0] || "";
+  // Robust: if user accidentally hits demoitsm-itsm.hi5tech... treat tenant as demoitsm
+  return firstLabel.split("-")[0] || "";
 }
 
 function getParentDomain() {
@@ -67,28 +69,55 @@ async function loadTenantByBaseHost(tenantBase) {
 function normalizeModuleValue(v) {
   const m = String(v || "").toLowerCase().trim();
   if (!m) return null;
+
+  // Accept a bunch of variants
   if (m === "itsm" || m.includes("itsm")) return "itsm";
   if (m === "control" || m.includes("control")) return "control";
-  if (m === "self" || m.includes("selfservice") || m.includes("self-service"))
+  if (
+    m === "self" ||
+    m.includes("self") ||
+    m.includes("selfservice") ||
+    m.includes("self-service")
+  )
     return "self";
+
   return null;
 }
 
+// -------------------------
+// Access loading
+// -------------------------
+
 async function loadProfileRole(userId, tenantId) {
-  // IMPORTANT: profiles.id is the user id
-  const { data, error } = await supabase
+  // 1) Tenant-scoped profile row (preferred)
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (data?.role) return data.role;
+  } catch (e) {
+    // ignore and try fallback below
+  }
+
+  // 2) Fallback: global profile row (some setups have tenant_id null or only one profile row)
+  const { data: fallback, error: fallbackErr } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", userId)
-    .eq("tenant_id", tenantId)
     .maybeSingle();
 
-  if (error) throw error;
-  return data?.role || null;
+  if (fallbackErr) throw fallbackErr;
+  return fallback?.role || null;
 }
 
 async function loadRoleModules(role, tenantId) {
   if (!role) return [];
+
   const { data, error } = await supabase
     .from("role_module_access")
     .select("module, allowed")
@@ -110,15 +139,46 @@ async function loadRoleModules(role, tenantId) {
 }
 
 async function loadUserOverrides(userId, tenantId) {
-  const { data, error } = await supabase
-    .from("user_module_access")
-    .select("module, effect")
-    .eq("tenant_id", tenantId)
-    .eq("user_id", userId);
+  // Your schema *should* have: module + effect
+  // But you previously hit errors around "effect" in SQL, so be defensive:
+  // Try effect -> action -> access -> allowed
+  const tries = [
+    { cols: "module, effect", mode: "effect" },
+    { cols: "module, action", mode: "effect" },
+    { cols: "module, access", mode: "effect" },
+    { cols: "module, allowed", mode: "allowedBool" },
+  ];
 
-  if (error) throw error;
+  let rows = [];
+  let mode = null;
 
-  const rows = Array.isArray(data) ? data : [];
+  for (const t of tries) {
+    const res = await supabase
+      .from("user_module_access")
+      .select(t.cols)
+      .eq("tenant_id", tenantId)
+      .eq("user_id", userId);
+
+    if (!res?.error) {
+      rows = Array.isArray(res.data) ? res.data : [];
+      mode = t.mode;
+      break;
+    }
+
+    // Only continue if the error looks like a missing column
+    const msg = String(res.error?.message || "").toLowerCase();
+    if (
+      msg.includes("does not exist") ||
+      msg.includes("column") ||
+      msg.includes("parse")
+    ) {
+      continue;
+    }
+
+    // Non-column error → throw
+    throw res.error;
+  }
+
   const allow = new Set();
   const deny = new Set();
 
@@ -126,7 +186,18 @@ async function loadUserOverrides(userId, tenantId) {
     const mod = normalizeModuleValue(r.module);
     if (!mod) continue;
 
-    const eff = String(r.effect || "").toLowerCase().trim();
+    if (mode === "allowedBool") {
+      // allowed true/false means allow/deny
+      if (r.allowed === true) allow.add(mod);
+      if (r.allowed === false) deny.add(mod);
+      continue;
+    }
+
+    // effect-like string
+    const effRaw =
+      r.effect ?? r.action ?? r.access ?? ""; // whichever exists
+    const eff = String(effRaw || "").toLowerCase().trim();
+
     if (eff === "deny" || eff === "block" || eff === "remove") deny.add(mod);
     if (eff === "allow" || eff === "grant" || eff === "add") allow.add(mod);
   }
@@ -253,6 +324,7 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
 function PortalHome() {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(true);
+  const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
   const [tenant, setTenant] = useState(null);
   const [modules, setModules] = useState([]);
@@ -281,9 +353,13 @@ function PortalHome() {
       try {
         setBusy(true);
 
-        const { data: userRes } = await supabase.auth.getUser();
-        const u = userRes?.user || null;
+        // ✅ Use session as the truth source (prevents login loops)
+        const { data } = await supabase.auth.getSession();
+        const sess = data?.session || null;
+        const u = sess?.user || null;
+
         if (!mounted) return;
+        setSession(sess);
         setUser(u);
 
         if (!u) {
@@ -303,7 +379,17 @@ function PortalHome() {
 
         const role = await loadProfileRole(u.id, t.id);
         const roleAllowed = await loadRoleModules(role, t.id);
-        const { allow: userAllow, deny: userDeny } = await loadUserOverrides(u.id, t.id);
+
+        let userAllow = [];
+        let userDeny = [];
+        try {
+          const o = await loadUserOverrides(u.id, t.id);
+          userAllow = o.allow || [];
+          userDeny = o.deny || [];
+        } catch (e) {
+          // Overrides are optional; don't brick the portal if that table/columns vary
+          console.warn("[Portal] user overrides failed:", e?.message || e);
+        }
 
         // Merge rules:
         // 1) start with roleAllowed
@@ -315,9 +401,7 @@ function PortalHome() {
 
         const finalAllowed = Array.from(set);
 
-        // IMPORTANT:
-        // No silent "default to ITSM" here.
-        // If access resolves to empty, show nothing and tell user to contact admin.
+        // No silent fallback to ITSM; show "no modules" message if empty.
         setModules(finalAllowed);
 
         setBusy(false);
@@ -332,7 +416,10 @@ function PortalHome() {
     run();
 
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, sess) => {
-      setUser(sess?.user || null);
+      const s = sess || null;
+      const u = s?.user || null;
+      setSession(s);
+      setUser(u);
     });
 
     return () => {
@@ -349,7 +436,7 @@ function PortalHome() {
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user || !session) return <Navigate to="/login" replace />;
 
   // Auto-route ONLY if exactly one module remains after proper access evaluation
   if (modules.length === 1 && tenantBase) {
@@ -541,7 +628,6 @@ function PortalLogout() {
       try {
         await supabase.auth.signOut();
       } finally {
-        // Always back to portal login (tenant root)
         window.location.href = "/login";
       }
     })();
@@ -549,7 +635,9 @@ function PortalLogout() {
 
   return (
     <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-      <Typography sx={{ fontWeight: 950, opacity: 0.8 }}>Signing out…</Typography>
+      <Typography sx={{ fontWeight: 950, opacity: 0.8 }}>
+        Signing out…
+      </Typography>
     </Box>
   );
 }
@@ -557,22 +645,10 @@ function PortalLogout() {
 export default function PortalApp() {
   return (
     <Routes>
-      {/* ✅ central login: if already logged in, go to /app */}
-      <Route
-        path="/login"
-        element={<CentralLogin title="Sign in" afterLogin="/app" />}
-      />
-
-      {/* ✅ central landing chooser */}
+      <Route path="/login" element={<CentralLogin title="Sign in" afterLogin="/app" />} />
       <Route path="/app" element={<PortalHome />} />
-
-      {/* ✅ central logout */}
       <Route path="/logout" element={<PortalLogout />} />
-
-      {/* ✅ root -> /app */}
       <Route path="/" element={<Navigate to="/app" replace />} />
-
-      {/* ✅ catch-all -> /app */}
       <Route path="*" element={<Navigate to="/app" replace />} />
     </Routes>
   );
