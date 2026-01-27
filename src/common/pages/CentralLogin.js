@@ -11,32 +11,22 @@ import {
 } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient";
-
-function isModuleHost(host) {
-  return host.includes("-control.") || host.includes("-itsm.") || host.includes("-self.");
-}
-
-function getDefaultAfterLogin() {
-  const host = window.location.hostname || "";
-
-  // ✅ On tenant host, always go to landing page
-  if (!isModuleHost(host)) return "/";
-
-  // Module hosts keep their internal defaults
-  if (host.includes("-control.")) return "/";
-  if (host.includes("-self.")) return "/";
-  return "/dashboard"; // itsm
-}
+import { buildTenantLoginUrl, getTenantBaseHost, isModuleHost } from "../utils/tenantHost";
 
 function getDefaultTitle() {
   const host = window.location.hostname || "";
-  if (!isModuleHost(host)) return "Sign in to Hi5Tech";
   if (host.includes("-control.")) return "Sign in to Control";
   if (host.includes("-self.")) return "Sign in to Self Service";
-  return "Sign in to ITSM";
+  if (host.includes("-itsm.")) return "Sign in to ITSM";
+  return "Sign in to Hi5Tech";
 }
 
-export default function CentralLogin({ title, afterLogin }) {
+/**
+ * CentralLogin rules:
+ * - If you're on a module host, redirect the browser to tenant login host.
+ * - If you're on tenant host, sign in and navigate to redirect (default /app).
+ */
+export default function CentralLogin({ title }) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -45,22 +35,21 @@ export default function CentralLogin({ title, afterLogin }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const computedAfterLogin = useMemo(
-    () => afterLogin || getDefaultAfterLogin(),
-    [afterLogin]
-  );
-
   const computedTitle = useMemo(() => title || getDefaultTitle(), [title]);
 
-  const host = window.location.hostname || "";
-  const qsRedirect = new URLSearchParams(location.search).get("redirect");
+  const redirect =
+    new URLSearchParams(location.search).get("redirect") || "/app";
 
-  // ✅ On tenant host, we ALWAYS land on "/" (module chooser),
-  // ignoring any redirect passed in.
-  const redirect = useMemo(() => {
-    if (!isModuleHost(host)) return "/";
-    return qsRedirect || computedAfterLogin;
-  }, [host, qsRedirect, computedAfterLogin]);
+  // If user lands on /login on a module host, bounce to tenant login.
+  // IMPORTANT: This must be a hard redirect (different host).
+  if (isModuleHost()) {
+    const target = buildTenantLoginUrl(
+      // if module asked for /control or /itsm, preserve it, else go /app
+      redirect && redirect.startsWith("/") ? redirect : "/app"
+    );
+    window.location.replace(target);
+    return null;
+  }
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -68,16 +57,17 @@ export default function CentralLogin({ title, afterLogin }) {
     setError("");
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) {
-        setError(error.message || "Login failed");
+      if (signInErr) {
+        setError(signInErr.message || "Login failed");
         return;
       }
 
+      // We are on TENANT host here. After login go to landing (/app) or requested redirect.
       navigate(redirect, { replace: true });
     } catch (e2) {
       setError(e2?.message || "Login failed");
@@ -133,6 +123,10 @@ export default function CentralLogin({ title, afterLogin }) {
               {busy ? "Signing in…" : "Sign in"}
             </Button>
           </Box>
+
+          <Typography sx={{ mt: 2, opacity: 0.6, fontSize: 12 }}>
+            Tenant: {getTenantBaseHost(window.location.hostname)}
+          </Typography>
         </Paper>
       </Container>
     </Box>
