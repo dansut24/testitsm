@@ -8,7 +8,6 @@ import Reports from "./pages/Reports";
 import ControlSettings from "./pages/Settings";
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
-import Login from "./pages/ControlLogin";
 import DeviceRemote from "./pages/DeviceRemote";
 
 import { useAuth } from "../common/context/AuthContext";
@@ -24,20 +23,18 @@ function App() {
     );
   }
 
+  // If not logged in, always send to central login
+  if (!user) {
+    return <Navigate to="/login?redirect=/control" replace />;
+  }
+
   return (
     <>
       <CssBaseline />
       <Box sx={{ minHeight: "100vh", overflow: "auto" }}>
         <Routes>
-          <Route
-            path="/login"
-            element={user ? <Navigate to="/" replace /> : <Login />}
-          />
-
-          <Route
-            path="/"
-            element={user ? <ControlLayout /> : <Navigate to="/login" replace />}
-          >
+          {/* Control routes (assumes mounted at /control by the top-level router) */}
+          <Route path="/" element={<ControlLayout />}>
             <Route index element={<Home />} />
             <Route path="devices" element={<Devices />} />
             <Route path="reports" element={<Reports />} />
