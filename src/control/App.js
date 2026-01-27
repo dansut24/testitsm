@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound";
 import DeviceRemote from "./pages/DeviceRemote";
 
 import { useAuth } from "../common/context/AuthContext";
+import CentralLogin from "../common/pages/CentralLogin";
 
 function App() {
   const { authLoading, user } = useAuth();
@@ -23,16 +24,26 @@ function App() {
     );
   }
 
-  if (!user) {
-    return <Navigate to="/login?redirect=/control" replace />;
-  }
-
   return (
     <>
       <CssBaseline />
       <Box sx={{ minHeight: "100vh", overflow: "auto" }}>
         <Routes>
-          <Route path="/" element={<ControlLayout />}>
+          <Route
+            path="/login"
+            element={
+              user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <CentralLogin title="Sign in to Control" afterLogin="/" />
+              )
+            }
+          />
+
+          <Route
+            path="/"
+            element={user ? <ControlLayout /> : <Navigate to="/login" replace />}
+          >
             <Route index element={<Home />} />
             <Route path="devices" element={<Devices />} />
             <Route path="reports" element={<Reports />} />
