@@ -1,148 +1,89 @@
-// src/main/pages/TenantLanding.js
+// src/common/pages/TenantLanding.js
 import React, { useEffect, useMemo, useState } from "react";
 import { Box, Button, Container, Paper, Stack, Typography } from "@mui/material";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "../../common/utils/supabaseClient";
-import { useAuth } from "../../common/context/AuthContext";
+import { useAuth } from "../context/AuthContext";
+import { getAccessibleModules } from "../services/ModuleAccessService";
+import { getTenantBaseHost, buildModuleUrlFromTenantHost } from "../utils/tenantHost";
+import CentralLogin from "./CentralLogin";
 
-function getTenantSlugFromHost() {
-  const host = window.location.hostname || "";
-  const first = host.split(".")[0] || "";
-  // tenant host is like demoitsm.hi5tech.co.uk
-  return first || null;
+function labelFor(module) {
+  if (module === "itsm") return "ITSM";
+  if (module === "control") return "Control (RMM)";
+  if (module === "self_service") return "Self Service";
+  return module;
 }
 
-function moduleToHostSuffix(module) {
-  // DNS pattern you already use:
-  // demoitsm-itsm.hi5tech.co.uk
-  // demoitsm-control.hi5tech.co.uk
-  // demoitsm-self.hi5tech.co.uk   (self_service module)
-  if (module === "self_service") return "self";
-  return module; // "itsm" | "control"
-}
-
-function buildModuleUrl(module) {
-  const tenantSlug = getTenantSlugFromHost();
-  if (!tenantSlug) return null;
-  const suffix = moduleToHostSuffix(module);
-  return `https://${tenantSlug}-${suffix}.hi5tech.co.uk/`;
+function descFor(module) {
+  if (module === "itsm") return "Incidents, requests, changes, assets, knowledge base.";
+  if (module === "control") return "Devices, remote tools, reports and admin control.";
+  if (module === "self_service") return "End-user portal for raising requests and incidents.";
+  return "";
 }
 
 export default function TenantLanding() {
-  const navigate = useNavigate();
-  const { user, authLoading, tenant } = useAuth();
+  const { user, authLoading, tenantId } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [modules, setModules] = useState([]);
-  const [err, setErr] = useState("");
+  const [error, setError] = useState("");
 
-  const tenantId = tenant?.id || user?.tenant_id || null;
-  const role = user?.role || "user";
+  const tenantBaseHost = useMemo(() => getTenantBaseHost(), []);
 
   useEffect(() => {
-    let alive = true;
+    let mounted = true;
 
-    async function run() {
-      setErr("");
-
-      if (authLoading) return;
-      if (!user) {
-        navigate("/login", { replace: true });
-        return;
-      }
-      if (!tenantId) {
+    async function load() {
+      if (!user?.id || !tenantId) {
         setLoading(false);
-        setErr("Tenant could not be resolved for this user/session.");
         return;
       }
 
       setLoading(true);
+      setError("");
 
       try {
-        // 1) role allows
-        const { data: roleRows, error: roleErr } = await supabase
-          .from("role_module_access")
-          .select("module, allowed")
-          .eq("tenant_id", tenantId)
-          .eq("role", role);
+        const mods = await getAccessibleModules({
+          tenantId,
+          userId: user.id,
+        });
 
-        if (roleErr) throw roleErr;
+        if (!mounted) return;
 
-        const roleAllowed = new Set(
-          (roleRows || [])
-            .filter((r) => r.allowed === true)
-            .map((r) => r.module)
-        );
-
-        // 2) user overrides (allow/deny)
-        const { data: userRows, error: userErr } = await supabase
-          .from("user_module_access")
-          .select("module, effect")
-          .eq("tenant_id", tenantId)
-          .eq("user_id", user.id);
-
-        if (userErr) throw userErr;
-
-        const final = new Set([...roleAllowed]);
-
-        for (const o of userRows || []) {
-          const m = o.module;
-          const effect = String(o.effect || "").toLowerCase();
-          if (effect === "deny") final.delete(m);
-          if (effect === "allow") final.add(m);
-        }
-
-        // Only modules we actually support here
-        const allowed = [...final].filter((m) =>
-          ["itsm", "control", "self_service"].includes(m)
-        );
-
-        if (!alive) return;
-        setModules(allowed);
+        setModules(mods || []);
       } catch (e) {
-        if (!alive) return;
-        setErr(e?.message || "Failed to load module access.");
+        if (!mounted) return;
+        setError(e?.message || "Failed to load module access");
       } finally {
-        if (!alive) return;
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
 
-    run();
+    load();
     return () => {
-      alive = false;
+      mounted = false;
     };
-  }, [authLoading, user, tenantId, role, navigate]);
+  }, [user?.id, tenantId]);
 
-  const title = useMemo(() => {
-    const name =
-      user?.full_name || user?.email?.split("@")?.[0] || "there";
-    return `Welcome, ${name}`;
-  }, [user]);
+  // Not signed in
+  if (authLoading) {
+    return (
+      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+        <Typography sx={{ opacity: 0.7 }}>Loading session…</Typography>
+      </Box>
+    );
+  }
 
-  // ✅ If only one module is allowed, auto-forward
+  if (!user) {
+    return <CentralLogin title="Sign in to Hi5Tech" />;
+  }
+
+  // Auto-forward if exactly one
   useEffect(() => {
-    if (loading || err) return;
-    if (modules.length === 1) {
-      const url = buildModuleUrl(modules[0]);
-      if (url) window.location.href = url;
+    if (!loading && modules.length === 1) {
+      const url = buildModuleUrlFromTenantHost(tenantBaseHost, modules[0]);
+      window.location.assign(url);
     }
-  }, [loading, err, modules]);
-
-  const cards = useMemo(() => {
-    return modules.map((m) => {
-      const label =
-        m === "itsm" ? "ITSM" : m === "control" ? "Control" : "Self Service";
-      const desc =
-        m === "itsm"
-          ? "Tickets, changes, assets and knowledge base"
-          : m === "control"
-          ? "RMM device management, scripts and remote actions"
-          : "End-user portal for raising requests and incidents";
-
-      return { module: m, label, desc };
-    });
-  }, [modules]);
+  }, [loading, modules, tenantBaseHost]);
 
   return (
     <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", px: 2 }}>
@@ -150,50 +91,65 @@ export default function TenantLanding() {
         <Paper elevation={6} sx={{ p: 4, borderRadius: 4 }}>
           <Stack spacing={1}>
             <Typography variant="h5" fontWeight={950}>
-              {title}
+              Choose where to go
             </Typography>
-            <Typography sx={{ opacity: 0.75 }}>
-              Choose where you want to go.
+            <Typography sx={{ opacity: 0.7 }}>
+              Signed in as {user.email}
             </Typography>
           </Stack>
 
-          {loading ? (
-            <Typography sx={{ mt: 3, opacity: 0.8 }}>Loading access…</Typography>
-          ) : err ? (
-            <Typography sx={{ mt: 3, color: "error.main" }}>{err}</Typography>
-          ) : modules.length <= 1 ? (
-            <Typography sx={{ mt: 3, opacity: 0.8 }}>
-              Redirecting…
-            </Typography>
-          ) : (
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mt: 3 }}>
-              {cards.map((c) => (
-                <Paper
-                  key={c.module}
-                  variant="outlined"
-                  sx={{ p: 2.5, borderRadius: 3, flex: 1 }}
-                >
-                  <Typography sx={{ fontWeight: 950, fontSize: 18 }}>
-                    {c.label}
-                  </Typography>
-                  <Typography sx={{ mt: 0.6, opacity: 0.75 }}>
-                    {c.desc}
-                  </Typography>
-
-                  <Button
-                    variant="contained"
-                    sx={{ mt: 2, fontWeight: 900 }}
-                    onClick={() => {
-                      const url = buildModuleUrl(c.module);
-                      if (url) window.location.href = url;
-                    }}
+          <Box sx={{ mt: 3 }}>
+            {loading ? (
+              <Typography sx={{ opacity: 0.7 }}>Loading modules…</Typography>
+            ) : error ? (
+              <Typography sx={{ color: "error.main" }}>{error}</Typography>
+            ) : modules.length === 0 ? (
+              <Typography sx={{ opacity: 0.8 }}>
+                No modules assigned to your account for this tenant.
+              </Typography>
+            ) : modules.length === 1 ? (
+              <Typography sx={{ opacity: 0.8 }}>
+                Taking you to {labelFor(modules[0])}…
+              </Typography>
+            ) : (
+              <Stack spacing={2}>
+                {modules.map((m) => (
+                  <Paper
+                    key={m}
+                    variant="outlined"
+                    sx={{ p: 2.2, borderRadius: 3 }}
                   >
-                    Open {c.label}
-                  </Button>
-                </Paper>
-              ))}
-            </Stack>
-          )}
+                    <Stack
+                      direction={{ xs: "column", sm: "row" }}
+                      spacing={2}
+                      alignItems={{ sm: "center" }}
+                      justifyContent="space-between"
+                    >
+                      <Box>
+                        <Typography fontWeight={950} sx={{ fontSize: 18 }}>
+                          {labelFor(m)}
+                        </Typography>
+                        <Typography sx={{ opacity: 0.7, mt: 0.4 }}>
+                          {descFor(m)}
+                        </Typography>
+                      </Box>
+
+                      <Button
+                        variant="contained"
+                        sx={{ fontWeight: 900, minWidth: 160 }}
+                        onClick={() => {
+                          const url = buildModuleUrlFromTenantHost(tenantBaseHost, m);
+                          window.location.assign(url);
+                        }}
+                      >
+                        Open {labelFor(m)}
+                      </Button>
+                    </Stack>
+                  </Paper>
+                ))}
+              </Stack>
+            )}
+          </Box>
         </Paper>
       </Container>
     </Box>
