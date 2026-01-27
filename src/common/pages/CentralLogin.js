@@ -1,3 +1,4 @@
+// src/common/pages/CentralLogin.js
 import React, { useMemo, useState } from "react";
 import {
   Box,
@@ -11,19 +12,88 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient";
 
-function getDefaultAfterLogin() {
+/**
+ * CentralLogin
+ * - Works on ANY host, but is intended to be used on tenant root:
+ *     demoitsm.hi5tech.co.uk/login
+ * - Reads ?redirect=/itsm (or /control, /self-service, etc.)
+ * - IMPORTANT: If redirect points to a MODULE PATH (/itsm, /control, /self-service),
+ *   we go to absolute URL for that module host (demoitsm-itsm, demoitsm-control, demoitsm-self)
+ * - Otherwise we navigate within the current host.
+ */
+
+function getParentDomain() {
   const host = window.location.hostname || "";
-  if (host.includes("-control.")) return "/";
-  if (host.includes("-self.")) return "/"; // selfservice typically index route
-  // itsm
-  return "/dashboard";
+  return host.split(".").slice(1).join(".");
 }
 
-function getDefaultTitle() {
+function stripModuleSuffixFromTenantBase(firstLabel) {
+  return String(firstLabel || "").replace(/-(control|itsm|self)$/i, "");
+}
+
+function getTenantBase() {
   const host = window.location.hostname || "";
-  if (host.includes("-control.")) return "Sign in to Control";
-  if (host.includes("-self.")) return "Sign in to Self Service";
-  return "Sign in to ITSM";
+  const first = host.split(".")[0] || "";
+  return stripModuleSuffixFromTenantBase(first);
+}
+
+function buildModuleBaseUrl(moduleKey) {
+  const tenantBase = getTenantBase();
+  const parent = getParentDomain();
+
+  const sub =
+    moduleKey === "itsm"
+      ? `${tenantBase}-itsm`
+      : moduleKey === "control"
+      ? `${tenantBase}-control`
+      : `${tenantBase}-self`;
+
+  return `https://${sub}.${parent}`;
+}
+
+function normalizeRedirect(raw) {
+  const r = String(raw || "").trim();
+  if (!r) return "/";
+  // allow "/itsm" "/control" "/self-service" "/dashboard" etc.
+  if (r.startsWith("/")) return r;
+  return `/${r}`;
+}
+
+function isModuleRedirect(pathname) {
+  const p = String(pathname || "").toLowerCase();
+  return p === "/itsm" || p.startsWith("/itsm/") || p === "/control" || p.startsWith("/control/") || p === "/self-service" || p.startsWith("/self-service/");
+}
+
+function moduleFromRedirect(pathname) {
+  const p = String(pathname || "").toLowerCase();
+  if (p === "/control" || p.startsWith("/control/")) return "control";
+  if (p === "/self-service" || p.startsWith("/self-service/")) return "self";
+  // default
+  return "itsm";
+}
+
+function rewritePathForModule(moduleKey, pathname) {
+  // If redirect is "/itsm" or "/itsm/xyz" => module host expects "/" or "/xyz"
+  // If redirect is "/control" or "/control/xyz" => module host expects "/" or "/xyz"
+  // If redirect is "/self-service" or "/self-service/xyz" => module host expects "/" or "/xyz"
+  const p = normalizeRedirect(pathname);
+  const lower = p.toLowerCase();
+
+  if (moduleKey === "itsm" && (lower === "/itsm" || lower.startsWith("/itsm/"))) {
+    return lower === "/itsm" ? "/" : p.slice("/itsm".length) || "/";
+  }
+  if (moduleKey === "control" && (lower === "/control" || lower.startsWith("/control/"))) {
+    return lower === "/control" ? "/" : p.slice("/control".length) || "/";
+  }
+  if (moduleKey === "self" && (lower === "/self-service" || lower.startsWith("/self-service/"))) {
+    return lower === "/self-service" ? "/" : p.slice("/self-service".length) || "/";
+  }
+
+  return "/";
+}
+
+function getDefaultTitleForCentral() {
+  return "Sign in";
 }
 
 export default function CentralLogin({ title, afterLogin }) {
@@ -35,15 +105,16 @@ export default function CentralLogin({ title, afterLogin }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const computedAfterLogin = useMemo(
-    () => afterLogin || getDefaultAfterLogin(),
-    [afterLogin]
-  );
+  const computedTitle = useMemo(() => title || getDefaultTitleForCentral(), [title]);
 
-  const computedTitle = useMemo(() => title || getDefaultTitle(), [title]);
+  // Default landing after login on CENTRAL host should be root "/"
+  // (PortalApp will then decide to show module chooser or auto-redirect)
+  const computedAfterLogin = useMemo(() => afterLogin || "/", [afterLogin]);
 
-  const redirect =
-    new URLSearchParams(location.search).get("redirect") || computedAfterLogin;
+  const redirect = useMemo(() => {
+    const qs = new URLSearchParams(location.search);
+    return normalizeRedirect(qs.get("redirect") || computedAfterLogin);
+  }, [location.search, computedAfterLogin]);
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -61,6 +132,16 @@ export default function CentralLogin({ title, afterLogin }) {
         return;
       }
 
+      // If the redirect targets a module, send user to the module HOST (absolute URL)
+      if (isModuleRedirect(redirect)) {
+        const moduleKey = moduleFromRedirect(redirect);
+        const base = buildModuleBaseUrl(moduleKey);
+        const path = rewritePathForModule(moduleKey, redirect);
+        window.location.href = `${base}${path}`;
+        return;
+      }
+
+      // Otherwise, route within current app
       navigate(redirect, { replace: true });
     } catch (e2) {
       setError(e2?.message || "Login failed");
