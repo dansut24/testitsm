@@ -13,20 +13,19 @@ import NotFound from "./pages/NotFound";
 import TenantSetupWizard from "./pages/TenantSetupWizard";
 import VerifyPage from "./pages/VerifyPage";
 
-// Central portal pages
+// ✅ Central login + landing
 import CentralLogin from "../common/pages/CentralLogin";
-import TenantLanding from "../common/pages/TenantLanding";
+import TenantLanding from "./pages/TenantLanding";
 
-const ROOT_HOSTS = new Set(["hi5tech.co.uk", "www.hi5tech.co.uk"]);
-
-function isRootHost() {
-  const host = window.location.hostname || "";
-  return ROOT_HOSTS.has(host);
+function isRootDomain(host) {
+  return host === "hi5tech.co.uk" || host === "www.hi5tech.co.uk";
 }
 
 function App() {
-  // Root domain = marketing
-  if (isRootHost()) {
+  const host = window.location.hostname || "";
+
+  // ✅ Root domain remains marketing
+  if (isRootDomain(host)) {
     return (
       <Routes>
         <Route path="/setup" element={<TenantSetupWizard />} />
@@ -44,10 +43,10 @@ function App() {
     );
   }
 
-  // Tenant base host = portal shell (login + landing)
+  // ✅ Tenant subdomain becomes the “central portal”
   return (
     <Routes>
-      <Route path="/login" element={<CentralLogin title="Sign in" afterLogin="/" />} />
+      <Route path="/login" element={<CentralLogin />} />
       <Route path="/" element={<TenantLanding />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
