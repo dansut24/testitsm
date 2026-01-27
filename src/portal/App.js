@@ -67,19 +67,29 @@ async function loadTenantByBaseHost(tenantBase) {
 }
 
 function normalizeModuleValue(v) {
-  const m = String(v || "").toLowerCase().trim();
-  if (!m) return null;
+  const raw = String(v || "").toLowerCase().trim();
+  if (!raw) return null;
 
-  // Accept a bunch of variants
+  // Normalize separators so:
+  // self-service, self_service, Self Service => self_service
+  const m = raw.replaceAll("-", "_").replaceAll(" ", "_");
+
+  // Ignore admin as a "module card" (otherwise modules contain values the UI never displays)
+  if (m === "admin") return null;
+
   if (m === "itsm" || m.includes("itsm")) return "itsm";
   if (m === "control" || m.includes("control")) return "control";
+
+  // ✅ IMPORTANT: support self_service from DB
   if (
     m === "self" ||
-    m.includes("self") ||
+    m === "self_service" ||
     m.includes("selfservice") ||
-    m.includes("self-service")
-  )
+    m.includes("self_service") ||
+    m.includes("self")
+  ) {
     return "self";
+  }
 
   return null;
 }
@@ -139,9 +149,6 @@ async function loadRoleModules(role, tenantId) {
 }
 
 async function loadUserOverrides(userId, tenantId) {
-  // Your schema *should* have: module + effect
-  // But you previously hit errors around "effect" in SQL, so be defensive:
-  // Try effect -> action -> access -> allowed
   const tries = [
     { cols: "module, effect", mode: "effect" },
     { cols: "module, action", mode: "effect" },
@@ -165,17 +172,11 @@ async function loadUserOverrides(userId, tenantId) {
       break;
     }
 
-    // Only continue if the error looks like a missing column
     const msg = String(res.error?.message || "").toLowerCase();
-    if (
-      msg.includes("does not exist") ||
-      msg.includes("column") ||
-      msg.includes("parse")
-    ) {
+    if (msg.includes("does not exist") || msg.includes("column") || msg.includes("parse")) {
       continue;
     }
 
-    // Non-column error → throw
     throw res.error;
   }
 
@@ -187,15 +188,12 @@ async function loadUserOverrides(userId, tenantId) {
     if (!mod) continue;
 
     if (mode === "allowedBool") {
-      // allowed true/false means allow/deny
       if (r.allowed === true) allow.add(mod);
       if (r.allowed === false) deny.add(mod);
       continue;
     }
 
-    // effect-like string
-    const effRaw =
-      r.effect ?? r.action ?? r.access ?? ""; // whichever exists
+    const effRaw = r.effect ?? r.action ?? r.access ?? "";
     const eff = String(effRaw || "").toLowerCase().trim();
 
     if (eff === "deny" || eff === "block" || eff === "remove") deny.add(mod);
@@ -277,12 +275,7 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
 
       <Divider sx={{ my: 1.8, borderColor: "rgba(255,255,255,0.10)" }} />
 
-      <Stack
-        direction="row"
-        spacing={1}
-        justifyContent="space-between"
-        alignItems="center"
-      >
+      <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
         <Button
           variant="contained"
           onClick={onOpen}
@@ -349,11 +342,11 @@ function PortalHome() {
   useEffect(() => {
     let mounted = true;
 
-    async function run() {
+    const run = async () => {
       try {
         setBusy(true);
 
-        // ✅ Use session as the truth source (prevents login loops)
+        // ✅ Session is source of truth
         const { data } = await supabase.auth.getSession();
         const sess = data?.session || null;
         const u = sess?.user || null;
@@ -363,6 +356,8 @@ function PortalHome() {
         setUser(u);
 
         if (!u) {
+          setTenant(null);
+          setModules([]);
           setBusy(false);
           return;
         }
@@ -387,21 +382,16 @@ function PortalHome() {
           userAllow = o.allow || [];
           userDeny = o.deny || [];
         } catch (e) {
-          // Overrides are optional; don't brick the portal if that table/columns vary
           console.warn("[Portal] user overrides failed:", e?.message || e);
         }
 
-        // Merge rules:
-        // 1) start with roleAllowed
-        // 2) apply user allow adds
-        // 3) apply user deny removes
         const set = new Set(roleAllowed);
         userAllow.forEach((m) => set.add(m));
         userDeny.forEach((m) => set.delete(m));
 
         const finalAllowed = Array.from(set);
 
-        // No silent fallback to ITSM; show "no modules" message if empty.
+        // No silent fallback. If empty -> show "No modules available".
         setModules(finalAllowed);
 
         setBusy(false);
@@ -411,15 +401,23 @@ function PortalHome() {
         setModules([]);
         setBusy(false);
       }
-    }
+    };
 
     run();
 
+    // ✅ Key fix: after login/logout, re-run access calc
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, sess) => {
       const s = sess || null;
       const u = s?.user || null;
       setSession(s);
       setUser(u);
+
+      if (u) {
+        run();
+      } else {
+        setTenant(null);
+        setModules([]);
+      }
     });
 
     return () => {
@@ -440,7 +438,7 @@ function PortalHome() {
 
   // Auto-route ONLY if exactly one module remains after proper access evaluation
   if (modules.length === 1 && tenantBase) {
-    window.location.href = buildModuleUrl(tenantBase, modules[0]);
+    window.location.assign(buildModuleUrl(tenantBase, modules[0]));
     return null;
   }
 
@@ -597,9 +595,7 @@ function PortalHome() {
               chips={m.chips}
               icon={m.icon}
               href={m.href}
-              onOpen={() => {
-                window.location.href = m.href;
-              }}
+              onOpen={() => window.location.assign(m.href)}
             />
           ))}
         </Box>
@@ -628,16 +624,14 @@ function PortalLogout() {
       try {
         await supabase.auth.signOut();
       } finally {
-        window.location.href = "/login";
+        window.location.assign("/login");
       }
     })();
   }, []);
 
   return (
     <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-      <Typography sx={{ fontWeight: 950, opacity: 0.8 }}>
-        Signing out…
-      </Typography>
+      <Typography sx={{ fontWeight: 950, opacity: 0.8 }}>Signing out…</Typography>
     </Box>
   );
 }
