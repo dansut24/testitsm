@@ -10,8 +10,8 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "../common/utils/supabaseClient";
 import { ThemeModeProvider } from "./theme/ThemeContext";
 
-// ✅ URL helpers to ALWAYS bounce to tenant central domain
 import { getCentralLoginUrl } from "../common/utils/portalUrl";
+import ExternalRedirect from "../common/components/ExternalRedirect";
 
 // Layout & Auth
 import Layout from "./components/Layout";
@@ -57,7 +57,7 @@ import NotFound from "./pages/NotFound";
 import SetPassword from "./pages/SetPassword";
 import NewTab from "./pages/NewTab";
 
-// Self-Service Pages (backwards compatibility if anyone hits /self-service on the ITSM host)
+// Self-Service (optional within ITSM host)
 import SelfServiceLayout from "../selfservice/layouts/SelfServiceLayout";
 import SelfServiceHome from "../selfservice/pages/SelfServiceHome";
 import RaiseRequest from "../selfservice/pages/RaiseRequest";
@@ -71,7 +71,6 @@ function ITSMRoutes() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // After login, we want to return to THIS module
   const centralLogin = getCentralLoginUrl("/itsm");
 
   useEffect(() => {
@@ -100,11 +99,8 @@ function ITSMRoutes() {
 
   return (
     <Routes>
-      {/* ✅ IMPORTANT:
-          - /login should NEVER be handled on the -itsm host.
-          - If someone hits /login here, send them to tenant central login with redirect=/itsm
-      */}
-      <Route path="/login" element={<Navigate to={centralLogin} replace />} />
+      {/* If someone hits /login on -itsm host, hard redirect to central login */}
+      <Route path="/login" element={<ExternalRedirect to={centralLogin} />} />
 
       {/* These can stay on-module */}
       <Route path="/loading" element={<Loading />} />
@@ -114,7 +110,7 @@ function ITSMRoutes() {
       {/* ITSM base */}
       <Route
         path="/"
-        element={isLoggedIn ? <Layout /> : <Navigate to={centralLogin} replace />}
+        element={isLoggedIn ? <Layout /> : <ExternalRedirect to={centralLogin} />}
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
@@ -182,10 +178,7 @@ function ITSMRoutes() {
       )}
 
       {/* Catch-all */}
-      <Route
-        path="*"
-        element={isLoggedIn ? <NotFound /> : <Navigate to={centralLogin} replace />}
-      />
+      <Route path="*" element={isLoggedIn ? <NotFound /> : <ExternalRedirect to={centralLogin} />} />
     </Routes>
   );
 }
