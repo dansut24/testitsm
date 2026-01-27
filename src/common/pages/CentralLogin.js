@@ -1,24 +1,18 @@
 import React, { useState } from "react";
-import {
-  Box,
-  Button,
-  Container,
-  Paper,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Box, Button, Container, Paper, TextField, Typography } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient";
 
-export default function CentralLogin() {
+export default function CentralLogin({ title = "Sign in", afterLogin = "/" }) {
   const navigate = useNavigate();
   const location = useLocation();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const redirect = new URLSearchParams(location.search).get("redirect");
+  const redirect = new URLSearchParams(location.search).get("redirect") || afterLogin;
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -31,8 +25,7 @@ export default function CentralLogin() {
         setError(error.message || "Login failed");
         return;
       }
-      // After login, go to router that decides where to send the user
-      navigate(redirect || "/app", { replace: true });
+      navigate(redirect, { replace: true });
     } catch (e2) {
       setError(e2?.message || "Login failed");
     } finally {
@@ -44,11 +37,11 @@ export default function CentralLogin() {
     <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", px: 2 }}>
       <Container maxWidth="sm">
         <Paper elevation={6} sx={{ p: 4, borderRadius: 4 }}>
-          <Typography variant="h5" fontWeight={900}>
-            Sign in
+          <Typography variant="h5" fontWeight={950}>
+            {title}
           </Typography>
           <Typography sx={{ opacity: 0.7, mt: 0.6 }}>
-            Access ITSM, Control and Self Service from one login.
+            Use your Hi5Tech account to continue.
           </Typography>
 
           <Box component="form" onSubmit={onSubmit} sx={{ mt: 3 }}>
