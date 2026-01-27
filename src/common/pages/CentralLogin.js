@@ -11,26 +11,32 @@ import {
 } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient";
-import { getModuleBaseUrl } from "../utils/portalUrl";
 
-function normalizeRedirect(r) {
-  const s = String(r || "").trim();
-  if (!s) return "/";
-  // ensure it starts with /
-  return s.startsWith("/") ? s : `/${s}`;
+function isModuleHost(host) {
+  return host.includes("-control.") || host.includes("-itsm.") || host.includes("-self.");
 }
 
-function isModuleRedirect(path) {
-  const p = normalizeRedirect(path).toLowerCase();
-  return p === "/itsm" || p === "/control" || p === "/self";
+function getDefaultAfterLogin() {
+  const host = window.location.hostname || "";
+
+  // ✅ On tenant host, always go to landing page
+  if (!isModuleHost(host)) return "/";
+
+  // Module hosts keep their internal defaults
+  if (host.includes("-control.")) return "/";
+  if (host.includes("-self.")) return "/";
+  return "/dashboard"; // itsm
 }
 
-function moduleFromRedirect(path) {
-  const p = normalizeRedirect(path).toLowerCase();
-  return p.replace("/", "");
+function getDefaultTitle() {
+  const host = window.location.hostname || "";
+  if (!isModuleHost(host)) return "Sign in to Hi5Tech";
+  if (host.includes("-control.")) return "Sign in to Control";
+  if (host.includes("-self.")) return "Sign in to Self Service";
+  return "Sign in to ITSM";
 }
 
-export default function CentralLogin({ title = "Sign in", afterLogin = "/" }) {
+export default function CentralLogin({ title, afterLogin }) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -39,10 +45,22 @@ export default function CentralLogin({ title = "Sign in", afterLogin = "/" }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  const computedAfterLogin = useMemo(
+    () => afterLogin || getDefaultAfterLogin(),
+    [afterLogin]
+  );
+
+  const computedTitle = useMemo(() => title || getDefaultTitle(), [title]);
+
+  const host = window.location.hostname || "";
+  const qsRedirect = new URLSearchParams(location.search).get("redirect");
+
+  // ✅ On tenant host, we ALWAYS land on "/" (module chooser),
+  // ignoring any redirect passed in.
   const redirect = useMemo(() => {
-    const q = new URLSearchParams(location.search).get("redirect");
-    return normalizeRedirect(q || afterLogin || "/");
-  }, [location.search, afterLogin]);
+    if (!isModuleHost(host)) return "/";
+    return qsRedirect || computedAfterLogin;
+  }, [host, qsRedirect, computedAfterLogin]);
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -60,14 +78,6 @@ export default function CentralLogin({ title = "Sign in", afterLogin = "/" }) {
         return;
       }
 
-      // If redirect is module selection, hard jump to that subdomain
-      if (isModuleRedirect(redirect)) {
-        const mod = moduleFromRedirect(redirect);
-        window.location.replace(`${getModuleBaseUrl(mod)}/`);
-        return;
-      }
-
-      // Otherwise stay on tenant base host (landing etc)
       navigate(redirect, { replace: true });
     } catch (e2) {
       setError(e2?.message || "Login failed");
@@ -82,7 +92,7 @@ export default function CentralLogin({ title = "Sign in", afterLogin = "/" }) {
         <Paper elevation={6} sx={{ p: 4, borderRadius: 4 }}>
           <Stack spacing={0.8}>
             <Typography variant="h5" fontWeight={950}>
-              {title}
+              {computedTitle}
             </Typography>
             <Typography sx={{ opacity: 0.7 }}>
               Use your Hi5Tech account to continue.
