@@ -5,7 +5,6 @@ import {
   Box,
   Button,
   Container,
-  Paper,
   Stack,
   Typography,
   TextField,
@@ -13,8 +12,6 @@ import {
   Chip,
   Divider,
   Avatar,
-  IconButton,
-  Tooltip,
 } from "@mui/material";
 
 import SearchIcon from "@mui/icons-material/Search";
@@ -24,78 +21,17 @@ import SupportAgentIcon from "@mui/icons-material/SupportAgent";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
-import DarkModeIcon from "@mui/icons-material/DarkMode";
-import LightModeIcon from "@mui/icons-material/LightMode";
 
 import CentralLogin from "../common/pages/CentralLogin";
 import { supabase } from "../common/utils/supabaseClient";
 
+// ✅ Shared theme + glass
+import { useHi5Theme } from "../common/ui/hi5Theme";
+import GlassPanel from "../common/ui/GlassPanel";
+import ThemeToggleIconButton from "../common/ui/ThemeToggleIconButton";
+
 // Keep in sync with supabaseClient.js
 const STORAGE_KEY = "hi5tech_sb_session";
-const THEME_KEY = "hi5tech_theme"; // "dark" | "light"
-
-// -------------------------
-// Theme tokens (dark glass ↔ light glass)
-// -------------------------
-
-function getThemeTokens(mode) {
-  const isLight = mode === "light";
-
-  return {
-    mode,
-
-    page: {
-      color: isLight ? "rgba(10,16,34,0.92)" : "rgba(255,255,255,0.92)",
-      background: isLight
-        ? `
-          radial-gradient(1200px 800px at 20% 10%, rgba(124, 92, 255, 0.20), transparent 60%),
-          radial-gradient(1000px 700px at 85% 25%, rgba(56, 189, 248, 0.16), transparent 55%),
-          radial-gradient(900px 700px at 60% 90%, rgba(34, 197, 94, 0.12), transparent 55%),
-          linear-gradient(180deg, #F7F9FF 0%, #EEF3FF 55%, #EAF0FF 100%)
-        `
-        : `
-          radial-gradient(1200px 800px at 20% 10%, rgba(124, 92, 255, 0.28), transparent 60%),
-          radial-gradient(1000px 700px at 85% 25%, rgba(56, 189, 248, 0.18), transparent 55%),
-          radial-gradient(900px 700px at 60% 90%, rgba(34, 197, 94, 0.10), transparent 55%),
-          linear-gradient(180deg, #070A12 0%, #0A1022 45%, #0B1633 100%)
-        `,
-    },
-
-    glass: {
-      border: isLight ? "1px solid rgba(10,16,34,0.10)" : "1px solid rgba(255,255,255,0.10)",
-      bg: isLight
-        ? "linear-gradient(135deg, rgba(255,255,255,0.70), rgba(255,255,255,0.40))"
-        : "linear-gradient(135deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04))",
-      shadow: isLight
-        ? "0 18px 55px rgba(10,16,34,0.12)"
-        : "0 18px 55px rgba(0,0,0,0.35)",
-      divider: isLight ? "rgba(10,16,34,0.10)" : "rgba(255,255,255,0.10)",
-    },
-
-    pill: {
-      bg: isLight ? "rgba(255,255,255,0.70)" : "rgba(255,255,255,0.06)",
-      border: isLight ? "1px solid rgba(10,16,34,0.12)" : "1px solid rgba(255,255,255,0.10)",
-      text: isLight ? "rgba(10,16,34,0.86)" : "rgba(255,255,255,0.88)",
-    },
-
-    chip: {
-      bg: isLight ? "rgba(255,255,255,0.65)" : "rgba(255,255,255,0.06)",
-      border: isLight ? "1px solid rgba(10,16,34,0.12)" : "1px solid rgba(255,255,255,0.10)",
-      color: isLight ? "rgba(10,16,34,0.78)" : "rgba(255,255,255,0.85)",
-    },
-
-    cardIcon: {
-      bg: isLight ? "rgba(124,92,255,0.12)" : "rgba(124,92,255,0.18)",
-      border: isLight ? "1px solid rgba(10,16,34,0.10)" : "1px solid rgba(255,255,255,0.12)",
-    },
-
-    buttonOutlined: {
-      borderColor: isLight ? "rgba(10,16,34,0.20)" : "rgba(255,255,255,0.18)",
-      color: isLight ? "rgba(10,16,34,0.88)" : "rgba(255,255,255,0.88)",
-      background: isLight ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.04)",
-    },
-  };
-}
 
 // -------------------------
 // Host + URL helpers
@@ -150,9 +86,7 @@ function normalizeModuleValue(v) {
 
   const m = raw.replaceAll("-", "_").replaceAll(" ", "_");
 
-  // Ignore admin as a "module card"
   if (m === "admin") return null;
-
   if (m === "itsm" || m.includes("itsm")) return "itsm";
   if (m === "control" || m.includes("control")) return "control";
   if (m === "self" || m === "self_service" || m.includes("self")) return "self";
@@ -233,11 +167,7 @@ async function loadUserOverrides(userId, tenantId) {
     }
 
     const msg = String(res.error?.message || "").toLowerCase();
-    if (
-      msg.includes("does not exist") ||
-      msg.includes("column") ||
-      msg.includes("parse")
-    ) {
+    if (msg.includes("does not exist") || msg.includes("column") || msg.includes("parse")) {
       continue;
     }
     throw res.error;
@@ -267,7 +197,7 @@ async function loadUserOverrides(userId, tenantId) {
 }
 
 // -------------------------
-// Hard cleanup helpers (fix "can’t login again after logout")
+// Hard cleanup helpers
 // -------------------------
 
 function deleteCookie(name, domain) {
@@ -312,27 +242,8 @@ function hardClearAuthStorage() {
 }
 
 // -------------------------
-// UI helpers
+// Cards
 // -------------------------
-
-function GlassPanel({ children, sx, t }) {
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        borderRadius: 4,
-        border: t.glass.border,
-        background: t.glass.bg,
-        backdropFilter: "blur(14px)",
-        WebkitBackdropFilter: "blur(14px)",
-        boxShadow: t.glass.shadow,
-        ...sx,
-      }}
-    >
-      {children}
-    </Paper>
-  );
-}
 
 function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href, t }) {
   return (
@@ -345,8 +256,8 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href, t }) {
             borderRadius: 3,
             display: "grid",
             placeItems: "center",
-            background: t.cardIcon.bg,
-            border: t.cardIcon.border,
+            background: "rgba(124,92,255,0.18)",
+            border: t.glass.border,
             flexShrink: 0,
           }}
         >
@@ -357,7 +268,7 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href, t }) {
           <Typography sx={{ fontWeight: 950, fontSize: 18 }} noWrap>
             {title}
           </Typography>
-          <Typography sx={{ opacity: 0.72, fontSize: 13 }} noWrap>
+          <Typography sx={{ opacity: 0.7, fontSize: 13 }} noWrap>
             {subtitle}
           </Typography>
         </Box>
@@ -372,9 +283,9 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href, t }) {
               height: 30,
               borderRadius: 999,
               fontWeight: 900,
-              background: t.chip.bg,
-              border: t.chip.border,
-              color: t.chip.color,
+              background: t.pill.bg,
+              border: t.pill.border,
+              color: t.pill.text,
             }}
           />
         ))}
@@ -418,34 +329,9 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href, t }) {
 
 function PortalHome() {
   const location = useLocation();
+  const { mode, tokens: t, toggleMode } = useHi5Theme();
 
   const tenantBase = useMemo(() => getTenantBaseHost(location.search), [location.search]);
-
-  // Theme state (persisted)
-  const [themeMode, setThemeMode] = useState(() => {
-    try {
-      const saved = localStorage.getItem(THEME_KEY);
-      if (saved === "light" || saved === "dark") return saved;
-    } catch {
-      // ignore
-    }
-    return "dark";
-  });
-
-  const t = useMemo(() => getThemeTokens(themeMode), [themeMode]);
-
-  const toggleTheme = useCallback(() => {
-    setThemeMode((prev) => {
-      const next = prev === "dark" ? "light" : "dark";
-      try {
-        localStorage.setItem(THEME_KEY, next);
-      } catch {
-        // ignore
-      }
-      return next;
-    });
-  }, []);
-
   const cacheKey = useMemo(
     () => `hi5tech_portal_cache:${tenantBase || "unknown"}`,
     [tenantBase]
@@ -476,13 +362,13 @@ function PortalHome() {
   const runSeq = useRef(0);
 
   const writeCache = useCallback(
-    (tt, mods) => {
+    (tObj, mods) => {
       try {
         sessionStorage.setItem(
           cacheKey,
           JSON.stringify({
             ts: Date.now(),
-            tenant: tt || null,
+            tenant: tObj || null,
             modules: Array.isArray(mods) ? mods : [],
           })
         );
@@ -519,24 +405,24 @@ function PortalHome() {
           return;
         }
 
-        const tt = await loadTenantByBaseHost(tenantBase);
+        const tObj = await loadTenantByBaseHost(tenantBase);
         if (seq !== runSeq.current) return;
 
-        setTenant(tt);
+        setTenant(tObj);
 
-        if (!tt?.id) {
+        if (!tObj?.id) {
           setModules([]);
-          writeCache(tt, []);
+          writeCache(tObj, []);
           return;
         }
 
-        const role = await loadProfileRole(u.id, tt.id);
-        const roleAllowed = await loadRoleModules(role, tt.id);
+        const role = await loadProfileRole(u.id, tObj.id);
+        const roleAllowed = await loadRoleModules(role, tObj.id);
 
         let userAllow = [];
         let userDeny = [];
         try {
-          const o = await loadUserOverrides(u.id, tt.id);
+          const o = await loadUserOverrides(u.id, tObj.id);
           userAllow = o.allow || [];
           userDeny = o.deny || [];
         } catch {
@@ -551,7 +437,7 @@ function PortalHome() {
 
         const finalMods = Array.from(set);
         setModules(finalMods);
-        writeCache(tt, finalMods);
+        writeCache(tObj, finalMods);
       } catch (e) {
         if (seq !== runSeq.current) return;
 
@@ -616,12 +502,7 @@ function PortalHome() {
           <Typography sx={{ fontWeight: 950, opacity: 0.85 }}>Loading…</Typography>
           {!!errorMsg && (
             <Typography
-              sx={{
-                opacity: 0.7,
-                fontSize: 13,
-                maxWidth: 320,
-                textAlign: "center",
-              }}
+              sx={{ opacity: 0.7, fontSize: 13, maxWidth: 320, textAlign: "center" }}
             >
               {errorMsg}
             </Typography>
@@ -723,9 +604,9 @@ function PortalHome() {
                         height: 24,
                         borderRadius: 999,
                         fontWeight: 900,
-                        background: t.chip.bg,
-                        border: t.chip.border,
-                        color: t.chip.color,
+                        background: t.pill.bg,
+                        border: t.pill.border,
+                        color: t.pill.text,
                       }}
                     />
                   ) : null}
@@ -737,11 +618,9 @@ function PortalHome() {
               </Box>
             </Stack>
 
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={1}
-              alignItems="center"
-            >
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="center">
+              <ThemeToggleIconButton mode={mode} onToggle={toggleMode} t={t} />
+
               <TextField
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -764,21 +643,6 @@ function PortalHome() {
                   ),
                 }}
               />
-
-              <Tooltip title={themeMode === "dark" ? "Switch to light" : "Switch to dark"}>
-                <IconButton
-                  onClick={toggleTheme}
-                  sx={{
-                    borderRadius: 999,
-                    border: t.buttonOutlined.borderColor ? `1px solid ${t.buttonOutlined.borderColor}` : undefined,
-                    color: t.buttonOutlined.color,
-                    background: t.buttonOutlined.background,
-                    px: 1.2,
-                  }}
-                >
-                  {themeMode === "dark" ? <LightModeIcon /> : <DarkModeIcon />}
-                </IconButton>
-              </Tooltip>
 
               <Button
                 variant="outlined"
@@ -807,9 +671,7 @@ function PortalHome() {
               alignItems={{ xs: "stretch", sm: "center" }}
               justifyContent="space-between"
             >
-              <Typography sx={{ fontWeight: 900, opacity: 0.85 }}>
-                {errorMsg}
-              </Typography>
+              <Typography sx={{ fontWeight: 900, opacity: 0.85 }}>{errorMsg}</Typography>
 
               <Button
                 variant="contained"
@@ -842,8 +704,8 @@ function PortalHome() {
               chips={m.chips}
               icon={m.icon}
               href={m.href}
-              onOpen={() => window.location.assign(m.href)}
               t={t}
+              onOpen={() => window.location.assign(m.href)}
             />
           ))}
         </Box>
