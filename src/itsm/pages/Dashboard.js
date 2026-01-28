@@ -1,5 +1,5 @@
 // src/itsm/pages/Dashboard.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -68,8 +68,97 @@ const sampleLineData = [
 
 const COLORS = ["#ff6f61", "#6a67ce", "#6fcf97"];
 
+// -------------------------
+// Local “glass” helpers (ITSM-side)
+// (Keeps this file self-contained for now. Later we can centralize.)
+// -------------------------
+
+function useGlassTokens(theme) {
+  const isDark = theme.palette.mode === "dark";
+
+  return useMemo(() => {
+    const border = isDark ? "1px solid rgba(255,255,255,0.12)" : "1px solid rgba(15,23,42,0.10)";
+    const divider = isDark ? "rgba(255,255,255,0.10)" : "rgba(15,23,42,0.08)";
+
+    const panelBg = isDark
+      ? "linear-gradient(135deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04))"
+      : "linear-gradient(135deg, rgba(255,255,255,0.80), rgba(255,255,255,0.55))";
+
+    const widgetBg = isDark
+      ? "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))"
+      : "linear-gradient(135deg, rgba(255,255,255,0.75), rgba(255,255,255,0.50))";
+
+    const shadow = isDark ? "0 18px 55px rgba(0,0,0,0.35)" : "0 18px 55px rgba(2,6,23,0.12)";
+    const shadowHover = isDark ? "0 22px 70px rgba(0,0,0,0.45)" : "0 22px 70px rgba(2,6,23,0.16)";
+
+    const subtleBg = isDark ? "rgba(255,255,255,0.06)" : "rgba(2,6,23,0.04)";
+    const subtleBorder = isDark ? "1px solid rgba(255,255,255,0.10)" : "1px solid rgba(2,6,23,0.08)";
+
+    // Background similar vibe to portal, but theme-aware
+    const pageBg = isDark
+      ? `
+        radial-gradient(1200px 800px at 20% 10%, rgba(124, 92, 255, 0.28), transparent 60%),
+        radial-gradient(1000px 700px at 85% 25%, rgba(56, 189, 248, 0.18), transparent 55%),
+        radial-gradient(900px 700px at 60% 90%, rgba(34, 197, 94, 0.10), transparent 55%),
+        linear-gradient(180deg, #070A12 0%, #0A1022 45%, #0B1633 100%)
+      `
+      : `
+        radial-gradient(1200px 800px at 20% 10%, rgba(124, 92, 255, 0.12), transparent 60%),
+        radial-gradient(1000px 700px at 85% 25%, rgba(56, 189, 248, 0.10), transparent 55%),
+        radial-gradient(900px 700px at 60% 90%, rgba(34, 197, 94, 0.08), transparent 55%),
+        linear-gradient(180deg, #F8FAFF 0%, #EEF3FF 45%, #EAF2FF 100%)
+      `;
+
+    return {
+      isDark,
+      page: {
+        background: pageBg,
+        color: isDark ? "rgba(255,255,255,0.92)" : "rgba(2,6,23,0.92)",
+      },
+      glass: {
+        border,
+        divider,
+        bg: panelBg,
+        widgetBg,
+        shadow,
+        shadowHover,
+      },
+      subtle: {
+        bg: subtleBg,
+        border: subtleBorder,
+      },
+      chip: {
+        bg: subtleBg,
+        border: subtleBorder,
+        text: isDark ? "rgba(255,255,255,0.85)" : "rgba(2,6,23,0.78)",
+      },
+    };
+  }, [theme.palette.mode]);
+}
+
+function GlassPanel({ children, sx, t }) {
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        borderRadius: 4,
+        border: t.glass.border,
+        background: t.glass.bg,
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+        boxShadow: t.glass.shadow,
+        ...sx,
+      }}
+    >
+      {children}
+    </Paper>
+  );
+}
+
 const Dashboard = () => {
   const theme = useTheme();
+  const t = useGlassTokens(theme);
+
   const isPreview =
     new URLSearchParams(window.location.search).get("preview") === "true";
 
@@ -95,17 +184,20 @@ const Dashboard = () => {
     setWidgets(widgetData);
   }, []);
 
-  const onDragEnd = (result) => {
-    if (!result.destination) return;
-    const reordered = Array.from(widgets);
-    const [removed] = reordered.splice(result.source.index, 1);
-    reordered.splice(result.destination.index, 0, removed);
-    setWidgets(reordered);
-  };
+  const onDragEnd = useCallback(
+    (result) => {
+      if (!result.destination) return;
+      const reordered = Array.from(widgets);
+      const [removed] = reordered.splice(result.source.index, 1);
+      reordered.splice(result.destination.index, 0, removed);
+      setWidgets(reordered);
+    },
+    [widgets]
+  );
 
-  const deleteWidget = (id) => {
-    setWidgets(widgets.filter((w) => w.id !== id));
-  };
+  const deleteWidget = useCallback((id) => {
+    setWidgets((prev) => prev.filter((w) => w.id !== id));
+  }, []);
 
   const ChartWrapper = ({ children }) => (
     <Box sx={{ width: "100%", height: 240 }}>
@@ -122,13 +214,30 @@ const Dashboard = () => {
           {Array.from({ length: 3 }).map((_, i) => (
             <Paper
               key={i}
+              elevation={0}
               sx={{
-                background: theme.palette.background.default,
-                borderLeft: `5px solid ${theme.palette.primary.main}`,
+                borderRadius: 3,
+                border: t.glass.border,
+                background: t.glass.widgetBg,
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                boxShadow: "none",
                 p: 2,
-                borderRadius: 2,
-                boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
-                "&:hover": { boxShadow: "0 2px 8px rgba(0,0,0,0.12)" },
+                position: "relative",
+                overflow: "hidden",
+                "&:hover": {
+                  boxShadow: t.glass.shadowHover,
+                },
+                "&::before": {
+                  content: '""',
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 4,
+                  background: theme.palette.primary.main,
+                  opacity: 0.9,
+                },
               }}
             >
               <Stack
@@ -136,7 +245,7 @@ const Dashboard = () => {
                 alignItems="center"
                 justifyContent="space-between"
               >
-                <Typography sx={{ fontSize: "0.95rem", fontWeight: 600 }}>
+                <Typography sx={{ fontSize: "0.95rem", fontWeight: 750 }}>
                   Incident #{i + 1}
                 </Typography>
                 <Chip
@@ -145,12 +254,14 @@ const Dashboard = () => {
                     i % 3 === 0 ? "Open" : i % 3 === 1 ? "Closed" : "Pending"
                   }
                   color={i % 3 === 0 ? "warning" : i % 3 === 1 ? "success" : "info"}
-                  sx={{ fontWeight: 500 }}
+                  sx={{ fontWeight: 700 }}
                 />
               </Stack>
-              <Typography variant="body2" mt={1}>
+
+              <Typography variant="body2" mt={1} sx={{ opacity: 0.9 }}>
                 Example description for Incident #{i + 1}.
               </Typography>
+
               <Typography
                 sx={{
                   fontSize: "0.8em",
@@ -234,14 +345,8 @@ const Dashboard = () => {
             {useGradient && (
               <defs>
                 <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop
-                    offset="0%"
-                    stopColor={theme.palette.primary.light}
-                  />
-                  <stop
-                    offset="100%"
-                    stopColor={theme.palette.primary.dark}
-                  />
+                  <stop offset="0%" stopColor={theme.palette.primary.light} />
+                  <stop offset="100%" stopColor={theme.palette.primary.dark} />
                 </linearGradient>
               </defs>
             )}
@@ -254,24 +359,31 @@ const Dashboard = () => {
   };
 
   return (
-    <Box sx={{ px: { xs: 1, sm: 2 }, py: 2 }}>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        color: t.page.color,
+        background: t.page.background,
+        px: { xs: 1, sm: 2 },
+        py: 2,
+      }}
+    >
       {/* 🔹 Onboarding banner row */}
       <Box sx={{ maxWidth: 1400, mx: "auto", mb: 2 }}>
+        {/* Keep banner as-is for now */}
         <TenantOnboardingBanner />
       </Box>
 
-      {/* Main dashboard card */}
-      <Box
+      {/* Main dashboard panel */}
+      <GlassPanel
+        t={t}
         sx={{
           maxWidth: 1400,
           mx: "auto",
-          bgcolor: theme.palette.background.paper,
-          borderRadius: 2,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
           p: { xs: 2, sm: 3 },
           display: "flex",
           flexDirection: "column",
-          gap: 3,
+          gap: 2.5,
         }}
       >
         {/* Header */}
@@ -282,31 +394,52 @@ const Dashboard = () => {
           flexWrap="wrap"
           gap={2}
         >
-          <Typography variant="h4" fontWeight="bold" color="primary">
-            Dashboard
-          </Typography>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontWeight: 950, fontSize: 26, lineHeight: 1.1 }}>
+              Dashboard
+            </Typography>
+            <Typography sx={{ opacity: 0.72, fontSize: 13, mt: 0.5 }}>
+              Drag widgets to rearrange • Real data will plug in here next
+            </Typography>
+          </Box>
+
           {!isPreview && (
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1}
+              alignItems={{ xs: "stretch", sm: "center" }}
+            >
               <FormControlLabel
                 control={
                   <Switch
                     checked={useGradient}
-                    onChange={() => setUseGradient(!useGradient)}
+                    onChange={() => setUseGradient((v) => !v)}
                   />
                 }
-                label="Gradient Theme"
+                label="Gradient line"
+                sx={{ m: 0 }}
               />
+
               <Button
                 variant="outlined"
                 size="small"
-                color="secondary"
                 onClick={() => setWidgets([])}
+                sx={{
+                  borderRadius: 999,
+                  fontWeight: 900,
+                  textTransform: "none",
+                  borderColor: t.isDark ? "rgba(255,255,255,0.18)" : "rgba(2,6,23,0.14)",
+                  color: t.isDark ? "rgba(255,255,255,0.88)" : "rgba(2,6,23,0.82)",
+                  background: t.isDark ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.55)",
+                }}
               >
                 Reset
               </Button>
             </Stack>
           )}
         </Box>
+
+        <Divider sx={{ borderColor: t.glass.divider }} />
 
         {/* Widgets */}
         <DragDropContext onDragEnd={onDragEnd}>
@@ -329,11 +462,11 @@ const Dashboard = () => {
                     index={index}
                     isDragDisabled={isPreview}
                   >
-                    {(provided) => (
+                    {(dragProvided) => (
                       <Box
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
+                        ref={dragProvided.innerRef}
+                        {...dragProvided.draggableProps}
+                        {...dragProvided.dragHandleProps}
                         sx={{
                           flex: {
                             xs: "1 1 100%",
@@ -345,16 +478,21 @@ const Dashboard = () => {
                         }}
                       >
                         <Paper
-                          elevation={2}
+                          elevation={0}
                           sx={{
                             flexGrow: 1,
-                            borderRadius: 3,
+                            borderRadius: 4,
                             p: 2,
                             position: "relative",
-                            backgroundColor: theme.palette.background.paper,
-                            transition: "all 0.2s ease",
+                            border: t.glass.border,
+                            background: t.glass.widgetBg,
+                            backdropFilter: "blur(12px)",
+                            WebkitBackdropFilter: "blur(12px)",
+                            boxShadow: "none",
+                            transition: "box-shadow 0.2s ease, transform 0.2s ease",
                             "&:hover": {
-                              boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                              boxShadow: t.glass.shadowHover,
+                              transform: "translateY(-1px)",
                             },
                           }}
                         >
@@ -366,21 +504,19 @@ const Dashboard = () => {
                                 position: "absolute",
                                 top: 8,
                                 right: 8,
-                                color: theme.palette.grey[600],
+                                color: theme.palette.text.secondary,
                               }}
                             >
                               <DeleteIcon fontSize="small" />
                             </IconButton>
                           )}
-                          <Typography
-                            variant="h6"
-                            fontWeight="bold"
-                            mb={1}
-                            color="text.primary"
-                          >
+
+                          <Typography sx={{ fontWeight: 900, fontSize: 16, mb: 1 }}>
                             {widget.title}
                           </Typography>
-                          <Divider sx={{ mb: 2 }} />
+
+                          <Divider sx={{ mb: 2, borderColor: t.glass.divider }} />
+
                           {renderWidget(widget)}
                         </Paper>
                       </Box>
@@ -392,7 +528,18 @@ const Dashboard = () => {
             )}
           </Droppable>
         </DragDropContext>
-      </Box>
+
+        {!widgets.length ? (
+          <Box sx={{ py: 2 }}>
+            <Typography sx={{ fontWeight: 900, fontSize: 16 }}>
+              No widgets selected
+            </Typography>
+            <Typography sx={{ opacity: 0.72, mt: 0.5 }}>
+              Choose a dashboard layout (default/minimal/analytics) or create a custom one.
+            </Typography>
+          </Box>
+        ) : null}
+      </GlassPanel>
     </Box>
   );
 };
