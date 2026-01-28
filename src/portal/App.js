@@ -32,6 +32,9 @@ import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import CentralLogin from "../common/pages/CentralLogin";
 import { supabase } from "../common/utils/supabaseClient";
 
+// Keep in sync with supabaseClient.js
+const STORAGE_KEY = "hi5tech_sb_session";
+
 // -------------------------
 // Host + URL helpers
 // -------------------------
@@ -43,7 +46,6 @@ function getTenantBaseHost(search) {
   const qpTenant = new URLSearchParams(search || "").get("tenant");
   if (qpTenant) return String(qpTenant).toLowerCase().trim();
 
-  // Robust: if user accidentally hits demoitsm-itsm.hi5tech... treat tenant as demoitsm
   return (firstLabel.split("-")[0] || "").toLowerCase().trim();
 }
 
@@ -64,6 +66,10 @@ function buildModuleUrl(tenantBase, moduleKey) {
 
   return `https://${sub}.${parent}`;
 }
+
+// -------------------------
+// Data loaders
+// -------------------------
 
 async function loadTenantByBaseHost(tenantBase) {
   const { data, error } = await supabase
@@ -92,12 +98,7 @@ function normalizeModuleValue(v) {
   return null;
 }
 
-// -------------------------
-// Access loading
-// -------------------------
-
 async function loadProfileRole(userId, tenantId) {
-  // tenant-scoped profile row (preferred)
   try {
     const { data, error } = await supabase
       .from("profiles")
@@ -112,7 +113,6 @@ async function loadProfileRole(userId, tenantId) {
     // fallback below
   }
 
-  // global fallback
   const { data: fallback, error: fallbackErr } = await supabase
     .from("profiles")
     .select("role")
@@ -205,16 +205,54 @@ async function loadUserOverrides(userId, tenantId) {
 }
 
 // -------------------------
-// Tiny utils
+// Hard cleanup helpers (fix "can’t login again after logout")
 // -------------------------
 
-function withTimeout(promise, ms, label = "Operation") {
-  let t;
-  const timeout = new Promise((_, reject) => {
-    t = setTimeout(() => reject(new Error(`${label} timed out (${ms}ms)`)), ms);
-  });
+function deleteCookie(name, domain) {
+  // domain should be like ".hi5tech.co.uk" or undefined
+  const base = `${encodeURIComponent(name)}=; Max-Age=0; path=/; samesite=lax`;
+  document.cookie = domain ? `${base}; domain=${domain}` : base;
+}
 
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(t));
+function clearPortalCache() {
+  try {
+    const keys = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const k = sessionStorage.key(i);
+      if (k && k.startsWith("hi5tech_portal_cache:")) keys.push(k);
+    }
+    keys.forEach((k) => sessionStorage.removeItem(k));
+  } catch {
+    // ignore
+  }
+}
+
+function hardClearAuthStorage() {
+  // Clear portal cache
+  clearPortalCache();
+
+  // Clear the custom Supabase storage cookie on:
+  // 1) current host (no domain attr)
+  // 2) parent domain (shared across subdomains)
+  try {
+    deleteCookie(STORAGE_KEY);
+    const parent = getParentDomain();
+    if (parent) deleteCookie(STORAGE_KEY, `.${parent}`);
+  } catch {
+    // ignore
+  }
+
+  // Also clear any local/session entries under the same key (belt and braces)
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
 }
 
 // -------------------------
@@ -289,12 +327,7 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
 
       <Divider sx={{ my: 1.8, borderColor: "rgba(255,255,255,0.10)" }} />
 
-      <Stack
-        direction="row"
-        spacing={1}
-        justifyContent="space-between"
-        alignItems="center"
-      >
+      <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
         <Button
           variant="contained"
           onClick={onOpen}
@@ -352,7 +385,6 @@ function PortalHome() {
       const raw = sessionStorage.getItem(cacheKey);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      // expire after 30 mins
       if (parsed?.ts && Date.now() - parsed.ts > 30 * 60 * 1000) return null;
       return parsed;
     } catch {
@@ -360,14 +392,11 @@ function PortalHome() {
     }
   }, [cacheKey]);
 
-  // IMPORTANT: Never allow "Loading..." to hang forever.
-  // If we have cached content, render immediately and refresh in background.
   const [busy, setBusy] = useState(!cached);
   const [refreshing, setRefreshing] = useState(!!cached);
 
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
-
   const [tenant, setTenant] = useState(cached?.tenant || null);
   const [modules, setModules] = useState(cached?.modules || []);
   const [query, setQuery] = useState("");
@@ -397,25 +426,14 @@ function PortalHome() {
     async ({ soft = false } = {}) => {
       const seq = ++runSeq.current;
 
-      // soft=true means: do not blank the UI; just refresh in background
-      if (soft) {
-        setRefreshing(true);
-      } else {
-        setBusy(true);
-      }
+      if (soft) setRefreshing(true);
+      else setBusy(true);
 
       setErrorMsg("");
 
       try {
-        // ⛔ Do NOT refreshSession() here — it can hang on iOS/Safari + cookie storage.
-        // If getSession stalls, timeout and show retry.
-        const sessRes = await withTimeout(
-          supabase.auth.getSession(),
-          8000,
-          "Get session"
-        );
-
-        const sess = sessRes?.data?.session || null;
+        const { data } = await supabase.auth.getSession();
+        const sess = data?.session || null;
         const u = sess?.user || null;
 
         if (seq !== runSeq.current) return;
@@ -430,13 +448,7 @@ function PortalHome() {
           return;
         }
 
-        // Tenant lookup
-        const t = await withTimeout(
-          loadTenantByBaseHost(tenantBase),
-          8000,
-          "Load tenant"
-        );
-
+        const t = await loadTenantByBaseHost(tenantBase);
         if (seq !== runSeq.current) return;
 
         setTenant(t);
@@ -447,31 +459,17 @@ function PortalHome() {
           return;
         }
 
-        // Access calc
-        const role = await withTimeout(
-          loadProfileRole(u.id, t.id),
-          8000,
-          "Load role"
-        );
-
-        const roleAllowed = await withTimeout(
-          loadRoleModules(role, t.id),
-          8000,
-          "Load role modules"
-        );
+        const role = await loadProfileRole(u.id, t.id);
+        const roleAllowed = await loadRoleModules(role, t.id);
 
         let userAllow = [];
         let userDeny = [];
         try {
-          const o = await withTimeout(
-            loadUserOverrides(u.id, t.id),
-            8000,
-            "Load user overrides"
-          );
+          const o = await loadUserOverrides(u.id, t.id);
           userAllow = o.allow || [];
           userDeny = o.deny || [];
         } catch {
-          // overrides optional
+          // optional
         }
 
         const set = new Set(roleAllowed);
@@ -486,10 +484,7 @@ function PortalHome() {
       } catch (e) {
         if (seq !== runSeq.current) return;
 
-        const msg = String(e?.message || e || "Unknown error");
-        console.error("[Portal] run error:", msg);
-
-        // If we have cached tenant/modules, keep showing them and just show a banner.
+        console.error("[Portal] run error:", e);
         if (cached?.tenant || (cached?.modules && cached.modules.length)) {
           setErrorMsg("We couldn’t refresh portal data. Showing cached view.");
         } else {
@@ -507,26 +502,13 @@ function PortalHome() {
     [tenantBase, writeCache, cached]
   );
 
-  // Run on mount + tenantBase change
   useEffect(() => {
     run({ soft: !!cached });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [run]);
 
-  // Auth state changes: re-run (soft if we already have something on screen)
-  useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange(() => {
       run({ soft: !!cached });
     });
 
-    return () => {
-      sub?.subscription?.unsubscribe?.();
-    };
-  }, [run, cached]);
-
-  // Back-button / BFCache / tab restore:
-  // DO NOT call refreshSession; just re-run a soft load.
-  useEffect(() => {
     const onPageShow = () => run({ soft: true });
     const onVisibility = () => {
       if (document.visibilityState === "visible") run({ soft: true });
@@ -536,10 +518,11 @@ function PortalHome() {
     document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
+      sub?.subscription?.unsubscribe?.();
       window.removeEventListener("pageshow", onPageShow);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [run]);
+  }, [run, cached]);
 
   const displayName = useMemo(() => {
     const name =
@@ -555,7 +538,6 @@ function PortalHome() {
     return (s[0] || "U").toUpperCase();
   }, [displayName]);
 
-  // Hard loading screen ONLY when we have nothing to render.
   if (busy && !tenant && !modules.length) {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
@@ -573,7 +555,6 @@ function PortalHome() {
 
   if (!user || !session) return <Navigate to="/login" replace />;
 
-  // Auto-route ONLY if exactly one module remains after proper access evaluation
   if (modules.length === 1 && tenantBase) {
     window.location.assign(buildModuleUrl(tenantBase, modules[0]));
     return null;
@@ -683,11 +664,7 @@ function PortalHome() {
               </Box>
             </Stack>
 
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={1}
-              alignItems="center"
-            >
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="center">
               <TextField
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -713,23 +690,8 @@ function PortalHome() {
 
               <Button
                 variant="outlined"
-                onClick={() => run({ soft: false })}
-                sx={{
-                  borderRadius: 999,
-                  fontWeight: 950,
-                  textTransform: "none",
-                  borderColor: "rgba(255,255,255,0.18)",
-                  color: "rgba(255,255,255,0.88)",
-                  background: "rgba(255,255,255,0.04)",
-                }}
-              >
-                Refresh
-              </Button>
-
-              <Button
-                variant="outlined"
+                onClick={() => window.location.assign("/logout")}
                 startIcon={<LogoutIcon />}
-                onClick={() => navigate("/logout")}
                 sx={{
                   borderRadius: 999,
                   fontWeight: 950,
@@ -759,10 +721,10 @@ function PortalHome() {
 
               <Button
                 variant="contained"
-                onClick={() => run({ soft: false })}
+                onClick={() => window.location.reload()}
                 sx={{ borderRadius: 999, fontWeight: 950, textTransform: "none" }}
               >
-                Retry
+                Reload
               </Button>
             </Stack>
           </GlassPanel>
@@ -811,16 +773,74 @@ function PortalHome() {
   );
 }
 
+// Login wrapper: fixes "login just refreshes" after logout by doing a hard cleanup when logout=1
+function PortalLogin() {
+  const location = useLocation();
+  const tenantBase = useMemo(() => getTenantBaseHost(location.search), [location.search]);
+
+  const qpTenant = new URLSearchParams(location.search || "").get("tenant");
+  const afterLogin = qpTenant ? `/app?tenant=${encodeURIComponent(qpTenant)}` : "/app";
+
+  const logoutFlag = new URLSearchParams(location.search || "").get("logout");
+
+  const [checking, setChecking] = useState(true);
+  const [hasSession, setHasSession] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      // If coming from logout, clear storage/cookie *again* (important on Safari/iOS)
+      if (logoutFlag === "1") {
+        hardClearAuthStorage();
+      }
+
+      const { data } = await supabase.auth.getSession();
+      const sess = data?.session || null;
+
+      if (!mounted) return;
+      setHasSession(!!sess);
+      setChecking(false);
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [logoutFlag, tenantBase]);
+
+  if (checking) {
+    return (
+      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+        <Typography sx={{ fontWeight: 950, opacity: 0.8 }}>Loading…</Typography>
+      </Box>
+    );
+  }
+
+  if (hasSession) {
+    return <Navigate to={afterLogin} replace />;
+  }
+
+  return <CentralLogin title="Sign in" afterLogin={afterLogin} />;
+}
+
 function PortalLogout() {
   useEffect(() => {
     (async () => {
+      const qpTenant = new URLSearchParams(window.location.search).get("tenant");
+
       try {
+        // Normal signout
         await supabase.auth.signOut();
       } finally {
-        const qpTenant = new URLSearchParams(window.location.search).get("tenant");
-        window.location.assign(
-          qpTenant ? `/login?tenant=${encodeURIComponent(qpTenant)}` : "/login"
-        );
+        // HARD CLEAR: fixes "can’t login again" due to cookieStorage not deleting domain cookie
+        hardClearAuthStorage();
+
+        // Force login page to do another cleanup pass
+        const loginUrl = qpTenant
+          ? `/login?tenant=${encodeURIComponent(qpTenant)}&logout=1`
+          : "/login?logout=1";
+
+        window.location.assign(loginUrl);
       }
     })();
   }, []);
@@ -839,10 +859,7 @@ export default function PortalApp() {
 
   return (
     <Routes>
-      <Route
-        path="/login"
-        element={<CentralLogin title="Sign in" afterLogin={withTenant("/app")} />}
-      />
+      <Route path="/login" element={<PortalLogin />} />
       <Route path="/app" element={<PortalHome />} />
       <Route path="/logout" element={<PortalLogout />} />
       <Route path="/" element={<Navigate to={withTenant("/app")} replace />} />
