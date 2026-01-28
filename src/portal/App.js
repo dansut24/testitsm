@@ -427,6 +427,20 @@ function PortalHome() {
 
     run();
 
+    // ✅ BFCache/back button fix
+    const onPageShow = () => {
+      if (!mounted) return;
+      run();
+    };
+
+    const onVisibilityChange = () => {
+      if (!mounted) return;
+      if (document.visibilityState === "visible") run();
+    };
+
+    window.addEventListener("pageshow", onPageShow);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, sess) => {
       const s = sess || null;
       const u = s?.user || null;
@@ -440,8 +454,10 @@ function PortalHome() {
     return () => {
       mounted = false;
       sub?.subscription?.unsubscribe?.();
+      window.removeEventListener("pageshow", onPageShow);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-    // ✅ key fix: rerun if route changes back to /app
+    // ✅ rerun if route changes back to /app
   }, [tenantBase, location.key]);
 
   if (busy) {
@@ -644,7 +660,9 @@ function PortalLogout() {
       } finally {
         // keep tenant query param if present (nice UX on central host)
         const qpTenant = new URLSearchParams(window.location.search).get("tenant");
-        window.location.assign(qpTenant ? `/login?tenant=${encodeURIComponent(qpTenant)}` : "/login");
+        window.location.assign(
+          qpTenant ? `/login?tenant=${encodeURIComponent(qpTenant)}` : "/login"
+        );
       }
     })();
   }, []);
