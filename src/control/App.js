@@ -15,13 +15,28 @@ import { useAuth } from "../common/context/AuthContext";
 import { getCentralLoginUrl } from "../common/utils/portalUrl";
 import ExternalRedirect from "../common/components/ExternalRedirect";
 
+// ✅ Shared Hi5 theme (matches portal + login)
+import { useHi5Theme } from "../common/ui/hi5Theme";
+import ThemeToggleIconButton from "../common/ui/ThemeToggleIconButton";
+
 function App() {
   const { authLoading, user } = useAuth();
   const centralLogin = getCentralLoginUrl("/control");
 
+  const { mode, tokens: t, toggleMode } = useHi5Theme();
+
   if (authLoading) {
     return (
-      <Box sx={{ p: 4 }}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          color: t.page.color,
+          background: t.page.background,
+          display: "grid",
+          placeItems: "center",
+          p: 4,
+        }}
+      >
         <p>Loading session...</p>
       </Box>
     );
@@ -30,7 +45,20 @@ function App() {
   return (
     <>
       <CssBaseline />
-      <Box sx={{ minHeight: "100vh", overflow: "auto" }}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          overflow: "auto",
+          color: t.page.color,
+          background: t.page.background,
+          position: "relative",
+        }}
+      >
+        {/* ✅ Floating theme toggle (keeps ControlLayout untouched) */}
+        <Box sx={{ position: "fixed", top: 14, right: 14, zIndex: 2000 }}>
+          <ThemeToggleIconButton mode={mode} onToggle={toggleMode} t={t} />
+        </Box>
+
         <Routes>
           {/* Control should never render a local login page */}
           <Route path="/login" element={<ExternalRedirect to={centralLogin} />} />
