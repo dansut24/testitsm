@@ -1,6 +1,7 @@
 // src/common/ui/hi5Theme.js
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { createTheme, alpha, ThemeProvider, CssBaseline } from "@mui/material";
+import { ThemeProvider, CssBaseline } from "@mui/material";
+import { createTheme, alpha } from "@mui/material/styles";
 
 const LS_KEY = "hi5_theme_mode"; // "light" | "dark"
 
@@ -11,9 +12,7 @@ function getInitialMode() {
   } catch {
     // ignore
   }
-
-  // Default to dark (matches your current look)
-  return "dark";
+  return "dark"; // keep your current default
 }
 
 function buildTokens(mode) {
@@ -30,7 +29,6 @@ function buildTokens(mode) {
         `,
       }
     : {
-        // Light mode: still “Hi5”, but clean and readable
         color: "rgba(10,16,34,0.92)",
         background: `
           radial-gradient(1000px 700px at 18% 12%, rgba(124, 92, 255, 0.20), transparent 60%),
@@ -45,20 +43,42 @@ function buildTokens(mode) {
         border: "1px solid rgba(255,255,255,0.10)",
         bg: "linear-gradient(135deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04))",
         shadow: "0 18px 55px rgba(0,0,0,0.35)",
-        chipBg: "rgba(255,255,255,0.06)",
-        chipBorder: "1px solid rgba(255,255,255,0.10)",
+        divider: "rgba(255,255,255,0.10)",
         outline: "rgba(255,255,255,0.18)",
       }
     : {
         border: "1px solid rgba(10,16,34,0.10)",
-        bg: "linear-gradient(135deg, rgba(255,255,255,0.80), rgba(255,255,255,0.55))",
+        bg: "linear-gradient(135deg, rgba(255,255,255,0.82), rgba(255,255,255,0.58))",
         shadow: "0 18px 55px rgba(10,16,34,0.12)",
-        chipBg: "rgba(10,16,34,0.05)",
-        chipBorder: "1px solid rgba(10,16,34,0.10)",
+        divider: "rgba(10,16,34,0.10)",
         outline: "rgba(10,16,34,0.18)",
       };
 
-  return { mode, page, glass };
+  const pill = isDark
+    ? {
+        bg: "rgba(255,255,255,0.06)",
+        border: "1px solid rgba(255,255,255,0.10)",
+        text: "rgba(255,255,255,0.90)",
+      }
+    : {
+        bg: "rgba(10,16,34,0.05)",
+        border: "1px solid rgba(10,16,34,0.10)",
+        text: "rgba(10,16,34,0.88)",
+      };
+
+  const buttonOutlined = isDark
+    ? {
+        borderColor: "rgba(255,255,255,0.18)",
+        color: "rgba(255,255,255,0.88)",
+        background: "rgba(255,255,255,0.04)",
+      }
+    : {
+        borderColor: "rgba(10,16,34,0.18)",
+        color: "rgba(10,16,34,0.85)",
+        background: "rgba(255,255,255,0.50)",
+      };
+
+  return { mode, page, glass, pill, buttonOutlined };
 }
 
 function buildMuiTheme(tokens) {
@@ -68,7 +88,7 @@ function buildMuiTheme(tokens) {
   const infoMain = isDark ? "#38BDF8" : "#0284C7";
   const successMain = isDark ? "#22C55E" : "#16A34A";
 
-  const theme = createTheme({
+  return createTheme({
     palette: {
       mode: tokens.mode,
       primary: { main: primaryMain },
@@ -76,23 +96,20 @@ function buildMuiTheme(tokens) {
       success: { main: successMain },
       background: {
         default: isDark ? "#070A12" : "#F6F8FF",
-        paper: isDark ? alpha("#0B1633", 0.65) : alpha("#FFFFFF", 0.8),
+        paper: isDark ? alpha("#0B1633", 0.65) : alpha("#FFFFFF", 0.85),
       },
       text: {
         primary: isDark ? "rgba(255,255,255,0.92)" : "rgba(10,16,34,0.92)",
         secondary: isDark ? "rgba(255,255,255,0.68)" : "rgba(10,16,34,0.66)",
       },
-      divider: isDark ? "rgba(255,255,255,0.10)" : "rgba(10,16,34,0.10)",
+      divider: tokens.glass.divider,
     },
     typography: {
       fontFamily:
         'Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif',
-      h5: { fontWeight: 950 },
       button: { fontWeight: 900, textTransform: "none" },
     },
-    shape: {
-      borderRadius: 16,
-    },
+    shape: { borderRadius: 16 },
     components: {
       MuiCssBaseline: {
         styleOverrides: {
@@ -101,65 +118,36 @@ function buildMuiTheme(tokens) {
           },
         },
       },
-
-      MuiPaper: {
-        styleOverrides: {
-          root: {
-            borderRadius: 16,
-          },
-        },
-      },
-
       MuiButton: {
         styleOverrides: {
           root: {
             borderRadius: 999,
-            paddingLeft: 16,
-            paddingRight: 16,
+            textTransform: "none",
+            fontWeight: 900,
           },
           contained: {
             boxShadow: "none",
           },
         },
       },
-
-      MuiTextField: {
-        defaultProps: {
-          variant: "outlined",
-        },
-      },
-
       MuiOutlinedInput: {
         styleOverrides: {
-          root: {
-            borderRadius: 999,
-          },
-          notchedOutline: {
-            borderColor: tokens.glass.outline,
-          },
+          root: { borderRadius: 999 },
+          notchedOutline: { borderColor: tokens.glass.outline },
         },
       },
-
       MuiChip: {
         styleOverrides: {
-          root: {
-            borderRadius: 999,
-            fontWeight: 900,
-          },
+          root: { borderRadius: 999, fontWeight: 900 },
         },
       },
-
       MuiDivider: {
         styleOverrides: {
-          root: {
-            borderColor: isDark ? "rgba(255,255,255,0.10)" : "rgba(10,16,34,0.10)",
-          },
+          root: { borderColor: tokens.glass.divider },
         },
       },
     },
   });
-
-  return theme;
 }
 
 const Hi5ThemeContext = createContext(null);
@@ -183,13 +171,7 @@ export function Hi5ThemeProvider({ children }) {
   const theme = useMemo(() => buildMuiTheme(tokens), [tokens]);
 
   const value = useMemo(
-    () => ({
-      mode,
-      setMode,
-      toggleMode,
-      tokens,
-      theme,
-    }),
+    () => ({ mode, setMode, toggleMode, tokens, theme }),
     [mode, toggleMode, tokens, theme]
   );
 
@@ -205,8 +187,6 @@ export function Hi5ThemeProvider({ children }) {
 
 export function useHi5Theme() {
   const ctx = useContext(Hi5ThemeContext);
-  if (!ctx) {
-    throw new Error("useHi5Theme must be used inside <Hi5ThemeProvider>.");
-  }
+  if (!ctx) throw new Error("useHi5Theme must be used within <Hi5ThemeProvider>.");
   return ctx;
 }
