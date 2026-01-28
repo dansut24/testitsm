@@ -3,18 +3,20 @@ import React from "react";
 import { Paper } from "@mui/material";
 
 export default function GlassPanel({ children, sx, t }) {
+  const tokens = t || {};
+
   return (
     <Paper
       elevation={0}
       sx={{
         borderRadius: 4,
-        border: t?.glass?.border || "1px solid rgba(255,255,255,0.10)",
+        border: tokens?.glass?.border || "1px solid rgba(255,255,255,0.10)",
         background:
-          t?.glass?.bg ||
+          tokens?.glass?.bg ||
           "linear-gradient(135deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04))",
         backdropFilter: "blur(14px)",
         WebkitBackdropFilter: "blur(14px)",
-        boxShadow: t?.glass?.shadow || "0 18px 55px rgba(0,0,0,0.35)",
+        boxShadow: tokens?.glass?.shadow || "0 18px 55px rgba(0,0,0,0.35)",
         ...sx,
       }}
     >
