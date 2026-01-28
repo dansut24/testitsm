@@ -13,6 +13,8 @@ import {
   Chip,
   Divider,
   Avatar,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 
 import SearchIcon from "@mui/icons-material/Search";
@@ -22,12 +24,78 @@ import SupportAgentIcon from "@mui/icons-material/SupportAgent";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import LightModeIcon from "@mui/icons-material/LightMode";
 
 import CentralLogin from "../common/pages/CentralLogin";
 import { supabase } from "../common/utils/supabaseClient";
 
 // Keep in sync with supabaseClient.js
 const STORAGE_KEY = "hi5tech_sb_session";
+const THEME_KEY = "hi5tech_theme"; // "dark" | "light"
+
+// -------------------------
+// Theme tokens (dark glass ↔ light glass)
+// -------------------------
+
+function getThemeTokens(mode) {
+  const isLight = mode === "light";
+
+  return {
+    mode,
+
+    page: {
+      color: isLight ? "rgba(10,16,34,0.92)" : "rgba(255,255,255,0.92)",
+      background: isLight
+        ? `
+          radial-gradient(1200px 800px at 20% 10%, rgba(124, 92, 255, 0.20), transparent 60%),
+          radial-gradient(1000px 700px at 85% 25%, rgba(56, 189, 248, 0.16), transparent 55%),
+          radial-gradient(900px 700px at 60% 90%, rgba(34, 197, 94, 0.12), transparent 55%),
+          linear-gradient(180deg, #F7F9FF 0%, #EEF3FF 55%, #EAF0FF 100%)
+        `
+        : `
+          radial-gradient(1200px 800px at 20% 10%, rgba(124, 92, 255, 0.28), transparent 60%),
+          radial-gradient(1000px 700px at 85% 25%, rgba(56, 189, 248, 0.18), transparent 55%),
+          radial-gradient(900px 700px at 60% 90%, rgba(34, 197, 94, 0.10), transparent 55%),
+          linear-gradient(180deg, #070A12 0%, #0A1022 45%, #0B1633 100%)
+        `,
+    },
+
+    glass: {
+      border: isLight ? "1px solid rgba(10,16,34,0.10)" : "1px solid rgba(255,255,255,0.10)",
+      bg: isLight
+        ? "linear-gradient(135deg, rgba(255,255,255,0.70), rgba(255,255,255,0.40))"
+        : "linear-gradient(135deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04))",
+      shadow: isLight
+        ? "0 18px 55px rgba(10,16,34,0.12)"
+        : "0 18px 55px rgba(0,0,0,0.35)",
+      divider: isLight ? "rgba(10,16,34,0.10)" : "rgba(255,255,255,0.10)",
+    },
+
+    pill: {
+      bg: isLight ? "rgba(255,255,255,0.70)" : "rgba(255,255,255,0.06)",
+      border: isLight ? "1px solid rgba(10,16,34,0.12)" : "1px solid rgba(255,255,255,0.10)",
+      text: isLight ? "rgba(10,16,34,0.86)" : "rgba(255,255,255,0.88)",
+    },
+
+    chip: {
+      bg: isLight ? "rgba(255,255,255,0.65)" : "rgba(255,255,255,0.06)",
+      border: isLight ? "1px solid rgba(10,16,34,0.12)" : "1px solid rgba(255,255,255,0.10)",
+      color: isLight ? "rgba(10,16,34,0.78)" : "rgba(255,255,255,0.85)",
+    },
+
+    cardIcon: {
+      bg: isLight ? "rgba(124,92,255,0.12)" : "rgba(124,92,255,0.18)",
+      border: isLight ? "1px solid rgba(10,16,34,0.10)" : "1px solid rgba(255,255,255,0.12)",
+    },
+
+    buttonOutlined: {
+      borderColor: isLight ? "rgba(10,16,34,0.20)" : "rgba(255,255,255,0.18)",
+      color: isLight ? "rgba(10,16,34,0.88)" : "rgba(255,255,255,0.88)",
+      background: isLight ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.04)",
+    },
+  };
+}
 
 // -------------------------
 // Host + URL helpers
@@ -247,18 +315,17 @@ function hardClearAuthStorage() {
 // UI helpers
 // -------------------------
 
-function GlassPanel({ children, sx }) {
+function GlassPanel({ children, sx, t }) {
   return (
     <Paper
       elevation={0}
       sx={{
         borderRadius: 4,
-        border: "1px solid rgba(255,255,255,0.10)",
-        background:
-          "linear-gradient(135deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04))",
+        border: t.glass.border,
+        background: t.glass.bg,
         backdropFilter: "blur(14px)",
         WebkitBackdropFilter: "blur(14px)",
-        boxShadow: "0 18px 55px rgba(0,0,0,0.35)",
+        boxShadow: t.glass.shadow,
         ...sx,
       }}
     >
@@ -267,9 +334,9 @@ function GlassPanel({ children, sx }) {
   );
 }
 
-function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
+function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href, t }) {
   return (
-    <GlassPanel sx={{ p: 2.2, height: "100%" }}>
+    <GlassPanel t={t} sx={{ p: 2.2, height: "100%" }}>
       <Stack direction="row" spacing={1.6} alignItems="center">
         <Box
           sx={{
@@ -278,8 +345,8 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
             borderRadius: 3,
             display: "grid",
             placeItems: "center",
-            background: "rgba(124,92,255,0.18)",
-            border: "1px solid rgba(255,255,255,0.12)",
+            background: t.cardIcon.bg,
+            border: t.cardIcon.border,
             flexShrink: 0,
           }}
         >
@@ -290,7 +357,7 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
           <Typography sx={{ fontWeight: 950, fontSize: 18 }} noWrap>
             {title}
           </Typography>
-          <Typography sx={{ opacity: 0.7, fontSize: 13 }} noWrap>
+          <Typography sx={{ opacity: 0.72, fontSize: 13 }} noWrap>
             {subtitle}
           </Typography>
         </Box>
@@ -305,15 +372,15 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
               height: 30,
               borderRadius: 999,
               fontWeight: 900,
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.10)",
-              color: "rgba(255,255,255,0.90)",
+              background: t.chip.bg,
+              border: t.chip.border,
+              color: t.chip.color,
             }}
           />
         ))}
       </Stack>
 
-      <Divider sx={{ my: 1.8, borderColor: "rgba(255,255,255,0.10)" }} />
+      <Divider sx={{ my: 1.8, borderColor: t.glass.divider }} />
 
       <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
         <Button
@@ -333,9 +400,9 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
             borderRadius: 999,
             fontWeight: 950,
             textTransform: "none",
-            borderColor: "rgba(255,255,255,0.18)",
-            color: "rgba(255,255,255,0.88)",
-            background: "rgba(255,255,255,0.04)",
+            borderColor: t.buttonOutlined.borderColor,
+            color: t.buttonOutlined.color,
+            background: t.buttonOutlined.background,
           }}
         >
           New tab
@@ -352,10 +419,32 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
 function PortalHome() {
   const location = useLocation();
 
-  const tenantBase = useMemo(
-    () => getTenantBaseHost(location.search),
-    [location.search]
-  );
+  const tenantBase = useMemo(() => getTenantBaseHost(location.search), [location.search]);
+
+  // Theme state (persisted)
+  const [themeMode, setThemeMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved === "light" || saved === "dark") return saved;
+    } catch {
+      // ignore
+    }
+    return "dark";
+  });
+
+  const t = useMemo(() => getThemeTokens(themeMode), [themeMode]);
+
+  const toggleTheme = useCallback(() => {
+    setThemeMode((prev) => {
+      const next = prev === "dark" ? "light" : "dark";
+      try {
+        localStorage.setItem(THEME_KEY, next);
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
 
   const cacheKey = useMemo(
     () => `hi5tech_portal_cache:${tenantBase || "unknown"}`,
@@ -387,13 +476,13 @@ function PortalHome() {
   const runSeq = useRef(0);
 
   const writeCache = useCallback(
-    (t, mods) => {
+    (tt, mods) => {
       try {
         sessionStorage.setItem(
           cacheKey,
           JSON.stringify({
             ts: Date.now(),
-            tenant: t || null,
+            tenant: tt || null,
             modules: Array.isArray(mods) ? mods : [],
           })
         );
@@ -430,24 +519,24 @@ function PortalHome() {
           return;
         }
 
-        const t = await loadTenantByBaseHost(tenantBase);
+        const tt = await loadTenantByBaseHost(tenantBase);
         if (seq !== runSeq.current) return;
 
-        setTenant(t);
+        setTenant(tt);
 
-        if (!t?.id) {
+        if (!tt?.id) {
           setModules([]);
-          writeCache(t, []);
+          writeCache(tt, []);
           return;
         }
 
-        const role = await loadProfileRole(u.id, t.id);
-        const roleAllowed = await loadRoleModules(role, t.id);
+        const role = await loadProfileRole(u.id, tt.id);
+        const roleAllowed = await loadRoleModules(role, tt.id);
 
         let userAllow = [];
         let userDeny = [];
         try {
-          const o = await loadUserOverrides(u.id, t.id);
+          const o = await loadUserOverrides(u.id, tt.id);
           userAllow = o.allow || [];
           userDeny = o.deny || [];
         } catch {
@@ -462,7 +551,7 @@ function PortalHome() {
 
         const finalMods = Array.from(set);
         setModules(finalMods);
-        writeCache(t, finalMods);
+        writeCache(tt, finalMods);
       } catch (e) {
         if (seq !== runSeq.current) return;
 
@@ -526,7 +615,14 @@ function PortalHome() {
         <Stack spacing={1} alignItems="center">
           <Typography sx={{ fontWeight: 950, opacity: 0.85 }}>Loading…</Typography>
           {!!errorMsg && (
-            <Typography sx={{ opacity: 0.7, fontSize: 13, maxWidth: 320, textAlign: "center" }}>
+            <Typography
+              sx={{
+                opacity: 0.7,
+                fontSize: 13,
+                maxWidth: 320,
+                textAlign: "center",
+              }}
+            >
               {errorMsg}
             </Typography>
           )}
@@ -587,17 +683,12 @@ function PortalHome() {
     <Box
       sx={{
         minHeight: "100vh",
-        color: "rgba(255,255,255,0.92)",
-        background: `
-          radial-gradient(1200px 800px at 20% 10%, rgba(124, 92, 255, 0.28), transparent 60%),
-          radial-gradient(1000px 700px at 85% 25%, rgba(56, 189, 248, 0.18), transparent 55%),
-          radial-gradient(900px 700px at 60% 90%, rgba(34, 197, 94, 0.10), transparent 55%),
-          linear-gradient(180deg, #070A12 0%, #0A1022 45%, #0B1633 100%)
-        `,
+        color: t.page.color,
+        background: t.page.background,
       }}
     >
       <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 } }}>
-        <GlassPanel sx={{ p: 2.2 }}>
+        <GlassPanel t={t} sx={{ p: 2.2 }}>
           <Stack
             direction={{ xs: "column", md: "row" }}
             spacing={2}
@@ -632,9 +723,9 @@ function PortalHome() {
                         height: 24,
                         borderRadius: 999,
                         fontWeight: 900,
-                        background: "rgba(255,255,255,0.06)",
-                        border: "1px solid rgba(255,255,255,0.10)",
-                        color: "rgba(255,255,255,0.85)",
+                        background: t.chip.bg,
+                        border: t.chip.border,
+                        color: t.chip.color,
                       }}
                     />
                   ) : null}
@@ -646,7 +737,11 @@ function PortalHome() {
               </Box>
             </Stack>
 
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="center">
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1}
+              alignItems="center"
+            >
               <TextField
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -656,8 +751,8 @@ function PortalHome() {
                   minWidth: { xs: "100%", sm: 320 },
                   "& .MuiOutlinedInput-root": {
                     borderRadius: 999,
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.10)",
+                    background: t.pill.bg,
+                    border: t.pill.border,
                     backdropFilter: "blur(10px)",
                   },
                 }}
@@ -670,6 +765,21 @@ function PortalHome() {
                 }}
               />
 
+              <Tooltip title={themeMode === "dark" ? "Switch to light" : "Switch to dark"}>
+                <IconButton
+                  onClick={toggleTheme}
+                  sx={{
+                    borderRadius: 999,
+                    border: t.buttonOutlined.borderColor ? `1px solid ${t.buttonOutlined.borderColor}` : undefined,
+                    color: t.buttonOutlined.color,
+                    background: t.buttonOutlined.background,
+                    px: 1.2,
+                  }}
+                >
+                  {themeMode === "dark" ? <LightModeIcon /> : <DarkModeIcon />}
+                </IconButton>
+              </Tooltip>
+
               <Button
                 variant="outlined"
                 onClick={() => window.location.assign("/logout")}
@@ -678,9 +788,9 @@ function PortalHome() {
                   borderRadius: 999,
                   fontWeight: 950,
                   textTransform: "none",
-                  borderColor: "rgba(255,255,255,0.18)",
-                  color: "rgba(255,255,255,0.88)",
-                  background: "rgba(255,255,255,0.04)",
+                  borderColor: t.buttonOutlined.borderColor,
+                  color: t.buttonOutlined.color,
+                  background: t.buttonOutlined.background,
                 }}
               >
                 Sign out
@@ -690,7 +800,7 @@ function PortalHome() {
         </GlassPanel>
 
         {!!errorMsg ? (
-          <GlassPanel sx={{ mt: 2.2, p: 2 }}>
+          <GlassPanel t={t} sx={{ mt: 2.2, p: 2 }}>
             <Stack
               direction={{ xs: "column", sm: "row" }}
               spacing={1}
@@ -733,12 +843,13 @@ function PortalHome() {
               icon={m.icon}
               href={m.href}
               onOpen={() => window.location.assign(m.href)}
+              t={t}
             />
           ))}
         </Box>
 
         {!visible.length ? (
-          <GlassPanel sx={{ mt: 2.2, p: 3 }}>
+          <GlassPanel t={t} sx={{ mt: 2.2, p: 3 }}>
             <Typography sx={{ fontWeight: 950, fontSize: 18 }}>
               No modules available
             </Typography>
