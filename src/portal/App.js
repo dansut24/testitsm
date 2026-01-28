@@ -1,12 +1,6 @@
 // src/portal/App.js
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Routes,
-  Route,
-  Navigate,
-  useNavigate,
-  useLocation,
-} from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Button,
@@ -43,6 +37,7 @@ function getTenantBaseHost(search) {
   const qpTenant = new URLSearchParams(search || "").get("tenant");
   if (qpTenant) return String(qpTenant).toLowerCase().trim();
 
+  // Robust: demoitsm-itsm.hi5tech... => demoitsm
   return (firstLabel.split("-")[0] || "").toLowerCase().trim();
 }
 
@@ -81,7 +76,7 @@ function normalizeModuleValue(v) {
 
   const m = raw.replaceAll("-", "_").replaceAll(" ", "_");
 
-  // Ignore admin as a "module card"
+  // Ignore admin as a card
   if (m === "admin") return null;
 
   if (m === "itsm" || m.includes("itsm")) return "itsm";
@@ -96,7 +91,7 @@ function normalizeModuleValue(v) {
 // -------------------------
 
 async function loadProfileRole(userId, tenantId) {
-  // tenant-scoped profile row (preferred)
+  // tenant-scoped preferred
   try {
     const { data, error } = await supabase
       .from("profiles")
@@ -107,11 +102,10 @@ async function loadProfileRole(userId, tenantId) {
 
     if (error) throw error;
     if (data?.role) return data.role;
-  } catch (e) {
+  } catch {
     // fallback below
   }
 
-  // global fallback
   const { data: fallback, error: fallbackErr } = await supabase
     .from("profiles")
     .select("role")
@@ -170,13 +164,10 @@ async function loadUserOverrides(userId, tenantId) {
     }
 
     const msg = String(res.error?.message || "").toLowerCase();
-    if (
-      msg.includes("does not exist") ||
-      msg.includes("column") ||
-      msg.includes("parse")
-    ) {
+    if (msg.includes("does not exist") || msg.includes("column") || msg.includes("parse")) {
       continue;
     }
+
     throw res.error;
   }
 
@@ -275,12 +266,7 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
 
       <Divider sx={{ my: 1.8, borderColor: "rgba(255,255,255,0.10)" }} />
 
-      <Stack
-        direction="row"
-        spacing={1}
-        justifyContent="space-between"
-        alignItems="center"
-      >
+      <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
         <Button
           variant="contained"
           onClick={onOpen}
@@ -318,44 +304,17 @@ function PortalHome() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const tenantBase = useMemo(
-    () => getTenantBaseHost(location.search),
-    [location.search]
-  );
+  const tenantBase = useMemo(() => getTenantBaseHost(location.search), [location.search]);
 
-  const cacheKey = useMemo(
-    () => `hi5tech_portal_cache:${tenantBase || "unknown"}`,
-    [tenantBase]
-  );
+  const [busy, setBusy] = useState(true);
+  const [sessionChecked, setSessionChecked] = useState(false);
 
-  // Read cache for THIS tenantBase/cacheKey
-  const cached = useMemo(() => {
-    try {
-      const raw = sessionStorage.getItem(cacheKey);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      // expire after 15 minutes
-      if (parsed?.ts && Date.now() - parsed.ts > 15 * 60 * 1000) return null;
-      return parsed;
-    } catch {
-      return null;
-    }
-  }, [cacheKey]);
-
-  // IMPORTANT: store the “initial cache” in a ref so the effect does NOT depend on `cached`
-  const initialCacheRef = useRef({ key: null, value: null });
-  if (initialCacheRef.current.key !== cacheKey) {
-    initialCacheRef.current = { key: cacheKey, value: cached };
-  }
-  const initialCached = initialCacheRef.current.value;
-
-  // If we have cache, don’t block UI with a full-screen spinner.
-  // We’ll still refresh in the background.
-  const [busy, setBusy] = useState(!initialCached);
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
-  const [tenant, setTenant] = useState(initialCached?.tenant || null);
-  const [modules, setModules] = useState(initialCached?.modules || []);
+
+  const [tenant, setTenant] = useState(null);
+  const [modules, setModules] = useState([]);
+
   const [query, setQuery] = useState("");
 
   const displayName = useMemo(() => {
@@ -374,124 +333,119 @@ function PortalHome() {
 
   const runSeq = useRef(0);
 
-  useEffect(() => {
-    let cancelled = false;
+  const withTimeout = async (p, ms = 2500) => {
+    let t;
+    try {
+      return await Promise.race([
+        p,
+        new Promise((_, reject) => {
+          t = setTimeout(() => reject(new Error("timeout")), ms);
+        }),
+      ]);
+    } finally {
+      clearTimeout(t);
+    }
+  };
 
-    const writeCache = (t, mods) => {
-      try {
-        sessionStorage.setItem(
-          cacheKey,
-          JSON.stringify({ ts: Date.now(), tenant: t || null, modules: mods || [] })
-        );
-      } catch {
-        // ignore
-      }
-    };
+  const run = async ({ soft = false, forceRefresh = false } = {}) => {
+    const seq = ++runSeq.current;
 
-    const getSessionRobust = async (forceRefreshSession) => {
-      // 1) normal getSession
-      let res = await supabase.auth.getSession();
-      let sess = res?.data?.session || null;
+    if (!soft) {
+      setBusy(true);
+    }
 
-      // 2) if asked OR missing session (common right after login / BFCache restore),
-      // try a refresh once
-      if (forceRefreshSession || !sess) {
+    try {
+      if (forceRefresh) {
         try {
-          await supabase.auth.refreshSession();
+          await withTimeout(supabase.auth.refreshSession(), 2500);
         } catch {
           // ignore
         }
-        res = await supabase.auth.getSession();
-        sess = res?.data?.session || null;
       }
 
-      return sess;
-    };
+      // Always attempt to read session (with timeout) so we never hang
+      const sessRes = await withTimeout(supabase.auth.getSession(), 2500);
+      const sess = sessRes?.data?.session || null;
+      const u = sess?.user || null;
 
-    const run = async ({ soft = false, forceRefreshSession = false } = {}) => {
-      const seq = ++runSeq.current;
-      if (!soft) setBusy(true);
+      if (seq !== runSeq.current) return;
 
-      try {
-        const sess = await getSessionRobust(forceRefreshSession);
-        const u = sess?.user || null;
+      setSession(sess);
+      setUser(u);
+      setSessionChecked(true);
 
-        if (cancelled || seq !== runSeq.current) return;
-
-        setSession(sess);
-        setUser(u);
-
-        if (!u) {
-          setTenant(null);
-          setModules([]);
-          writeCache(null, []);
-          return;
-        }
-
-        const t = await loadTenantByBaseHost(tenantBase);
-
-        if (cancelled || seq !== runSeq.current) return;
-
-        setTenant(t);
-
-        if (!t?.id) {
-          setModules([]);
-          writeCache(t, []);
-          return;
-        }
-
-        const role = await loadProfileRole(u.id, t.id);
-        const roleAllowed = await loadRoleModules(role, t.id);
-
-        let userAllow = [];
-        let userDeny = [];
-        try {
-          const o = await loadUserOverrides(u.id, t.id);
-          userAllow = o.allow || [];
-          userDeny = o.deny || [];
-        } catch {
-          // optional
-        }
-
-        const set = new Set(roleAllowed);
-        userAllow.forEach((m) => set.add(m));
-        userDeny.forEach((m) => set.delete(m));
-
-        if (cancelled || seq !== runSeq.current) return;
-
-        const finalMods = Array.from(set);
-        setModules(finalMods);
-        writeCache(t, finalMods);
-      } catch (e) {
-        console.error("[Portal] error:", e);
-        if (cancelled || seq !== runSeq.current) return;
+      if (!u) {
         setTenant(null);
         setModules([]);
-        writeCache(null, []);
-      } finally {
-        if (!cancelled && seq === runSeq.current) setBusy(false);
+        return;
       }
-    };
 
-    // ✅ Initial run: if we have cache, refresh in background (soft)
-    run({ soft: !!initialCached, forceRefreshSession: false });
+      const t = await withTimeout(loadTenantByBaseHost(tenantBase), 4000);
+      if (seq !== runSeq.current) return;
 
+      setTenant(t);
+
+      if (!t?.id) {
+        setModules([]);
+        return;
+      }
+
+      const role = await withTimeout(loadProfileRole(u.id, t.id), 4000);
+      const roleAllowed = await withTimeout(loadRoleModules(role, t.id), 4000);
+
+      let userAllow = [];
+      let userDeny = [];
+      try {
+        const o = await withTimeout(loadUserOverrides(u.id, t.id), 4000);
+        userAllow = o.allow || [];
+        userDeny = o.deny || [];
+      } catch {
+        // optional
+      }
+
+      const set = new Set(roleAllowed);
+      userAllow.forEach((m) => set.add(m));
+      userDeny.forEach((m) => set.delete(m));
+
+      if (seq !== runSeq.current) return;
+
+      setModules(Array.from(set));
+    } catch (e) {
+      console.error("[Portal] run error:", e);
+      if (seq !== runSeq.current) return;
+      setSession(null);
+      setUser(null);
+      setTenant(null);
+      setModules([]);
+      setSessionChecked(true);
+    } finally {
+      if (seq === runSeq.current) setBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+
+    // initial
+    run({ soft: false, forceRefresh: false });
+
+    // auth changes
     const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      // auth changes (SIGNED_IN/SIGNED_OUT/TOKEN_REFRESHED) -> hard refresh
-      run({ soft: false, forceRefreshSession: true });
+      if (!mounted) return;
+      run({ soft: false, forceRefresh: true });
     });
 
-    // ✅ BFCache restore + “back button”: re-run on pageshow
+    // back button / BFCache restore
     const onPageShow = (e) => {
-      // If restored from bfcache, tokens/storage can be stale. Force refresh session.
-      const persisted = !!e?.persisted;
-      run({ soft: true, forceRefreshSession: persisted });
+      if (!mounted) return;
+      run({ soft: true, forceRefresh: !!e?.persisted });
     };
 
-    // ✅ Also run when tab becomes visible again (mobile Safari is notorious here)
+    // mobile safari: coming back to tab
     const onVisibility = () => {
+      if (!mounted) return;
       if (document.visibilityState === "visible") {
-        run({ soft: true, forceRefreshSession: true });
+        run({ soft: true, forceRefresh: true });
       }
     };
 
@@ -499,15 +453,20 @@ function PortalHome() {
     document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
-      cancelled = true;
+      mounted = false;
       sub?.subscription?.unsubscribe?.();
       window.removeEventListener("pageshow", onPageShow);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [tenantBase, cacheKey, initialCached]); // ✅ no `cached` reference anywhere inside the effect
+    // Re-run when tenantBase changes (query param changes)
+  }, [tenantBase]);
 
-  // Only show full-screen loading when we truly have nothing to render yet
-  if (busy && !tenant && modules.length === 0) {
+  // ✅ IMPORTANT: decide redirect BEFORE showing a full-screen loading forever
+  if (sessionChecked && (!user || !session)) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!sessionChecked || (busy && !tenant && modules.length === 0)) {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
         <Typography sx={{ fontWeight: 950, opacity: 0.8 }}>Loading…</Typography>
@@ -515,8 +474,7 @@ function PortalHome() {
     );
   }
 
-  if (!user || !session) return <Navigate to="/login" replace />;
-
+  // Auto-route only if exactly 1 module
   if (modules.length === 1 && tenantBase) {
     window.location.assign(buildModuleUrl(tenantBase, modules[0]));
     return null;
@@ -603,7 +561,7 @@ function PortalHome() {
                   Choose a module
                 </Typography>
                 <Typography sx={{ opacity: 0.72, fontSize: 13 }} noWrap>
-                  {tenant?.name ? tenant.name : tenantBase} • {user.email}
+                  {tenant?.name ? tenant.name : tenantBase} • {user?.email}
                 </Typography>
               </Box>
             </Stack>
