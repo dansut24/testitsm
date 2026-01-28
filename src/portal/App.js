@@ -36,16 +36,13 @@ import { supabase } from "../common/utils/supabaseClient";
 // Host + URL helpers
 // -------------------------
 
-function getTenantBaseHost() {
+function getTenantBaseHost(search) {
   const host = window.location.hostname || "";
   const firstLabel = host.split(".")[0] || "";
 
-  // ✅ if you're on a "central" host (tenant.hi5tech... / portal.hi5tech...),
-  // allow explicit tenant resolution via query param.
-  const qpTenant = new URLSearchParams(window.location.search).get("tenant");
+  const qpTenant = new URLSearchParams(search || "").get("tenant");
   if (qpTenant) return String(qpTenant).toLowerCase().trim();
 
-  // Robust: if user accidentally hits demoitsm-itsm.hi5tech... treat tenant as demoitsm
   return (firstLabel.split("-")[0] || "").toLowerCase().trim();
 }
 
@@ -82,8 +79,6 @@ function normalizeModuleValue(v) {
   const raw = String(v || "").toLowerCase().trim();
   if (!raw) return null;
 
-  // Normalize separators so:
-  // self-service, self_service, Self Service => self_service
   const m = raw.replaceAll("-", "_").replaceAll(" ", "_");
 
   // Ignore admin as a "module card"
@@ -92,7 +87,7 @@ function normalizeModuleValue(v) {
   if (m === "itsm" || m.includes("itsm")) return "itsm";
   if (m === "control" || m.includes("control")) return "control";
 
-  // ✅ support self_service from DB + other variants
+  // support self_service variants
   if (m === "self" || m === "self_service" || m.includes("self")) return "self";
 
   return null;
@@ -103,7 +98,6 @@ function normalizeModuleValue(v) {
 // -------------------------
 
 async function loadProfileRole(userId, tenantId) {
-  // 1) Tenant-scoped profile row (preferred)
   try {
     const { data, error } = await supabase
       .from("profiles")
@@ -115,10 +109,9 @@ async function loadProfileRole(userId, tenantId) {
     if (error) throw error;
     if (data?.role) return data.role;
   } catch (e) {
-    // ignore and try fallback below
+    // fallback below
   }
 
-  // 2) Fallback: global profile row
   const { data: fallback, error: fallbackErr } = await supabase
     .from("profiles")
     .select("role")
@@ -283,22 +276,12 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
 
       <Divider sx={{ my: 1.8, borderColor: "rgba(255,255,255,0.10)" }} />
 
-      <Stack
-        direction="row"
-        spacing={1}
-        justifyContent="space-between"
-        alignItems="center"
-      >
+      <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
         <Button
           variant="contained"
           onClick={onOpen}
           endIcon={<KeyboardArrowRightIcon />}
-          sx={{
-            borderRadius: 999,
-            fontWeight: 950,
-            textTransform: "none",
-            px: 2,
-          }}
+          sx={{ borderRadius: 999, fontWeight: 950, textTransform: "none", px: 2 }}
         >
           Open
         </Button>
@@ -338,7 +321,8 @@ function PortalHome() {
   const [modules, setModules] = useState([]);
   const [query, setQuery] = useState("");
 
-  const tenantBase = useMemo(() => getTenantBaseHost(), []);
+  // ✅ IMPORTANT: derive tenant base from *router* search, not window search
+  const tenantBase = useMemo(() => getTenantBaseHost(location.search), [location.search]);
 
   const displayName = useMemo(() => {
     const name =
@@ -354,23 +338,23 @@ function PortalHome() {
     return (s[0] || "U").toUpperCase();
   }, [displayName]);
 
-  // prevent double-run racing (StrictMode in dev) + allow manual reruns safely
   const runSeq = useRef(0);
 
   useEffect(() => {
-    let mounted = true;
+    let cancelled = false;
 
-    const run = async () => {
+    const run = async ({ soft = false } = {}) => {
       const seq = ++runSeq.current;
 
-      try {
-        setBusy(true);
+      // soft reruns should not flash the loading screen
+      if (!soft) setBusy(true);
 
+      try {
         const { data } = await supabase.auth.getSession();
         const sess = data?.session || null;
         const u = sess?.user || null;
 
-        if (!mounted || seq !== runSeq.current) return;
+        if (cancelled || seq !== runSeq.current) return;
 
         setSession(sess);
         setUser(u);
@@ -378,19 +362,17 @@ function PortalHome() {
         if (!u) {
           setTenant(null);
           setModules([]);
-          setBusy(false);
           return;
         }
 
         const t = await loadTenantByBaseHost(tenantBase);
 
-        if (!mounted || seq !== runSeq.current) return;
+        if (cancelled || seq !== runSeq.current) return;
 
         setTenant(t);
 
         if (!t?.id) {
           setModules([]);
-          setBusy(false);
           return;
         }
 
@@ -404,61 +386,53 @@ function PortalHome() {
           userAllow = o.allow || [];
           userDeny = o.deny || [];
         } catch (e) {
-          // overrides are optional; don't brick portal
+          // optional
         }
 
         const set = new Set(roleAllowed);
         userAllow.forEach((m) => set.add(m));
         userDeny.forEach((m) => set.delete(m));
 
-        const finalAllowed = Array.from(set);
+        if (cancelled || seq !== runSeq.current) return;
 
-        if (!mounted || seq !== runSeq.current) return;
-
-        setModules(finalAllowed);
-        setBusy(false);
+        setModules(Array.from(set));
       } catch (e) {
         console.error("[Portal] error:", e);
-        if (!mounted) return;
+        if (cancelled || seq !== runSeq.current) return;
+        setTenant(null);
         setModules([]);
-        setBusy(false);
+      } finally {
+        // ✅ CRITICAL: always clear busy for the *latest* run
+        if (!cancelled && seq === runSeq.current) setBusy(false);
       }
     };
 
-    run();
+    // initial load
+    run({ soft: false });
 
-    // ✅ BFCache/back button fix
-    const onPageShow = () => {
-      if (!mounted) return;
-      run();
-    };
+    // auth changes
+    const { data: sub } = supabase.auth.onAuthStateChange((_evt, sess) => {
+      setSession(sess || null);
+      setUser(sess?.user || null);
+      run({ soft: false });
+    });
 
+    // ✅ BFCache / back-forward restore
+    const onPageShow = () => run({ soft: true });
     const onVisibilityChange = () => {
-      if (!mounted) return;
-      if (document.visibilityState === "visible") run();
+      if (document.visibilityState === "visible") run({ soft: true });
     };
 
     window.addEventListener("pageshow", onPageShow);
     document.addEventListener("visibilitychange", onVisibilityChange);
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_evt, sess) => {
-      const s = sess || null;
-      const u = s?.user || null;
-      setSession(s);
-      setUser(u);
-
-      // rerun access calc after auth changes
-      run();
-    });
-
     return () => {
-      mounted = false;
+      cancelled = true;
       sub?.subscription?.unsubscribe?.();
       window.removeEventListener("pageshow", onPageShow);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-    // ✅ rerun if route changes back to /app
-  }, [tenantBase, location.key]);
+  }, [tenantBase]); // ✅ do NOT depend on location.key (causes unnecessary reruns)
 
   if (busy) {
     return (
@@ -658,7 +632,6 @@ function PortalLogout() {
       try {
         await supabase.auth.signOut();
       } finally {
-        // keep tenant query param if present (nice UX on central host)
         const qpTenant = new URLSearchParams(window.location.search).get("tenant");
         window.location.assign(
           qpTenant ? `/login?tenant=${encodeURIComponent(qpTenant)}` : "/login"
@@ -675,7 +648,6 @@ function PortalLogout() {
 }
 
 export default function PortalApp() {
-  // keep tenant query param when bouncing between / and /app
   const qpTenant = new URLSearchParams(window.location.search).get("tenant");
   const withTenant = (path) =>
     qpTenant ? `${path}?tenant=${encodeURIComponent(qpTenant)}` : path;
