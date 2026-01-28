@@ -77,7 +77,9 @@ function useGlassTokens(theme) {
   const isDark = theme.palette.mode === "dark";
 
   return useMemo(() => {
-    const border = isDark ? "1px solid rgba(255,255,255,0.12)" : "1px solid rgba(15,23,42,0.10)";
+    const border = isDark
+      ? "1px solid rgba(255,255,255,0.12)"
+      : "1px solid rgba(15,23,42,0.10)";
     const divider = isDark ? "rgba(255,255,255,0.10)" : "rgba(15,23,42,0.08)";
 
     const panelBg = isDark
@@ -88,11 +90,17 @@ function useGlassTokens(theme) {
       ? "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))"
       : "linear-gradient(135deg, rgba(255,255,255,0.75), rgba(255,255,255,0.50))";
 
-    const shadow = isDark ? "0 18px 55px rgba(0,0,0,0.35)" : "0 18px 55px rgba(2,6,23,0.12)";
-    const shadowHover = isDark ? "0 22px 70px rgba(0,0,0,0.45)" : "0 22px 70px rgba(2,6,23,0.16)";
+    const shadow = isDark
+      ? "0 18px 55px rgba(0,0,0,0.35)"
+      : "0 18px 55px rgba(2,6,23,0.12)";
+    const shadowHover = isDark
+      ? "0 22px 70px rgba(0,0,0,0.45)"
+      : "0 22px 70px rgba(2,6,23,0.16)";
 
     const subtleBg = isDark ? "rgba(255,255,255,0.06)" : "rgba(2,6,23,0.04)";
-    const subtleBorder = isDark ? "1px solid rgba(255,255,255,0.10)" : "1px solid rgba(2,6,23,0.08)";
+    const subtleBorder = isDark
+      ? "1px solid rgba(255,255,255,0.10)"
+      : "1px solid rgba(2,6,23,0.08)";
 
     // Background similar vibe to portal, but theme-aware
     const pageBg = isDark
@@ -133,7 +141,7 @@ function useGlassTokens(theme) {
         text: isDark ? "rgba(255,255,255,0.85)" : "rgba(2,6,23,0.78)",
       },
     };
-  }, [theme.palette.mode]);
+  }, [isDark]); // ✅ FIX: depend on what the memo actually uses
 }
 
 function GlassPanel({ children, sx, t }) {
@@ -253,7 +261,9 @@ const Dashboard = () => {
                   label={
                     i % 3 === 0 ? "Open" : i % 3 === 1 ? "Closed" : "Pending"
                   }
-                  color={i % 3 === 0 ? "warning" : i % 3 === 1 ? "success" : "info"}
+                  color={
+                    i % 3 === 0 ? "warning" : i % 3 === 1 ? "success" : "info"
+                  }
                   sx={{ fontWeight: 700 }}
                 />
               </Stack>
@@ -305,10 +315,7 @@ const Dashboard = () => {
       return (
         <ChartWrapper>
           <BarChart data={sampleBarData}>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke={theme.palette.divider}
-            />
+            <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
             <XAxis dataKey="name" />
             <YAxis />
             <Bar
@@ -326,18 +333,13 @@ const Dashboard = () => {
       return (
         <ChartWrapper>
           <LineChart data={sampleLineData}>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke={theme.palette.divider}
-            />
+            <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
             <XAxis dataKey="name" />
             <YAxis />
             <Line
               type="monotone"
               dataKey="Changes"
-              stroke={
-                useGradient ? "url(#lineGradient)" : theme.palette.primary.main
-              }
+              stroke={useGradient ? "url(#lineGradient)" : theme.palette.primary.main}
               strokeWidth={2}
               dot={{ r: 4, fill: theme.palette.primary.main }}
             />
@@ -370,7 +372,6 @@ const Dashboard = () => {
     >
       {/* 🔹 Onboarding banner row */}
       <Box sx={{ maxWidth: 1400, mx: "auto", mb: 2 }}>
-        {/* Keep banner as-is for now */}
         <TenantOnboardingBanner />
       </Box>
 
@@ -428,9 +429,15 @@ const Dashboard = () => {
                   borderRadius: 999,
                   fontWeight: 900,
                   textTransform: "none",
-                  borderColor: t.isDark ? "rgba(255,255,255,0.18)" : "rgba(2,6,23,0.14)",
-                  color: t.isDark ? "rgba(255,255,255,0.88)" : "rgba(2,6,23,0.82)",
-                  background: t.isDark ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.55)",
+                  borderColor: t.isDark
+                    ? "rgba(255,255,255,0.18)"
+                    : "rgba(2,6,23,0.14)",
+                  color: t.isDark
+                    ? "rgba(255,255,255,0.88)"
+                    : "rgba(2,6,23,0.82)",
+                  background: t.isDark
+                    ? "rgba(255,255,255,0.04)"
+                    : "rgba(255,255,255,0.55)",
                 }}
               >
                 Reset
@@ -535,7 +542,8 @@ const Dashboard = () => {
               No widgets selected
             </Typography>
             <Typography sx={{ opacity: 0.72, mt: 0.5 }}>
-              Choose a dashboard layout (default/minimal/analytics) or create a custom one.
+              Choose a dashboard layout (default/minimal/analytics) or create a custom
+              one.
             </Typography>
           </Box>
         ) : null}
