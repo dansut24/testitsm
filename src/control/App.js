@@ -16,10 +16,10 @@ import { getCentralLoginUrl } from "../common/utils/portalUrl";
 import ExternalRedirect from "../common/components/ExternalRedirect";
 
 // ✅ Shared Hi5 theme (matches portal + login)
-import { useHi5Theme } from "../common/ui/hi5Theme";
+import { Hi5ThemeProvider, useHi5Theme } from "../common/ui/hi5Theme";
 import ThemeToggleIconButton from "../common/ui/ThemeToggleIconButton";
 
-function App() {
+function ControlInnerApp() {
   const { authLoading, user } = useAuth();
   const centralLogin = getCentralLoginUrl("/control");
 
@@ -54,19 +54,14 @@ function App() {
           position: "relative",
         }}
       >
-        {/* ✅ Floating theme toggle (keeps ControlLayout untouched) */}
         <Box sx={{ position: "fixed", top: 14, right: 14, zIndex: 2000 }}>
           <ThemeToggleIconButton mode={mode} onToggle={toggleMode} t={t} />
         </Box>
 
         <Routes>
-          {/* Control should never render a local login page */}
           <Route path="/login" element={<ExternalRedirect to={centralLogin} />} />
 
-          <Route
-            path="/"
-            element={user ? <ControlLayout /> : <ExternalRedirect to={centralLogin} />}
-          >
+          <Route path="/" element={user ? <ControlLayout /> : <ExternalRedirect to={centralLogin} />}>
             <Route index element={<Home />} />
             <Route path="devices" element={<Devices />} />
             <Route path="reports" element={<Reports />} />
@@ -74,14 +69,17 @@ function App() {
             <Route path="devices/:deviceId/remote" element={<DeviceRemote />} />
           </Route>
 
-          <Route
-            path="*"
-            element={user ? <NotFound /> : <ExternalRedirect to={centralLogin} />}
-          />
+          <Route path="*" element={user ? <NotFound /> : <ExternalRedirect to={centralLogin} />} />
         </Routes>
       </Box>
     </>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <Hi5ThemeProvider>
+      <ControlInnerApp />
+    </Hi5ThemeProvider>
+  );
+}
