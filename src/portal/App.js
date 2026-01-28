@@ -1,6 +1,12 @@
 // src/portal/App.js
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import {
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 import {
   Box,
   Button,
@@ -37,7 +43,7 @@ function getTenantBaseHost(search) {
   const qpTenant = new URLSearchParams(search || "").get("tenant");
   if (qpTenant) return String(qpTenant).toLowerCase().trim();
 
-  // Robust: demoitsm-itsm.hi5tech... => demoitsm
+  // Robust: if user accidentally hits demoitsm-itsm.hi5tech... treat tenant as demoitsm
   return (firstLabel.split("-")[0] || "").toLowerCase().trim();
 }
 
@@ -76,7 +82,7 @@ function normalizeModuleValue(v) {
 
   const m = raw.replaceAll("-", "_").replaceAll(" ", "_");
 
-  // Ignore admin as a card
+  // Ignore admin as a "module card"
   if (m === "admin") return null;
 
   if (m === "itsm" || m.includes("itsm")) return "itsm";
@@ -91,7 +97,7 @@ function normalizeModuleValue(v) {
 // -------------------------
 
 async function loadProfileRole(userId, tenantId) {
-  // tenant-scoped preferred
+  // tenant-scoped profile row (preferred)
   try {
     const { data, error } = await supabase
       .from("profiles")
@@ -102,10 +108,11 @@ async function loadProfileRole(userId, tenantId) {
 
     if (error) throw error;
     if (data?.role) return data.role;
-  } catch {
+  } catch (e) {
     // fallback below
   }
 
+  // global fallback
   const { data: fallback, error: fallbackErr } = await supabase
     .from("profiles")
     .select("role")
@@ -164,10 +171,13 @@ async function loadUserOverrides(userId, tenantId) {
     }
 
     const msg = String(res.error?.message || "").toLowerCase();
-    if (msg.includes("does not exist") || msg.includes("column") || msg.includes("parse")) {
+    if (
+      msg.includes("does not exist") ||
+      msg.includes("column") ||
+      msg.includes("parse")
+    ) {
       continue;
     }
-
     throw res.error;
   }
 
@@ -266,12 +276,22 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
 
       <Divider sx={{ my: 1.8, borderColor: "rgba(255,255,255,0.10)" }} />
 
-      <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+      <Stack
+        direction="row"
+        spacing={1}
+        justifyContent="space-between"
+        alignItems="center"
+      >
         <Button
           variant="contained"
           onClick={onOpen}
           endIcon={<KeyboardArrowRightIcon />}
-          sx={{ borderRadius: 999, fontWeight: 950, textTransform: "none", px: 2 }}
+          sx={{
+            borderRadius: 999,
+            fontWeight: 950,
+            textTransform: "none",
+            px: 2,
+          }}
         >
           Open
         </Button>
@@ -304,18 +324,20 @@ function PortalHome() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const tenantBase = useMemo(() => getTenantBaseHost(location.search), [location.search]);
+  const tenantBase = useMemo(
+    () => getTenantBaseHost(location.search),
+    [location.search]
+  );
 
   const [busy, setBusy] = useState(true);
-  const [sessionChecked, setSessionChecked] = useState(false);
-
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
-
   const [tenant, setTenant] = useState(null);
   const [modules, setModules] = useState([]);
-
   const [query, setQuery] = useState("");
+
+  // ✅ Prevent race conditions when navigating back / effect reruns
+  const runSeq = useRef(0);
 
   const displayName = useMemo(() => {
     const name =
@@ -331,117 +353,101 @@ function PortalHome() {
     return (s[0] || "U").toUpperCase();
   }, [displayName]);
 
-  const runSeq = useRef(0);
+  // ✅ Stable run() to satisfy ESLint + CI builds
+  const run = useCallback(
+    async ({ soft = false, forceRefresh = false } = {}) => {
+      const seq = ++runSeq.current;
 
-  const withTimeout = async (p, ms = 2500) => {
-    let t;
-    try {
-      return await Promise.race([
-        p,
-        new Promise((_, reject) => {
-          t = setTimeout(() => reject(new Error("timeout")), ms);
-        }),
-      ]);
-    } finally {
-      clearTimeout(t);
-    }
-  };
+      if (!soft) setBusy(true);
 
-  const run = async ({ soft = false, forceRefresh = false } = {}) => {
-    const seq = ++runSeq.current;
-
-    if (!soft) {
-      setBusy(true);
-    }
-
-    try {
-      if (forceRefresh) {
-        try {
-          await withTimeout(supabase.auth.refreshSession(), 2500);
-        } catch {
-          // ignore
+      try {
+        if (forceRefresh) {
+          try {
+            await supabase.auth.refreshSession();
+          } catch {
+            // ignore
+          }
         }
-      }
 
-      // Always attempt to read session (with timeout) so we never hang
-      const sessRes = await withTimeout(supabase.auth.getSession(), 2500);
-      const sess = sessRes?.data?.session || null;
-      const u = sess?.user || null;
+        const { data } = await supabase.auth.getSession();
+        const sess = data?.session || null;
+        const u = sess?.user || null;
 
-      if (seq !== runSeq.current) return;
+        if (seq !== runSeq.current) return;
 
-      setSession(sess);
-      setUser(u);
-      setSessionChecked(true);
+        setSession(sess);
+        setUser(u);
 
-      if (!u) {
+        if (!u) {
+          setTenant(null);
+          setModules([]);
+          return;
+        }
+
+        const t = await loadTenantByBaseHost(tenantBase);
+        if (seq !== runSeq.current) return;
+
+        setTenant(t);
+
+        if (!t?.id) {
+          setModules([]);
+          return;
+        }
+
+        const role = await loadProfileRole(u.id, t.id);
+        const roleAllowed = await loadRoleModules(role, t.id);
+
+        let userAllow = [];
+        let userDeny = [];
+        try {
+          const o = await loadUserOverrides(u.id, t.id);
+          userAllow = o.allow || [];
+          userDeny = o.deny || [];
+        } catch {
+          // optional
+        }
+
+        const set = new Set(roleAllowed);
+        userAllow.forEach((m) => set.add(m));
+        userDeny.forEach((m) => set.delete(m));
+
+        if (seq !== runSeq.current) return;
+
+        setModules(Array.from(set));
+      } catch (e) {
+        console.error("[Portal] run error:", e);
+        if (seq !== runSeq.current) return;
+        setSession(null);
+        setUser(null);
         setTenant(null);
         setModules([]);
-        return;
+      } finally {
+        if (seq === runSeq.current) setBusy(false);
       }
-
-      const t = await withTimeout(loadTenantByBaseHost(tenantBase), 4000);
-      if (seq !== runSeq.current) return;
-
-      setTenant(t);
-
-      if (!t?.id) {
-        setModules([]);
-        return;
-      }
-
-      const role = await withTimeout(loadProfileRole(u.id, t.id), 4000);
-      const roleAllowed = await withTimeout(loadRoleModules(role, t.id), 4000);
-
-      let userAllow = [];
-      let userDeny = [];
-      try {
-        const o = await withTimeout(loadUserOverrides(u.id, t.id), 4000);
-        userAllow = o.allow || [];
-        userDeny = o.deny || [];
-      } catch {
-        // optional
-      }
-
-      const set = new Set(roleAllowed);
-      userAllow.forEach((m) => set.add(m));
-      userDeny.forEach((m) => set.delete(m));
-
-      if (seq !== runSeq.current) return;
-
-      setModules(Array.from(set));
-    } catch (e) {
-      console.error("[Portal] run error:", e);
-      if (seq !== runSeq.current) return;
-      setSession(null);
-      setUser(null);
-      setTenant(null);
-      setModules([]);
-      setSessionChecked(true);
-    } finally {
-      if (seq === runSeq.current) setBusy(false);
-    }
-  };
+    },
+    [tenantBase]
+  );
 
   useEffect(() => {
     let mounted = true;
 
-    // initial
-    run({ soft: false, forceRefresh: false });
+    // Initial load
+    run({ soft: false });
 
-    // auth changes
+    // Recalculate on auth changes
     const { data: sub } = supabase.auth.onAuthStateChange(() => {
       if (!mounted) return;
       run({ soft: false, forceRefresh: true });
     });
 
-    // back button / BFCache restore
+    // ✅ BFCache / back-button fix:
+    // When returning to this tab/page, re-run with a soft refresh.
     const onPageShow = (e) => {
       if (!mounted) return;
       run({ soft: true, forceRefresh: !!e?.persisted });
     };
 
-    // mobile safari: coming back to tab
+    // Also handle "tab becomes visible again"
     const onVisibility = () => {
       if (!mounted) return;
       if (document.visibilityState === "visible") {
@@ -458,15 +464,9 @@ function PortalHome() {
       window.removeEventListener("pageshow", onPageShow);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-    // Re-run when tenantBase changes (query param changes)
-  }, [tenantBase]);
+  }, [run]);
 
-  // ✅ IMPORTANT: decide redirect BEFORE showing a full-screen loading forever
-  if (sessionChecked && (!user || !session)) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!sessionChecked || (busy && !tenant && modules.length === 0)) {
+  if (busy) {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
         <Typography sx={{ fontWeight: 950, opacity: 0.8 }}>Loading…</Typography>
@@ -474,7 +474,9 @@ function PortalHome() {
     );
   }
 
-  // Auto-route only if exactly 1 module
+  if (!user || !session) return <Navigate to="/login" replace />;
+
+  // Auto-route ONLY if exactly one module remains after proper access evaluation
   if (modules.length === 1 && tenantBase) {
     window.location.assign(buildModuleUrl(tenantBase, modules[0]));
     return null;
@@ -561,12 +563,16 @@ function PortalHome() {
                   Choose a module
                 </Typography>
                 <Typography sx={{ opacity: 0.72, fontSize: 13 }} noWrap>
-                  {tenant?.name ? tenant.name : tenantBase} • {user?.email}
+                  {tenant?.name ? tenant.name : tenantBase} • {user.email}
                 </Typography>
               </Box>
             </Stack>
 
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="center">
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1}
+              alignItems="center"
+            >
               <TextField
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
