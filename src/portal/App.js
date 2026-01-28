@@ -26,7 +26,7 @@ import CentralLogin from "../common/pages/CentralLogin";
 import { supabase } from "../common/utils/supabaseClient";
 
 // ✅ Shared theme + glass
-import { useHi5Theme } from "../common/ui/hi5Theme";
+import { Hi5ThemeProvider, useHi5Theme } from "../common/ui/hi5Theme";
 import GlassPanel from "../common/ui/GlassPanel";
 import ThemeToggleIconButton from "../common/ui/ThemeToggleIconButton";
 
@@ -501,9 +501,7 @@ function PortalHome() {
         <Stack spacing={1} alignItems="center">
           <Typography sx={{ fontWeight: 950, opacity: 0.85 }}>Loading…</Typography>
           {!!errorMsg && (
-            <Typography
-              sx={{ opacity: 0.7, fontSize: 13, maxWidth: 320, textAlign: "center" }}
-            >
+            <Typography sx={{ opacity: 0.7, fontSize: 13, maxWidth: 320, textAlign: "center" }}>
               {errorMsg}
             </Typography>
           )}
@@ -561,13 +559,7 @@ function PortalHome() {
     });
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        color: t.page.color,
-        background: t.page.background,
-      }}
-    >
+    <Box sx={{ minHeight: "100vh", color: t.page.color, background: t.page.background }}>
       <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 } }}>
         <GlassPanel t={t} sx={{ p: 2.2 }}>
           <Stack
@@ -689,11 +681,7 @@ function PortalHome() {
             mt: 2.2,
             display: "grid",
             gap: 16,
-            gridTemplateColumns: {
-              xs: "1fr",
-              sm: "repeat(2, 1fr)",
-              md: "repeat(3, 1fr)",
-            },
+            gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" },
           }}
         >
           {visible.map((m) => (
@@ -712,12 +700,10 @@ function PortalHome() {
 
         {!visible.length ? (
           <GlassPanel t={t} sx={{ mt: 2.2, p: 3 }}>
-            <Typography sx={{ fontWeight: 950, fontSize: 18 }}>
-              No modules available
-            </Typography>
+            <Typography sx={{ fontWeight: 950, fontSize: 18 }}>No modules available</Typography>
             <Typography sx={{ opacity: 0.72, mt: 0.6 }}>
-              Your account doesn’t have access to any modules for this tenant yet.
-              Contact an administrator to grant ITSM / Control / Self Service.
+              Your account doesn’t have access to any modules for this tenant yet. Contact an
+              administrator to grant ITSM / Control / Self Service.
             </Typography>
           </GlassPanel>
         ) : null}
@@ -802,10 +788,9 @@ function PortalLogout() {
   );
 }
 
-export default function PortalApp() {
+function PortalRoutes() {
   const qpTenant = new URLSearchParams(window.location.search).get("tenant");
-  const withTenant = (path) =>
-    qpTenant ? `${path}?tenant=${encodeURIComponent(qpTenant)}` : path;
+  const withTenant = (path) => (qpTenant ? `${path}?tenant=${encodeURIComponent(qpTenant)}` : path);
 
   return (
     <Routes>
@@ -815,5 +800,13 @@ export default function PortalApp() {
       <Route path="/" element={<Navigate to={withTenant("/app")} replace />} />
       <Route path="*" element={<Navigate to={withTenant("/app")} replace />} />
     </Routes>
+  );
+}
+
+export default function PortalApp() {
+  return (
+    <Hi5ThemeProvider>
+      <PortalRoutes />
+    </Hi5ThemeProvider>
   );
 }
