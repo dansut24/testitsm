@@ -97,7 +97,7 @@ function useGlassTokens(theme) {
       glass: { border, divider, bg: panelBg, shadow },
       iconFg,
     };
-  }, [theme.palette.mode]);
+  }, [isDark]); // ✅ FIX: depend on what the memo actually uses
 }
 
 function GlassBar({ children, t, sx }) {
