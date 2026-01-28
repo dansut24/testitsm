@@ -67,6 +67,10 @@ import Checkout from "../selfservice/pages/Checkout";
 import SelfServiceConfirmation from "../selfservice/pages/CheckoutConfirmation";
 import SelfServiceKnowledgeBase from "../selfservice/pages/KnowledgeBase";
 
+// ✅ Shared Hi5 theme (matches portal + login)
+import { useHi5Theme } from "../common/ui/hi5Theme";
+import ThemeToggleIconButton from "../common/ui/ThemeToggleIconButton";
+
 function ITSMRoutes() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -178,12 +182,17 @@ function ITSMRoutes() {
       )}
 
       {/* Catch-all */}
-      <Route path="*" element={isLoggedIn ? <NotFound /> : <ExternalRedirect to={centralLogin} />} />
+      <Route
+        path="*"
+        element={isLoggedIn ? <NotFound /> : <ExternalRedirect to={centralLogin} />}
+      />
     </Routes>
   );
 }
 
 function App() {
+  const { mode, tokens: t, toggleMode } = useHi5Theme();
+
   return (
     <ThemeModeProvider>
       <Box
@@ -193,8 +202,16 @@ function App() {
           overflowX: "hidden",
           display: "flex",
           flexDirection: "column",
+          color: t.page.color,
+          background: t.page.background,
+          position: "relative",
         }}
       >
+        {/* ✅ Floating theme toggle (doesn't touch ITSM Layout) */}
+        <Box sx={{ position: "fixed", top: 14, right: 14, zIndex: 2000 }}>
+          <ThemeToggleIconButton mode={mode} onToggle={toggleMode} t={t} />
+        </Box>
+
         <ITSMRoutes />
       </Box>
     </ThemeModeProvider>
