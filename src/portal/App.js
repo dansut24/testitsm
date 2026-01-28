@@ -86,8 +86,6 @@ function normalizeModuleValue(v) {
 
   if (m === "itsm" || m.includes("itsm")) return "itsm";
   if (m === "control" || m.includes("control")) return "control";
-
-  // support self_service variants
   if (m === "self" || m === "self_service" || m.includes("self")) return "self";
 
   return null;
@@ -98,6 +96,7 @@ function normalizeModuleValue(v) {
 // -------------------------
 
 async function loadProfileRole(userId, tenantId) {
+  // tenant-scoped profile row (preferred)
   try {
     const { data, error } = await supabase
       .from("profiles")
@@ -112,6 +111,7 @@ async function loadProfileRole(userId, tenantId) {
     // fallback below
   }
 
+  // global fallback
   const { data: fallback, error: fallbackErr } = await supabase
     .from("profiles")
     .select("role")
@@ -170,14 +170,9 @@ async function loadUserOverrides(userId, tenantId) {
     }
 
     const msg = String(res.error?.message || "").toLowerCase();
-    if (
-      msg.includes("does not exist") ||
-      msg.includes("column") ||
-      msg.includes("parse")
-    ) {
+    if (msg.includes("does not exist") || msg.includes("column") || msg.includes("parse")) {
       continue;
     }
-
     throw res.error;
   }
 
@@ -314,15 +309,36 @@ function PortalHome() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [busy, setBusy] = useState(true);
+  const tenantBase = useMemo(
+    () => getTenantBaseHost(location.search),
+    [location.search]
+  );
+
+  const cacheKey = useMemo(
+    () => `hi5tech_portal_cache:${tenantBase || "unknown"}`,
+    [tenantBase]
+  );
+
+  // ✅ Start from cache (prevents BFCache/back-button "Loading..." problem)
+  const cached = useMemo(() => {
+    try {
+      const raw = sessionStorage.getItem(cacheKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      // optional: expire after 15 minutes
+      if (parsed?.ts && Date.now() - parsed.ts > 15 * 60 * 1000) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }, [cacheKey]);
+
+  const [busy, setBusy] = useState(!cached); // if cached exists, don't block UI
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
-  const [tenant, setTenant] = useState(null);
-  const [modules, setModules] = useState([]);
+  const [tenant, setTenant] = useState(cached?.tenant || null);
+  const [modules, setModules] = useState(cached?.modules || []);
   const [query, setQuery] = useState("");
-
-  // ✅ IMPORTANT: derive tenant base from *router* search, not window search
-  const tenantBase = useMemo(() => getTenantBaseHost(location.search), [location.search]);
 
   const displayName = useMemo(() => {
     const name =
@@ -343,13 +359,31 @@ function PortalHome() {
   useEffect(() => {
     let cancelled = false;
 
-    const run = async ({ soft = false } = {}) => {
-      const seq = ++runSeq.current;
+    const writeCache = (t, mods) => {
+      try {
+        sessionStorage.setItem(
+          cacheKey,
+          JSON.stringify({ ts: Date.now(), tenant: t || null, modules: mods || [] })
+        );
+      } catch {
+        // ignore
+      }
+    };
 
-      // soft reruns should not flash the loading screen
+    const run = async ({ soft = false, forceRefreshSession = false } = {}) => {
+      const seq = ++runSeq.current;
       if (!soft) setBusy(true);
 
       try {
+        // ✅ BFCache fix: force refresh tokens/session if requested
+        if (forceRefreshSession) {
+          try {
+            await supabase.auth.refreshSession();
+          } catch {
+            // ignore, fallback to getSession
+          }
+        }
+
         const { data } = await supabase.auth.getSession();
         const sess = data?.session || null;
         const u = sess?.user || null;
@@ -362,6 +396,7 @@ function PortalHome() {
         if (!u) {
           setTenant(null);
           setModules([]);
+          writeCache(null, []);
           return;
         }
 
@@ -373,6 +408,7 @@ function PortalHome() {
 
         if (!t?.id) {
           setModules([]);
+          writeCache(t, []);
           return;
         }
 
@@ -385,7 +421,7 @@ function PortalHome() {
           const o = await loadUserOverrides(u.id, t.id);
           userAllow = o.allow || [];
           userDeny = o.deny || [];
-        } catch (e) {
+        } catch {
           // optional
         }
 
@@ -395,44 +431,44 @@ function PortalHome() {
 
         if (cancelled || seq !== runSeq.current) return;
 
-        setModules(Array.from(set));
+        const finalMods = Array.from(set);
+        setModules(finalMods);
+        writeCache(t, finalMods);
       } catch (e) {
         console.error("[Portal] error:", e);
         if (cancelled || seq !== runSeq.current) return;
         setTenant(null);
         setModules([]);
+        writeCache(null, []);
       } finally {
-        // ✅ CRITICAL: always clear busy for the *latest* run
         if (!cancelled && seq === runSeq.current) setBusy(false);
       }
     };
 
-    // initial load
-    run({ soft: false });
+    // initial run
+    run({ soft: !!cached });
 
-    // auth changes
-    const { data: sub } = supabase.auth.onAuthStateChange((_evt, sess) => {
-      setSession(sess || null);
-      setUser(sess?.user || null);
+    const { data: sub } = supabase.auth.onAuthStateChange(() => {
       run({ soft: false });
     });
 
-    // ✅ BFCache / back-forward restore
-    const onPageShow = () => run({ soft: true });
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") run({ soft: true });
+    // ✅ BFCache restore: this is the real fix for "back shows Loading until refresh"
+    const onPageShow = (e) => {
+      if (e?.persisted) {
+        run({ soft: true, forceRefreshSession: true });
+      } else {
+        run({ soft: true });
+      }
     };
 
     window.addEventListener("pageshow", onPageShow);
-    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       cancelled = true;
       sub?.subscription?.unsubscribe?.();
       window.removeEventListener("pageshow", onPageShow);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [tenantBase]); // ✅ do NOT depend on location.key (causes unnecessary reruns)
+  }, [tenantBase, cacheKey]); // cacheKey changes when tenantBase changes
 
   if (busy) {
     return (
@@ -444,7 +480,6 @@ function PortalHome() {
 
   if (!user || !session) return <Navigate to="/login" replace />;
 
-  // Auto-route ONLY if exactly one module remains after proper access evaluation
   if (modules.length === 1 && tenantBase) {
     window.location.assign(buildModuleUrl(tenantBase, modules[0]));
     return null;
@@ -536,11 +571,7 @@ function PortalHome() {
               </Box>
             </Stack>
 
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={1}
-              alignItems={{ xs: "stretch", sm: "center" }}
-            >
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="center">
               <TextField
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
