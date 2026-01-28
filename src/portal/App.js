@@ -332,10 +332,7 @@ function PortalHome() {
   const { mode, tokens: t, toggleMode } = useHi5Theme();
 
   const tenantBase = useMemo(() => getTenantBaseHost(location.search), [location.search]);
-  const cacheKey = useMemo(
-    () => `hi5tech_portal_cache:${tenantBase || "unknown"}`,
-    [tenantBase]
-  );
+  const cacheKey = useMemo(() => `hi5tech_portal_cache:${tenantBase || "unknown"}`, [tenantBase]);
 
   const cached = useMemo(() => {
     try {
@@ -510,6 +507,7 @@ function PortalHome() {
     );
   }
 
+  // ✅ PortalHome is the ONLY auth gatekeeper now
   if (!user || !session) return <Navigate to="/login" replace />;
 
   if (modules.length === 1 && tenantBase) {
@@ -714,54 +712,6 @@ function PortalHome() {
   );
 }
 
-// Login wrapper: fixes "login just refreshes" after logout by doing a hard cleanup when logout=1
-function PortalLogin() {
-  const location = useLocation();
-
-  const qpTenant = new URLSearchParams(location.search || "").get("tenant");
-  const afterLogin = qpTenant ? `/app?tenant=${encodeURIComponent(qpTenant)}` : "/app";
-
-  const logoutFlag = new URLSearchParams(location.search || "").get("logout");
-
-  const [checking, setChecking] = useState(true);
-  const [hasSession, setHasSession] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-
-    (async () => {
-      if (logoutFlag === "1") {
-        hardClearAuthStorage();
-      }
-
-      const { data } = await supabase.auth.getSession();
-      const sess = data?.session || null;
-
-      if (!mounted) return;
-      setHasSession(!!sess);
-      setChecking(false);
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, [logoutFlag]);
-
-  if (checking) {
-    return (
-      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-        <Typography sx={{ fontWeight: 950, opacity: 0.8 }}>Loading…</Typography>
-      </Box>
-    );
-  }
-
-  if (hasSession) {
-    return <Navigate to={afterLogin} replace />;
-  }
-
-  return <CentralLogin title="Sign in" afterLogin={afterLogin} />;
-}
-
 function PortalLogout() {
   useEffect(() => {
     (async () => {
@@ -790,11 +740,14 @@ function PortalLogout() {
 
 function PortalRoutes() {
   const qpTenant = new URLSearchParams(window.location.search).get("tenant");
+  const afterLogin = qpTenant ? `/app?tenant=${encodeURIComponent(qpTenant)}` : "/app";
   const withTenant = (path) => (qpTenant ? `${path}?tenant=${encodeURIComponent(qpTenant)}` : path);
 
   return (
     <Routes>
-      <Route path="/login" element={<PortalLogin />} />
+      {/* ✅ NO auto-redirect from login anymore (prevents /login <-> /app loop) */}
+      <Route path="/login" element={<CentralLogin title="Sign in" afterLogin={afterLogin} />} />
+
       <Route path="/app" element={<PortalHome />} />
       <Route path="/logout" element={<PortalLogout />} />
       <Route path="/" element={<Navigate to={withTenant("/app")} replace />} />
