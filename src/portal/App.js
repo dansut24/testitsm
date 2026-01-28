@@ -170,7 +170,11 @@ async function loadUserOverrides(userId, tenantId) {
     }
 
     const msg = String(res.error?.message || "").toLowerCase();
-    if (msg.includes("does not exist") || msg.includes("column") || msg.includes("parse")) {
+    if (
+      msg.includes("does not exist") ||
+      msg.includes("column") ||
+      msg.includes("parse")
+    ) {
       continue;
     }
     throw res.error;
@@ -271,7 +275,12 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
 
       <Divider sx={{ my: 1.8, borderColor: "rgba(255,255,255,0.10)" }} />
 
-      <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+      <Stack
+        direction="row"
+        spacing={1}
+        justifyContent="space-between"
+        alignItems="center"
+      >
         <Button
           variant="contained"
           onClick={onOpen}
@@ -319,13 +328,13 @@ function PortalHome() {
     [tenantBase]
   );
 
-  // ✅ Start from cache (prevents BFCache/back-button "Loading..." problem)
+  // Read cache for THIS tenantBase/cacheKey
   const cached = useMemo(() => {
     try {
       const raw = sessionStorage.getItem(cacheKey);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      // optional: expire after 15 minutes
+      // expire after 15 minutes
       if (parsed?.ts && Date.now() - parsed.ts > 15 * 60 * 1000) return null;
       return parsed;
     } catch {
@@ -333,11 +342,20 @@ function PortalHome() {
     }
   }, [cacheKey]);
 
-  const [busy, setBusy] = useState(!cached); // if cached exists, don't block UI
+  // IMPORTANT: store the “initial cache” in a ref so the effect does NOT depend on `cached`
+  const initialCacheRef = useRef({ key: null, value: null });
+  if (initialCacheRef.current.key !== cacheKey) {
+    initialCacheRef.current = { key: cacheKey, value: cached };
+  }
+  const initialCached = initialCacheRef.current.value;
+
+  // If we have cache, don’t block UI with a full-screen spinner.
+  // We’ll still refresh in the background.
+  const [busy, setBusy] = useState(!initialCached);
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
-  const [tenant, setTenant] = useState(cached?.tenant || null);
-  const [modules, setModules] = useState(cached?.modules || []);
+  const [tenant, setTenant] = useState(initialCached?.tenant || null);
+  const [modules, setModules] = useState(initialCached?.modules || []);
   const [query, setQuery] = useState("");
 
   const displayName = useMemo(() => {
@@ -370,22 +388,32 @@ function PortalHome() {
       }
     };
 
+    const getSessionRobust = async (forceRefreshSession) => {
+      // 1) normal getSession
+      let res = await supabase.auth.getSession();
+      let sess = res?.data?.session || null;
+
+      // 2) if asked OR missing session (common right after login / BFCache restore),
+      // try a refresh once
+      if (forceRefreshSession || !sess) {
+        try {
+          await supabase.auth.refreshSession();
+        } catch {
+          // ignore
+        }
+        res = await supabase.auth.getSession();
+        sess = res?.data?.session || null;
+      }
+
+      return sess;
+    };
+
     const run = async ({ soft = false, forceRefreshSession = false } = {}) => {
       const seq = ++runSeq.current;
       if (!soft) setBusy(true);
 
       try {
-        // ✅ BFCache fix: force refresh tokens/session if requested
-        if (forceRefreshSession) {
-          try {
-            await supabase.auth.refreshSession();
-          } catch {
-            // ignore, fallback to getSession
-          }
-        }
-
-        const { data } = await supabase.auth.getSession();
-        const sess = data?.session || null;
+        const sess = await getSessionRobust(forceRefreshSession);
         const u = sess?.user || null;
 
         if (cancelled || seq !== runSeq.current) return;
@@ -445,32 +473,41 @@ function PortalHome() {
       }
     };
 
-    // initial run
-    run({ soft: !!cached });
+    // ✅ Initial run: if we have cache, refresh in background (soft)
+    run({ soft: !!initialCached, forceRefreshSession: false });
 
     const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      run({ soft: false });
+      // auth changes (SIGNED_IN/SIGNED_OUT/TOKEN_REFRESHED) -> hard refresh
+      run({ soft: false, forceRefreshSession: true });
     });
 
-    // ✅ BFCache restore: this is the real fix for "back shows Loading until refresh"
+    // ✅ BFCache restore + “back button”: re-run on pageshow
     const onPageShow = (e) => {
-      if (e?.persisted) {
+      // If restored from bfcache, tokens/storage can be stale. Force refresh session.
+      const persisted = !!e?.persisted;
+      run({ soft: true, forceRefreshSession: persisted });
+    };
+
+    // ✅ Also run when tab becomes visible again (mobile Safari is notorious here)
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
         run({ soft: true, forceRefreshSession: true });
-      } else {
-        run({ soft: true });
       }
     };
 
     window.addEventListener("pageshow", onPageShow);
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
       cancelled = true;
       sub?.subscription?.unsubscribe?.();
       window.removeEventListener("pageshow", onPageShow);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [tenantBase, cacheKey]); // cacheKey changes when tenantBase changes
+  }, [tenantBase, cacheKey, initialCached]); // ✅ no `cached` reference anywhere inside the effect
 
-  if (busy) {
+  // Only show full-screen loading when we truly have nothing to render yet
+  if (busy && !tenant && modules.length === 0) {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
         <Typography sx={{ fontWeight: 950, opacity: 0.8 }}>Loading…</Typography>
