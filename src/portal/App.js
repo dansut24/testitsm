@@ -108,7 +108,7 @@ async function loadProfileRole(userId, tenantId) {
 
     if (error) throw error;
     if (data?.role) return data.role;
-  } catch (e) {
+  } catch {
     // fallback below
   }
 
@@ -202,6 +202,19 @@ async function loadUserOverrides(userId, tenantId) {
   }
 
   return { allow: Array.from(allow), deny: Array.from(deny) };
+}
+
+// -------------------------
+// Tiny utils
+// -------------------------
+
+function withTimeout(promise, ms, label = "Operation") {
+  let t;
+  const timeout = new Promise((_, reject) => {
+    t = setTimeout(() => reject(new Error(`${label} timed out (${ms}ms)`)), ms);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(t));
 }
 
 // -------------------------
@@ -329,15 +342,204 @@ function PortalHome() {
     [location.search]
   );
 
-  const [busy, setBusy] = useState(true);
+  const cacheKey = useMemo(
+    () => `hi5tech_portal_cache:${tenantBase || "unknown"}`,
+    [tenantBase]
+  );
+
+  const cached = useMemo(() => {
+    try {
+      const raw = sessionStorage.getItem(cacheKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      // expire after 30 mins
+      if (parsed?.ts && Date.now() - parsed.ts > 30 * 60 * 1000) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }, [cacheKey]);
+
+  // IMPORTANT: Never allow "Loading..." to hang forever.
+  // If we have cached content, render immediately and refresh in background.
+  const [busy, setBusy] = useState(!cached);
+  const [refreshing, setRefreshing] = useState(!!cached);
+
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
-  const [tenant, setTenant] = useState(null);
-  const [modules, setModules] = useState([]);
-  const [query, setQuery] = useState("");
 
-  // ✅ Prevent race conditions when navigating back / effect reruns
+  const [tenant, setTenant] = useState(cached?.tenant || null);
+  const [modules, setModules] = useState(cached?.modules || []);
+  const [query, setQuery] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+
   const runSeq = useRef(0);
+
+  const writeCache = useCallback(
+    (t, mods) => {
+      try {
+        sessionStorage.setItem(
+          cacheKey,
+          JSON.stringify({
+            ts: Date.now(),
+            tenant: t || null,
+            modules: Array.isArray(mods) ? mods : [],
+          })
+        );
+      } catch {
+        // ignore
+      }
+    },
+    [cacheKey]
+  );
+
+  const run = useCallback(
+    async ({ soft = false } = {}) => {
+      const seq = ++runSeq.current;
+
+      // soft=true means: do not blank the UI; just refresh in background
+      if (soft) {
+        setRefreshing(true);
+      } else {
+        setBusy(true);
+      }
+
+      setErrorMsg("");
+
+      try {
+        // ⛔ Do NOT refreshSession() here — it can hang on iOS/Safari + cookie storage.
+        // If getSession stalls, timeout and show retry.
+        const sessRes = await withTimeout(
+          supabase.auth.getSession(),
+          8000,
+          "Get session"
+        );
+
+        const sess = sessRes?.data?.session || null;
+        const u = sess?.user || null;
+
+        if (seq !== runSeq.current) return;
+
+        setSession(sess);
+        setUser(u);
+
+        if (!u) {
+          setTenant(null);
+          setModules([]);
+          writeCache(null, []);
+          return;
+        }
+
+        // Tenant lookup
+        const t = await withTimeout(
+          loadTenantByBaseHost(tenantBase),
+          8000,
+          "Load tenant"
+        );
+
+        if (seq !== runSeq.current) return;
+
+        setTenant(t);
+
+        if (!t?.id) {
+          setModules([]);
+          writeCache(t, []);
+          return;
+        }
+
+        // Access calc
+        const role = await withTimeout(
+          loadProfileRole(u.id, t.id),
+          8000,
+          "Load role"
+        );
+
+        const roleAllowed = await withTimeout(
+          loadRoleModules(role, t.id),
+          8000,
+          "Load role modules"
+        );
+
+        let userAllow = [];
+        let userDeny = [];
+        try {
+          const o = await withTimeout(
+            loadUserOverrides(u.id, t.id),
+            8000,
+            "Load user overrides"
+          );
+          userAllow = o.allow || [];
+          userDeny = o.deny || [];
+        } catch {
+          // overrides optional
+        }
+
+        const set = new Set(roleAllowed);
+        userAllow.forEach((m) => set.add(m));
+        userDeny.forEach((m) => set.delete(m));
+
+        if (seq !== runSeq.current) return;
+
+        const finalMods = Array.from(set);
+        setModules(finalMods);
+        writeCache(t, finalMods);
+      } catch (e) {
+        if (seq !== runSeq.current) return;
+
+        const msg = String(e?.message || e || "Unknown error");
+        console.error("[Portal] run error:", msg);
+
+        // If we have cached tenant/modules, keep showing them and just show a banner.
+        if (cached?.tenant || (cached?.modules && cached.modules.length)) {
+          setErrorMsg("We couldn’t refresh portal data. Showing cached view.");
+        } else {
+          setErrorMsg("We couldn’t load portal data. Please retry.");
+          setTenant(null);
+          setModules([]);
+        }
+      } finally {
+        if (seq === runSeq.current) {
+          setBusy(false);
+          setRefreshing(false);
+        }
+      }
+    },
+    [tenantBase, writeCache, cached]
+  );
+
+  // Run on mount + tenantBase change
+  useEffect(() => {
+    run({ soft: !!cached });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [run]);
+
+  // Auth state changes: re-run (soft if we already have something on screen)
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange(() => {
+      run({ soft: !!cached });
+    });
+
+    return () => {
+      sub?.subscription?.unsubscribe?.();
+    };
+  }, [run, cached]);
+
+  // Back-button / BFCache / tab restore:
+  // DO NOT call refreshSession; just re-run a soft load.
+  useEffect(() => {
+    const onPageShow = () => run({ soft: true });
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") run({ soft: true });
+    };
+
+    window.addEventListener("pageshow", onPageShow);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.removeEventListener("pageshow", onPageShow);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [run]);
 
   const displayName = useMemo(() => {
     const name =
@@ -353,123 +555,18 @@ function PortalHome() {
     return (s[0] || "U").toUpperCase();
   }, [displayName]);
 
-  // ✅ Stable run() to satisfy ESLint + CI builds
-  const run = useCallback(
-    async ({ soft = false, forceRefresh = false } = {}) => {
-      const seq = ++runSeq.current;
-
-      if (!soft) setBusy(true);
-
-      try {
-        if (forceRefresh) {
-          try {
-            await supabase.auth.refreshSession();
-          } catch {
-            // ignore
-          }
-        }
-
-        const { data } = await supabase.auth.getSession();
-        const sess = data?.session || null;
-        const u = sess?.user || null;
-
-        if (seq !== runSeq.current) return;
-
-        setSession(sess);
-        setUser(u);
-
-        if (!u) {
-          setTenant(null);
-          setModules([]);
-          return;
-        }
-
-        const t = await loadTenantByBaseHost(tenantBase);
-        if (seq !== runSeq.current) return;
-
-        setTenant(t);
-
-        if (!t?.id) {
-          setModules([]);
-          return;
-        }
-
-        const role = await loadProfileRole(u.id, t.id);
-        const roleAllowed = await loadRoleModules(role, t.id);
-
-        let userAllow = [];
-        let userDeny = [];
-        try {
-          const o = await loadUserOverrides(u.id, t.id);
-          userAllow = o.allow || [];
-          userDeny = o.deny || [];
-        } catch {
-          // optional
-        }
-
-        const set = new Set(roleAllowed);
-        userAllow.forEach((m) => set.add(m));
-        userDeny.forEach((m) => set.delete(m));
-
-        if (seq !== runSeq.current) return;
-
-        setModules(Array.from(set));
-      } catch (e) {
-        console.error("[Portal] run error:", e);
-        if (seq !== runSeq.current) return;
-        setSession(null);
-        setUser(null);
-        setTenant(null);
-        setModules([]);
-      } finally {
-        if (seq === runSeq.current) setBusy(false);
-      }
-    },
-    [tenantBase]
-  );
-
-  useEffect(() => {
-    let mounted = true;
-
-    // Initial load
-    run({ soft: false });
-
-    // Recalculate on auth changes
-    const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      if (!mounted) return;
-      run({ soft: false, forceRefresh: true });
-    });
-
-    // ✅ BFCache / back-button fix:
-    // When returning to this tab/page, re-run with a soft refresh.
-    const onPageShow = (e) => {
-      if (!mounted) return;
-      run({ soft: true, forceRefresh: !!e?.persisted });
-    };
-
-    // Also handle "tab becomes visible again"
-    const onVisibility = () => {
-      if (!mounted) return;
-      if (document.visibilityState === "visible") {
-        run({ soft: true, forceRefresh: true });
-      }
-    };
-
-    window.addEventListener("pageshow", onPageShow);
-    document.addEventListener("visibilitychange", onVisibility);
-
-    return () => {
-      mounted = false;
-      sub?.subscription?.unsubscribe?.();
-      window.removeEventListener("pageshow", onPageShow);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [run]);
-
-  if (busy) {
+  // Hard loading screen ONLY when we have nothing to render.
+  if (busy && !tenant && !modules.length) {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-        <Typography sx={{ fontWeight: 950, opacity: 0.8 }}>Loading…</Typography>
+        <Stack spacing={1} alignItems="center">
+          <Typography sx={{ fontWeight: 950, opacity: 0.85 }}>Loading…</Typography>
+          {!!errorMsg && (
+            <Typography sx={{ opacity: 0.7, fontSize: 13, maxWidth: 320, textAlign: "center" }}>
+              {errorMsg}
+            </Typography>
+          )}
+        </Stack>
       </Box>
     );
   }
@@ -559,9 +656,27 @@ function PortalHome() {
               </Avatar>
 
               <Box sx={{ minWidth: 0 }}>
-                <Typography sx={{ fontWeight: 950, fontSize: 20 }} noWrap>
-                  Choose a module
-                </Typography>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Typography sx={{ fontWeight: 950, fontSize: 20 }} noWrap>
+                    Choose a module
+                  </Typography>
+
+                  {refreshing ? (
+                    <Chip
+                      label="Refreshing…"
+                      size="small"
+                      sx={{
+                        height: 24,
+                        borderRadius: 999,
+                        fontWeight: 900,
+                        background: "rgba(255,255,255,0.06)",
+                        border: "1px solid rgba(255,255,255,0.10)",
+                        color: "rgba(255,255,255,0.85)",
+                      }}
+                    />
+                  ) : null}
+                </Stack>
+
                 <Typography sx={{ opacity: 0.72, fontSize: 13 }} noWrap>
                   {tenant?.name ? tenant.name : tenantBase} • {user.email}
                 </Typography>
@@ -598,6 +713,21 @@ function PortalHome() {
 
               <Button
                 variant="outlined"
+                onClick={() => run({ soft: false })}
+                sx={{
+                  borderRadius: 999,
+                  fontWeight: 950,
+                  textTransform: "none",
+                  borderColor: "rgba(255,255,255,0.18)",
+                  color: "rgba(255,255,255,0.88)",
+                  background: "rgba(255,255,255,0.04)",
+                }}
+              >
+                Refresh
+              </Button>
+
+              <Button
+                variant="outlined"
                 startIcon={<LogoutIcon />}
                 onClick={() => navigate("/logout")}
                 sx={{
@@ -614,6 +744,29 @@ function PortalHome() {
             </Stack>
           </Stack>
         </GlassPanel>
+
+        {!!errorMsg ? (
+          <GlassPanel sx={{ mt: 2.2, p: 2 }}>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1}
+              alignItems={{ xs: "stretch", sm: "center" }}
+              justifyContent="space-between"
+            >
+              <Typography sx={{ fontWeight: 900, opacity: 0.85 }}>
+                {errorMsg}
+              </Typography>
+
+              <Button
+                variant="contained"
+                onClick={() => run({ soft: false })}
+                sx={{ borderRadius: 999, fontWeight: 950, textTransform: "none" }}
+              >
+                Retry
+              </Button>
+            </Stack>
+          </GlassPanel>
+        ) : null}
 
         <Box
           sx={{
