@@ -1,12 +1,6 @@
 // src/portal/App.js
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import {
-  Routes,
-  Route,
-  Navigate,
-  useNavigate,
-  useLocation,
-} from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import {
   Box,
   Button,
@@ -209,7 +203,6 @@ async function loadUserOverrides(userId, tenantId) {
 // -------------------------
 
 function deleteCookie(name, domain) {
-  // domain should be like ".hi5tech.co.uk" or undefined
   const base = `${encodeURIComponent(name)}=; Max-Age=0; path=/; samesite=lax`;
   document.cookie = domain ? `${base}; domain=${domain}` : base;
 }
@@ -228,12 +221,8 @@ function clearPortalCache() {
 }
 
 function hardClearAuthStorage() {
-  // Clear portal cache
   clearPortalCache();
 
-  // Clear the custom Supabase storage cookie on:
-  // 1) current host (no domain attr)
-  // 2) parent domain (shared across subdomains)
   try {
     deleteCookie(STORAGE_KEY);
     const parent = getParentDomain();
@@ -242,7 +231,6 @@ function hardClearAuthStorage() {
     // ignore
   }
 
-  // Also clear any local/session entries under the same key (belt and braces)
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {
@@ -332,12 +320,7 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
           variant="contained"
           onClick={onOpen}
           endIcon={<KeyboardArrowRightIcon />}
-          sx={{
-            borderRadius: 999,
-            fontWeight: 950,
-            textTransform: "none",
-            px: 2,
-          }}
+          sx={{ borderRadius: 999, fontWeight: 950, textTransform: "none", px: 2 }}
         >
           Open
         </Button>
@@ -367,7 +350,6 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
 // -------------------------
 
 function PortalHome() {
-  const navigate = useNavigate();
   const location = useLocation();
 
   const tenantBase = useMemo(
@@ -776,7 +758,6 @@ function PortalHome() {
 // Login wrapper: fixes "login just refreshes" after logout by doing a hard cleanup when logout=1
 function PortalLogin() {
   const location = useLocation();
-  const tenantBase = useMemo(() => getTenantBaseHost(location.search), [location.search]);
 
   const qpTenant = new URLSearchParams(location.search || "").get("tenant");
   const afterLogin = qpTenant ? `/app?tenant=${encodeURIComponent(qpTenant)}` : "/app";
@@ -790,7 +771,6 @@ function PortalLogin() {
     let mounted = true;
 
     (async () => {
-      // If coming from logout, clear storage/cookie *again* (important on Safari/iOS)
       if (logoutFlag === "1") {
         hardClearAuthStorage();
       }
@@ -806,7 +786,7 @@ function PortalLogin() {
     return () => {
       mounted = false;
     };
-  }, [logoutFlag, tenantBase]);
+  }, [logoutFlag]);
 
   if (checking) {
     return (
@@ -829,13 +809,10 @@ function PortalLogout() {
       const qpTenant = new URLSearchParams(window.location.search).get("tenant");
 
       try {
-        // Normal signout
         await supabase.auth.signOut();
       } finally {
-        // HARD CLEAR: fixes "can’t login again" due to cookieStorage not deleting domain cookie
         hardClearAuthStorage();
 
-        // Force login page to do another cleanup pass
         const loginUrl = qpTenant
           ? `/login?tenant=${encodeURIComponent(qpTenant)}&logout=1`
           : "/login?logout=1";
