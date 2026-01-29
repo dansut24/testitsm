@@ -1,157 +1,592 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { useAuth } from "../../common/context/AuthContext";
-import { getCentralLogoutUrl } from "../../common/utils/portalUrl";
+// src/itsm/components/Layout.js
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  Box,
+  useTheme,
+  useMediaQuery,
+  SwipeableDrawer,
+  Typography,
+  IconButton,
+  Paper,
+} from "@mui/material";
+import { useLocation, useNavigate, Outlet } from "react-router-dom";
 
-const Layout = ({ children }) => {
+import Sidebar from "./Sidebar";
+import Navbar from "./Navbar";
+import NavbarTabs from "./NavbarTabs";
+
+import NotificationDrawer from "./NotificationDrawer";
+import ProfileDrawer from "./ProfileDrawer";
+
+import SearchIcon from "@mui/icons-material/Search";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import MenuIcon from "@mui/icons-material/Menu";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import ListAltIcon from "@mui/icons-material/ListAlt";
+import StorageIcon from "@mui/icons-material/Storage";
+import SettingsIcon from "@mui/icons-material/Settings";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+import ChangeCircleIcon from "@mui/icons-material/ChangeCircle";
+import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
+import PersonIcon from "@mui/icons-material/Person";
+import ArticleIcon from "@mui/icons-material/Article";
+
+import { supabase } from "../../common/utils/supabaseClient";
+import { getCentralLoginUrl } from "../../common/utils/portalUrl";
+
+const EXPANDED_WIDTH = 260;
+const COLLAPSED_WIDTH = 60;
+
+const BASE_APP_HEADER_HEIGHT = 38;
+const BASE_TABBAR_HEIGHT = 30;
+const BASE_BOTTOM_NAV_HEIGHT = 56;
+
+const routeLabels = {
+  "/dashboard": "Dashboard",
+  "/incidents": "Incidents",
+  "/service-requests": "Service Requests",
+  "/changes": "Changes",
+  "/tasks": "Tasks",
+  "/profile": "Profile",
+  "/knowledge-base": "Knowledge Base",
+  "/settings": "Settings",
+  "/assets": "Assets",
+  "/new-tab": "New Tab",
+};
+
+// -------------------------
+// Local “glass tokens” (theme-aware)
+// -------------------------
+function useGlassTokens(theme) {
+  const mode = theme.palette.mode;
+
+  return useMemo(() => {
+    const isDark = mode === "dark";
+
+    const border = isDark
+      ? "1px solid rgba(255,255,255,0.12)"
+      : "1px solid rgba(15,23,42,0.10)";
+
+    const divider = isDark ? "rgba(255,255,255,0.10)" : "rgba(15,23,42,0.08)";
+
+    const panelBg = isDark
+      ? "linear-gradient(135deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04))"
+      : "linear-gradient(135deg, rgba(255,255,255,0.82), rgba(255,255,255,0.55))";
+
+    const shadow = isDark
+      ? "0 18px 55px rgba(0,0,0,0.35)"
+      : "0 18px 55px rgba(2,6,23,0.12)";
+
+    const pageBg = isDark
+      ? `
+        radial-gradient(1200px 800px at 20% 10%, rgba(124, 92, 255, 0.28), transparent 60%),
+        radial-gradient(1000px 700px at 85% 25%, rgba(56, 189, 248, 0.18), transparent 55%),
+        radial-gradient(900px 700px at 60% 90%, rgba(34, 197, 94, 0.10), transparent 55%),
+        linear-gradient(180deg, #070A12 0%, #0A1022 45%, #0B1633 100%)
+      `
+      : `
+        radial-gradient(1200px 800px at 20% 10%, rgba(124, 92, 255, 0.12), transparent 60%),
+        radial-gradient(1000px 700px at 85% 25%, rgba(56, 189, 248, 0.10), transparent 55%),
+        radial-gradient(900px 700px at 60% 90%, rgba(34, 197, 94, 0.08), transparent 55%),
+        linear-gradient(180deg, #F8FAFF 0%, #EEF3FF 45%, #EAF2FF 100%)
+      `;
+
+    const contentText = isDark ? "rgba(255,255,255,0.92)" : "rgba(2,6,23,0.92)";
+    const iconFg = isDark ? "rgba(255,255,255,0.82)" : "rgba(2,6,23,0.76)";
+
+    return {
+      isDark,
+      page: { background: pageBg, color: contentText },
+      glass: { border, divider, bg: panelBg, shadow },
+      iconFg,
+    };
+  }, [mode]);
+}
+
+function GlassBar({ children, t, sx }) {
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        borderRadius: 0,
+        borderBottom: t.glass.border,
+        background: t.glass.bg,
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+        boxShadow: "none",
+        ...sx,
+      }}
+    >
+      {children}
+    </Paper>
+  );
+}
+
+const Layout = () => {
+  const theme = useTheme();
+  const t = useGlassTokens(theme);
+
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const APP_HEADER_HEIGHT = isMobile ? 52 : BASE_APP_HEADER_HEIGHT;
+  const TABBAR_HEIGHT = isMobile ? 42 : BASE_TABBAR_HEIGHT;
+  const NAVBAR_HEIGHT = APP_HEADER_HEIGHT + TABBAR_HEIGHT;
 
-  const isActive = (path) => location.pathname === path;
+  const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
+  const [tabIndex, setTabIndex] = useState(0);
 
-  const navItems = useMemo(
-    () => [
-      { label: "Dashboard", path: "/itsm" },
-      { label: "Tickets", path: "/itsm/tickets" },
-      { label: "Assets", path: "/itsm/assets" },
-      { label: "Users", path: "/itsm/users" },
-      { label: "Settings", path: "/itsm/settings" },
-    ],
-    []
+  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned");
+  const [sidebarPinned, setSidebarPinned] = useState(true);
+
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [drawerType, setDrawerType] = useState(null);
+
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
+  const [navbarElevated, setNavbarElevated] = useState(false);
+
+  const username = "User";
+  const userInitial = username[0]?.toUpperCase() || "U";
+
+  const [userStatus, setUserStatus] = useState(
+    () => localStorage.getItem("userStatus") || "Available"
   );
 
-  const handleLogout = () => {
-    // IMPORTANT:
-    // Always route through the portal's /logout route.
-    // This avoids corrupting querystrings and eliminates multi-redirect loops.
-    window.location.replace(`${getCentralLogoutUrl()}?t=${Date.now()}`);
+  useEffect(() => {
+    localStorage.setItem("userStatus", userStatus);
+  }, [userStatus]);
+
+  // vh fix (mobile)
+  useEffect(() => {
+    const setVh = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty("--vh", `${vh}px`);
+    };
+    setVh();
+    window.addEventListener("resize", setVh);
+    window.addEventListener("orientationchange", setVh);
+    return () => {
+      window.removeEventListener("resize", setVh);
+      window.removeEventListener("orientationchange", setVh);
+    };
+  }, []);
+
+  const handleStatusChange = (statusKey) => {
+    setUserStatus(statusKey);
   };
 
+  // ✅ CRITICAL: Logout must be hard redirect to central login (no SPA route)
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // ignore
+    }
+
+    try {
+      sessionStorage.clear();
+      localStorage.removeItem("tabs");
+      localStorage.removeItem("tabIndex");
+    } catch {
+      // ignore
+    }
+
+    const loginUrl = getCentralLoginUrl("/itsm");
+    window.location.replace(`${loginUrl}?logout=1&t=${Date.now()}`);
+  };
+
+  // Sync tabs with route
   useEffect(() => {
-    setIsSidebarOpen(false);
+    const currentPath = location.pathname;
+    const tabExists = tabs.some((tb) => tb.path === currentPath);
+    if (!tabExists) {
+      const label = routeLabels[currentPath] || "Unknown";
+      const newTabs = [...tabs, { label, path: currentPath }];
+      setTabs(newTabs);
+      setTabIndex(newTabs.length - 1);
+    } else {
+      setTabIndex(tabs.findIndex((tb) => tb.path === currentPath));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
+  useEffect(() => {
+    sessionStorage.setItem("tabs", JSON.stringify(tabs));
+    sessionStorage.setItem("tabIndex", tabIndex.toString());
+  }, [tabs, tabIndex]);
+
+  const handleTabChange = (_ev, newIndex, path) => {
+    setTabIndex(newIndex);
+    if (path) navigate(path);
+  };
+
+  const handleTabClose = (tabId) => {
+    const closingIndex = tabs.findIndex((tb) => tb.path === tabId);
+    if (closingIndex === 0) return; // keep Dashboard pinned
+    const newTabs = tabs.filter((tb) => tb.path !== tabId);
+    setTabs(newTabs);
+    if (location.pathname === tabId) {
+      const fallbackIndex = Math.max(0, closingIndex - 1);
+      navigate(newTabs[fallbackIndex]?.path || "/dashboard");
+    }
+  };
+
+  const handleTabReorder = (tabsReordered) => setTabs(tabsReordered);
+
+  // "+" new tab → open /new-tab
+  const handleNewTab = () => {
+    const path = "/new-tab";
+    const label = routeLabels[path] || "New Tab";
+
+    const existingIndex = tabs.findIndex((tb) => tb.path === path);
+    if (existingIndex !== -1) {
+      setTabIndex(existingIndex);
+      navigate(path);
+      return;
+    }
+
+    const newTabs = [...tabs, { label, path }];
+    setTabs(newTabs);
+    setTabIndex(newTabs.length - 1);
+    navigate(path);
+  };
+
+  const activateOrAddTab = (label) => {
+    const path = `/${label.toLowerCase().replace(/\s+/g, "-")}`;
+    const existing = tabs.find((tb) => tb.path === path);
+    if (existing) {
+      const idx = tabs.findIndex((tb) => tb.path === path);
+      setTabIndex(idx);
+      navigate(existing.path);
+    } else {
+      const newTabs = [...tabs, { label, path }];
+      setTabs(newTabs);
+      setTabIndex(newTabs.length - 1);
+      navigate(path);
+    }
+  };
+
+  const sidebarItems = [
+    { label: "Dashboard", icon: <DashboardIcon /> },
+    { label: "Incidents", icon: <ListAltIcon /> },
+    { label: "Service Requests", icon: <AssignmentIcon /> },
+    { label: "Changes", icon: <ChangeCircleIcon /> },
+    { label: "Tasks", icon: <AssignmentTurnedInIcon /> },
+    { label: "Profile", icon: <PersonIcon /> },
+    { label: "Knowledge Base", icon: <ArticleIcon /> },
+    { label: "Settings", icon: <SettingsIcon /> },
+    { label: "Assets", icon: <StorageIcon /> },
+  ];
+
+  const desktopHasSidebar = !isMobile && sidebarMode !== "hidden";
+  const sidebarWidth =
+    desktopHasSidebar && (sidebarMode === "pinned" || sidebarPinned)
+      ? EXPANDED_WIDTH
+      : desktopHasSidebar
+      ? COLLAPSED_WIDTH
+      : 0;
+
+  const handleMainScroll = (e) => {
+    const scrolled = e.currentTarget.scrollTop > 4;
+    setNavbarElevated(scrolled);
+  };
+
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0b1220] text-slate-900 dark:text-slate-100">
-      {/* Top Nav */}
-      <header className="sticky top-0 z-50 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-[#0b1220]/90 backdrop-blur">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              className="lg:hidden inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm"
-              onClick={() => setIsSidebarOpen((v) => !v)}
-              aria-label="Toggle menu"
+    <Box
+      sx={{
+        position: "fixed",
+        inset: 0,
+        width: "100%",
+        height: "calc(var(--vh, 1vh) * 100)",
+        display: "flex",
+        overflow: "hidden",
+        color: t.page.color,
+        background: t.page.background,
+      }}
+    >
+      {/* Sidebar (desktop) */}
+      {desktopHasSidebar && (
+        <Paper
+          elevation={0}
+          sx={{
+            width: sidebarWidth,
+            flexShrink: 0,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            borderRight: t.glass.border,
+            background: t.glass.bg,
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
+            boxShadow: "none",
+          }}
+        >
+          <Sidebar
+            pinned={sidebarMode === "pinned" ? true : sidebarPinned}
+            onToggle={() => {
+              if (sidebarMode === "collapsible") setSidebarPinned((p) => !p);
+            }}
+            items={sidebarItems}
+            onItemClick={activateOrAddTab}
+            widthExpanded={EXPANDED_WIDTH}
+            widthCollapsed={COLLAPSED_WIDTH}
+          />
+        </Paper>
+      )}
+
+      {/* Right column */}
+      <Box
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          maxWidth: "100%",
+          display: "grid",
+          gridTemplateRows: isMobile
+            ? `${NAVBAR_HEIGHT}px 1fr ${BASE_BOTTOM_NAV_HEIGHT}px`
+            : `${NAVBAR_HEIGHT}px 1fr`,
+          height: "100%",
+          overflow: "hidden",
+        }}
+      >
+        {/* NAVBAR */}
+        <GlassBar
+          t={t}
+          sx={{
+            height: NAVBAR_HEIGHT,
+            minWidth: 0,
+            maxWidth: "100%",
+            position: "sticky",
+            top: 0,
+            zIndex: 1400,
+            transition: "box-shadow 0.25s ease",
+            boxShadow: navbarElevated ? t.glass.shadow : "none",
+          }}
+        >
+          <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+            <Navbar
+              isMobile={isMobile}
+              sidebarMode={sidebarMode}
+              username={username}
+              userInitial={userInitial}
+              userStatus={userStatus}
+              statusMenuAnchor={statusMenuAnchor}
+              setStatusMenuAnchor={setStatusMenuAnchor}
+              setDrawerType={setDrawerType}
+              setMobileSidebarOpen={setMobileSidebarOpen}
+              onStatusChange={handleStatusChange}
+            />
+
+            <Box
+              sx={{
+                height: TABBAR_HEIGHT,
+                minHeight: TABBAR_HEIGHT,
+                minWidth: 0,
+                overflow: "hidden",
+                borderTop: `1px solid ${t.glass.divider}`,
+              }}
             >
-              ☰
-            </button>
-
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-400" />
-              <div className="leading-tight">
-                <div className="font-semibold">ITSM</div>
-                <div className="text-xs opacity-70">Hi5Tech</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:block text-sm opacity-80">
-              {user?.email}
-            </div>
-            <button
-              onClick={handleLogout}
-              className="inline-flex items-center justify-center rounded-md bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-3 py-2 text-sm font-medium"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex">
-          {/* Sidebar (desktop) */}
-          <aside className="hidden lg:block w-64 shrink-0 py-6 pr-6">
-            <nav className="space-y-1">
-              {navItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={[
-                    "block rounded-lg px-3 py-2 text-sm font-medium transition",
-                    isActive(item.path)
-                      ? "bg-slate-100 dark:bg-slate-800"
-                      : "hover:bg-slate-50 dark:hover:bg-slate-900/40",
-                  ].join(" ")}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-          </aside>
-
-          {/* Sidebar (mobile drawer) */}
-          {isSidebarOpen && (
-            <div className="lg:hidden fixed inset-0 z-50">
-              <div
-                className="absolute inset-0 bg-black/40"
-                onClick={() => setIsSidebarOpen(false)}
+              <NavbarTabs
+                tabs={tabs}
+                tabIndex={tabIndex}
+                handleTabChange={handleTabChange}
+                handleTabClose={handleTabClose}
+                handleTabReorder={handleTabReorder}
+                handleNewTab={handleNewTab}
+                isMobile={isMobile}
               />
-              <div className="absolute left-0 top-0 bottom-0 w-72 bg-white dark:bg-[#0b1220] border-r border-slate-200 dark:border-slate-800 p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="font-semibold">Menu</div>
-                  <button
-                    className="rounded-md border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm"
-                    onClick={() => setIsSidebarOpen(false)}
-                  >
-                    Close
-                  </button>
-                </div>
-                <nav className="space-y-1">
-                  {navItems.map((item) => (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className={[
-                        "block rounded-lg px-3 py-2 text-sm font-medium transition",
-                        isActive(item.path)
-                          ? "bg-slate-100 dark:bg-slate-800"
-                          : "hover:bg-slate-50 dark:hover:bg-slate-900/40",
-                      ].join(" ")}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                </nav>
+            </Box>
+          </Box>
+        </GlassBar>
 
-                <div className="mt-6">
-                  <button
-                    onClick={handleLogout}
-                    className="w-full inline-flex items-center justify-center rounded-md bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-3 py-2 text-sm font-medium"
-                  >
-                    Logout
-                  </button>
-                </div>
-              </div>
-            </div>
+        {/* MAIN CONTENT */}
+        <Box
+          component="main"
+          onScroll={handleMainScroll}
+          sx={{
+            minHeight: 0,
+            height: "100%",
+            width: "100%",
+            overflowY: "auto",
+            overflowX: "hidden",
+            WebkitOverflowScrolling: "touch",
+            overscrollBehavior: "contain",
+            touchAction: "pan-y",
+            px: 2,
+            pt: 1,
+            pb: isMobile ? 1 : 2,
+            boxSizing: "border-box",
+          }}
+        >
+          <Outlet />
+        </Box>
+
+        {/* Bottom nav (mobile) */}
+        {isMobile && (
+          <Paper
+            elevation={0}
+            sx={{
+              borderTop: t.glass.border,
+              background: t.glass.bg,
+              backdropFilter: "blur(14px)",
+              WebkitBackdropFilter: "blur(14px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-around",
+              px: 0.5,
+            }}
+          >
+            <IconButton
+              onClick={() => setMobileSidebarOpen(true)}
+              sx={{ color: t.iconFg }}
+              aria-label="Menu"
+            >
+              <MenuIcon />
+            </IconButton>
+
+            <IconButton
+              onClick={() => setDrawerType("search")}
+              sx={{ color: t.iconFg }}
+              aria-label="Search"
+            >
+              <SearchIcon />
+            </IconButton>
+
+            <IconButton
+              onClick={() => setDrawerType("notifications")}
+              sx={{ color: t.iconFg }}
+              aria-label="Notifications"
+            >
+              <NotificationsIcon />
+            </IconButton>
+
+            <IconButton
+              onClick={() => setDrawerType("profile")}
+              sx={{ color: t.iconFg }}
+              aria-label="Profile"
+            >
+              <AccountCircleIcon />
+            </IconButton>
+          </Paper>
+        )}
+      </Box>
+
+      {/* Sidebar Drawer (mobile & hidden desktop) */}
+      {(isMobile || sidebarMode === "hidden") && (
+        <SwipeableDrawer
+          anchor="left"
+          open={mobileSidebarOpen}
+          onClose={() => setMobileSidebarOpen(false)}
+          onOpen={() => setMobileSidebarOpen(true)}
+          ModalProps={{ keepMounted: true }}
+          PaperProps={{
+            sx: {
+              width: EXPANDED_WIDTH,
+              borderRight: t.glass.border,
+              background: t.glass.bg,
+              backdropFilter: "blur(14px)",
+              WebkitBackdropFilter: "blur(14px)",
+            },
+          }}
+        >
+          <Sidebar
+            pinned
+            onToggle={() => {}}
+            items={sidebarItems}
+            onItemClick={(label) => {
+              activateOrAddTab(label);
+              setMobileSidebarOpen(false);
+            }}
+            widthExpanded={EXPANDED_WIDTH}
+            widthCollapsed={COLLAPSED_WIDTH}
+          />
+        </SwipeableDrawer>
+      )}
+
+      {/* Desktop right-hand drawer */}
+      {!isMobile && (
+        <SwipeableDrawer
+          anchor="right"
+          open={Boolean(drawerType)}
+          onClose={() => setDrawerType(null)}
+          onOpen={() => {}}
+          disableSwipeToOpen
+          disableDiscovery
+          swipeAreaWidth={0}
+          PaperProps={{
+            sx: {
+              width: 360,
+              maxWidth: "100%",
+              background: t.glass.bg,
+              backdropFilter: "blur(14px)",
+              WebkitBackdropFilter: "blur(14px)",
+              borderLeft: t.glass.border,
+            },
+          }}
+        >
+          {drawerType === "notifications" && <NotificationDrawer />}
+          {drawerType === "profile" && (
+            <ProfileDrawer
+              status={userStatus}
+              onStatusChange={handleStatusChange}
+              onLogout={handleLogout}
+              showStatus
+            />
           )}
+          {drawerType === "search" && (
+            <Box p={2}>
+              <Typography variant="h6" gutterBottom>
+                Search
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Advanced search coming soon.
+              </Typography>
+            </Box>
+          )}
+        </SwipeableDrawer>
+      )}
 
-          {/* Main */}
-          <main className="flex-1 py-6">
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a] p-4 sm:p-6 shadow-sm">
-              {children}
-            </div>
-          </main>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <footer className="py-8 text-center text-xs opacity-70">
-        © {new Date().getFullYear()} Hi5Tech ITSM
-      </footer>
-    </div>
+      {/* Bottom action drawer (mobile) */}
+      {isMobile && (
+        <SwipeableDrawer
+          anchor="bottom"
+          open={Boolean(drawerType)}
+          onClose={() => setDrawerType(null)}
+          onOpen={() => {}}
+          ModalProps={{
+            keepMounted: true,
+            BackdropProps: {
+              sx: { backgroundColor: "transparent", pointerEvents: "none" },
+            },
+          }}
+          PaperProps={{
+            sx: {
+              height: `calc(50dvh - ${BASE_BOTTOM_NAV_HEIGHT}px)`,
+              bottom: `${BASE_BOTTOM_NAV_HEIGHT}px`,
+              p: 2,
+              borderTopLeftRadius: 14,
+              borderTopRightRadius: 14,
+              pointerEvents: "auto",
+              background: t.glass.bg,
+              backdropFilter: "blur(14px)",
+              WebkitBackdropFilter: "blur(14px)",
+              borderTop: t.glass.border,
+            },
+          }}
+        >
+          {drawerType === "search" && (
+            <Typography variant="h6" gutterBottom>
+              Search
+            </Typography>
+          )}
+          {drawerType === "notifications" && <NotificationDrawer />}
+          {drawerType === "profile" && (
+            <ProfileDrawer onLogout={handleLogout} showStatus={false} />
+          )}
+        </SwipeableDrawer>
+      )}
+    </Box>
   );
 };
 
