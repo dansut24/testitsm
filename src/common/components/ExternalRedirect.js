@@ -1,14 +1,11 @@
 // src/common/components/ExternalRedirect.js
-import React, { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 export default function ExternalRedirect({ to }) {
-  const did = useRef(false);
-
   useEffect(() => {
-    if (did.current) return;
-    did.current = true;
+    if (!to) return;
 
-    // replace avoids back-button loops
+    // Hard redirect (prevents router loops / history spam)
     window.location.replace(to);
   }, [to]);
 
