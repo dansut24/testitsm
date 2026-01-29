@@ -26,26 +26,29 @@ function applyOverride(set, row) {
   else if (effect === "deny") set.delete(module);
 }
 
-export async function getAccessibleModules({ tenantId, userId }) {
+export async function getAccessibleModules({ tenantId, userId, role }) {
   if (!tenantId || !userId) return [];
 
-  // 1) profile role
-  const { data: profile, error: profErr } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .maybeSingle();
+  // 1) Determine role (prefer provided role to avoid extra DB call)
+  let resolvedRole = role;
 
-  if (profErr) throw profErr;
+  if (!resolvedRole) {
+    const { data: profile, error: profErr } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle();
 
-  const role = profile?.role || "user";
+    if (profErr) throw profErr;
+    resolvedRole = profile?.role || "user";
+  }
 
   // 2) role based modules
   const { data: roleRows, error: roleErr } = await supabase
     .from("role_module_access")
     .select("module, allowed")
     .eq("tenant_id", tenantId)
-    .eq("role", role)
+    .eq("role", resolvedRole)
     .eq("allowed", true);
 
   if (roleErr) throw roleErr;
@@ -64,7 +67,6 @@ export async function getAccessibleModules({ tenantId, userId }) {
     for (const row of userRows) applyOverride(allowed, row);
   }
 
-  // Clean
   const out = Array.from(allowed).filter(Boolean);
 
   // Optional: order
