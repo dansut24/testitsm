@@ -1,31 +1,25 @@
-// src/control/pages/Settings.js
 import React from "react";
-import { Box, Typography, Button, Stack } from "@mui/material";
-import { supabase } from "../../common/utils/supabaseClient";
 import { useAuth } from "../../common/context/AuthContext";
 
-const Settings = () => {
-  const { logout } = useAuth();
+export default function Settings() {
+  const { user, logout } = useAuth();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    logout();
-    window.location.href = "/login"; // Updated to point to /login for consistency
+    // IMPORTANT: logout() already handles supabase signOut + navigation
+    // Avoid double sign-out / double redirects.
+    await logout();
   };
 
   return (
-    <Box sx={{ p: 4 }}>
-      <Typography variant="h5" gutterBottom>
-        Control Panel Settings
-      </Typography>
+    <div style={{ padding: 24 }}>
+      <h1 style={{ marginBottom: 8 }}>Settings</h1>
+      <p style={{ marginTop: 0, opacity: 0.8 }}>
+        Signed in as: <strong>{user?.email || "Unknown"}</strong>
+      </p>
 
-      <Stack spacing={2} mt={2}>
-        <Button variant="contained" color="error" onClick={handleLogout}>
-          Logout
-        </Button>
-      </Stack>
-    </Box>
+      <button onClick={handleLogout} style={{ marginTop: 16 }}>
+        Logout
+      </button>
+    </div>
   );
-};
-
-export default Settings;
+}
