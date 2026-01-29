@@ -539,7 +539,17 @@ function PortalHome() {
     );
   }
 
-  if (!user || !session) return <Navigate to="/login" replace />;
+  // ✅ IMPORTANT: don't redirect until we've actually checked session.
+// During initial render (and during refreshing), session/user are null briefly.
+if (!session && (busy || refreshing)) {
+  return (
+    <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+      <Typography sx={{ fontWeight: 950, opacity: 0.85 }}>Loading…</Typography>
+    </Box>
+  );
+}
+
+if (!user || !session) return <Navigate to="/login" replace />;
 
   if (modules.length === 1 && tenantBase) {
     window.location.assign(buildModuleUrl(tenantBase, modules[0]));
