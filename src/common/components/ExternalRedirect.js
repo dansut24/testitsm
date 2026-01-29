@@ -5,7 +5,7 @@ export default function ExternalRedirect({ to }) {
   useEffect(() => {
     if (!to) return;
 
-    // Hard redirect (prevents router loops / history spam)
+    // Hard redirect avoids router loops + history spam
     window.location.replace(to);
   }, [to]);
 
