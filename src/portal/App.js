@@ -37,13 +37,14 @@ const STORAGE_KEY = "hi5tech_sb_session";
 // Host + URL helpers
 // -------------------------
 
-function getTenantBaseHost(search) {
+function getTenantSlugFromSearchOrHost(search) {
   const host = window.location.hostname || "";
   const firstLabel = host.split(".")[0] || "";
 
   const qpTenant = new URLSearchParams(search || "").get("tenant");
   if (qpTenant) return String(qpTenant).toLowerCase().trim();
 
+  // demoitsm-itsm -> demoitsm
   return (firstLabel.split("-")[0] || "").toLowerCase().trim();
 }
 
@@ -52,28 +53,41 @@ function getParentDomain() {
   return host.split(".").slice(1).join(".");
 }
 
-function buildModuleUrl(tenantBase, moduleKey) {
-  const parent = getParentDomain();
+function getProtocol() {
+  return window.location.protocol || "https:";
+}
 
+// tenant base host like: demoitsm.hi5tech.co.uk
+function buildTenantBaseHostFromSlug(tenantSlug) {
+  const parent = getParentDomain();
+  return `${tenantSlug}.${parent}`;
+}
+
+// module host like: demoitsm-itsm.hi5tech.co.uk
+function buildModuleUrl(tenantSlug, moduleKey) {
+  const parent = getParentDomain();
+  const proto = getProtocol();
+
+  // internal keys: itsm | control | self_service
   const sub =
     moduleKey === "itsm"
-      ? `${tenantBase}-itsm`
+      ? `${tenantSlug}-itsm`
       : moduleKey === "control"
-      ? `${tenantBase}-control`
-      : `${tenantBase}-self`;
+      ? `${tenantSlug}-control`
+      : `${tenantSlug}-self`;
 
-  return `https://${sub}.${parent}`;
+  return `${proto}//${sub}.${parent}`;
 }
 
 // -------------------------
 // Data loaders
 // -------------------------
 
-async function loadTenantByBaseHost(tenantBase) {
+async function loadTenantByBaseHost(tenantSlug) {
   const { data, error } = await supabase
     .from("tenants")
     .select("id, subdomain, name")
-    .eq("subdomain", tenantBase)
+    .eq("subdomain", tenantSlug)
     .maybeSingle();
 
   if (error) throw error;
@@ -91,7 +105,9 @@ function normalizeModuleValue(v) {
 
   if (m === "itsm" || m.includes("itsm")) return "itsm";
   if (m === "control" || m.includes("control")) return "control";
-  if (m === "self" || m === "self_service" || m.includes("self")) return "self";
+
+  // ✅ Normalize to self_service everywhere (matches common)
+  if (m === "self" || m === "self_service" || m.includes("self")) return "self_service";
 
   return null;
 }
@@ -169,11 +185,7 @@ async function loadUserOverrides(userId, tenantId) {
     }
 
     const msg = String(res.error?.message || "").toLowerCase();
-    if (
-      msg.includes("does not exist") ||
-      msg.includes("column") ||
-      msg.includes("parse")
-    ) {
+    if (msg.includes("does not exist") || msg.includes("column") || msg.includes("parse")) {
       continue;
     }
     throw res.error;
@@ -299,12 +311,7 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href, t }) {
 
       <Divider sx={{ my: 1.8, borderColor: t.glass.divider }} />
 
-      <Stack
-        direction="row"
-        spacing={1}
-        justifyContent="space-between"
-        alignItems="center"
-      >
+      <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
         <Button
           variant="contained"
           onClick={onOpen}
@@ -347,14 +354,14 @@ function PortalHome() {
   const location = useLocation();
   const { mode, tokens: t, toggleMode } = useHi5Theme();
 
-  const tenantBase = useMemo(
-    () => getTenantBaseHost(location.search),
+  const tenantSlug = useMemo(
+    () => getTenantSlugFromSearchOrHost(location.search),
     [location.search]
   );
 
   const cacheKey = useMemo(
-    () => `hi5tech_portal_cache:${tenantBase || "unknown"}`,
-    [tenantBase]
+    () => `hi5tech_portal_cache:${tenantSlug || "unknown"}`,
+    [tenantSlug]
   );
 
   const cached = useMemo(() => {
@@ -425,7 +432,7 @@ function PortalHome() {
           return;
         }
 
-        const tObj = await loadTenantByBaseHost(tenantBase);
+        const tObj = await loadTenantByBaseHost(tenantSlug);
         if (seq !== runSeq.current) return;
 
         setTenant(tObj);
@@ -476,7 +483,7 @@ function PortalHome() {
         }
       }
     },
-    [tenantBase, writeCache, cached]
+    [tenantSlug, writeCache, cached]
   );
 
   useEffect(() => {
@@ -519,9 +526,7 @@ function PortalHome() {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
         <Stack spacing={1} alignItems="center">
-          <Typography sx={{ fontWeight: 950, opacity: 0.85 }}>
-            Loading…
-          </Typography>
+          <Typography sx={{ fontWeight: 950, opacity: 0.85 }}>Loading…</Typography>
           {!!errorMsg && (
             <Typography
               sx={{
@@ -540,19 +545,19 @@ function PortalHome() {
   }
 
   // ✅ IMPORTANT: don't redirect until we've actually checked session.
-// During initial render (and during refreshing), session/user are null briefly.
-if (!session && (busy || refreshing)) {
-  return (
-    <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-      <Typography sx={{ fontWeight: 950, opacity: 0.85 }}>Loading…</Typography>
-    </Box>
-  );
-}
+  if (!session && (busy || refreshing)) {
+    return (
+      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+        <Typography sx={{ fontWeight: 950, opacity: 0.85 }}>Loading…</Typography>
+      </Box>
+    );
+  }
 
-if (!user || !session) return <Navigate to="/login" replace />;
+  if (!user || !session) return <Navigate to="/login" replace />;
 
-  if (modules.length === 1 && tenantBase) {
-    window.location.assign(buildModuleUrl(tenantBase, modules[0]));
+  // Auto-forward if exactly one module
+  if (modules.length === 1 && tenantSlug) {
+    window.location.assign(buildModuleUrl(tenantSlug, modules[0]));
     return null;
   }
 
@@ -563,7 +568,7 @@ if (!user || !session) return <Navigate to="/login" replace />;
       subtitle: "Incidents, Requests, Changes, KB",
       icon: <ListAltIcon sx={{ opacity: 0.92 }} />,
       chips: ["Tickets", "Knowledge", "Approvals"],
-      href: buildModuleUrl(tenantBase, "itsm"),
+      href: buildModuleUrl(tenantSlug, "itsm"),
     },
     {
       key: "control",
@@ -571,15 +576,15 @@ if (!user || !session) return <Navigate to="/login" replace />;
       subtitle: "Devices, remote actions, reporting",
       icon: <DashboardIcon sx={{ opacity: 0.92 }} />,
       chips: ["Devices", "Remote", "Patch"],
-      href: buildModuleUrl(tenantBase, "control"),
+      href: buildModuleUrl(tenantSlug, "control"),
     },
     {
-      key: "self",
+      key: "self_service",
       title: "Self Service",
       subtitle: "End-user portal & service catalog",
       icon: <SupportAgentIcon sx={{ opacity: 0.92 }} />,
       chips: ["Catalog", "Raise ticket", "Status"],
-      href: buildModuleUrl(tenantBase, "self"),
+      href: buildModuleUrl(tenantSlug, "self_service"),
     },
   ];
 
@@ -598,13 +603,7 @@ if (!user || !session) return <Navigate to="/login" replace />;
     });
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        color: t.page.color,
-        background: t.page.background,
-      }}
-    >
+    <Box sx={{ minHeight: "100vh", color: t.page.color, background: t.page.background }}>
       <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 } }}>
         <GlassPanel t={t} sx={{ p: 2.2 }}>
           <Stack
@@ -650,16 +649,12 @@ if (!user || !session) return <Navigate to="/login" replace />;
                 </Stack>
 
                 <Typography sx={{ opacity: 0.72, fontSize: 13 }} noWrap>
-                  {tenant?.name ? tenant.name : tenantBase} • {user.email}
+                  {tenant?.name ? tenant.name : tenantSlug} • {user.email}
                 </Typography>
               </Box>
             </Stack>
 
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={1}
-              alignItems="center"
-            >
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="center">
               <ThemeToggleIconButton mode={mode} onToggle={toggleMode} t={t} />
 
               <TextField
@@ -687,7 +682,7 @@ if (!user || !session) return <Navigate to="/login" replace />;
 
               <Button
                 variant="outlined"
-                onClick={() => window.location.assign("/logout")}
+                onClick={() => window.location.assign(`/logout${location.search || ""}`)}
                 startIcon={<LogoutIcon />}
                 sx={{
                   borderRadius: 999,
@@ -712,18 +707,12 @@ if (!user || !session) return <Navigate to="/login" replace />;
               alignItems={{ xs: "stretch", sm: "center" }}
               justifyContent="space-between"
             >
-              <Typography sx={{ fontWeight: 900, opacity: 0.85 }}>
-                {errorMsg}
-              </Typography>
+              <Typography sx={{ fontWeight: 900, opacity: 0.85 }}>{errorMsg}</Typography>
 
               <Button
                 variant="contained"
                 onClick={() => window.location.reload()}
-                sx={{
-                  borderRadius: 999,
-                  fontWeight: 950,
-                  textTransform: "none",
-                }}
+                sx={{ borderRadius: 999, fontWeight: 950, textTransform: "none" }}
               >
                 Reload
               </Button>
@@ -759,9 +748,7 @@ if (!user || !session) return <Navigate to="/login" replace />;
 
         {!visible.length ? (
           <GlassPanel t={t} sx={{ mt: 2.2, p: 3 }}>
-            <Typography sx={{ fontWeight: 950, fontSize: 18 }}>
-              No modules available
-            </Typography>
+            <Typography sx={{ fontWeight: 950, fontSize: 18 }}>No modules available</Typography>
             <Typography sx={{ opacity: 0.72, mt: 0.6 }}>
               Your account doesn’t have access to any modules for this tenant yet.
               Contact an administrator to grant ITSM / Control / Self Service.
@@ -851,8 +838,7 @@ function PortalLogout() {
 
 function PortalAppInner() {
   const qpTenant = new URLSearchParams(window.location.search).get("tenant");
-  const withTenant = (path) =>
-    qpTenant ? `${path}?tenant=${encodeURIComponent(qpTenant)}` : path;
+  const withTenant = (path) => (qpTenant ? `${path}?tenant=${encodeURIComponent(qpTenant)}` : path);
 
   return (
     <Routes>
