@@ -29,12 +29,13 @@ export default function TenantLanding() {
 
   const tenantBaseHost = useMemo(() => getTenantBaseHost(), []);
 
+  // Load module access once we have user + tenantId
   useEffect(() => {
     let mounted = true;
 
     async function load() {
       if (!user?.id || !tenantId) {
-        setLoading(false);
+        if (mounted) setLoading(false);
         return;
       }
 
@@ -48,11 +49,11 @@ export default function TenantLanding() {
         });
 
         if (!mounted) return;
-
         setModules(mods || []);
       } catch (e) {
         if (!mounted) return;
         setError(e?.message || "Failed to load module access");
+        setModules([]);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -64,7 +65,19 @@ export default function TenantLanding() {
     };
   }, [user?.id, tenantId]);
 
-  // Not signed in
+  // Auto-forward if exactly one module
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user?.id) return;
+    if (!tenantId) return;
+    if (loading) return;
+
+    if (modules.length === 1) {
+      const url = buildModuleUrlFromTenantHost(tenantBaseHost, modules[0]);
+      window.location.assign(url);
+    }
+  }, [authLoading, user?.id, tenantId, loading, modules, tenantBaseHost]);
+
   if (authLoading) {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
@@ -77,14 +90,6 @@ export default function TenantLanding() {
     return <CentralLogin title="Sign in to Hi5Tech" />;
   }
 
-  // Auto-forward if exactly one
-  useEffect(() => {
-    if (!loading && modules.length === 1) {
-      const url = buildModuleUrlFromTenantHost(tenantBaseHost, modules[0]);
-      window.location.assign(url);
-    }
-  }, [loading, modules, tenantBaseHost]);
-
   return (
     <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", px: 2 }}>
       <Container maxWidth="md">
@@ -93,9 +98,7 @@ export default function TenantLanding() {
             <Typography variant="h5" fontWeight={950}>
               Choose where to go
             </Typography>
-            <Typography sx={{ opacity: 0.7 }}>
-              Signed in as {user.email}
-            </Typography>
+            <Typography sx={{ opacity: 0.7 }}>Signed in as {user.email}</Typography>
           </Stack>
 
           <Box sx={{ mt: 3 }}>
@@ -103,22 +106,20 @@ export default function TenantLanding() {
               <Typography sx={{ opacity: 0.7 }}>Loading modules…</Typography>
             ) : error ? (
               <Typography sx={{ color: "error.main" }}>{error}</Typography>
+            ) : !tenantId ? (
+              <Typography sx={{ opacity: 0.8 }}>
+                No tenant detected for this host. If you&apos;re on the root domain, use the tenant subdomain.
+              </Typography>
             ) : modules.length === 0 ? (
               <Typography sx={{ opacity: 0.8 }}>
                 No modules assigned to your account for this tenant.
               </Typography>
             ) : modules.length === 1 ? (
-              <Typography sx={{ opacity: 0.8 }}>
-                Taking you to {labelFor(modules[0])}…
-              </Typography>
+              <Typography sx={{ opacity: 0.8 }}>Taking you to {labelFor(modules[0])}…</Typography>
             ) : (
               <Stack spacing={2}>
                 {modules.map((m) => (
-                  <Paper
-                    key={m}
-                    variant="outlined"
-                    sx={{ p: 2.2, borderRadius: 3 }}
-                  >
+                  <Paper key={m} variant="outlined" sx={{ p: 2.2, borderRadius: 3 }}>
                     <Stack
                       direction={{ xs: "column", sm: "row" }}
                       spacing={2}
@@ -129,9 +130,7 @@ export default function TenantLanding() {
                         <Typography fontWeight={950} sx={{ fontSize: 18 }}>
                           {labelFor(m)}
                         </Typography>
-                        <Typography sx={{ opacity: 0.7, mt: 0.4 }}>
-                          {descFor(m)}
-                        </Typography>
+                        <Typography sx={{ opacity: 0.7, mt: 0.4 }}>{descFor(m)}</Typography>
                       </Box>
 
                       <Button
