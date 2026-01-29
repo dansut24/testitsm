@@ -1,12 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../common/context/AuthContext";
-import {
-  getCentralLogoutUrl,
-} from "../../common/utils/portalUrl";
+import { getCentralLogoutUrl } from "../../common/utils/portalUrl";
 
 const Layout = ({ children }) => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
 
@@ -28,9 +25,7 @@ const Layout = ({ children }) => {
   const handleLogout = () => {
     // IMPORTANT:
     // Always route through the portal's /logout route.
-    // This avoids corrupting querystrings like:
-    // /login?redirect=%2Fitsm?logout=1  (bad)
-    // and eliminates multi-redirect loops.
+    // This avoids corrupting querystrings and eliminates multi-redirect loops.
     window.location.replace(`${getCentralLogoutUrl()}?t=${Date.now()}`);
   };
 
