@@ -1,3 +1,4 @@
+// src/common/context/AuthContext.js
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../../common/utils/supabaseClient";
 import { useNavigate } from "react-router-dom";
@@ -16,7 +17,7 @@ export const AuthProvider = ({ children }) => {
     if (host.includes("localhost")) return "local";
     const parts = host.split(".");
     if (parts.length < 3) return null;
-    return parts[0].replace("-itsm", "").replace("-control", "");
+    return parts[0].replace("-itsm", "").replace("-control", "").replace("-self", "");
   };
 
   const isRootDomain = () => {
@@ -205,15 +206,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        authLoading,
-        logout,
-        tenant,
-        tenantId: tenant?.id || null, // ✅ ADD THIS
-      }}
-    >
+    <AuthContext.Provider value={{ user, authLoading, logout, tenant, tenantId: tenant?.id || null }}>
       {children}
     </AuthContext.Provider>
   );
