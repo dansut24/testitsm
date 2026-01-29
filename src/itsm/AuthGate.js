@@ -1,45 +1,60 @@
-import { useEffect, useState } from "react";
+// src/itsm/AuthGate.js
+import React, { useEffect, useRef, useState } from "react";
+import { Box, Typography } from "@mui/material";
 import { supabase } from "../common/utils/supabaseClient";
-import ExternalRedirect from "../common/components/ExternalRedirect";
 import { getCentralLoginUrl } from "../common/utils/portalUrl";
 
 export default function AuthGate({ children }) {
-  const [state, setState] = useState({
-    loading: true,
-    session: null,
-  });
+  const [loading, setLoading] = useState(true);
+  const [hasSession, setHasSession] = useState(false);
+
+  // Prevent state updates after unmount
+  const mounted = useRef(true);
 
   useEffect(() => {
-    let mounted = true;
+    mounted.current = true;
 
-    // Initial resolve
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      setState({ loading: false, session: data.session });
-    });
+    const resolve = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!mounted.current) return;
+        setHasSession(!!data?.session);
+      } finally {
+        if (!mounted.current) return;
+        setLoading(false);
+      }
+    };
 
-    // Single listener
+    resolve();
+
+    // Single listener for the whole ITSM app
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!mounted) return;
-      setState({ loading: false, session });
+      if (!mounted.current) return;
+      setHasSession(!!session);
+      setLoading(false);
     });
 
     return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
+      mounted.current = false;
+      sub?.subscription?.unsubscribe?.();
     };
   }, []);
 
-  if (state.loading) {
+  if (loading) {
     return (
-      <div style={{ padding: 24, fontWeight: 600 }}>
-        Loading session…
-      </div>
+      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+        <Typography sx={{ fontWeight: 900, opacity: 0.8 }}>
+          Loading session…
+        </Typography>
+      </Box>
     );
   }
 
-  if (!state.session) {
-    return <ExternalRedirect to={getCentralLoginUrl("/itsm")} />;
+  if (!hasSession) {
+    // HARD redirect to central login (no React Router bouncing)
+    const loginUrl = getCentralLoginUrl("/itsm");
+    window.location.replace(`${loginUrl}?t=${Date.now()}`);
+    return null;
   }
 
   return children;
