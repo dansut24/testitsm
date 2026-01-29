@@ -10,12 +10,13 @@ export function getHost() {
   return window.location.hostname || "";
 }
 
+export function getProtocol() {
+  // Keeps localhost/http working without hardcoding https
+  return window.location.protocol || "https:";
+}
+
 export function isModuleHost(host = getHost()) {
-  return (
-    host.includes("-itsm.") ||
-    host.includes("-control.") ||
-    host.includes("-self.")
-  );
+  return host.includes("-itsm.") || host.includes("-control.") || host.includes("-self.");
 }
 
 /**
@@ -25,10 +26,7 @@ export function isModuleHost(host = getHost()) {
  *  demoitsm-self.hi5tech.co.uk -> demoitsm.hi5tech.co.uk
  */
 export function getTenantBaseHost(host = getHost()) {
-  return host
-    .replace("-itsm.", ".")
-    .replace("-control.", ".")
-    .replace("-self.", ".");
+  return host.replace("-itsm.", ".").replace("-control.", ".").replace("-self.", ".");
 }
 
 export function getTenantSlugFromHost(host = getHost()) {
@@ -52,12 +50,12 @@ export function buildModuleHost(tenantBaseHost, module) {
 
 export function buildTenantLoginUrl(redirectPath = "/app") {
   const baseHost = getTenantBaseHost(getHost());
-  const url = new URL(`https://${baseHost}/login`);
+  const url = new URL(`${getProtocol()}//${baseHost}/login`);
   url.searchParams.set("redirect", redirectPath);
   return url.toString();
 }
 
 export function buildModuleUrlFromTenantHost(tenantBaseHost, module) {
   const moduleHost = buildModuleHost(tenantBaseHost, module);
-  return `https://${moduleHost}/`;
+  return `${getProtocol()}//${moduleHost}/`;
 }
