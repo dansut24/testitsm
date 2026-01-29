@@ -1,9 +1,9 @@
 /**
  * Centralized helpers for building cross-portal URLs.
  *
- * Notes:
- * - Works whether you run on root domain (tenantless) or tenant subdomains.
- * - Uses Vite env var if present, otherwise derives from window.location.
+ * CRA notes:
+ * - Use process.env.REACT_APP_* for environment variables.
+ * - Never use import.meta in react-scripts projects.
  */
 
 const trimTrailingSlash = (s) => (s || "").replace(/\/+$/, "");
@@ -13,11 +13,11 @@ const ensureLeadingSlash = (s) => (s?.startsWith("/") ? s : `/${s || ""}`);
  * Returns the base origin for the "central" portal (where /login lives).
  *
  * Priority:
- * 1) VITE_CENTRAL_PORTAL_ORIGIN (e.g. https://demoitsm.hi5tech.co.uk)
+ * 1) REACT_APP_CENTRAL_PORTAL_ORIGIN (e.g. https://demoitsm.hi5tech.co.uk)
  * 2) current origin
  */
 export function getCentralPortalOrigin() {
-  const env = import.meta?.env?.VITE_CENTRAL_PORTAL_ORIGIN;
+  const env = process.env.REACT_APP_CENTRAL_PORTAL_ORIGIN;
   if (env) return trimTrailingSlash(env);
   return trimTrailingSlash(window.location.origin);
 }
@@ -70,27 +70,27 @@ export function getCentralLogoutUrl() {
 
 /**
  * Optional helpers to build module-specific origins if your deployment uses
- * separate subdomains. If you use path-based routing only, these are unused.
+ * separate subdomains.
  *
- * If you *do* have separate origins, set env vars like:
- *  VITE_ITSM_PORTAL_ORIGIN=https://demoitsm-itsm.hi5tech.co.uk
- *  VITE_CONTROL_PORTAL_ORIGIN=https://demoitsm-control.hi5tech.co.uk
- *  VITE_SELFSERVICE_PORTAL_ORIGIN=https://demoitsm-selfservice.hi5tech.co.uk
+ * CRA env vars examples:
+ *  REACT_APP_ITSM_PORTAL_ORIGIN=https://demoitsm-itsm.hi5tech.co.uk
+ *  REACT_APP_CONTROL_PORTAL_ORIGIN=https://demoitsm-control.hi5tech.co.uk
+ *  REACT_APP_SELFSERVICE_PORTAL_ORIGIN=https://demoitsm-selfservice.hi5tech.co.uk
  */
 export function getItsmPortalOrigin() {
-  const env = import.meta?.env?.VITE_ITSM_PORTAL_ORIGIN;
+  const env = process.env.REACT_APP_ITSM_PORTAL_ORIGIN;
   if (env) return trimTrailingSlash(env);
   return trimTrailingSlash(window.location.origin);
 }
 
 export function getControlPortalOrigin() {
-  const env = import.meta?.env?.VITE_CONTROL_PORTAL_ORIGIN;
+  const env = process.env.REACT_APP_CONTROL_PORTAL_ORIGIN;
   if (env) return trimTrailingSlash(env);
   return trimTrailingSlash(window.location.origin);
 }
 
 export function getSelfServicePortalOrigin() {
-  const env = import.meta?.env?.VITE_SELFSERVICE_PORTAL_ORIGIN;
+  const env = process.env.REACT_APP_SELFSERVICE_PORTAL_ORIGIN;
   if (env) return trimTrailingSlash(env);
   return trimTrailingSlash(window.location.origin);
 }
