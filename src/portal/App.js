@@ -57,12 +57,6 @@ function getProtocol() {
   return window.location.protocol || "https:";
 }
 
-// tenant base host like: demoitsm.hi5tech.co.uk
-function buildTenantBaseHostFromSlug(tenantSlug) {
-  const parent = getParentDomain();
-  return `${tenantSlug}.${parent}`;
-}
-
 // module host like: demoitsm-itsm.hi5tech.co.uk
 function buildModuleUrl(tenantSlug, moduleKey) {
   const parent = getParentDomain();
