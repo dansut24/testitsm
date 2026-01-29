@@ -34,6 +34,13 @@ export function getTenantSlugFromHost(host = getHost()) {
   return (base.split(".")[0] || "").trim();
 }
 
+function normalizeModuleForHost(module) {
+  const m = String(module || "").toLowerCase().trim();
+  if (m === "self_service" || m === "self-service" || m === "selfservice" || m === "self") return "self";
+  if (m === "rmm") return "control";
+  return m;
+}
+
 /**
  * Builds module host from tenant base host:
  *  base: demoitsm.hi5tech.co.uk
@@ -44,7 +51,7 @@ export function buildModuleHost(tenantBaseHost, module) {
   const tenantSlug = parts.shift();
   const rest = parts.join(".");
 
-  const m = module === "self_service" ? "self" : module; // normalize
+  const m = normalizeModuleForHost(module);
   return `${tenantSlug}-${m}.${rest}`;
 }
 
