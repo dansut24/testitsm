@@ -1,96 +1,132 @@
-/**
- * Centralized helpers for building cross-portal URLs.
- *
- * CRA notes:
- * - Use process.env.REACT_APP_* for environment variables.
- * - Never use import.meta in react-scripts projects.
- */
+// src/common/utils/portalUrl.js
 
-const trimTrailingSlash = (s) => (s || "").replace(/\/+$/, "");
-const ensureLeadingSlash = (s) => (s?.startsWith("/") ? s : `/${s || ""}`);
+const ROOT_HOSTS = new Set(["hi5tech.co.uk", "www.hi5tech.co.uk"]);
 
-/**
- * Returns the base origin for the "central" portal (where /login lives).
- *
- * Priority:
- * 1) REACT_APP_CENTRAL_PORTAL_ORIGIN (e.g. https://demoitsm.hi5tech.co.uk)
- * 2) current origin
- */
-export function getCentralPortalOrigin() {
-  const env = process.env.REACT_APP_CENTRAL_PORTAL_ORIGIN;
-  if (env) return trimTrailingSlash(env);
-  return trimTrailingSlash(window.location.origin);
+const MODULE_HOST_SUFFIXES = [
+  { module: "itsm", token: "-itsm" },
+  { module: "control", token: "-control" },
+  { module: "self", token: "-self" },
+];
+
+// Minimal public-suffix handling (enough to fix .co.uk etc)
+const MULTI_PART_TLDS = new Set([
+  "co.uk",
+  "org.uk",
+  "ac.uk",
+  "gov.uk",
+  "ltd.uk",
+  "plc.uk",
+  "net.uk",
+]);
+
+function getHost() {
+  return window.location.hostname || "";
+}
+
+function getProtocol() {
+  return window.location.protocol || "https:";
+}
+
+function getRegistrableDomain(host) {
+  // Returns the base domain:
+  // demoitsm.hi5tech.co.uk -> hi5tech.co.uk
+  // demoitsm-control.hi5tech.com -> hi5tech.com
+  const parts = String(host || "").split(".").filter(Boolean);
+  if (parts.length <= 2) return host;
+
+  const last2 = parts.slice(-2).join(".");
+  const last3 = parts.slice(-3).join(".");
+
+  // If TLD is multi-part (co.uk), registrable domain uses last 3 labels
+  if (MULTI_PART_TLDS.has(last2)) {
+    return last3; // e.g. hi5tech.co.uk
+  }
+
+  // Normal TLD (com/net/etc) uses last 2 labels
+  return last2;
+}
+
+function parseTenantFromHost(host) {
+  const h = String(host || "").trim();
+  if (!h) return { tenantSlug: null, module: null, rootDomain: null };
+
+  if (ROOT_HOSTS.has(h)) return { tenantSlug: null, module: null, rootDomain: h };
+
+  const rootDomain = getRegistrableDomain(h);
+
+  // first label: demoitsm-itsm OR demoitsm
+  const firstLabel = h.split(".")[0] || "";
+  const found = MODULE_HOST_SUFFIXES.find((x) => firstLabel.endsWith(x.token));
+
+  if (found) {
+    const tenantSlug = firstLabel.slice(0, -found.token.length);
+    return { tenantSlug: tenantSlug || null, module: found.module, rootDomain };
+  }
+
+  // tenant base host: demoitsm.hi5tech.co.uk
+  return { tenantSlug: firstLabel || null, module: null, rootDomain };
+}
+
+export function appendQueryParams(urlString, params = {}) {
+  try {
+    const u = new URL(urlString, window.location.origin);
+    Object.entries(params).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === "") return;
+      u.searchParams.set(k, String(v));
+    });
+    return u.toString();
+  } catch {
+    const sep = urlString.includes("?") ? "&" : "?";
+    const qp = Object.entries(params)
+      .filter(([, v]) => v !== undefined && v !== null && v !== "")
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+      .join("&");
+    return qp ? `${urlString}${sep}${qp}` : urlString;
+  }
 }
 
 /**
- * Safe query builder.
+ * Central tenant host (no module suffix)
+ * e.g. https://demoitsm.hi5tech.co.uk
  */
-function toQuery(params = {}) {
-  const sp = new URLSearchParams();
-  Object.entries(params).forEach(([k, v]) => {
-    if (v === undefined || v === null || v === "") return;
-    sp.set(k, String(v));
-  });
-  const q = sp.toString();
-  return q ? `?${q}` : "";
+export function getTenantBaseUrl() {
+  const { tenantSlug, rootDomain } = parseTenantFromHost(getHost());
+  if (!tenantSlug || !rootDomain) return `${getProtocol()}//${getHost()}`;
+  return `${getProtocol()}//${tenantSlug}.${rootDomain}`;
 }
 
 /**
- * Central login URL.
- * Example:
- *  getCentralLoginUrl("/itsm") -> https://<central>/login?redirect=%2Fitsm
+ * Module base URL
+ * e.g. https://demoitsm-itsm.hi5tech.co.uk
  */
-export function getCentralLoginUrl(redirectPath = "/app") {
-  const origin = getCentralPortalOrigin();
-  const redirect = ensureLeadingSlash(redirectPath);
-  return `${origin}/login${toQuery({ redirect })}`;
+export function getModuleBaseUrl(module) {
+  const { tenantSlug, rootDomain } = parseTenantFromHost(getHost());
+  if (!tenantSlug || !rootDomain) return `${getProtocol()}//${getHost()}`;
+
+  const mod = String(module || "").toLowerCase();
+  const token =
+    mod === "itsm" ? "itsm" : mod === "control" ? "control" : mod === "self" ? "self" : mod;
+
+  return `${getProtocol()}//${tenantSlug}-${token}.${rootDomain}`;
 }
 
 /**
- * Central landing page (module chooser) URL.
+ * Central login URL on tenant base host.
+ * redirectPath can be:
+ *  - "/" (landing)
+ *  - "/itsm" | "/control" | "/self"
  */
-export function getCentralLandingUrl() {
-  const origin = getCentralPortalOrigin();
-  return `${origin}/app`;
+export function getCentralLoginUrl(redirectPath = "/") {
+  const base = getTenantBaseUrl();
+  const qp = encodeURIComponent(redirectPath || "/");
+  return `${base}/login?redirect=${qp}`;
 }
 
 /**
- * Central logout URL.
- *
- * IMPORTANT:
- * We route through the portal's /logout route (which does supabase signOut +
- * clears storage + finally redirects to /login?logout=1). This avoids the
- * common bug where callers try to append '?logout=1' to an existing URL that
- * already has query params (leading to broken redirect querystrings).
+ * Central logout URL on tenant base host.
+ * Useful as a single redirect target from module portals.
  */
 export function getCentralLogoutUrl() {
-  const origin = getCentralPortalOrigin();
-  return `${origin}/logout`;
-}
-
-/**
- * Optional helpers to build module-specific origins if your deployment uses
- * separate subdomains.
- *
- * CRA env vars examples:
- *  REACT_APP_ITSM_PORTAL_ORIGIN=https://demoitsm-itsm.hi5tech.co.uk
- *  REACT_APP_CONTROL_PORTAL_ORIGIN=https://demoitsm-control.hi5tech.co.uk
- *  REACT_APP_SELFSERVICE_PORTAL_ORIGIN=https://demoitsm-selfservice.hi5tech.co.uk
- */
-export function getItsmPortalOrigin() {
-  const env = process.env.REACT_APP_ITSM_PORTAL_ORIGIN;
-  if (env) return trimTrailingSlash(env);
-  return trimTrailingSlash(window.location.origin);
-}
-
-export function getControlPortalOrigin() {
-  const env = process.env.REACT_APP_CONTROL_PORTAL_ORIGIN;
-  if (env) return trimTrailingSlash(env);
-  return trimTrailingSlash(window.location.origin);
-}
-
-export function getSelfServicePortalOrigin() {
-  const env = process.env.REACT_APP_SELFSERVICE_PORTAL_ORIGIN;
-  if (env) return trimTrailingSlash(env);
-  return trimTrailingSlash(window.location.origin);
+  const base = getTenantBaseUrl();
+  return `${base}/logout`;
 }
