@@ -22,11 +22,7 @@ import ThemeToggleIconButton from "../ui/ThemeToggleIconButton";
 
 function getDefaultAfterLogin() {
   const host = window.location.hostname || "";
-  if (
-    !host.includes("-control.") &&
-    !host.includes("-itsm.") &&
-    !host.includes("-self.")
-  ) {
+  if (!host.includes("-control.") && !host.includes("-itsm.") && !host.includes("-self.")) {
     return "/app";
   }
   return "/";
@@ -40,11 +36,11 @@ function getDefaultTitle() {
   return "Sign in";
 }
 
-// ✅ Prevent redirect loops / unsafe redirects
+// Prevent redirect loops and unsafe redirects
 function sanitizeRedirect(raw, fallback) {
   let r = raw || fallback || "/";
 
-  // If someone passes a full URL, only accept same-origin and convert to path
+  // If a full URL is passed, only accept same-origin and convert to a path
   if (/^https?:\/\//i.test(r)) {
     try {
       const u = new URL(r);
@@ -58,7 +54,7 @@ function sanitizeRedirect(raw, fallback) {
     }
   }
 
-  // Must be an in-app path
+  // Must be an app path
   if (!r.startsWith("/")) r = fallback || "/";
 
   // Never redirect back to login (common loop cause)
@@ -147,12 +143,7 @@ export default function CentralLogin({ title, afterLogin }) {
     >
       <Container maxWidth="sm">
         <GlassPanel t={t} sx={{ p: { xs: 2.2, sm: 3 }, borderRadius: 4 }}>
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-            spacing={1}
-          >
+          <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
             <Stack spacing={0.6} sx={{ minWidth: 0 }}>
               <Typography sx={{ fontWeight: 950, fontSize: 22 }} noWrap>
                 {computedTitle}
@@ -220,9 +211,7 @@ export default function CentralLogin({ title, afterLogin }) {
 
             {error ? (
               <GlassPanel t={t} sx={{ mt: 1.6, p: 1.2, borderRadius: 3 }}>
-                <Typography
-                  sx={{ fontWeight: 900, fontSize: 13, opacity: 0.95 }}
-                >
+                <Typography sx={{ fontWeight: 900, fontSize: 13, opacity: 0.95 }}>
                   {error}
                 </Typography>
               </GlassPanel>
