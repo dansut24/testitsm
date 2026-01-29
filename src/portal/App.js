@@ -25,6 +25,11 @@ import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import CentralLogin from "../common/pages/CentralLogin";
 import { supabase } from "../common/utils/supabaseClient";
 
+// ✅ Shared Hi5 theme provider + hook
+import { Hi5ThemeProvider, useHi5Theme } from "../common/ui/hi5Theme";
+import GlassPanel from "../common/ui/GlassPanel";
+import ThemeToggleIconButton from "../common/ui/ThemeToggleIconButton";
+
 // Keep in sync with supabaseClient.js
 const STORAGE_KEY = "hi5tech_sb_session";
 
@@ -81,6 +86,7 @@ function normalizeModuleValue(v) {
 
   const m = raw.replaceAll("-", "_").replaceAll(" ", "_");
 
+  // Ignore admin as a "module card"
   if (m === "admin") return null;
 
   if (m === "itsm" || m.includes("itsm")) return "itsm";
@@ -197,7 +203,7 @@ async function loadUserOverrides(userId, tenantId) {
 }
 
 // -------------------------
-// Hard cleanup helpers
+// Hard cleanup helpers (auth + portal cache)
 // -------------------------
 
 function deleteCookie(name, domain) {
@@ -242,31 +248,12 @@ function hardClearAuthStorage() {
 }
 
 // -------------------------
-// UI helpers
+// Cards
 // -------------------------
 
-function GlassPanel({ children, sx }) {
+function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href, t }) {
   return (
-    <Box
-      sx={{
-        borderRadius: 4,
-        border: "1px solid rgba(255,255,255,0.10)",
-        background:
-          "linear-gradient(135deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04))",
-        backdropFilter: "blur(14px)",
-        WebkitBackdropFilter: "blur(14px)",
-        boxShadow: "0 18px 55px rgba(0,0,0,0.35)",
-        ...sx,
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
-
-function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
-  return (
-    <GlassPanel sx={{ p: 2.2, height: "100%" }}>
+    <GlassPanel t={t} sx={{ p: 2.2, height: "100%" }}>
       <Stack direction="row" spacing={1.6} alignItems="center">
         <Box
           sx={{
@@ -276,7 +263,7 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
             display: "grid",
             placeItems: "center",
             background: "rgba(124,92,255,0.18)",
-            border: "1px solid rgba(255,255,255,0.12)",
+            border: t.glass.border,
             flexShrink: 0,
           }}
         >
@@ -302,15 +289,15 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
               height: 30,
               borderRadius: 999,
               fontWeight: 900,
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.10)",
-              color: "rgba(255,255,255,0.90)",
+              background: t.pill.bg,
+              border: t.pill.border,
+              color: t.pill.text,
             }}
           />
         ))}
       </Stack>
 
-      <Divider sx={{ my: 1.8, borderColor: "rgba(255,255,255,0.10)" }} />
+      <Divider sx={{ my: 1.8, borderColor: t.glass.divider }} />
 
       <Stack
         direction="row"
@@ -340,9 +327,9 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
             borderRadius: 999,
             fontWeight: 950,
             textTransform: "none",
-            borderColor: "rgba(255,255,255,0.18)",
-            color: "rgba(255,255,255,0.88)",
-            background: "rgba(255,255,255,0.04)",
+            borderColor: t.buttonOutlined.borderColor,
+            color: t.buttonOutlined.color,
+            background: t.buttonOutlined.background,
           }}
         >
           New tab
@@ -358,6 +345,7 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href }) {
 
 function PortalHome() {
   const location = useLocation();
+  const { mode, tokens: t, toggleMode } = useHi5Theme();
 
   const tenantBase = useMemo(
     () => getTenantBaseHost(location.search),
@@ -369,51 +357,37 @@ function PortalHome() {
     [tenantBase]
   );
 
-  // ✅ IMPORTANT CHANGE:
-  // We do NOT use cached tenant/modules until we confirm the session userId matches.
-  const [busy, setBusy] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const cached = useMemo(() => {
+    try {
+      const raw = sessionStorage.getItem(cacheKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed?.ts && Date.now() - parsed.ts > 30 * 60 * 1000) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }, [cacheKey]);
+
+  const [busy, setBusy] = useState(!cached);
+  const [refreshing, setRefreshing] = useState(!!cached);
 
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
-
-  const [tenant, setTenant] = useState(null);
-  const [modules, setModules] = useState([]);
-
+  const [tenant, setTenant] = useState(cached?.tenant || null);
+  const [modules, setModules] = useState(cached?.modules || []);
   const [query, setQuery] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
   const runSeq = useRef(0);
 
-  const readCacheForUser = useCallback(
-    (userId) => {
-      try {
-        const raw = sessionStorage.getItem(cacheKey);
-        if (!raw) return null;
-        const parsed = JSON.parse(raw);
-
-        // Expire after 30 mins
-        if (parsed?.ts && Date.now() - parsed.ts > 30 * 60 * 1000) return null;
-
-        // ✅ Session-bound: only accept cache if it matches the active user
-        if (!parsed?.userId || parsed.userId !== userId) return null;
-
-        return parsed;
-      } catch {
-        return null;
-      }
-    },
-    [cacheKey]
-  );
-
   const writeCache = useCallback(
-    (userId, tObj, mods) => {
+    (tObj, mods) => {
       try {
         sessionStorage.setItem(
           cacheKey,
           JSON.stringify({
             ts: Date.now(),
-            userId,
             tenant: tObj || null,
             modules: Array.isArray(mods) ? mods : [],
           })
@@ -444,24 +418,11 @@ function PortalHome() {
         setSession(sess);
         setUser(u);
 
-        // ✅ If no session: clear portal cache (prevents login/app flicker)
         if (!u) {
           setTenant(null);
           setModules([]);
-          try {
-            sessionStorage.removeItem(cacheKey);
-          } catch {
-            // ignore
-          }
+          writeCache(null, []);
           return;
-        }
-
-        // ✅ Try fast-path: hydrate from cache ONLY if it belongs to this user
-        const cached = readCacheForUser(u.id);
-        if (cached?.tenant || (cached?.modules && cached.modules.length)) {
-          setTenant(cached.tenant || null);
-          setModules(Array.isArray(cached.modules) ? cached.modules : []);
-          // keep going in background to refresh hard data
         }
 
         const tObj = await loadTenantByBaseHost(tenantBase);
@@ -471,7 +432,7 @@ function PortalHome() {
 
         if (!tObj?.id) {
           setModules([]);
-          writeCache(u.id, tObj, []);
+          writeCache(tObj, []);
           return;
         }
 
@@ -496,15 +457,18 @@ function PortalHome() {
 
         const finalMods = Array.from(set);
         setModules(finalMods);
-        writeCache(u.id, tObj, finalMods);
+        writeCache(tObj, finalMods);
       } catch (e) {
         if (seq !== runSeq.current) return;
 
         console.error("[Portal] run error:", e);
-        setErrorMsg("We couldn’t load portal data. Please retry.");
-        // ✅ DO NOT clear session/user on data errors (prevents auth bounce)
-        setTenant(null);
-        setModules([]);
+        if (cached?.tenant || (cached?.modules && cached.modules.length)) {
+          setErrorMsg("We couldn’t refresh portal data. Showing cached view.");
+        } else {
+          setErrorMsg("We couldn’t load portal data. Please retry.");
+          setTenant(null);
+          setModules([]);
+        }
       } finally {
         if (seq === runSeq.current) {
           setBusy(false);
@@ -512,14 +476,14 @@ function PortalHome() {
         }
       }
     },
-    [tenantBase, cacheKey, readCacheForUser, writeCache]
+    [tenantBase, writeCache, cached]
   );
 
   useEffect(() => {
-    run({ soft: false });
+    run({ soft: !!cached });
 
     const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      run({ soft: true });
+      run({ soft: !!cached });
     });
 
     const onPageShow = () => run({ soft: true });
@@ -535,7 +499,7 @@ function PortalHome() {
       window.removeEventListener("pageshow", onPageShow);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [run]);
+  }, [run, cached]);
 
   const displayName = useMemo(() => {
     const name =
@@ -551,7 +515,7 @@ function PortalHome() {
     return (s[0] || "U").toUpperCase();
   }, [displayName]);
 
-  if (busy) {
+  if (busy && !tenant && !modules.length) {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
         <Stack spacing={1} alignItems="center">
@@ -563,7 +527,7 @@ function PortalHome() {
               sx={{
                 opacity: 0.7,
                 fontSize: 13,
-                maxWidth: 340,
+                maxWidth: 320,
                 textAlign: "center",
               }}
             >
@@ -577,7 +541,6 @@ function PortalHome() {
 
   if (!user || !session) return <Navigate to="/login" replace />;
 
-  // Only auto-route if modules is real (not empty) and stable
   if (modules.length === 1 && tenantBase) {
     window.location.assign(buildModuleUrl(tenantBase, modules[0]));
     return null;
@@ -628,17 +591,12 @@ function PortalHome() {
     <Box
       sx={{
         minHeight: "100vh",
-        color: "rgba(255,255,255,0.92)",
-        background: `
-          radial-gradient(1200px 800px at 20% 10%, rgba(124, 92, 255, 0.28), transparent 60%),
-          radial-gradient(1000px 700px at 85% 25%, rgba(56, 189, 248, 0.18), transparent 55%),
-          radial-gradient(900px 700px at 60% 90%, rgba(34, 197, 94, 0.10), transparent 55%),
-          linear-gradient(180deg, #070A12 0%, #0A1022 45%, #0B1633 100%)
-        `,
+        color: t.page.color,
+        background: t.page.background,
       }}
     >
       <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 } }}>
-        <GlassPanel sx={{ p: 2.2 }}>
+        <GlassPanel t={t} sx={{ p: 2.2 }}>
           <Stack
             direction={{ xs: "column", md: "row" }}
             spacing={2}
@@ -673,9 +631,9 @@ function PortalHome() {
                         height: 24,
                         borderRadius: 999,
                         fontWeight: 900,
-                        background: "rgba(255,255,255,0.06)",
-                        border: "1px solid rgba(255,255,255,0.10)",
-                        color: "rgba(255,255,255,0.85)",
+                        background: t.pill.bg,
+                        border: t.pill.border,
+                        color: t.pill.text,
                       }}
                     />
                   ) : null}
@@ -692,6 +650,8 @@ function PortalHome() {
               spacing={1}
               alignItems="center"
             >
+              <ThemeToggleIconButton mode={mode} onToggle={toggleMode} t={t} />
+
               <TextField
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -701,8 +661,8 @@ function PortalHome() {
                   minWidth: { xs: "100%", sm: 320 },
                   "& .MuiOutlinedInput-root": {
                     borderRadius: 999,
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.10)",
+                    background: t.pill.bg,
+                    border: t.pill.border,
                     backdropFilter: "blur(10px)",
                   },
                 }}
@@ -723,9 +683,9 @@ function PortalHome() {
                   borderRadius: 999,
                   fontWeight: 950,
                   textTransform: "none",
-                  borderColor: "rgba(255,255,255,0.18)",
-                  color: "rgba(255,255,255,0.88)",
-                  background: "rgba(255,255,255,0.04)",
+                  borderColor: t.buttonOutlined.borderColor,
+                  color: t.buttonOutlined.color,
+                  background: t.buttonOutlined.background,
                 }}
               >
                 Sign out
@@ -735,7 +695,7 @@ function PortalHome() {
         </GlassPanel>
 
         {!!errorMsg ? (
-          <GlassPanel sx={{ mt: 2.2, p: 2 }}>
+          <GlassPanel t={t} sx={{ mt: 2.2, p: 2 }}>
             <Stack
               direction={{ xs: "column", sm: "row" }}
               spacing={1}
@@ -749,7 +709,11 @@ function PortalHome() {
               <Button
                 variant="contained"
                 onClick={() => window.location.reload()}
-                sx={{ borderRadius: 999, fontWeight: 950, textTransform: "none" }}
+                sx={{
+                  borderRadius: 999,
+                  fontWeight: 950,
+                  textTransform: "none",
+                }}
               >
                 Reload
               </Button>
@@ -777,13 +741,14 @@ function PortalHome() {
               chips={m.chips}
               icon={m.icon}
               href={m.href}
+              t={t}
               onOpen={() => window.location.assign(m.href)}
             />
           ))}
         </Box>
 
         {!visible.length ? (
-          <GlassPanel sx={{ mt: 2.2, p: 3 }}>
+          <GlassPanel t={t} sx={{ mt: 2.2, p: 3 }}>
             <Typography sx={{ fontWeight: 950, fontSize: 18 }}>
               No modules available
             </Typography>
@@ -874,7 +839,7 @@ function PortalLogout() {
   );
 }
 
-export default function PortalApp() {
+function PortalAppInner() {
   const qpTenant = new URLSearchParams(window.location.search).get("tenant");
   const withTenant = (path) =>
     qpTenant ? `${path}?tenant=${encodeURIComponent(qpTenant)}` : path;
@@ -887,5 +852,13 @@ export default function PortalApp() {
       <Route path="/" element={<Navigate to={withTenant("/app")} replace />} />
       <Route path="*" element={<Navigate to={withTenant("/app")} replace />} />
     </Routes>
+  );
+}
+
+export default function PortalApp() {
+  return (
+    <Hi5ThemeProvider>
+      <PortalAppInner />
+    </Hi5ThemeProvider>
   );
 }
