@@ -56,21 +56,21 @@ const routeLabels = {
 };
 
 // -------------------------
-// Glass tokens
+// Local “glass tokens” (theme-aware)
 // -------------------------
 function useGlassTokens(theme) {
-  const isDark = theme.palette.mode === "dark";
+  const mode = theme.palette.mode;
 
   return useMemo(() => {
+    const isDark = mode === "dark";
+
     const border = isDark
       ? "1px solid rgba(255,255,255,0.12)"
       : "1px solid rgba(15,23,42,0.10)";
 
-    const divider = isDark
-      ? "rgba(255,255,255,0.10)"
-      : "rgba(15,23,42,0.08)";
+    const divider = isDark ? "rgba(255,255,255,0.10)" : "rgba(15,23,42,0.08)";
 
-    const bg = isDark
+    const panelBg = isDark
       ? "linear-gradient(135deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04))"
       : "linear-gradient(135deg, rgba(255,255,255,0.82), rgba(255,255,255,0.55))";
 
@@ -80,34 +80,42 @@ function useGlassTokens(theme) {
 
     const pageBg = isDark
       ? `
-        radial-gradient(1200px 800px at 20% 10%, rgba(124,92,255,.28), transparent 60%),
-        radial-gradient(1000px 700px at 85% 25%, rgba(56,189,248,.18), transparent 55%),
-        linear-gradient(180deg,#070A12,#0A1022 45%,#0B1633)
+        radial-gradient(1200px 800px at 20% 10%, rgba(124, 92, 255, 0.28), transparent 60%),
+        radial-gradient(1000px 700px at 85% 25%, rgba(56, 189, 248, 0.18), transparent 55%),
+        radial-gradient(900px 700px at 60% 90%, rgba(34, 197, 94, 0.10), transparent 55%),
+        linear-gradient(180deg, #070A12 0%, #0A1022 45%, #0B1633 100%)
       `
       : `
-        radial-gradient(1200px 800px at 20% 10%, rgba(124,92,255,.12), transparent 60%),
-        radial-gradient(1000px 700px at 85% 25%, rgba(56,189,248,.10), transparent 55%),
-        linear-gradient(180deg,#F8FAFF,#EEF3FF 45%,#EAF2FF)
+        radial-gradient(1200px 800px at 20% 10%, rgba(124, 92, 255, 0.12), transparent 60%),
+        radial-gradient(1000px 700px at 85% 25%, rgba(56, 189, 248, 0.10), transparent 55%),
+        radial-gradient(900px 700px at 60% 90%, rgba(34, 197, 94, 0.08), transparent 55%),
+        linear-gradient(180deg, #F8FAFF 0%, #EEF3FF 45%, #EAF2FF 100%)
       `;
+
+    const contentText = isDark ? "rgba(255,255,255,0.92)" : "rgba(2,6,23,0.92)";
+    const iconFg = isDark ? "rgba(255,255,255,0.82)" : "rgba(2,6,23,0.76)";
 
     return {
       isDark,
-      page: { background: pageBg },
-      glass: { border, divider, bg, shadow },
-      iconFg: isDark ? "rgba(255,255,255,.8)" : "rgba(2,6,23,.7)",
+      page: { background: pageBg, color: contentText },
+      glass: { border, divider, bg: panelBg, shadow },
+      iconFg,
     };
-  }, [isDark]);
+  }, [mode]);
 }
 
-function GlassBar({ children, t }) {
+function GlassBar({ children, t, sx }) {
   return (
     <Paper
       elevation={0}
       sx={{
+        borderRadius: 0,
         borderBottom: t.glass.border,
         background: t.glass.bg,
         backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
         boxShadow: "none",
+        ...sx,
       }}
     >
       {children}
@@ -118,8 +126,8 @@ function GlassBar({ children, t }) {
 const Layout = () => {
   const theme = useTheme();
   const t = useGlassTokens(theme);
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -130,16 +138,46 @@ const Layout = () => {
   const [tabs, setTabs] = useState([{ label: "Dashboard", path: "/dashboard" }]);
   const [tabIndex, setTabIndex] = useState(0);
 
+  const [sidebarMode] = useState(localStorage.getItem("sidebarMode") || "pinned");
   const [sidebarPinned, setSidebarPinned] = useState(true);
+
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [drawerType, setDrawerType] = useState(null);
 
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
   const [navbarElevated, setNavbarElevated] = useState(false);
-  const [userStatus, setUserStatus] = useState("Available");
 
-  // -------------------------
-  // ✅ FIXED LOGOUT
-  // -------------------------
+  const username = "User";
+  const userInitial = username[0]?.toUpperCase() || "U";
+
+  const [userStatus, setUserStatus] = useState(
+    () => localStorage.getItem("userStatus") || "Available"
+  );
+
+  useEffect(() => {
+    localStorage.setItem("userStatus", userStatus);
+  }, [userStatus]);
+
+  // vh fix (mobile)
+  useEffect(() => {
+    const setVh = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty("--vh", `${vh}px`);
+    };
+    setVh();
+    window.addEventListener("resize", setVh);
+    window.addEventListener("orientationchange", setVh);
+    return () => {
+      window.removeEventListener("resize", setVh);
+      window.removeEventListener("orientationchange", setVh);
+    };
+  }, []);
+
+  const handleStatusChange = (statusKey) => {
+    setUserStatus(statusKey);
+  };
+
+  // ✅ CRITICAL: Logout must be hard redirect to central login (no SPA route)
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -148,42 +186,84 @@ const Layout = () => {
     }
 
     try {
-      localStorage.clear();
       sessionStorage.clear();
+      localStorage.removeItem("tabs");
+      localStorage.removeItem("tabIndex");
     } catch {
       // ignore
     }
 
-    const central = getCentralLoginUrl("/itsm");
-    const sep = central.includes("?") ? "&" : "?";
-
-    window.location.replace(`${central}${sep}logout=1&ts=${Date.now()}`);
+    const loginUrl = getCentralLoginUrl("/itsm");
+    window.location.replace(`${loginUrl}?logout=1&t=${Date.now()}`);
   };
 
-  // -------------------------
-  // Tabs sync
-  // -------------------------
+  // Sync tabs with route
   useEffect(() => {
-    const path = location.pathname;
-    const exists = tabs.some((t) => t.path === path);
-
-    if (!exists) {
-      const label = routeLabels[path] || "Unknown";
-      const newTabs = [...tabs, { label, path }];
+    const currentPath = location.pathname;
+    const tabExists = tabs.some((tb) => tb.path === currentPath);
+    if (!tabExists) {
+      const label = routeLabels[currentPath] || "Unknown";
+      const newTabs = [...tabs, { label, path: currentPath }];
       setTabs(newTabs);
       setTabIndex(newTabs.length - 1);
     } else {
-      setTabIndex(tabs.findIndex((t) => t.path === path));
+      setTabIndex(tabs.findIndex((tb) => tb.path === currentPath));
     }
-  }, [location.pathname]); // eslint-disable-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  useEffect(() => {
+    sessionStorage.setItem("tabs", JSON.stringify(tabs));
+    sessionStorage.setItem("tabIndex", tabIndex.toString());
+  }, [tabs, tabIndex]);
+
+  const handleTabChange = (_ev, newIndex, path) => {
+    setTabIndex(newIndex);
+    if (path) navigate(path);
+  };
+
+  const handleTabClose = (tabId) => {
+    const closingIndex = tabs.findIndex((tb) => tb.path === tabId);
+    if (closingIndex === 0) return; // keep Dashboard pinned
+    const newTabs = tabs.filter((tb) => tb.path !== tabId);
+    setTabs(newTabs);
+    if (location.pathname === tabId) {
+      const fallbackIndex = Math.max(0, closingIndex - 1);
+      navigate(newTabs[fallbackIndex]?.path || "/dashboard");
+    }
+  };
+
+  const handleTabReorder = (tabsReordered) => setTabs(tabsReordered);
+
+  // "+" new tab → open /new-tab
+  const handleNewTab = () => {
+    const path = "/new-tab";
+    const label = routeLabels[path] || "New Tab";
+
+    const existingIndex = tabs.findIndex((tb) => tb.path === path);
+    if (existingIndex !== -1) {
+      setTabIndex(existingIndex);
+      navigate(path);
+      return;
+    }
+
+    const newTabs = [...tabs, { label, path }];
+    setTabs(newTabs);
+    setTabIndex(newTabs.length - 1);
+    navigate(path);
+  };
 
   const activateOrAddTab = (label) => {
     const path = `/${label.toLowerCase().replace(/\s+/g, "-")}`;
-    const existing = tabs.find((t) => t.path === path);
+    const existing = tabs.find((tb) => tb.path === path);
     if (existing) {
+      const idx = tabs.findIndex((tb) => tb.path === path);
+      setTabIndex(idx);
       navigate(existing.path);
     } else {
-      setTabs((t) => [...t, { label, path }]);
+      const newTabs = [...tabs, { label, path }];
+      setTabs(newTabs);
+      setTabIndex(newTabs.length - 1);
       navigate(path);
     }
   };
@@ -200,110 +280,312 @@ const Layout = () => {
     { label: "Assets", icon: <StorageIcon /> },
   ];
 
+  const desktopHasSidebar = !isMobile && sidebarMode !== "hidden";
+  const sidebarWidth =
+    desktopHasSidebar && (sidebarMode === "pinned" || sidebarPinned)
+      ? EXPANDED_WIDTH
+      : desktopHasSidebar
+      ? COLLAPSED_WIDTH
+      : 0;
+
+  const handleMainScroll = (e) => {
+    const scrolled = e.currentTarget.scrollTop > 4;
+    setNavbarElevated(scrolled);
+  };
+
   return (
     <Box
       sx={{
         position: "fixed",
         inset: 0,
+        width: "100%",
+        height: "calc(var(--vh, 1vh) * 100)",
         display: "flex",
+        overflow: "hidden",
+        color: t.page.color,
         background: t.page.background,
       }}
     >
-      {/* Sidebar */}
-      <Paper
-        elevation={0}
-        sx={{
-          width: sidebarPinned ? EXPANDED_WIDTH : COLLAPSED_WIDTH,
-          borderRight: t.glass.border,
-          background: t.glass.bg,
-          backdropFilter: "blur(14px)",
-        }}
-      >
-        <Sidebar
-          pinned
-          items={sidebarItems}
-          onItemClick={activateOrAddTab}
-        />
-      </Paper>
+      {/* Sidebar (desktop) */}
+      {desktopHasSidebar && (
+        <Paper
+          elevation={0}
+          sx={{
+            width: sidebarWidth,
+            flexShrink: 0,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            borderRight: t.glass.border,
+            background: t.glass.bg,
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
+            boxShadow: "none",
+          }}
+        >
+          <Sidebar
+            pinned={sidebarMode === "pinned" ? true : sidebarPinned}
+            onToggle={() => {
+              if (sidebarMode === "collapsible") setSidebarPinned((p) => !p);
+            }}
+            items={sidebarItems}
+            onItemClick={activateOrAddTab}
+            widthExpanded={EXPANDED_WIDTH}
+            widthCollapsed={COLLAPSED_WIDTH}
+          />
+        </Paper>
+      )}
 
-      {/* Main column */}
+      {/* Right column */}
       <Box
         sx={{
           flex: 1,
+          minWidth: 0,
+          maxWidth: "100%",
           display: "grid",
-          gridTemplateRows: `${NAVBAR_HEIGHT}px 1fr ${
-            isMobile ? BASE_BOTTOM_NAV_HEIGHT : 0
-          }px`,
+          gridTemplateRows: isMobile
+            ? `${NAVBAR_HEIGHT}px 1fr ${BASE_BOTTOM_NAV_HEIGHT}px`
+            : `${NAVBAR_HEIGHT}px 1fr`,
+          height: "100%",
+          overflow: "hidden",
         }}
       >
-        {/* Navbar */}
-        <GlassBar t={t}>
-          <Navbar
-            isMobile={isMobile}
-            userStatus={userStatus}
-            setDrawerType={setDrawerType}
-          />
+        {/* NAVBAR */}
+        <GlassBar
+          t={t}
+          sx={{
+            height: NAVBAR_HEIGHT,
+            minWidth: 0,
+            maxWidth: "100%",
+            position: "sticky",
+            top: 0,
+            zIndex: 1400,
+            transition: "box-shadow 0.25s ease",
+            boxShadow: navbarElevated ? t.glass.shadow : "none",
+          }}
+        >
+          <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+            <Navbar
+              isMobile={isMobile}
+              sidebarMode={sidebarMode}
+              username={username}
+              userInitial={userInitial}
+              userStatus={userStatus}
+              statusMenuAnchor={statusMenuAnchor}
+              setStatusMenuAnchor={setStatusMenuAnchor}
+              setDrawerType={setDrawerType}
+              setMobileSidebarOpen={setMobileSidebarOpen}
+              onStatusChange={handleStatusChange}
+            />
 
-          <NavbarTabs
-            tabs={tabs}
-            tabIndex={tabIndex}
-            handleTabChange={(_, i, p) => p && navigate(p)}
-            handleNewTab={() => activateOrAddTab("New Tab")}
-          />
+            <Box
+              sx={{
+                height: TABBAR_HEIGHT,
+                minHeight: TABBAR_HEIGHT,
+                minWidth: 0,
+                overflow: "hidden",
+                borderTop: `1px solid ${t.glass.divider}`,
+              }}
+            >
+              <NavbarTabs
+                tabs={tabs}
+                tabIndex={tabIndex}
+                handleTabChange={handleTabChange}
+                handleTabClose={handleTabClose}
+                handleTabReorder={handleTabReorder}
+                handleNewTab={handleNewTab}
+                isMobile={isMobile}
+              />
+            </Box>
+          </Box>
         </GlassBar>
 
-        {/* Content */}
+        {/* MAIN CONTENT */}
         <Box
           component="main"
-          onScroll={(e) => setNavbarElevated(e.currentTarget.scrollTop > 4)}
-          sx={{ overflowY: "auto", p: 2 }}
+          onScroll={handleMainScroll}
+          sx={{
+            minHeight: 0,
+            height: "100%",
+            width: "100%",
+            overflowY: "auto",
+            overflowX: "hidden",
+            WebkitOverflowScrolling: "touch",
+            overscrollBehavior: "contain",
+            touchAction: "pan-y",
+            px: 2,
+            pt: 1,
+            pb: isMobile ? 1 : 2,
+            boxSizing: "border-box",
+          }}
         >
           <Outlet />
         </Box>
 
-        {/* Mobile bottom bar */}
+        {/* Bottom nav (mobile) */}
         {isMobile && (
           <Paper
             elevation={0}
             sx={{
               borderTop: t.glass.border,
               background: t.glass.bg,
+              backdropFilter: "blur(14px)",
+              WebkitBackdropFilter: "blur(14px)",
               display: "flex",
+              alignItems: "center",
               justifyContent: "space-around",
+              px: 0.5,
             }}
           >
-            <IconButton onClick={() => setMobileSidebarOpen(true)}>
+            <IconButton
+              onClick={() => setMobileSidebarOpen(true)}
+              sx={{ color: t.iconFg }}
+              aria-label="Menu"
+            >
               <MenuIcon />
             </IconButton>
-            <IconButton onClick={() => setDrawerType("notifications")}>
+
+            <IconButton
+              onClick={() => setDrawerType("search")}
+              sx={{ color: t.iconFg }}
+              aria-label="Search"
+            >
+              <SearchIcon />
+            </IconButton>
+
+            <IconButton
+              onClick={() => setDrawerType("notifications")}
+              sx={{ color: t.iconFg }}
+              aria-label="Notifications"
+            >
               <NotificationsIcon />
             </IconButton>
-            <IconButton onClick={() => setDrawerType("profile")}>
+
+            <IconButton
+              onClick={() => setDrawerType("profile")}
+              sx={{ color: t.iconFg }}
+              aria-label="Profile"
+            >
               <AccountCircleIcon />
             </IconButton>
           </Paper>
         )}
       </Box>
 
-      {/* Right drawers */}
-      <SwipeableDrawer
-        anchor="right"
-        open={drawerType === "profile"}
-        onClose={() => setDrawerType(null)}
-      >
-        <ProfileDrawer
-          status={userStatus}
-          onLogout={handleLogout}
-        />
-      </SwipeableDrawer>
+      {/* Sidebar Drawer (mobile & hidden desktop) */}
+      {(isMobile || sidebarMode === "hidden") && (
+        <SwipeableDrawer
+          anchor="left"
+          open={mobileSidebarOpen}
+          onClose={() => setMobileSidebarOpen(false)}
+          onOpen={() => setMobileSidebarOpen(true)}
+          ModalProps={{ keepMounted: true }}
+          PaperProps={{
+            sx: {
+              width: EXPANDED_WIDTH,
+              borderRight: t.glass.border,
+              background: t.glass.bg,
+              backdropFilter: "blur(14px)",
+              WebkitBackdropFilter: "blur(14px)",
+            },
+          }}
+        >
+          <Sidebar
+            pinned
+            onToggle={() => {}}
+            items={sidebarItems}
+            onItemClick={(label) => {
+              activateOrAddTab(label);
+              setMobileSidebarOpen(false);
+            }}
+            widthExpanded={EXPANDED_WIDTH}
+            widthCollapsed={COLLAPSED_WIDTH}
+          />
+        </SwipeableDrawer>
+      )}
 
-      <SwipeableDrawer
-        anchor="right"
-        open={drawerType === "notifications"}
-        onClose={() => setDrawerType(null)}
-      >
-        <NotificationDrawer />
-      </SwipeableDrawer>
+      {/* Desktop right-hand drawer */}
+      {!isMobile && (
+        <SwipeableDrawer
+          anchor="right"
+          open={Boolean(drawerType)}
+          onClose={() => setDrawerType(null)}
+          onOpen={() => {}}
+          disableSwipeToOpen
+          disableDiscovery
+          swipeAreaWidth={0}
+          PaperProps={{
+            sx: {
+              width: 360,
+              maxWidth: "100%",
+              background: t.glass.bg,
+              backdropFilter: "blur(14px)",
+              WebkitBackdropFilter: "blur(14px)",
+              borderLeft: t.glass.border,
+            },
+          }}
+        >
+          {drawerType === "notifications" && <NotificationDrawer />}
+          {drawerType === "profile" && (
+            <ProfileDrawer
+              status={userStatus}
+              onStatusChange={handleStatusChange}
+              onLogout={handleLogout}
+              showStatus
+            />
+          )}
+          {drawerType === "search" && (
+            <Box p={2}>
+              <Typography variant="h6" gutterBottom>
+                Search
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Advanced search coming soon.
+              </Typography>
+            </Box>
+          )}
+        </SwipeableDrawer>
+      )}
+
+      {/* Bottom action drawer (mobile) */}
+      {isMobile && (
+        <SwipeableDrawer
+          anchor="bottom"
+          open={Boolean(drawerType)}
+          onClose={() => setDrawerType(null)}
+          onOpen={() => {}}
+          ModalProps={{
+            keepMounted: true,
+            BackdropProps: {
+              sx: { backgroundColor: "transparent", pointerEvents: "none" },
+            },
+          }}
+          PaperProps={{
+            sx: {
+              height: `calc(50dvh - ${BASE_BOTTOM_NAV_HEIGHT}px)`,
+              bottom: `${BASE_BOTTOM_NAV_HEIGHT}px`,
+              p: 2,
+              borderTopLeftRadius: 14,
+              borderTopRightRadius: 14,
+              pointerEvents: "auto",
+              background: t.glass.bg,
+              backdropFilter: "blur(14px)",
+              WebkitBackdropFilter: "blur(14px)",
+              borderTop: t.glass.border,
+            },
+          }}
+        >
+          {drawerType === "search" && (
+            <Typography variant="h6" gutterBottom>
+              Search
+            </Typography>
+          )}
+          {drawerType === "notifications" && <NotificationDrawer />}
+          {drawerType === "profile" && (
+            <ProfileDrawer onLogout={handleLogout} showStatus={false} />
+          )}
+        </SwipeableDrawer>
+      )}
     </Box>
   );
 };
