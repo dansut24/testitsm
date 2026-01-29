@@ -27,22 +27,21 @@ function getProtocol() {
   return window.location.protocol || "https:";
 }
 
+function normalizeModuleForHost(module) {
+  const m = String(module || "").toLowerCase().trim();
+  if (m === "self_service" || m === "self-service" || m === "selfservice" || m === "self") return "self";
+  if (m === "rmm") return "control";
+  return m;
+}
+
 function getRegistrableDomain(host) {
-  // Returns the base domain:
-  // demoitsm.hi5tech.co.uk -> hi5tech.co.uk
-  // demoitsm-control.hi5tech.com -> hi5tech.com
   const parts = String(host || "").split(".").filter(Boolean);
   if (parts.length <= 2) return host;
 
   const last2 = parts.slice(-2).join(".");
   const last3 = parts.slice(-3).join(".");
 
-  // If TLD is multi-part (co.uk), registrable domain uses last 3 labels
-  if (MULTI_PART_TLDS.has(last2)) {
-    return last3; // e.g. hi5tech.co.uk
-  }
-
-  // Normal TLD (com/net/etc) uses last 2 labels
+  if (MULTI_PART_TLDS.has(last2)) return last3;
   return last2;
 }
 
@@ -53,8 +52,6 @@ function parseTenantFromHost(host) {
   if (ROOT_HOSTS.has(h)) return { tenantSlug: null, module: null, rootDomain: h };
 
   const rootDomain = getRegistrableDomain(h);
-
-  // first label: demoitsm-itsm OR demoitsm
   const firstLabel = h.split(".")[0] || "";
   const found = MODULE_HOST_SUFFIXES.find((x) => firstLabel.endsWith(x.token));
 
@@ -63,7 +60,6 @@ function parseTenantFromHost(host) {
     return { tenantSlug: tenantSlug || null, module: found.module, rootDomain };
   }
 
-  // tenant base host: demoitsm.hi5tech.co.uk
   return { tenantSlug: firstLabel || null, module: null, rootDomain };
 }
 
@@ -85,47 +81,26 @@ export function appendQueryParams(urlString, params = {}) {
   }
 }
 
-/**
- * Central tenant host (no module suffix)
- * e.g. https://demoitsm.hi5tech.co.uk
- */
 export function getTenantBaseUrl() {
   const { tenantSlug, rootDomain } = parseTenantFromHost(getHost());
   if (!tenantSlug || !rootDomain) return `${getProtocol()}//${getHost()}`;
   return `${getProtocol()}//${tenantSlug}.${rootDomain}`;
 }
 
-/**
- * Module base URL
- * e.g. https://demoitsm-itsm.hi5tech.co.uk
- */
 export function getModuleBaseUrl(module) {
   const { tenantSlug, rootDomain } = parseTenantFromHost(getHost());
   if (!tenantSlug || !rootDomain) return `${getProtocol()}//${getHost()}`;
 
-  const mod = String(module || "").toLowerCase();
-  const token =
-    mod === "itsm" ? "itsm" : mod === "control" ? "control" : mod === "self" ? "self" : mod;
-
+  const token = normalizeModuleForHost(module);
   return `${getProtocol()}//${tenantSlug}-${token}.${rootDomain}`;
 }
 
-/**
- * Central login URL on tenant base host.
- * redirectPath can be:
- *  - "/" (landing)
- *  - "/itsm" | "/control" | "/self"
- */
 export function getCentralLoginUrl(redirectPath = "/") {
   const base = getTenantBaseUrl();
   const qp = encodeURIComponent(redirectPath || "/");
   return `${base}/login?redirect=${qp}`;
 }
 
-/**
- * Central logout URL on tenant base host.
- * Useful as a single redirect target from module portals.
- */
 export function getCentralLogoutUrl() {
   const base = getTenantBaseUrl();
   return `${base}/logout`;
