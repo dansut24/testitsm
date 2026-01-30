@@ -25,7 +25,6 @@ import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import CentralLogin from "../common/pages/CentralLogin";
 import { supabase } from "../common/utils/supabaseClient";
 
-// ✅ Shared Hi5 theme provider + hook
 import { Hi5ThemeProvider, useHi5Theme } from "../common/ui/hi5Theme";
 import GlassPanel from "../common/ui/GlassPanel";
 import ThemeToggleIconButton from "../common/ui/ThemeToggleIconButton";
@@ -44,7 +43,6 @@ function getTenantSlugFromSearchOrHost(search) {
   const qpTenant = new URLSearchParams(search || "").get("tenant");
   if (qpTenant) return String(qpTenant).toLowerCase().trim();
 
-  // demoitsm-itsm -> demoitsm
   return (firstLabel.split("-")[0] || "").toLowerCase().trim();
 }
 
@@ -57,12 +55,10 @@ function getProtocol() {
   return window.location.protocol || "https:";
 }
 
-// module host like: demoitsm-itsm.hi5tech.co.uk
 function buildModuleUrl(tenantSlug, moduleKey) {
   const parent = getParentDomain();
   const proto = getProtocol();
 
-  // internal keys: itsm | control | self_service
   const sub =
     moduleKey === "itsm"
       ? `${tenantSlug}-itsm`
@@ -93,16 +89,11 @@ function normalizeModuleValue(v) {
   if (!raw) return null;
 
   const m = raw.replaceAll("-", "_").replaceAll(" ", "_");
-
-  // Ignore admin as a "module card"
   if (m === "admin") return null;
 
   if (m === "itsm" || m.includes("itsm")) return "itsm";
   if (m === "control" || m.includes("control")) return "control";
-
-  // ✅ Normalize to self_service everywhere (matches common)
   if (m === "self" || m === "self_service" || m.includes("self")) return "self_service";
-
   return null;
 }
 
@@ -179,9 +170,7 @@ async function loadUserOverrides(userId, tenantId) {
     }
 
     const msg = String(res.error?.message || "").toLowerCase();
-    if (msg.includes("does not exist") || msg.includes("column") || msg.includes("parse")) {
-      continue;
-    }
+    if (msg.includes("does not exist") || msg.includes("column") || msg.includes("parse")) continue;
     throw res.error;
   }
 
@@ -209,7 +198,7 @@ async function loadUserOverrides(userId, tenantId) {
 }
 
 // -------------------------
-// Hard cleanup helpers (auth + portal cache)
+// Hard cleanup helpers
 // -------------------------
 
 function deleteCookie(name, domain) {
@@ -225,9 +214,7 @@ function clearPortalCache() {
       if (k && k.startsWith("hi5tech_portal_cache:")) keys.push(k);
     }
     keys.forEach((k) => sessionStorage.removeItem(k));
-  } catch {
-    // ignore
-  }
+  } catch {}
 }
 
 function hardClearAuthStorage() {
@@ -237,20 +224,14 @@ function hardClearAuthStorage() {
     deleteCookie(STORAGE_KEY);
     const parent = getParentDomain();
     if (parent) deleteCookie(STORAGE_KEY, `.${parent}`);
-  } catch {
-    // ignore
-  }
+  } catch {}
 
   try {
     localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // ignore
-  }
+  } catch {}
   try {
     sessionStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // ignore
-  }
+  } catch {}
 }
 
 // -------------------------
@@ -310,12 +291,7 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href, t }) {
           variant="contained"
           onClick={onOpen}
           endIcon={<KeyboardArrowRightIcon />}
-          sx={{
-            borderRadius: 999,
-            fontWeight: 950,
-            textTransform: "none",
-            px: 2,
-          }}
+          sx={{ borderRadius: 999, fontWeight: 950, textTransform: "none", px: 2 }}
         >
           Open
         </Button>
@@ -370,8 +346,9 @@ function PortalHome() {
     }
   }, [cacheKey]);
 
-  const [busy, setBusy] = useState(!cached);
-  const [refreshing, setRefreshing] = useState(!!cached);
+  // Single source of truth for screen state
+  const [status, setStatus] = useState(() => (cached ? "checking" : "checking"));
+  // checking | signed_out | signed_in_loading | ready
 
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
@@ -380,7 +357,9 @@ function PortalHome() {
   const [query, setQuery] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
-  const runSeq = useRef(0);
+  const runningRef = useRef(false);
+  const rerunRef = useRef(false);
+  const lastRunAtRef = useRef(0);
 
   const writeCache = useCallback(
     (tObj, mods) => {
@@ -393,28 +372,36 @@ function PortalHome() {
             modules: Array.isArray(mods) ? mods : [],
           })
         );
-      } catch {
-        // ignore
-      }
+      } catch {}
     },
     [cacheKey]
   );
 
   const run = useCallback(
-    async ({ soft = false } = {}) => {
-      const seq = ++runSeq.current;
+    async ({ reason = "manual" } = {}) => {
+      // single-flight
+      if (runningRef.current) {
+        rerunRef.current = true;
+        return;
+      }
+      runningRef.current = true;
+      rerunRef.current = false;
 
-      if (soft) setRefreshing(true);
-      else setBusy(true);
+      // prevent thrash
+      const now = Date.now();
+      if (reason !== "auth" && now - lastRunAtRef.current < 500) {
+        runningRef.current = false;
+        return;
+      }
+      lastRunAtRef.current = now;
 
       setErrorMsg("");
+      setStatus("checking");
 
       try {
         const { data } = await supabase.auth.getSession();
         const sess = data?.session || null;
         const u = sess?.user || null;
-
-        if (seq !== runSeq.current) return;
 
         setSession(sess);
         setUser(u);
@@ -423,17 +410,19 @@ function PortalHome() {
           setTenant(null);
           setModules([]);
           writeCache(null, []);
+          setStatus("signed_out");
           return;
         }
 
-        const tObj = await loadTenantByBaseHost(tenantSlug);
-        if (seq !== runSeq.current) return;
+        setStatus("signed_in_loading");
 
+        const tObj = await loadTenantByBaseHost(tenantSlug);
         setTenant(tObj);
 
         if (!tObj?.id) {
           setModules([]);
           writeCache(tObj, []);
+          setStatus("ready");
           return;
         }
 
@@ -454,26 +443,28 @@ function PortalHome() {
         userAllow.forEach((m) => set.add(m));
         userDeny.forEach((m) => set.delete(m));
 
-        if (seq !== runSeq.current) return;
-
         const finalMods = Array.from(set);
         setModules(finalMods);
         writeCache(tObj, finalMods);
+        setStatus("ready");
       } catch (e) {
-        if (seq !== runSeq.current) return;
-
         console.error("[Portal] run error:", e);
+
+        // If we have cache, show it but don’t deadlock on loading
         if (cached?.tenant || (cached?.modules && cached.modules.length)) {
           setErrorMsg("We couldn’t refresh portal data. Showing cached view.");
+          setStatus("ready");
         } else {
           setErrorMsg("We couldn’t load portal data. Please retry.");
           setTenant(null);
           setModules([]);
+          setStatus("ready");
         }
       } finally {
-        if (seq === runSeq.current) {
-          setBusy(false);
-          setRefreshing(false);
+        runningRef.current = false;
+        if (rerunRef.current) {
+          rerunRef.current = false;
+          run({ reason: "queued" });
         }
       }
     },
@@ -481,26 +472,23 @@ function PortalHome() {
   );
 
   useEffect(() => {
-    run({ soft: !!cached });
+    run({ reason: "initial" });
 
     const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      run({ soft: !!cached });
+      run({ reason: "auth" });
     });
 
-    const onPageShow = () => run({ soft: true });
+    // Optional: refresh when tab becomes visible, but debounced by single-flight logic
     const onVisibility = () => {
-      if (document.visibilityState === "visible") run({ soft: true });
+      if (document.visibilityState === "visible") run({ reason: "visible" });
     };
-
-    window.addEventListener("pageshow", onPageShow);
     document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
       sub?.subscription?.unsubscribe?.();
-      window.removeEventListener("pageshow", onPageShow);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [run, cached]);
+  }, [run]);
 
   const displayName = useMemo(() => {
     const name =
@@ -516,20 +504,13 @@ function PortalHome() {
     return (s[0] || "U").toUpperCase();
   }, [displayName]);
 
-  if (busy && !tenant && !modules.length) {
+  if (status === "checking" && !tenant && !modules.length) {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
         <Stack spacing={1} alignItems="center">
           <Typography sx={{ fontWeight: 950, opacity: 0.85 }}>Loading…</Typography>
           {!!errorMsg && (
-            <Typography
-              sx={{
-                opacity: 0.7,
-                fontSize: 13,
-                maxWidth: 320,
-                textAlign: "center",
-              }}
-            >
+            <Typography sx={{ opacity: 0.7, fontSize: 13, maxWidth: 320, textAlign: "center" }}>
               {errorMsg}
             </Typography>
           )}
@@ -538,15 +519,7 @@ function PortalHome() {
     );
   }
 
-  // ✅ IMPORTANT: don't redirect until we've actually checked session.
-  if (!session && (busy || refreshing)) {
-    return (
-      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-        <Typography sx={{ fontWeight: 950, opacity: 0.85 }}>Loading…</Typography>
-      </Box>
-    );
-  }
-
+  if (status === "signed_out") return <Navigate to="/login" replace />;
   if (!user || !session) return <Navigate to="/login" replace />;
 
   // Auto-forward if exactly one module
@@ -626,7 +599,7 @@ function PortalHome() {
                     Choose a module
                   </Typography>
 
-                  {refreshing ? (
+                  {status === "checking" || status === "signed_in_loading" ? (
                     <Chip
                       label="Refreshing…"
                       size="small"
@@ -705,10 +678,10 @@ function PortalHome() {
 
               <Button
                 variant="contained"
-                onClick={() => window.location.reload()}
+                onClick={() => run({ reason: "manual" })}
                 sx={{ borderRadius: 999, fontWeight: 950, textTransform: "none" }}
               >
-                Reload
+                Retry
               </Button>
             </Stack>
           </GlassPanel>
@@ -744,8 +717,8 @@ function PortalHome() {
           <GlassPanel t={t} sx={{ mt: 2.2, p: 3 }}>
             <Typography sx={{ fontWeight: 950, fontSize: 18 }}>No modules available</Typography>
             <Typography sx={{ opacity: 0.72, mt: 0.6 }}>
-              Your account doesn’t have access to any modules for this tenant yet.
-              Contact an administrator to grant ITSM / Control / Self Service.
+              Your account doesn’t have access to any modules for this tenant yet. Contact an
+              administrator to grant ITSM / Control / Self Service.
             </Typography>
           </GlassPanel>
         ) : null}
@@ -756,7 +729,7 @@ function PortalHome() {
   );
 }
 
-// Login wrapper: fixes "login just refreshes" after logout by doing a hard cleanup when logout=1
+// Login wrapper
 function PortalLogin() {
   const location = useLocation();
 
@@ -772,9 +745,7 @@ function PortalLogin() {
     let mounted = true;
 
     (async () => {
-      if (logoutFlag === "1") {
-        hardClearAuthStorage();
-      }
+      if (logoutFlag === "1") hardClearAuthStorage();
 
       const { data } = await supabase.auth.getSession();
       const sess = data?.session || null;
@@ -797,9 +768,7 @@ function PortalLogin() {
     );
   }
 
-  if (hasSession) {
-    return <Navigate to={afterLogin} replace />;
-  }
+  if (hasSession) return <Navigate to={afterLogin} replace />;
 
   return <CentralLogin title="Sign in" afterLogin={afterLogin} />;
 }
