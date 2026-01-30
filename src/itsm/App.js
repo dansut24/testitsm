@@ -3,10 +3,9 @@
 import "@uiw/react-md-editor/markdown-editor.css";
 import "@uiw/react-markdown-preview/markdown.css";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Box } from "@mui/material";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { supabase } from "../common/utils/supabaseClient";
 import { ThemeModeProvider } from "./theme/ThemeContext";
 
 import { getCentralLoginUrl } from "../common/utils/portalUrl";
@@ -51,6 +50,7 @@ import NotFound from "./pages/NotFound";
 import SetPassword from "./pages/SetPassword";
 import NewTab from "./pages/NewTab";
 
+// Self-service routes included inside ITSM (kept as you had it)
 import SelfServiceLayout from "../selfservice/layouts/SelfServiceLayout";
 import SelfServiceHome from "../selfservice/pages/SelfServiceHome";
 import RaiseRequest from "../selfservice/pages/RaiseRequest";
@@ -60,39 +60,20 @@ import Checkout from "../selfservice/pages/Checkout";
 import SelfServiceConfirmation from "../selfservice/pages/CheckoutConfirmation";
 import SelfServiceKnowledgeBase from "../selfservice/pages/KnowledgeBase";
 
+// ✅ New stable auth hook (cookie + /api/session)
+import { useSession } from "../common/hooks/useSession";
+
 // ✅ Shared Hi5 theme
 import { Hi5ThemeProvider, useHi5Theme } from "../common/ui/hi5Theme";
 import ThemeToggleIconButton from "../common/ui/ThemeToggleIconButton";
 
 function ITSMRoutes() {
-  const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
-
+  const { loading, user } = useSession();
   const centralLogin = getCentralLoginUrl("/itsm");
-
-  useEffect(() => {
-    let mounted = true;
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      setSession(session);
-      setLoading(false);
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      if (!mounted) return;
-      setSession(newSession);
-    });
-
-    return () => {
-      mounted = false;
-      listener?.subscription?.unsubscribe?.();
-    };
-  }, []);
 
   if (loading) return <div>Loading...</div>;
 
-  const isLoggedIn = !!session;
+  const isLoggedIn = !!user;
 
   return (
     <Routes>
