@@ -1,3 +1,4 @@
+// src/selfservice/App.js
 import React from "react";
 import { CssBaseline, Box } from "@mui/material";
 import { Routes, Route, Navigate } from "react-router-dom";
@@ -12,32 +13,63 @@ import Confirmation from "./pages/CheckoutConfirmation";
 import KnowledgeBase from "./pages/KnowledgeBase";
 import NotFound from "./pages/NotFound";
 
-import { useAuth } from "../common/context/AuthContext";
 import { getCentralLoginUrl } from "../common/utils/portalUrl";
+import ExternalRedirect from "../common/components/ExternalRedirect";
 
-function App() {
-  const { authLoading, user } = useAuth();
+// ✅ New stable auth hook (cookie + /api/session)
+import { useSession } from "../common/hooks/useSession";
 
-  if (authLoading) {
+// ✅ Shared Hi5 theme (optional but keeps visuals consistent)
+import { Hi5ThemeProvider, useHi5Theme } from "../common/ui/hi5Theme";
+import ThemeToggleIconButton from "../common/ui/ThemeToggleIconButton";
+
+function SelfServiceInnerApp() {
+  const { loading, user } = useSession();
+  const centralLogin = getCentralLoginUrl("/self");
+
+  const { mode, tokens: t, toggleMode } = useHi5Theme();
+
+  if (loading) {
     return (
-      <Box sx={{ p: 4 }}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          color: t.page.color,
+          background: t.page.background,
+          display: "grid",
+          placeItems: "center",
+          p: 4,
+        }}
+      >
         <p>Loading session...</p>
       </Box>
     );
   }
 
-  const centralLogin = getCentralLoginUrl("/self-service");
-
   return (
     <>
       <CssBaseline />
-      <Box sx={{ minHeight: "100vh", overflow: "auto" }}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          overflow: "auto",
+          color: t.page.color,
+          background: t.page.background,
+          position: "relative",
+        }}
+      >
+        {/* ✅ Floating theme toggle (matches Control/ITSM behaviour) */}
+        <Box sx={{ position: "fixed", top: 14, right: 14, zIndex: 2000 }}>
+          <ThemeToggleIconButton mode={mode} onToggle={toggleMode} t={t} />
+        </Box>
+
         <Routes>
-          <Route path="/login" element={<Navigate to={centralLogin} replace />} />
+          {/* Always send /login to the central login on tenant base host */}
+          <Route path="/login" element={<ExternalRedirect to={centralLogin} />} />
 
           <Route
             path="/"
-            element={user ? <SelfServiceLayout /> : <Navigate to={centralLogin} replace />}
+            element={user ? <SelfServiceLayout /> : <ExternalRedirect to={centralLogin} />}
           >
             <Route index element={<SelfServiceHome />} />
             <Route path="raise-request" element={<RaiseRequest />} />
@@ -48,11 +80,20 @@ function App() {
             <Route path="knowledge-base" element={<KnowledgeBase />} />
           </Route>
 
-          <Route path="*" element={<NotFound />} />
+          <Route
+            path="*"
+            element={user ? <NotFound /> : <ExternalRedirect to={centralLogin} />}
+          />
         </Routes>
       </Box>
     </>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <Hi5ThemeProvider>
+      <SelfServiceInnerApp />
+    </Hi5ThemeProvider>
+  );
+}
