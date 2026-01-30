@@ -1,7 +1,7 @@
 // src/selfservice/App.js
 import React from "react";
 import { CssBaseline, Box } from "@mui/material";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 
 import SelfServiceLayout from "./layouts/SelfServiceLayout";
 import SelfServiceHome from "./pages/SelfServiceHome";
