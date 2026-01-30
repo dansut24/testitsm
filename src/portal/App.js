@@ -30,19 +30,30 @@ import GlassPanel from "../common/ui/GlassPanel";
 import ThemeToggleIconButton from "../common/ui/ThemeToggleIconButton";
 
 // -------------------------
-// Helpers
+// Host helpers
 // -------------------------
+
+function getHost() {
+  return window.location.hostname || "";
+}
+
+function getHostModule(host = getHost()) {
+  if (host.includes("-itsm.")) return "itsm";
+  if (host.includes("-control.")) return "control";
+  if (host.includes("-self.")) return "self";
+  return null; // tenant base host
+}
 
 function getTenantSlug(search) {
   const qp = new URLSearchParams(search || "").get("tenant");
   if (qp) return qp.toLowerCase();
 
-  const host = window.location.hostname || "";
+  const host = getHost();
   return (host.split(".")[0] || "").split("-")[0];
 }
 
 function parentDomain() {
-  const host = window.location.hostname || "";
+  const host = getHost();
   return host.split(".").slice(1).join(".");
 }
 
@@ -58,16 +69,8 @@ function moduleUrl(tenant, module) {
       ? `${tenant}-control`
       : `${tenant}-self`;
 
-  // IMPORTANT: go to the module route, not the subdomain root
-  // (your current deployment serves the same SPA on subdomains, and "/" redirects to "/app")
-  const path =
-    module === "itsm"
-      ? "/itsm"
-      : module === "control"
-      ? "/control"
-      : "/self";
-
-  return `${protocol()}//${sub}.${parentDomain()}${path}`;
+  // We navigate to the module HOST. The module host itself will route to the correct module path.
+  return `${protocol()}//${sub}.${parentDomain()}/`;
 }
 
 // -------------------------
@@ -185,7 +188,7 @@ function PortalHome() {
         <GlassPanel t={t} sx={{ p: 2 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Stack direction="row" spacing={1.5} alignItems="center">
-              <Avatar>{user.email[0].toUpperCase()}</Avatar>
+              <Avatar>{user.email?.[0]?.toUpperCase?.() || "U"}</Avatar>
               <Box>
                 <Typography fontWeight={950}>Choose a module</Typography>
                 <Typography sx={{ opacity: 0.7 }}>{user.email}</Typography>
@@ -248,12 +251,24 @@ function PortalHome() {
 }
 
 function PortalAppInner() {
+  const hostModule = getHostModule();
+
+  // On module hosts, DO NOT redirect to /app.
+  // Use the module route as the default “home”.
+  const defaultHome = hostModule ? `/${hostModule}` : "/app";
+
   return (
     <Routes>
       <Route path="/login" element={<CentralLogin />} />
+
+      {/* Tenant landing (portal) */}
       <Route path="/app" element={<PortalHome />} />
-      <Route path="/" element={<Navigate to="/app" replace />} />
-      <Route path="*" element={<Navigate to="/app" replace />} />
+
+      {/* Root → host-aware default */}
+      <Route path="/" element={<Navigate to={defaultHome} replace />} />
+
+      {/* Anything unknown → host-aware default */}
+      <Route path="*" element={<Navigate to={defaultHome} replace />} />
     </Routes>
   );
 }
