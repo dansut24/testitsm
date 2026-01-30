@@ -1,98 +1,128 @@
 // api/login.js
 import { createClient } from "@supabase/supabase-js";
 
-/**
- * POST /api/login
- * Body: { email, password }
- *
- * Sets HttpOnly cookies for access + refresh tokens scoped to .hi5tech.co.uk
- * so ALL subdomains share auth without flaky client-side session storage.
- */
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
+const ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
-function isProdHost(host) {
-  // Covers demoitsm.hi5tech.co.uk, demoitsm-itsm.hi5tech.co.uk, etc.
-  return typeof host === "string" && (host === "hi5tech.co.uk" || host.endsWith(".hi5tech.co.uk"));
+// Cookie names (keep in sync with api/session.js)
+const ACCESS_COOKIE = "hi5tech_access_token";
+const REFRESH_COOKIE = "hi5tech_refresh_token";
+
+function getRegistrableDomain(hostname = "") {
+  // Handles .co.uk properly (enough for hi5tech.co.uk)
+  const h = String(hostname || "").toLowerCase().trim();
+  const parts = h.split(".").filter(Boolean);
+  if (parts.length < 2) return null;
+
+  const last2 = parts.slice(-2).join(".");
+  const last3 = parts.slice(-3).join(".");
+
+  const MULTI_PART_TLDS = new Set([
+    "co.uk",
+    "org.uk",
+    "ac.uk",
+    "gov.uk",
+    "ltd.uk",
+    "plc.uk",
+    "net.uk",
+  ]);
+
+  // If the TLD is multi-part (co.uk), registrable domain is last 3 labels
+  if (MULTI_PART_TLDS.has(last2)) return last3;
+
+  return last2;
 }
 
-function cookieDomainFromHost(host) {
-  // Only set a Domain= in production; omit in localhost/preview to avoid browser rejection.
-  return isProdHost(host) ? ".hi5tech.co.uk" : null;
+function cookieDomainFromReq(req) {
+  const host = req.headers.host || "";
+  const hostname = host.split(":")[0];
+  const base = getRegistrableDomain(hostname);
+  if (!base) return null;
+
+  // Always use dot-domain to share across subdomains
+  return `.${base}`;
 }
 
-function serializeCookie(name, value, opts = {}) {
-  const encName = encodeURIComponent(name);
-  const encVal = encodeURIComponent(value);
+function setCookie(res, name, value, opts = {}) {
+  const parts = [];
+  parts.push(`${encodeURIComponent(name)}=${encodeURIComponent(value)}`);
 
-  let str = `${encName}=${encVal}`;
+  parts.push(`Path=${opts.path || "/"}`);
+  if (opts.domain) parts.push(`Domain=${opts.domain}`);
+  if (opts.httpOnly) parts.push("HttpOnly");
+  if (opts.secure) parts.push("Secure");
+  parts.push(`SameSite=${opts.sameSite || "Lax"}`);
 
-  if (opts.maxAge != null) str += `; Max-Age=${opts.maxAge}`;
-  str += `; Path=/`;
-  if (opts.domain) str += `; Domain=${opts.domain}`;
-  if (opts.httpOnly) str += `; HttpOnly`;
-  if (opts.secure) str += `; Secure`;
-  if (opts.sameSite) str += `; SameSite=${opts.sameSite}`;
+  if (typeof opts.maxAge === "number") parts.push(`Max-Age=${opts.maxAge}`);
 
-  return str;
+  return parts.join("; ");
+}
+
+function json(res, status, body) {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.status(status).json(body);
 }
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).json({ error: "Method not allowed" });
+    return json(res, 405, { error: "Method not allowed" });
   }
 
   try {
+    if (!SUPABASE_URL || !ANON_KEY) {
+      return json(res, 500, { error: "Server not configured (missing env vars)" });
+    }
+
     const { email, password } = req.body || {};
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required" });
+    const e = String(email || "").trim();
+    const p = String(password || "");
+
+    if (!e || !p) {
+      return json(res, 400, { error: "Email and password are required" });
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL;
-    const supabaseAnonKey =
-      process.env.SUPABASE_ANON_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return res.status(500).json({ error: "Supabase env vars not set" });
-    }
-
-    // Server-side auth: anon key is enough for signInWithPassword
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false }, // important: we manage cookies ourselves
+    const supabase = createClient(SUPABASE_URL, ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
     });
 
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: String(email).trim(),
-      password: String(password),
+      email: e,
+      password: p,
     });
 
     if (error || !data?.session) {
-      return res.status(401).json({ error: error?.message || "Invalid login" });
+      return json(res, 401, { error: error?.message || "Invalid credentials" });
     }
 
-    const hostHeader = req.headers.host || "";
-    const domain = cookieDomainFromHost(hostHeader);
+    const access = data.session.access_token;
+    const refresh = data.session.refresh_token;
 
-    const isSecure = (req.headers["x-forwarded-proto"] || "").toString() === "https";
+    const domain = cookieDomainFromReq(req);
 
-    const accessToken = data.session.access_token;
-    const refreshToken = data.session.refresh_token;
+    // If you run locally (localhost) domain may be null; that’s fine.
+    const secure = true; // Vercel = https; leaving this true is correct for prod
 
-    // Keep cookies slightly longer than access token lifetime; refresh token handles the long session.
-    const accessMaxAge = Math.max(60, Number(data.session.expires_in || 3600)); // seconds
+    // Supabase default access token lifetime is short; refresh is longer.
+    // We keep access cookie short and refresh longer.
+    const accessMaxAge = 60 * 60; // 1 hour
     const refreshMaxAge = 60 * 60 * 24 * 30; // 30 days
 
     const cookies = [
-      serializeCookie("hi5_at", accessToken, {
+      setCookie(res, ACCESS_COOKIE, access, {
+        path: "/",
         domain,
         httpOnly: true,
-        secure: isSecure,
+        secure,
         sameSite: "Lax",
         maxAge: accessMaxAge,
       }),
-      serializeCookie("hi5_rt", refreshToken, {
+      setCookie(res, REFRESH_COOKIE, refresh, {
+        path: "/",
         domain,
         httpOnly: true,
-        secure: isSecure,
+        secure,
         sameSite: "Lax",
         maxAge: refreshMaxAge,
       }),
@@ -100,9 +130,13 @@ export default async function handler(req, res) {
 
     res.setHeader("Set-Cookie", cookies);
 
-    return res.status(200).json({ ok: true });
+    // Return minimal user info (optional)
+    return json(res, 200, {
+      ok: true,
+      user: data.user || null,
+    });
   } catch (e) {
-    console.error("[api/login] error:", e);
-    return res.status(500).json({ error: "Server error" });
+    console.error("api/login error:", e);
+    return json(res, 500, { error: "Login failed" });
   }
 }
