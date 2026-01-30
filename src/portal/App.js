@@ -1,5 +1,5 @@
 // src/portal/App.js
-import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import React, { useMemo, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import {
   Box,
@@ -23,223 +23,52 @@ import ListAltIcon from "@mui/icons-material/ListAlt";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 
 import CentralLogin from "../common/pages/CentralLogin";
+import { useSession } from "../common/hooks/useSession";
 
 import { Hi5ThemeProvider, useHi5Theme } from "../common/ui/hi5Theme";
 import GlassPanel from "../common/ui/GlassPanel";
 import ThemeToggleIconButton from "../common/ui/ThemeToggleIconButton";
 
-import { supabase, STORAGE_KEY } from "../common/utils/supabaseClient";
-
 // -------------------------
-// Host + URL helpers
+// Helpers
 // -------------------------
 
-function getTenantSlugFromSearchOrHost(search) {
+function getTenantSlug(search) {
+  const qp = new URLSearchParams(search || "").get("tenant");
+  if (qp) return qp.toLowerCase();
+
   const host = window.location.hostname || "";
-  const firstLabel = host.split(".")[0] || "";
-
-  const qpTenant = new URLSearchParams(search || "").get("tenant");
-  if (qpTenant) return String(qpTenant).toLowerCase().trim();
-
-  return (firstLabel.split("-")[0] || "").toLowerCase().trim();
+  return (host.split(".")[0] || "").split("-")[0];
 }
 
-function getParentDomain() {
+function parentDomain() {
   const host = window.location.hostname || "";
   return host.split(".").slice(1).join(".");
 }
 
-function getProtocol() {
+function protocol() {
   return window.location.protocol || "https:";
 }
 
-function buildModuleUrl(tenantSlug, moduleKey) {
-  const parent = getParentDomain();
-  const proto = getProtocol();
-
+function moduleUrl(tenant, module) {
   const sub =
-    moduleKey === "itsm"
-      ? `${tenantSlug}-itsm`
-      : moduleKey === "control"
-      ? `${tenantSlug}-control`
-      : `${tenantSlug}-self`;
+    module === "itsm"
+      ? `${tenant}-itsm`
+      : module === "control"
+      ? `${tenant}-control`
+      : `${tenant}-self`;
 
-  return `${proto}//${sub}.${parent}`;
+  return `${protocol()}//${sub}.${parentDomain()}`;
 }
 
 // -------------------------
-// Data loaders
+// UI
 // -------------------------
 
-async function loadTenantByBaseHost(tenantSlug) {
-  const { data, error } = await supabase
-    .from("tenants")
-    .select("id, subdomain, name")
-    .eq("subdomain", tenantSlug)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data || null;
-}
-
-function normalizeModuleValue(v) {
-  const raw = String(v || "").toLowerCase().trim();
-  if (!raw) return null;
-
-  const m = raw.replaceAll("-", "_").replaceAll(" ", "_");
-  if (m === "admin") return null;
-
-  if (m === "itsm" || m.includes("itsm")) return "itsm";
-  if (m === "control" || m.includes("control")) return "control";
-  if (m === "self" || m === "self_service" || m.includes("self")) return "self_service";
-  return null;
-}
-
-async function loadProfileRole(userId, tenantId) {
-  try {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", userId)
-      .eq("tenant_id", tenantId)
-      .maybeSingle();
-
-    if (error) throw error;
-    if (data?.role) return data.role;
-  } catch {
-    // fallback below
-  }
-
-  const { data: fallback, error: fallbackErr } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (fallbackErr) throw fallbackErr;
-  return fallback?.role || null;
-}
-
-async function loadRoleModules(role, tenantId) {
-  if (!role) return [];
-
-  const { data, error } = await supabase
-    .from("role_module_access")
-    .select("module, allowed")
-    .eq("tenant_id", tenantId)
-    .eq("role", role);
-
-  if (error) throw error;
-
-  const rows = Array.isArray(data) ? data : [];
-  const allow = new Set();
-
-  for (const r of rows) {
-    if (!r?.allowed) continue;
-    const mod = normalizeModuleValue(r.module);
-    if (mod) allow.add(mod);
-  }
-
-  return Array.from(allow);
-}
-
-async function loadUserOverrides(userId, tenantId) {
-  const tries = [
-    { cols: "module, effect", mode: "effect" },
-    { cols: "module, action", mode: "effect" },
-    { cols: "module, access", mode: "effect" },
-    { cols: "module, allowed", mode: "allowedBool" },
-  ];
-
-  let rows = [];
-  let mode = null;
-
-  for (const t of tries) {
-    const res = await supabase
-      .from("user_module_access")
-      .select(t.cols)
-      .eq("tenant_id", tenantId)
-      .eq("user_id", userId);
-
-    if (!res?.error) {
-      rows = Array.isArray(res.data) ? res.data : [];
-      mode = t.mode;
-      break;
-    }
-
-    const msg = String(res.error?.message || "").toLowerCase();
-    if (msg.includes("does not exist") || msg.includes("column") || msg.includes("parse")) continue;
-    throw res.error;
-  }
-
-  const allow = new Set();
-  const deny = new Set();
-
-  for (const r of rows) {
-    const mod = normalizeModuleValue(r.module);
-    if (!mod) continue;
-
-    if (mode === "allowedBool") {
-      if (r.allowed === true) allow.add(mod);
-      if (r.allowed === false) deny.add(mod);
-      continue;
-    }
-
-    const effRaw = r.effect ?? r.action ?? r.access ?? "";
-    const eff = String(effRaw || "").toLowerCase().trim();
-
-    if (eff === "deny" || eff === "block" || eff === "remove") deny.add(mod);
-    if (eff === "allow" || eff === "grant" || eff === "add") allow.add(mod);
-  }
-
-  return { allow: Array.from(allow), deny: Array.from(deny) };
-}
-
-// -------------------------
-// Hard cleanup helpers
-// -------------------------
-
-function deleteCookie(name, domain) {
-  const base = `${encodeURIComponent(name)}=; Max-Age=0; path=/; samesite=lax`;
-  document.cookie = domain ? `${base}; domain=${domain}` : base;
-}
-
-function clearPortalCache() {
-  try {
-    const keys = [];
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const k = sessionStorage.key(i);
-      if (k && k.startsWith("hi5tech_portal_cache:")) keys.push(k);
-    }
-    keys.forEach((k) => sessionStorage.removeItem(k));
-  } catch {}
-}
-
-function hardClearAuthStorage() {
-  clearPortalCache();
-
-  try {
-    deleteCookie(STORAGE_KEY);
-    const parent = getParentDomain();
-    if (parent) deleteCookie(STORAGE_KEY, `.${parent}`);
-  } catch {}
-
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch {}
-  try {
-    sessionStorage.removeItem(STORAGE_KEY);
-  } catch {}
-}
-
-// -------------------------
-// Cards
-// -------------------------
-
-function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href, t }) {
+function ModuleCard({ title, subtitle, chips, icon, href, t }) {
   return (
-    <GlassPanel t={t} sx={{ p: 2.2, height: "100%" }}>
-      <Stack direction="row" spacing={1.6} alignItems="center">
+    <GlassPanel t={t} sx={{ p: 2.2 }}>
+      <Stack direction="row" spacing={1.6}>
         <Box
           sx={{
             width: 54,
@@ -249,63 +78,37 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href, t }) {
             placeItems: "center",
             background: "rgba(124,92,255,0.18)",
             border: t.glass.border,
-            flexShrink: 0,
           }}
         >
           {icon}
         </Box>
 
-        <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Typography sx={{ fontWeight: 950, fontSize: 18 }} noWrap>
-            {title}
-          </Typography>
-          <Typography sx={{ opacity: 0.7, fontSize: 13 }} noWrap>
-            {subtitle}
-          </Typography>
+        <Box sx={{ flex: 1 }}>
+          <Typography fontWeight={950}>{title}</Typography>
+          <Typography sx={{ opacity: 0.7 }}>{subtitle}</Typography>
         </Box>
       </Stack>
 
-      <Stack direction="row" spacing={1} sx={{ mt: 1.6, flexWrap: "wrap" }}>
+      <Stack direction="row" spacing={1} mt={1.6} flexWrap="wrap">
         {chips.map((c) => (
-          <Chip
-            key={c}
-            label={c}
-            sx={{
-              height: 30,
-              borderRadius: 999,
-              fontWeight: 900,
-              background: t.pill.bg,
-              border: t.pill.border,
-              color: t.pill.text,
-            }}
-          />
+          <Chip key={c} label={c} />
         ))}
       </Stack>
 
-      <Divider sx={{ my: 1.8, borderColor: t.glass.divider }} />
+      <Divider sx={{ my: 2 }} />
 
-      <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+      <Stack direction="row" spacing={1}>
         <Button
           variant="contained"
-          onClick={onOpen}
           endIcon={<KeyboardArrowRightIcon />}
-          sx={{ borderRadius: 999, fontWeight: 950, textTransform: "none", px: 2 }}
+          onClick={() => window.location.assign(href)}
         >
           Open
         </Button>
-
         <Button
           variant="outlined"
-          onClick={() => window.open(href, "_blank", "noopener,noreferrer")}
           startIcon={<OpenInNewIcon />}
-          sx={{
-            borderRadius: 999,
-            fontWeight: 950,
-            textTransform: "none",
-            borderColor: t.buttonOutlined.borderColor,
-            color: t.buttonOutlined.color,
-            background: t.buttonOutlined.background,
-          }}
+          onClick={() => window.open(href, "_blank")}
         >
           New tab
         </Button>
@@ -315,347 +118,79 @@ function ModuleCard({ title, subtitle, chips = [], icon, onOpen, href, t }) {
 }
 
 // -------------------------
-// Portal pages
+// Pages
 // -------------------------
 
 function PortalHome() {
   const location = useLocation();
   const { mode, tokens: t, toggleMode } = useHi5Theme();
+  const { loading, user } = useSession();
 
-  const tenantSlug = useMemo(
-    () => getTenantSlugFromSearchOrHost(location.search),
-    [location.search]
-  );
-
-  const cacheKey = useMemo(
-    () => `hi5tech_portal_cache:${tenantSlug || "unknown"}`,
-    [tenantSlug]
-  );
-
-  const cached = useMemo(() => {
-    try {
-      const raw = sessionStorage.getItem(cacheKey);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (parsed?.ts && Date.now() - parsed.ts > 30 * 60 * 1000) return null;
-      return parsed;
-    } catch {
-      return null;
-    }
-  }, [cacheKey]);
-
-  // Single source of truth for screen state
-  const [status, setStatus] = useState(() => (cached ? "checking" : "checking"));
-  // checking | signed_out | signed_in_loading | ready
-
-  const [session, setSession] = useState(null);
-  const [user, setUser] = useState(null);
-  const [tenant, setTenant] = useState(cached?.tenant || null);
-  const [modules, setModules] = useState(cached?.modules || []);
+  const tenant = useMemo(() => getTenantSlug(location.search), [location.search]);
   const [query, setQuery] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
 
-  const runningRef = useRef(false);
-  const rerunRef = useRef(false);
-  const lastRunAtRef = useRef(0);
-
-  const writeCache = useCallback(
-    (tObj, mods) => {
-      try {
-        sessionStorage.setItem(
-          cacheKey,
-          JSON.stringify({
-            ts: Date.now(),
-            tenant: tObj || null,
-            modules: Array.isArray(mods) ? mods : [],
-          })
-        );
-      } catch {}
-    },
-    [cacheKey]
-  );
-
-  const run = useCallback(
-    async ({ reason = "manual" } = {}) => {
-      // single-flight
-      if (runningRef.current) {
-        rerunRef.current = true;
-        return;
-      }
-      runningRef.current = true;
-      rerunRef.current = false;
-
-      // prevent thrash
-      const now = Date.now();
-      if (reason !== "auth" && now - lastRunAtRef.current < 500) {
-        runningRef.current = false;
-        return;
-      }
-      lastRunAtRef.current = now;
-
-      setErrorMsg("");
-      setStatus("checking");
-
-      try {
-        const { data } = await supabase.auth.getSession();
-        const sess = data?.session || null;
-        const u = sess?.user || null;
-
-        setSession(sess);
-        setUser(u);
-
-        if (!u) {
-          setTenant(null);
-          setModules([]);
-          writeCache(null, []);
-          setStatus("signed_out");
-          return;
-        }
-
-        setStatus("signed_in_loading");
-
-        const tObj = await loadTenantByBaseHost(tenantSlug);
-        setTenant(tObj);
-
-        if (!tObj?.id) {
-          setModules([]);
-          writeCache(tObj, []);
-          setStatus("ready");
-          return;
-        }
-
-        const role = await loadProfileRole(u.id, tObj.id);
-        const roleAllowed = await loadRoleModules(role, tObj.id);
-
-        let userAllow = [];
-        let userDeny = [];
-        try {
-          const o = await loadUserOverrides(u.id, tObj.id);
-          userAllow = o.allow || [];
-          userDeny = o.deny || [];
-        } catch {
-          // optional
-        }
-
-        const set = new Set(roleAllowed);
-        userAllow.forEach((m) => set.add(m));
-        userDeny.forEach((m) => set.delete(m));
-
-        const finalMods = Array.from(set);
-        setModules(finalMods);
-        writeCache(tObj, finalMods);
-        setStatus("ready");
-      } catch (e) {
-        console.error("[Portal] run error:", e);
-
-        // If we have cache, show it but don’t deadlock on loading
-        if (cached?.tenant || (cached?.modules && cached.modules.length)) {
-          setErrorMsg("We couldn’t refresh portal data. Showing cached view.");
-          setStatus("ready");
-        } else {
-          setErrorMsg("We couldn’t load portal data. Please retry.");
-          setTenant(null);
-          setModules([]);
-          setStatus("ready");
-        }
-      } finally {
-        runningRef.current = false;
-        if (rerunRef.current) {
-          rerunRef.current = false;
-          run({ reason: "queued" });
-        }
-      }
-    },
-    [tenantSlug, writeCache, cached]
-  );
-
-  useEffect(() => {
-    run({ reason: "initial" });
-
-    const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      run({ reason: "auth" });
-    });
-
-    // Optional: refresh when tab becomes visible, but debounced by single-flight logic
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") run({ reason: "visible" });
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-
-    return () => {
-      sub?.subscription?.unsubscribe?.();
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [run]);
-
-  const displayName = useMemo(() => {
-    const name =
-      user?.user_metadata?.full_name ||
-      user?.user_metadata?.name ||
-      user?.email?.split("@")?.[0] ||
-      "User";
-    return String(name || "User");
-  }, [user]);
-
-  const initials = useMemo(() => {
-    const s = String(displayName || "U").trim();
-    return (s[0] || "U").toUpperCase();
-  }, [displayName]);
-
-  if (status === "checking" && !tenant && !modules.length) {
+  if (loading) {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-        <Stack spacing={1} alignItems="center">
-          <Typography sx={{ fontWeight: 950, opacity: 0.85 }}>Loading…</Typography>
-          {!!errorMsg && (
-            <Typography sx={{ opacity: 0.7, fontSize: 13, maxWidth: 320, textAlign: "center" }}>
-              {errorMsg}
-            </Typography>
-          )}
-        </Stack>
+        <Typography fontWeight={900}>Loading…</Typography>
       </Box>
     );
   }
 
-  if (status === "signed_out") return <Navigate to="/login" replace />;
-  if (!user || !session) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace />;
 
-  // Auto-forward if exactly one module
-  if (modules.length === 1 && tenantSlug) {
-    window.location.assign(buildModuleUrl(tenantSlug, modules[0]));
-    return null;
-  }
-
-  const catalog = [
+  const modules = [
     {
       key: "itsm",
       title: "ITSM",
-      subtitle: "Incidents, Requests, Changes, KB",
-      icon: <ListAltIcon sx={{ opacity: 0.92 }} />,
-      chips: ["Tickets", "Knowledge", "Approvals"],
-      href: buildModuleUrl(tenantSlug, "itsm"),
+      subtitle: "Incidents, Requests, Knowledge",
+      icon: <ListAltIcon />,
+      chips: ["Tickets", "KB"],
     },
     {
       key: "control",
       title: "Control",
-      subtitle: "Devices, remote actions, reporting",
-      icon: <DashboardIcon sx={{ opacity: 0.92 }} />,
-      chips: ["Devices", "Remote", "Patch"],
-      href: buildModuleUrl(tenantSlug, "control"),
+      subtitle: "Devices, Remote Actions",
+      icon: <DashboardIcon />,
+      chips: ["Devices", "Remote"],
     },
     {
-      key: "self_service",
+      key: "self",
       title: "Self Service",
-      subtitle: "End-user portal & service catalog",
-      icon: <SupportAgentIcon sx={{ opacity: 0.92 }} />,
-      chips: ["Catalog", "Raise ticket", "Status"],
-      href: buildModuleUrl(tenantSlug, "self_service"),
+      subtitle: "End-user portal",
+      icon: <SupportAgentIcon />,
+      chips: ["Raise ticket"],
     },
   ];
 
-  const allowedSet = new Set(modules);
-  const q = query.trim().toLowerCase();
-
-  const visible = catalog
-    .filter((m) => allowedSet.has(m.key))
-    .filter((m) => {
-      if (!q) return true;
-      return (
-        m.title.toLowerCase().includes(q) ||
-        m.subtitle.toLowerCase().includes(q) ||
-        m.chips.some((c) => c.toLowerCase().includes(q))
-      );
-    });
+  const filtered = modules.filter(
+    (m) =>
+      !query ||
+      m.title.toLowerCase().includes(query.toLowerCase()) ||
+      m.subtitle.toLowerCase().includes(query.toLowerCase())
+  );
 
   return (
-    <Box sx={{ minHeight: "100vh", color: t.page.color, background: t.page.background }}>
-      <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 } }}>
-        <GlassPanel t={t} sx={{ p: 2.2 }}>
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={2}
-            alignItems={{ xs: "stretch", md: "center" }}
-            justifyContent="space-between"
-          >
+    <Box sx={{ minHeight: "100vh", background: t.page.background }}>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <GlassPanel t={t} sx={{ p: 2 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Stack direction="row" spacing={1.5} alignItems="center">
-              <Avatar
-                sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 3,
-                  fontWeight: 950,
-                  background:
-                    "linear-gradient(135deg, rgba(0,176,255,0.95), rgba(140,90,255,0.95))",
-                }}
-              >
-                {initials}
-              </Avatar>
-
-              <Box sx={{ minWidth: 0 }}>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Typography sx={{ fontWeight: 950, fontSize: 20 }} noWrap>
-                    Choose a module
-                  </Typography>
-
-                  {status === "checking" || status === "signed_in_loading" ? (
-                    <Chip
-                      label="Refreshing…"
-                      size="small"
-                      sx={{
-                        height: 24,
-                        borderRadius: 999,
-                        fontWeight: 900,
-                        background: t.pill.bg,
-                        border: t.pill.border,
-                        color: t.pill.text,
-                      }}
-                    />
-                  ) : null}
-                </Stack>
-
-                <Typography sx={{ opacity: 0.72, fontSize: 13 }} noWrap>
-                  {tenant?.name ? tenant.name : tenantSlug} • {user.email}
-                </Typography>
+              <Avatar>{user.email[0].toUpperCase()}</Avatar>
+              <Box>
+                <Typography fontWeight={950}>Choose a module</Typography>
+                <Typography sx={{ opacity: 0.7 }}>{user.email}</Typography>
               </Box>
             </Stack>
 
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="center">
+            <Stack direction="row" spacing={1}>
               <ThemeToggleIconButton mode={mode} onToggle={toggleMode} t={t} />
-
-              <TextField
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search modules…"
-                size="small"
-                sx={{
-                  minWidth: { xs: "100%", sm: 320 },
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 999,
-                    background: t.pill.bg,
-                    border: t.pill.border,
-                    backdropFilter: "blur(10px)",
-                  },
-                }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon sx={{ opacity: 0.75 }} />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-
               <Button
                 variant="outlined"
-                onClick={() => window.location.assign(`/logout${location.search || ""}`)}
                 startIcon={<LogoutIcon />}
-                sx={{
-                  borderRadius: 999,
-                  fontWeight: 950,
-                  textTransform: "none",
-                  borderColor: t.buttonOutlined.borderColor,
-                  color: t.buttonOutlined.color,
-                  background: t.buttonOutlined.background,
+                onClick={async () => {
+                  await fetch("/api/logout", { method: "POST", credentials: "include" });
+                  window.location.assign("/login?logout=1");
                 }}
               >
                 Sign out
@@ -664,150 +199,52 @@ function PortalHome() {
           </Stack>
         </GlassPanel>
 
-        {!!errorMsg ? (
-          <GlassPanel t={t} sx={{ mt: 2.2, p: 2 }}>
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={1}
-              alignItems={{ xs: "stretch", sm: "center" }}
-              justifyContent="space-between"
-            >
-              <Typography sx={{ fontWeight: 900, opacity: 0.85 }}>{errorMsg}</Typography>
-
-              <Button
-                variant="contained"
-                onClick={() => run({ reason: "manual" })}
-                sx={{ borderRadius: 999, fontWeight: 950, textTransform: "none" }}
-              >
-                Retry
-              </Button>
-            </Stack>
-          </GlassPanel>
-        ) : null}
+        <TextField
+          fullWidth
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search modules…"
+          sx={{ my: 2 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
 
         <Box
           sx={{
-            mt: 2.2,
             display: "grid",
-            gap: 16,
-            gridTemplateColumns: {
-              xs: "1fr",
-              sm: "repeat(2, 1fr)",
-              md: "repeat(3, 1fr)",
-            },
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px,1fr))",
+            gap: 2,
           }}
         >
-          {visible.map((m) => (
+          {filtered.map((m) => (
             <ModuleCard
               key={m.key}
               title={m.title}
               subtitle={m.subtitle}
               chips={m.chips}
               icon={m.icon}
-              href={m.href}
+              href={moduleUrl(tenant, m.key)}
               t={t}
-              onOpen={() => window.location.assign(m.href)}
             />
           ))}
         </Box>
-
-        {!visible.length ? (
-          <GlassPanel t={t} sx={{ mt: 2.2, p: 3 }}>
-            <Typography sx={{ fontWeight: 950, fontSize: 18 }}>No modules available</Typography>
-            <Typography sx={{ opacity: 0.72, mt: 0.6 }}>
-              Your account doesn’t have access to any modules for this tenant yet. Contact an
-              administrator to grant ITSM / Control / Self Service.
-            </Typography>
-          </GlassPanel>
-        ) : null}
-
-        <Box sx={{ height: 16 }} />
       </Container>
     </Box>
   );
 }
 
-// Login wrapper
-function PortalLogin() {
-  const location = useLocation();
-
-  const qpTenant = new URLSearchParams(location.search || "").get("tenant");
-  const afterLogin = qpTenant ? `/app?tenant=${encodeURIComponent(qpTenant)}` : "/app";
-
-  const logoutFlag = new URLSearchParams(location.search || "").get("logout");
-
-  const [checking, setChecking] = useState(true);
-  const [hasSession, setHasSession] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-
-    (async () => {
-      if (logoutFlag === "1") hardClearAuthStorage();
-
-      const { data } = await supabase.auth.getSession();
-      const sess = data?.session || null;
-
-      if (!mounted) return;
-      setHasSession(!!sess);
-      setChecking(false);
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, [logoutFlag]);
-
-  if (checking) {
-    return (
-      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-        <Typography sx={{ fontWeight: 950, opacity: 0.8 }}>Loading…</Typography>
-      </Box>
-    );
-  }
-
-  if (hasSession) return <Navigate to={afterLogin} replace />;
-
-  return <CentralLogin title="Sign in" afterLogin={afterLogin} />;
-}
-
-function PortalLogout() {
-  useEffect(() => {
-    (async () => {
-      const qpTenant = new URLSearchParams(window.location.search).get("tenant");
-
-      try {
-        await supabase.auth.signOut();
-      } finally {
-        hardClearAuthStorage();
-
-        const loginUrl = qpTenant
-          ? `/login?tenant=${encodeURIComponent(qpTenant)}&logout=1`
-          : "/login?logout=1";
-
-        window.location.assign(loginUrl);
-      }
-    })();
-  }, []);
-
-  return (
-    <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-      <Typography sx={{ fontWeight: 950, opacity: 0.8 }}>Signing out…</Typography>
-    </Box>
-  );
-}
-
 function PortalAppInner() {
-  const qpTenant = new URLSearchParams(window.location.search).get("tenant");
-  const withTenant = (path) => (qpTenant ? `${path}?tenant=${encodeURIComponent(qpTenant)}` : path);
-
   return (
     <Routes>
-      <Route path="/login" element={<PortalLogin />} />
+      <Route path="/login" element={<CentralLogin />} />
       <Route path="/app" element={<PortalHome />} />
-      <Route path="/logout" element={<PortalLogout />} />
-      <Route path="/" element={<Navigate to={withTenant("/app")} replace />} />
-      <Route path="*" element={<Navigate to={withTenant("/app")} replace />} />
+      <Route path="/" element={<Navigate to="/app" replace />} />
+      <Route path="*" element={<Navigate to="/app" replace />} />
     </Routes>
   );
 }
