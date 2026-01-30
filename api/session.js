@@ -1,121 +1,89 @@
 // api/session.js
 import { createClient } from "@supabase/supabase-js";
 
-/**
- * GET /api/session
- *
- * Reads HttpOnly cookies set by /api/login,
- * validates them with Supabase,
- * refreshes access token if needed,
- * and returns the user object.
- */
+// Expect these env vars in Vercel:
+// - REACT_APP_SUPABASE_URL
+// - SUPABASE_SERVICE_ROLE_KEY   (server only; never expose to client)
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-function isProdHost(host) {
-  return typeof host === "string" && (host === "hi5tech.co.uk" || host.endsWith(".hi5tech.co.uk"));
+// Cookie names (must match what your api/login.js sets)
+const ACCESS_COOKIE = "hi5tech_access_token";
+const REFRESH_COOKIE = "hi5tech_refresh_token";
+
+function parseCookies(cookieHeader = "") {
+  const out = {};
+  const parts = String(cookieHeader || "")
+    .split(";")
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  for (const p of parts) {
+    const idx = p.indexOf("=");
+    if (idx === -1) continue;
+    const k = decodeURIComponent(p.slice(0, idx).trim());
+    const v = decodeURIComponent(p.slice(idx + 1).trim());
+    out[k] = v;
+  }
+  return out;
 }
 
-function cookieDomainFromHost(host) {
-  return isProdHost(host) ? ".hi5tech.co.uk" : null;
-}
+function json(res, status, body) {
+  // Prevent any caching at CDN/browser level (important!)
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
 
-function serializeCookie(name, value, opts = {}) {
-  const encName = encodeURIComponent(name);
-  const encVal = encodeURIComponent(value);
-
-  let str = `${encName}=${encVal}`;
-
-  if (opts.maxAge != null) str += `; Max-Age=${opts.maxAge}`;
-  str += `; Path=/`;
-  if (opts.domain) str += `; Domain=${opts.domain}`;
-  if (opts.httpOnly) str += `; HttpOnly`;
-  if (opts.secure) str += `; Secure`;
-  if (opts.sameSite) str += `; SameSite=${opts.sameSite}`;
-
-  return str;
+  res.status(status).json(body);
 }
 
 export default async function handler(req, res) {
   try {
-    const accessToken = req.cookies?.hi5_at;
-    const refreshToken = req.cookies?.hi5_rt;
-
-    if (!accessToken && !refreshToken) {
-      return res.status(401).end();
+    if (!SUPABASE_URL || !SERVICE_KEY) {
+      return json(res, 500, { error: "Server auth not configured (missing env vars)" });
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL;
-    const supabaseAnonKey =
-      process.env.SUPABASE_ANON_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY;
+    const cookies = parseCookies(req.headers.cookie || "");
+    const access_token = cookies[ACCESS_COOKIE];
+    const refresh_token = cookies[REFRESH_COOKIE];
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return res.status(500).json({ error: "Supabase env vars not set" });
+    if (!access_token) {
+      return json(res, 200, { user: null });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false },
+    const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    let user = null;
-    let newSession = null;
+    // 1) Try access token
+    const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(access_token);
 
-    // 1️⃣ Try current access token
-    if (accessToken) {
-      const { data, error } = await supabase.auth.getUser(accessToken);
-      if (!error && data?.user) {
-        user = data.user;
-      }
+    if (userData?.user && !userErr) {
+      return json(res, 200, { user: userData.user });
     }
 
-    // 2️⃣ If access token expired, refresh using refresh token
-    if (!user && refreshToken) {
-      const { data, error } = await supabase.auth.refreshSession({
-        refresh_token: refreshToken,
-      });
-
-      if (error || !data?.session) {
-        return res.status(401).end();
-      }
-
-      newSession = data.session;
-      user = data.session.user;
+    // 2) If access token expired but refresh token exists, try refresh
+    if (!refresh_token) {
+      return json(res, 200, { user: null });
     }
 
-    if (!user) {
-      return res.status(401).end();
+    const { data: refreshData, error: refreshErr } = await supabaseAdmin.auth.refreshSession({
+      refresh_token,
+    });
+
+    if (refreshErr || !refreshData?.session?.access_token) {
+      return json(res, 200, { user: null });
     }
 
-    // 3️⃣ If we refreshed, update cookies
-    if (newSession) {
-      const hostHeader = req.headers.host || "";
-      const domain = cookieDomainFromHost(hostHeader);
-      const isSecure = (req.headers["x-forwarded-proto"] || "").toString() === "https";
+    // If you want: you *could* re-set cookies here with new tokens,
+    // but it's optional. Login flow already handles this.
+    const { data: userData2 } = await supabaseAdmin.auth.getUser(
+      refreshData.session.access_token
+    );
 
-      const accessMaxAge = Math.max(60, Number(newSession.expires_in || 3600));
-      const refreshMaxAge = 60 * 60 * 24 * 30;
-
-      const cookies = [
-        serializeCookie("hi5_at", newSession.access_token, {
-          domain,
-          httpOnly: true,
-          secure: isSecure,
-          sameSite: "Lax",
-          maxAge: accessMaxAge,
-        }),
-        serializeCookie("hi5_rt", newSession.refresh_token, {
-          domain,
-          httpOnly: true,
-          secure: isSecure,
-          sameSite: "Lax",
-          maxAge: refreshMaxAge,
-        }),
-      ];
-
-      res.setHeader("Set-Cookie", cookies);
-    }
-
-    return res.status(200).json({ user });
+    return json(res, 200, { user: userData2?.user || null });
   } catch (e) {
-    console.error("[api/session] error:", e);
-    return res.status(401).end();
+    console.error("api/session error:", e);
+    return json(res, 200, { user: null });
   }
 }
