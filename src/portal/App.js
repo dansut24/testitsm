@@ -1,5 +1,5 @@
 // src/portal/App.js
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import {
   Box,
@@ -30,18 +30,11 @@ import GlassPanel from "../common/ui/GlassPanel";
 import ThemeToggleIconButton from "../common/ui/ThemeToggleIconButton";
 
 // -------------------------
-// Host helpers
+// Helpers
 // -------------------------
 
 function getHost() {
   return window.location.hostname || "";
-}
-
-function getHostModule(host = getHost()) {
-  if (host.includes("-itsm.")) return "itsm";
-  if (host.includes("-control.")) return "control";
-  if (host.includes("-self.")) return "self";
-  return null; // tenant base host
 }
 
 function getTenantSlug(search) {
@@ -61,16 +54,22 @@ function protocol() {
   return window.location.protocol || "https:";
 }
 
-function moduleUrl(tenant, module) {
+function moduleHost(tenant, module) {
   const sub =
     module === "itsm"
       ? `${tenant}-itsm`
       : module === "control"
       ? `${tenant}-control`
       : `${tenant}-self`;
+  return `${protocol()}//${sub}.${parentDomain()}`;
+}
 
-  // We navigate to the module HOST. The module host itself will route to the correct module path.
-  return `${protocol()}//${sub}.${parentDomain()}/`;
+function moduleLaunchUrl(tenant, module) {
+  // Use a query param to force a deterministic redirect on the module host.
+  // This avoids SPA route / rewrite issues entirely.
+  const base = moduleHost(tenant, module);
+  const open = module === "self" ? "self" : module;
+  return `${base}/?open=${encodeURIComponent(open)}`;
 }
 
 // -------------------------
@@ -127,6 +126,26 @@ function ModuleCard({ title, subtitle, chips, icon, href, t }) {
       </Stack>
     </GlassPanel>
   );
+}
+
+// -------------------------
+// Module-host redirect shim
+// -------------------------
+
+function ModuleHostRedirectShim() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search || "");
+    const open = (params.get("open") || "").toLowerCase().trim();
+
+    if (open === "itsm" || open === "control" || open === "self") {
+      // Hard replace so it doesn't bounce back through router fallbacks
+      window.location.replace(`/${open}`);
+    }
+  }, [location.search]);
+
+  return null;
 }
 
 // -------------------------
@@ -240,7 +259,7 @@ function PortalHome() {
               subtitle={m.subtitle}
               chips={m.chips}
               icon={m.icon}
-              href={moduleUrl(tenant, m.key)}
+              href={moduleLaunchUrl(tenant, m.key)}
               t={t}
             />
           ))}
@@ -251,24 +270,36 @@ function PortalHome() {
 }
 
 function PortalAppInner() {
-  const hostModule = getHostModule();
+  const host = getHost();
 
-  // On module hosts, DO NOT redirect to /app.
-  // Use the module route as the default “home”.
-  const defaultHome = hostModule ? `/${hostModule}` : "/app";
+  // If we're on a module subdomain, we still run this SPA,
+  // so we must NOT redirect unknown routes to /app.
+  // Instead, let module apps handle /itsm /control /self.
+  const onModuleHost =
+    host.includes("-itsm.") || host.includes("-control.") || host.includes("-self.");
+
+  const defaultHome = onModuleHost ? "/" : "/app";
 
   return (
     <Routes>
-      <Route path="/login" element={<CentralLogin />} />
+      {/* Shim for module hosts: /?open=itsm => /itsm */}
+      <Route path="/" element={<ModuleHostRedirectShim />} />
 
-      {/* Tenant landing (portal) */}
+      <Route path="/login" element={<CentralLogin />} />
       <Route path="/app" element={<PortalHome />} />
 
-      {/* Root → host-aware default */}
-      <Route path="/" element={<Navigate to={defaultHome} replace />} />
-
-      {/* Anything unknown → host-aware default */}
-      <Route path="*" element={<Navigate to={defaultHome} replace />} />
+      {/* Tenant base host */}
+      {!onModuleHost ? (
+        <>
+          <Route path="/" element={<Navigate to="/app" replace />} />
+          <Route path="*" element={<Navigate to="/app" replace />} />
+        </>
+      ) : (
+        <>
+          {/* Module host: don't force /app; leave routing to module */}
+          <Route path="*" element={<Navigate to={defaultHome} replace />} />
+        </>
+      )}
     </Routes>
   );
 }
