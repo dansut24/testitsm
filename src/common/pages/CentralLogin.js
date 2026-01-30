@@ -1,5 +1,5 @@
 // src/common/pages/CentralLogin.js
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Button,
@@ -63,6 +63,19 @@ function sanitizeRedirect(raw, fallback) {
   return r;
 }
 
+async function waitForSession({ tries = 35, delayMs = 80 } = {}) {
+  // Wait up to ~2.8s by default (35 * 80ms)
+  for (let i = 0; i < tries; i++) {
+    const { data } = await supabase.auth.getSession();
+    if (data?.session) return data.session;
+
+    // small delay
+    // eslint-disable-next-line no-await-in-loop
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  return null;
+}
+
 export default function CentralLogin({ title, afterLogin }) {
   const location = useLocation();
   const { mode, tokens: t, toggleMode } = useHi5Theme();
@@ -71,6 +84,9 @@ export default function CentralLogin({ title, afterLogin }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  // prevents the "already signed in bounce" effect from firing while we’re submitting
+  const submittingRef = useRef(false);
 
   const computedAfterLogin = useMemo(
     () => afterLogin || getDefaultAfterLogin(),
@@ -90,11 +106,19 @@ export default function CentralLogin({ title, afterLogin }) {
   // If already signed in, bounce
   useEffect(() => {
     let mounted = true;
+
     (async () => {
+      // don't auto-bounce while a sign-in submit is in progress
+      if (submittingRef.current) return;
+
       const { data } = await supabase.auth.getSession();
       if (!mounted) return;
-      if (data?.session) window.location.assign(redirect);
+
+      if (data?.session) {
+        window.location.assign(redirect);
+      }
     })();
+
     return () => {
       mounted = false;
     };
@@ -104,6 +128,7 @@ export default function CentralLogin({ title, afterLogin }) {
     e.preventDefault();
     setBusy(true);
     setError("");
+    submittingRef.current = true;
 
     try {
       const { error: signInErr } = await supabase.auth.signInWithPassword({
@@ -116,9 +141,13 @@ export default function CentralLogin({ title, afterLogin }) {
         return;
       }
 
-      const { data } = await supabase.auth.getSession();
-      if (!data?.session) {
-        setError("Signed in, but session was not created. Please try again.");
+      // ✅ Critical: wait for session to be actually available before redirect.
+      // This fixes the “sometimes needs refresh after login” issue.
+      const sess = await waitForSession({ tries: 40, delayMs: 75 });
+      if (!sess) {
+        setError(
+          "Signed in, but the session didn’t persist in time. Please press refresh once. (We’ll fix storage next.)"
+        );
         return;
       }
 
@@ -126,6 +155,7 @@ export default function CentralLogin({ title, afterLogin }) {
     } catch (e2) {
       setError(e2?.message || "Login failed");
     } finally {
+      submittingRef.current = false;
       setBusy(false);
     }
   }
@@ -143,7 +173,12 @@ export default function CentralLogin({ title, afterLogin }) {
     >
       <Container maxWidth="sm">
         <GlassPanel t={t} sx={{ p: { xs: 2.2, sm: 3 }, borderRadius: 4 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            spacing={1}
+          >
             <Stack spacing={0.6} sx={{ minWidth: 0 }}>
               <Typography sx={{ fontWeight: 950, fontSize: 22 }} noWrap>
                 {computedTitle}
