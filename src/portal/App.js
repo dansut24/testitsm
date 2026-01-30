@@ -58,7 +58,16 @@ function moduleUrl(tenant, module) {
       ? `${tenant}-control`
       : `${tenant}-self`;
 
-  return `${protocol()}//${sub}.${parentDomain()}`;
+  // IMPORTANT: go to the module route, not the subdomain root
+  // (your current deployment serves the same SPA on subdomains, and "/" redirects to "/app")
+  const path =
+    module === "itsm"
+      ? "/itsm"
+      : module === "control"
+      ? "/control"
+      : "/self";
+
+  return `${protocol()}//${sub}.${parentDomain()}${path}`;
 }
 
 // -------------------------
