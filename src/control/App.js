@@ -11,21 +11,23 @@ import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 import DeviceRemote from "./pages/DeviceRemote";
 
-import { useAuth } from "../common/context/AuthContext";
 import { getCentralLoginUrl } from "../common/utils/portalUrl";
 import ExternalRedirect from "../common/components/ExternalRedirect";
+
+// ✅ New stable auth hook (cookie + /api/session)
+import { useSession } from "../common/hooks/useSession";
 
 // ✅ Shared Hi5 theme
 import { Hi5ThemeProvider, useHi5Theme } from "../common/ui/hi5Theme";
 import ThemeToggleIconButton from "../common/ui/ThemeToggleIconButton";
 
 function ControlInnerApp() {
-  const { authLoading, user } = useAuth();
+  const { loading, user } = useSession();
   const centralLogin = getCentralLoginUrl("/control");
 
   const { mode, tokens: t, toggleMode } = useHi5Theme();
 
-  if (authLoading) {
+  if (loading) {
     return (
       <Box
         sx={{
