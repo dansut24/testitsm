@@ -1,5 +1,5 @@
 // src/common/pages/CentralLogin.js
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -11,7 +11,6 @@ import {
   Divider,
 } from "@mui/material";
 import { useLocation } from "react-router-dom";
-import { supabase } from "../utils/supabaseClient";
 
 import EmailIcon from "@mui/icons-material/Email";
 import LockIcon from "@mui/icons-material/Lock";
@@ -63,17 +62,15 @@ function sanitizeRedirect(raw, fallback) {
   return r;
 }
 
-async function waitForSession({ tries = 35, delayMs = 80 } = {}) {
-  // Wait up to ~2.8s by default (35 * 80ms)
-  for (let i = 0; i < tries; i++) {
-    const { data } = await supabase.auth.getSession();
-    if (data?.session) return data.session;
-
-    // small delay
-    // eslint-disable-next-line no-await-in-loop
-    await new Promise((r) => setTimeout(r, delayMs));
-  }
-  return null;
+async function fetchSession() {
+  const res = await fetch("/api/session", {
+    method: "GET",
+    credentials: "include",
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) return null;
+  const data = await res.json().catch(() => null);
+  return data?.user ? data : null;
 }
 
 export default function CentralLogin({ title, afterLogin }) {
@@ -82,11 +79,10 @@ export default function CentralLogin({ title, afterLogin }) {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
 
-  // prevents the "already signed in bounce" effect from firing while we’re submitting
-  const submittingRef = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [error, setError] = useState("");
 
   const computedAfterLogin = useMemo(
     () => afterLogin || getDefaultAfterLogin(),
@@ -103,19 +99,20 @@ export default function CentralLogin({ title, afterLogin }) {
     [rawRedirect, computedAfterLogin]
   );
 
-  // If already signed in, bounce
+  // If already signed in (server cookie exists), bounce immediately
   useEffect(() => {
     let mounted = true;
 
     (async () => {
-      // don't auto-bounce while a sign-in submit is in progress
-      if (submittingRef.current) return;
-
-      const { data } = await supabase.auth.getSession();
-      if (!mounted) return;
-
-      if (data?.session) {
-        window.location.assign(redirect);
+      try {
+        const sess = await fetchSession();
+        if (!mounted) return;
+        if (sess?.user) {
+          window.location.assign(redirect);
+          return;
+        }
+      } finally {
+        if (mounted) setChecking(false);
       }
     })();
 
@@ -128,26 +125,41 @@ export default function CentralLogin({ title, afterLogin }) {
     e.preventDefault();
     setBusy(true);
     setError("");
-    submittingRef.current = true;
 
     try {
-      const { error: signInErr } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const res = await fetch("/api/login", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          email: String(email || "").trim(),
+          password: String(password || ""),
+        }),
       });
 
-      if (signInErr) {
-        setError(signInErr.message || "Login failed");
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        setError(json?.error || "Login failed");
         return;
       }
 
-      // ✅ Critical: wait for session to be actually available before redirect.
-      // This fixes the “sometimes needs refresh after login” issue.
-      const sess = await waitForSession({ tries: 40, delayMs: 75 });
-      if (!sess) {
-        setError(
-          "Signed in, but the session didn’t persist in time. Please press refresh once. (We’ll fix storage next.)"
-        );
+      // Ensure cookie is set + session endpoint sees it before redirecting
+      // This avoids "login succeeds but next page says not logged in".
+      let ok = false;
+      for (let i = 0; i < 25; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        const sess = await fetchSession();
+        if (sess?.user) {
+          ok = true;
+          break;
+        }
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((r) => setTimeout(r, 80));
+      }
+
+      if (!ok) {
+        setError("Signed in, but session did not persist. Please try again.");
         return;
       }
 
@@ -155,9 +167,16 @@ export default function CentralLogin({ title, afterLogin }) {
     } catch (e2) {
       setError(e2?.message || "Login failed");
     } finally {
-      submittingRef.current = false;
       setBusy(false);
     }
+  }
+
+  if (checking) {
+    return (
+      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+        <Typography sx={{ fontWeight: 950, opacity: 0.8 }}>Loading…</Typography>
+      </Box>
+    );
   }
 
   return (
@@ -173,12 +192,7 @@ export default function CentralLogin({ title, afterLogin }) {
     >
       <Container maxWidth="sm">
         <GlassPanel t={t} sx={{ p: { xs: 2.2, sm: 3 }, borderRadius: 4 }}>
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-            spacing={1}
-          >
+          <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
             <Stack spacing={0.6} sx={{ minWidth: 0 }}>
               <Typography sx={{ fontWeight: 950, fontSize: 22 }} noWrap>
                 {computedTitle}
