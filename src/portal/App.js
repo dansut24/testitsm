@@ -23,14 +23,12 @@ import ListAltIcon from "@mui/icons-material/ListAlt";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 
 import CentralLogin from "../common/pages/CentralLogin";
-import { supabase } from "../common/utils/supabaseClient";
 
 import { Hi5ThemeProvider, useHi5Theme } from "../common/ui/hi5Theme";
 import GlassPanel from "../common/ui/GlassPanel";
 import ThemeToggleIconButton from "../common/ui/ThemeToggleIconButton";
 
-// Keep in sync with supabaseClient.js
-const STORAGE_KEY = "hi5tech_sb_session";
+import { supabase, STORAGE_KEY } from "../common/utils/supabaseClient";
 
 // -------------------------
 // Host + URL helpers
