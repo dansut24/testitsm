@@ -35,7 +35,7 @@ function getDefaultTitle() {
   return "Sign in";
 }
 
-// Prevent redirect loops and unsafe redirects
+// Prevent redirect loops and unsafe redirects (path-only)
 function sanitizeRedirect(raw, fallback) {
   let r = raw || fallback || "/";
 
@@ -53,13 +53,52 @@ function sanitizeRedirect(raw, fallback) {
     }
   }
 
-  // Must be an app path
   if (!r.startsWith("/")) r = fallback || "/";
-
-  // Never redirect back to login (common loop cause)
   if (r.startsWith("/login")) r = fallback || "/";
 
   return r;
+}
+
+function getProtocol() {
+  return window.location.protocol || "https:";
+}
+
+function getParentDomain() {
+  const host = window.location.hostname || "";
+  return host.split(".").slice(1).join(".");
+}
+
+function getTenantSlugFromHost() {
+  const host = window.location.hostname || "";
+  const first = host.split(".")[0] || "";
+  return (first.split("-")[0] || "").toLowerCase();
+}
+
+function isModuleRedirectPath(path) {
+  const p = String(path || "").toLowerCase();
+  return p === "/itsm" || p.startsWith("/itsm/") ||
+         p === "/control" || p.startsWith("/control/") ||
+         p === "/self" || p.startsWith("/self/");
+}
+
+function buildModuleUrlFromPath(path) {
+  const p = String(path || "").toLowerCase();
+  const tenant = getTenantSlugFromHost();
+  const parent = getParentDomain();
+  const proto = getProtocol();
+
+  if (!tenant || !parent) return path;
+
+  if (p === "/itsm" || p.startsWith("/itsm/")) {
+    return `${proto}//${tenant}-itsm.${parent}/`;
+  }
+  if (p === "/control" || p.startsWith("/control/")) {
+    return `${proto}//${tenant}-control.${parent}/`;
+  }
+  if (p === "/self" || p.startsWith("/self/")) {
+    return `${proto}//${tenant}-self.${parent}/`;
+  }
+  return path;
 }
 
 async function fetchSession() {
@@ -94,10 +133,18 @@ export default function CentralLogin({ title, afterLogin }) {
   const rawRedirect =
     new URLSearchParams(location.search).get("redirect") || computedAfterLogin;
 
-  const redirect = useMemo(
+  const redirectPath = useMemo(
     () => sanitizeRedirect(rawRedirect, computedAfterLogin),
     [rawRedirect, computedAfterLogin]
   );
+
+  // FINAL redirect target:
+  // - normal paths like /app => stay on this host
+  // - module paths /itsm /control /self => jump to module subdomain
+  const redirectTarget = useMemo(() => {
+    if (isModuleRedirectPath(redirectPath)) return buildModuleUrlFromPath(redirectPath);
+    return redirectPath;
+  }, [redirectPath]);
 
   // If already signed in (server cookie exists), bounce immediately
   useEffect(() => {
@@ -108,7 +155,7 @@ export default function CentralLogin({ title, afterLogin }) {
         const sess = await fetchSession();
         if (!mounted) return;
         if (sess?.user) {
-          window.location.assign(redirect);
+          window.location.assign(redirectTarget);
           return;
         }
       } finally {
@@ -119,7 +166,7 @@ export default function CentralLogin({ title, afterLogin }) {
     return () => {
       mounted = false;
     };
-  }, [redirect]);
+  }, [redirectTarget]);
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -145,7 +192,6 @@ export default function CentralLogin({ title, afterLogin }) {
       }
 
       // Ensure cookie is set + session endpoint sees it before redirecting
-      // This avoids "login succeeds but next page says not logged in".
       let ok = false;
       for (let i = 0; i < 25; i++) {
         // eslint-disable-next-line no-await-in-loop
@@ -163,7 +209,7 @@ export default function CentralLogin({ title, afterLogin }) {
         return;
       }
 
-      window.location.assign(redirect);
+      window.location.assign(redirectTarget);
     } catch (e2) {
       setError(e2?.message || "Login failed");
     } finally {
